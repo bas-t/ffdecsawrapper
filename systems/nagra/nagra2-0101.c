@@ -522,20 +522,21 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
 
 // -- cN2Timer -----------------------------------------------------------------
 
-enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmLATCHED=0x04 };
-
 class cN2Timer {
 private:
-  int ctrl, divisor, cycles, remainder;
-  unsigned int latch;
+  int ctrl, divisor, cycles, remainder, latch;
+  enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmMASK=0xFF, tmLATCHED=0x100 };
+  //
+  bool Running(void) { return ctrl&tmRUNNING; }
+  void Stop(void);
 public:
   cN2Timer(void);
   void AddCycles(int count);
-  unsigned int GetCycles(void) { return (unsigned int)cycles; }
-  void SetLatch(int val);
-  void Stop(void);
-  void Start(int mode, int div);
-  bool Running(void) { return ctrl&tmRUNNING; }
+  unsigned int Cycles(void) { return (unsigned int)cycles; }
+  unsigned char Ctrl(void) { return ctrl&tmMASK; }
+  void Ctrl(unsigned char c);
+  unsigned char Latch(void) { return latch&0xFF; }
+  void Latch(unsigned char val);
   };
 
 cN2Timer::cN2Timer(void)
@@ -545,34 +546,48 @@ cN2Timer::cN2Timer(void)
 
 void cN2Timer::AddCycles(int count)
 {
-  remainder+=count;
-  if(remainder>=divisor) {
-    cycles-=remainder/divisor;
-    remainder%=divisor;
-    }
-  if(ctrl&tmCONTINUOUS) {
-    while(cycles<0) cycles+=latch+1;
-    }
-  else if(cycles<0 || (cycles==0 && remainder>=4)) {
-    cycles=0;
-    Stop();
+  if(Running()) {
+    remainder+=count;
+    if(remainder>=divisor) {
+      cycles-=remainder/divisor;
+      remainder%=divisor;
+      }
+    if(ctrl&tmCONTINUOUS) {
+      while(cycles<0) cycles+=latch+1;
+      }
+    else if(cycles<0 || (cycles==0 && remainder>=4)) {
+      cycles=0;
+      Stop();
+      }
     }
 }
 
-void cN2Timer::SetLatch(int val)
+void cN2Timer::Latch(unsigned char val)
 {
-  val&=0xFF; if(val==0) val=0x100;
-  latch=val; cycles=val; remainder=0;
-  ctrl|=tmLATCHED;
+  if(!Running()) {
+    latch=val; if(latch==0) latch=0x100;
+    cycles=latch; remainder=0;
+    ctrl|=tmLATCHED;
+    }
 }
 
-void cN2Timer::Start(int mode, int div)
+void cN2Timer::Ctrl(unsigned char val)
 {
-  ctrl=(ctrl&~tmCONTINUOUS) | (mode&tmCONTINUOUS) | tmRUNNING;
-  divisor=div;
-  if(!(ctrl&tmLATCHED)) cycles=(unsigned int)(cycles-1)&0xFF;
-  remainder=-1;
-  if(!mode && cycles==0) ctrl&=~tmRUNNING;
+  if(Running()) {
+    ctrl=(ctrl&~tmRUNNING) | (val&tmRUNNING);
+    if(!Running()) Stop();
+    }
+  else {
+    ctrl=(ctrl&~tmMASK) | (val&tmMASK);
+    if(Running()) {
+      if((ctrl&0xc0)==0x40) divisor=1 << (2 *(1 + ((ctrl & 0x38) >> 3)));
+      else divisor=4; // This is wrong, but we haven't figured the right value out yet
+      if(divisor<=0) divisor=1; // sanity
+      if(!(ctrl&tmLATCHED)) cycles=(unsigned int)(cycles-1)&0xFF;
+      remainder=-1;
+      if(!(ctrl&tmCONTINUOUS) && cycles==0) ctrl&=~tmRUNNING;
+      }
+    }
 }
 
 void cN2Timer::Stop(void)
@@ -580,17 +595,16 @@ void cN2Timer::Stop(void)
   ctrl&=~(tmRUNNING|tmLATCHED);
 }
 
-// -- cN2Prov0101 ----------------------------------------------------------------
+// -- cMapMemHW ----------------------------------------------------------------
+
+#define HW_REGS   0x20
+#define HW_OFFSET 0x0000
 
 #define MAX_TIMERS 3
 #define TIMER_NUM(x) (((x)>>2)&3) // timer order doesn't match HW order
 
-class cN2Prov0101 : public cN2Prov, public cN2Emu, private cMap0101 {
+class cMapMemHW : public cMapMem {
 private:
-  int desSize;
-  DES_key_schedule desks1, desks2;
-  unsigned char desblock[8];
-  IdeaKS ks;
   // memory mapped HW
   enum {
     HW_IO=0x00, HW_SECURITY,
@@ -599,50 +613,35 @@ private:
     HW_TIMER1_DATA=0x10, HW_TIMER1_LATCH, HW_TIMER1_CONTROL,
     HW_TIMER2_DATA=0x14, HW_TIMER2_LATCH, HW_TIMER2_CONTROL
     };
+  // timer hardware
   cN2Timer timer[MAX_TIMERS];
+  // CRC hardware
   enum { CRCCALC_DELAY=9, CRC_BUSY=1, CRC_DISABLED=2 };
   unsigned short CRCvalue;
   unsigned char CRCpos;
   unsigned int CRCstarttime;
   unsigned short crc16table[256];
+  // counter
+  unsigned int cycles;
   //
-  void AddRomCallbacks(void);
-  bool RomCallbacks(void);
-  bool ProcessMap(int f);
-  bool ProcessDESMap(int f);
   void GenCRC16Table(void);
-protected:
-  int mecmAddr[2];
-  int mecmKeyId;
-  //
-  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw);
-  virtual bool RomInit(void);
-  virtual void Stepper(void);
-  virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op);
-  virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op);
-  virtual void TimerHandler(unsigned int num);
 public:
-  cN2Prov0101(int Id, int Flags);
-  virtual bool PostProcAU(int id, unsigned char *data);
-  virtual int ProcessBx(unsigned char *data, int len, int pos);
-  virtual int ProcessEx(unsigned char *data, int len, int pos);
+  cMapMemHW(void);
+  virtual unsigned char Get(unsigned short ea);
+  virtual void Set(unsigned short ea, unsigned char val);
+  void AddCycles(unsigned int num);
   };
 
-static cN2ProvLinkReg<cN2Prov0101,0x0101,(N2FLAG_MECM|N2FLAG_POSTAU|N2FLAG_Bx|N2FLAG_Ex)> staticPL0101;
-
-cN2Prov0101::cN2Prov0101(int Id, int Flags)
-:cN2Prov(Id,Flags)
+cMapMemHW::cMapMemHW(void)
+:cMapMem(HW_OFFSET,HW_REGS)
 {
-  hasWriteHandler=hasReadHandler=true;
-  mecmAddr[0]=0x91d7; mecmAddr[1]=0x92d7; mecmKeyId=0x106;
-  seedSize=10;
-
-  desSize=16;
+  cycles=0;
   CRCvalue=0; CRCpos=0; CRCstarttime=0;
   GenCRC16Table();
+  PRINTF(L_SYS_EMU,"mapmemhw: new HW map off=%04x size=%04x",offset,size);
 }
 
-void cN2Prov0101::GenCRC16Table(void)
+void cMapMemHW::GenCRC16Table(void)
 {
   unsigned char hi[256];
     for(int i=0; i<256; ++i) {
@@ -654,6 +653,126 @@ void cN2Prov0101::GenCRC16Table(void)
     for(int i=0; i<32; ++i)
       for(int j=0; j<8; ++j)
         crc16table[i*8+j] |= hi[(0x87+(i*8)-j)&0xff]<<8;
+}
+
+void cMapMemHW::AddCycles(unsigned int num)
+{
+  cycles+=num;
+  for(int i=0; i<MAX_TIMERS; i++) timer[i].AddCycles(num);
+}
+
+unsigned char cMapMemHW::Get(unsigned short ea)
+{
+  if(ea<offset || ea>=offset+size) return 0;
+  ea-=offset;
+  switch(ea) {
+    case HW_SECURITY:
+      return 0x0F;
+    case HW_TIMER0_CONTROL:
+    case HW_TIMER1_CONTROL:
+    case HW_TIMER2_CONTROL:
+      return timer[TIMER_NUM(ea)].Ctrl();
+    case HW_TIMER0_DATA:
+    case HW_TIMER1_DATA:
+    case HW_TIMER2_DATA:
+      return timer[TIMER_NUM(ea)].Cycles();
+    case HW_TIMER0_LATCH:
+    case HW_TIMER1_LATCH:
+    case HW_TIMER2_LATCH:
+      return timer[TIMER_NUM(ea)].Latch();
+    case HW_CRC_CONTROL:
+      {
+      unsigned char r=mem[ea];
+      if(!(r&CRC_DISABLED) && cycles-CRCstarttime<CRCCALC_DELAY) r|=CRC_BUSY; // busy
+      else r&=~CRC_BUSY; // not busy
+      return r;
+      }
+    case HW_CRC_DATA:
+      {
+      unsigned char r=CRCvalue>>((CRCpos&1)<<3);
+      CRCpos=!CRCpos;
+      return r;
+      }
+    default:
+      return mem[ea];
+    }
+}
+
+void cMapMemHW::Set(unsigned short ea, unsigned char val)
+{
+  if(ea<offset || ea>=offset+size) return;
+  ea-=offset;
+  switch(ea) {
+    case HW_SECURITY:
+      break;
+    case HW_TIMER0_CONTROL:
+    case HW_TIMER1_CONTROL:
+    case HW_TIMER2_CONTROL:
+      timer[TIMER_NUM(ea)].Ctrl(val);
+      break;
+    case HW_TIMER0_LATCH:
+    case HW_TIMER1_LATCH:
+    case HW_TIMER2_LATCH:
+      timer[TIMER_NUM(ea)].Latch(val);
+      break;
+    case HW_CRC_CONTROL:
+      mem[ea]=val;
+      if(!(val&CRC_DISABLED)) {
+        CRCvalue=0; CRCpos=0;
+        CRCstarttime=cycles-CRCCALC_DELAY;
+        }
+      break;
+    case HW_CRC_DATA:
+      if(!(mem[HW_CRC_CONTROL]&CRC_DISABLED) && cycles-CRCstarttime>=CRCCALC_DELAY) {
+        CRCvalue=(CRCvalue>>8)^crc16table[(CRCvalue^val)&0xFF];
+        CRCpos=0;
+        CRCstarttime=cycles;
+        }
+      break;
+    default:
+      mem[ea]=val;
+      break;
+    }
+}
+
+// -- cN2Prov0101 --------------------------------------------------------------
+
+class cN2Prov0101 : public cN2Prov, public cN2Emu, private cMap0101 {
+private:
+  int desSize;
+  DES_key_schedule desks1, desks2;
+  unsigned char desblock[8];
+  IdeaKS ks;
+  cMapMemHW *hwMapper;
+  //
+  void AddRomCallbacks(void);
+  bool RomCallbacks(void);
+  bool ProcessMap(int f);
+  bool ProcessDESMap(int f);
+protected:
+  int mecmAddr[2];
+  int mecmKeyId;
+  //
+  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw);
+  virtual bool RomInit(void);
+  virtual void Stepper(void);
+  virtual void TimerHandler(unsigned int num);
+public:
+  cN2Prov0101(int Id, int Flags);
+  virtual bool PostProcAU(int id, unsigned char *data);
+  virtual int ProcessBx(unsigned char *data, int len, int pos);
+  virtual int ProcessEx(unsigned char *data, int len, int pos);
+  int RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len);
+  };
+
+static cN2ProvLinkReg<cN2Prov0101,0x0101,(N2FLAG_MECM|N2FLAG_POSTAU|N2FLAG_Bx|N2FLAG_Ex)> staticPL0101;
+
+cN2Prov0101::cN2Prov0101(int Id, int Flags)
+:cN2Prov(Id,Flags)
+{
+  mecmAddr[0]=0x91d7; mecmAddr[1]=0x92d7; mecmKeyId=0x106;
+  seedSize=10;
+  desSize=16; hwMapper=0;
 }
 
 bool cN2Prov0101::Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw)
@@ -769,6 +888,7 @@ bool cN2Prov0101::PostProcAU(int id, unsigned char *data)
 
 bool cN2Prov0101::RomInit(void)
 {
+  if(!AddMapper(hwMapper=new cMapMemHW(),HW_OFFSET,HW_REGS,0x00)) return false;
   SetPc(0x4000);
   SetSp(0x0FFF,0x0FE0);
   ClearBreakpoints();
@@ -1026,103 +1146,31 @@ int cN2Prov0101::ProcessEx(unsigned char *data, int len, int pos)
   return -1;
 }
 
+int cN2Prov0101::RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len)
+{
+  if(Init(id,102)) {
+    SetSp(0x0FFF,0x0EF8);
+    SetMem(load,data,len);
+    SetPc(run);
+    ClearBreakpoints();
+    AddBreakpoint(stop);
+    if(stop!=0x0000) AddBreakpoint(0x0000);
+    AddRomCallbacks();
+    while(!Run(100000)) {
+      if(GetPc()==0x0000 || GetPc()==stop) {
+        GetMem(fetch,data,fetch_len);
+        return 1;
+        }
+      else if(!RomCallbacks()) break;
+      break;
+      }
+    }
+  return -1;
+}
+
 void cN2Prov0101::TimerHandler(unsigned int num)
 {
-  for(int i=0; i<MAX_TIMERS; i++) 
-    if(timer[i].Running()) timer[i].AddCycles(num);
-}
-
-void cN2Prov0101::WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op)
-{
-  switch(ea) {
-    case HW_SECURITY:
-      if(cr==0x00) op=Get(ea);
-      break;
-    case HW_TIMER0_CONTROL:
-    case HW_TIMER1_CONTROL:
-    case HW_TIMER2_CONTROL:
-      {
-      int num=TIMER_NUM(ea);
-      // The value of a Control Register for a timer (i.e. here $16 for the 3rd timer)
-      // can't be changed if the timer is running (i.e. old and 2 <> 0 ) : you can only
-      // stop it (i.e. op and 2 = 0).
-      if(timer[num].Running()) {
-        op=(Get(ea)&~tmRUNNING) | (op&tmRUNNING);
-        if(!(op&tmRUNNING)) timer[num].Stop();
-        }
-      else if(op&tmRUNNING) {
-        unsigned int div;
-        if((op&0xc0)==0x40) div=1 << (2 *(1 + ((op & 0x38) >> 3)));
-        else div=4; // This is wrong, but we haven't figured the right value out yet
-        timer[num].Start(op,div);
-        }
-      break;
-      }
-    case HW_TIMER0_LATCH:
-    case HW_TIMER1_LATCH:
-    case HW_TIMER2_LATCH:
-      {
-      int num=TIMER_NUM(ea);
-      if(!timer[num].Running()) timer[num].SetLatch(op);
-      break;
-      }
-    case HW_CRC_CONTROL:
-      // $0e is to program the CRC unit.  $0f is the data to CRC
-      // assumes:
-      //   bit 1 disables/enables CRCing
-      if(!(op&CRC_DISABLED)) {
-        // disable -> reset CRC
-        CRCvalue=0; CRCpos=0;
-        CRCstarttime=Cycles()-CRCCALC_DELAY;
-        }
-      break;
-     case HW_CRC_DATA:
-      if(!(Get(HW_CRC_CONTROL)&CRC_DISABLED)) {
-        if(Cycles()-CRCstarttime>=CRCCALC_DELAY) {
-          // accept new data if not busy
-          CRCvalue=(CRCvalue>>8)^crc16table[(CRCvalue^op)&0xff];
-          CRCpos=0;
-          CRCstarttime=Cycles();
-          }
-        }
-      break;
-    }
-}
-
-void cN2Prov0101::ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op)
-{
-  switch(ea) {
-    case HW_SECURITY:
-      if(cr==0) op=0x0F; break;
-    case HW_TIMER0_CONTROL:
-    case HW_TIMER1_CONTROL:
-    case HW_TIMER2_CONTROL:
-      {
-      int num=TIMER_NUM(ea);
-      op=timer[num].Running() ? op|tmRUNNING : op&~tmRUNNING;
-      break;
-      }
-    case HW_TIMER0_DATA:
-    case HW_TIMER1_DATA:
-    case HW_TIMER2_DATA:
-      {
-      int num=TIMER_NUM(ea);
-      op=timer[num].GetCycles();
-      break;
-      }
-    case HW_CRC_CONTROL:
-      if(!(op&CRC_DISABLED)) {
-        //CRC takes 10 cycles to generate
-        if(Cycles()-CRCstarttime>=CRCCALC_DELAY) op&=~CRC_BUSY; // not busy
-        else op|=CRC_BUSY; // busy
-        }
-      else op&=~CRC_BUSY; // clear busy bit
-      break;
-    case HW_CRC_DATA:
-      op=CRCvalue>>((CRCpos&1)<<3);
-      CRCpos=!CRCpos;
-      break;
-    }
+  if(hwMapper) hwMapper->AddCycles(num);
 }
 
 void cN2Prov0101::Stepper(void)

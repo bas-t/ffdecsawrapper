@@ -42,7 +42,7 @@ public:
 // ----------------------------------------------------------------
 
 class cMapMem : public cMap {
-private:
+protected:
   unsigned short offset;
   unsigned char *mem;
   int size;
