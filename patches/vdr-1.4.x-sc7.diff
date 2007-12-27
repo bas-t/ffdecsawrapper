@@ -24,7 +24,7 @@ diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/ci.c vdr-1.4.7-sc7/ci.c
  }
 diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/ci.h vdr-1.4.7-sc7/ci.h
 --- vdr-1.4.7-orig/ci.h	2006-08-12 11:43:31.000000000 +0200
-+++ vdr-1.4.7-sc7/ci.h	2007-05-13 18:41:42.000000000 +0200
++++ vdr-1.4.7-sc7/ci.h	2007-06-24 19:46:39.000000000 +0200
 @@ -85,10 +85,12 @@
  class cCiCaProgramData : public cListObject {
  public:
@@ -42,7 +42,7 @@ diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/ci.h vdr-1.4.7-sc7/ci.h
  class cCiTransportLayer;
  class cCiTransportConnection;
  
-+#define VDR_IS_SC_PATCHED 401
++#define VDR_IS_SC_PATCHED 402
 +
  class cCiHandler {
  private:
@@ -205,7 +205,7 @@ diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/device.h vdr-1.4.7-sc7/device.h
  
 diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/dvbdevice.c vdr-1.4.7-sc7/dvbdevice.c
 --- vdr-1.4.7-orig/dvbdevice.c	2007-02-24 12:10:14.000000000 +0100
-+++ vdr-1.4.7-sc7/dvbdevice.c	2007-05-13 18:04:04.000000000 +0200
++++ vdr-1.4.7-sc7/dvbdevice.c	2007-06-24 19:42:24.000000000 +0200
 @@ -419,7 +419,11 @@
       dvb_frontend_info feinfo;
       if (ioctl(fd_frontend, FE_GET_INFO, &feinfo) >= 0) {
@@ -227,7 +227,7 @@ diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/dvbdevice.c vdr-1.4.7-sc7/dvbdevice.c
 -                 needsDetachReceivers = Ca() != Channel->Ca();
 +              if (Ca() >= CA_ENCRYPTED_MIN || Channel->Ca() >= CA_ENCRYPTED_MIN) {
 +                 if(Channel->Ca()<CA_ENCRYPTED_MIN || CiAllowConcurrent())
-+                   return true;
++                   result = true;
 +                 else
 +                   needsDetachReceivers = Ca() != Channel->Ca();
 +                 }

@@ -2419,7 +2419,7 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
     LBSTARTF(L_CORE_CSA);
     LBPUT("decrypting %3d packets (ccs=%3d cs=%3d %s)",ccs,ccs,cs,ccs>=cs?"OK ":"INC");
     int n=decrypt_packets(keys[currIdx],range);
-    LBPUT(" -> %3d packets decrypted\n",n);
+    LBPUT(" -> %3d packets decrypted",n);
     if(n>0) return true;
     LBEND();
     }
@@ -2598,6 +2598,8 @@ void cScDvbDevice::Shutdown(void)
 
 void cScDvbDevice::Startup(void)
 {
+  if(ScSetup.ForceTransfer)
+    SetTransferModeForDolbyDigital(2);
   for(int n=cDevice::NumDevices(); --n>=0;) {
     cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
     if(dev) dev->LateInit();

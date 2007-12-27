@@ -158,7 +158,8 @@ public:
   ~cScDvbDevice();
 #if APIVERSNUM >= 10501
   virtual bool HasCi(void);
-#else
+#endif
+#if APIVERSNUM < 10500
   virtual int ProvidesCa(const cChannel *Channel) const;
 #endif
   static void Capture(void);

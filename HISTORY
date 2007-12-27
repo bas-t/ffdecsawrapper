@@ -1,7 +1,17 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+06.07.2007: Version 0.8.1
+- Added Nagra2 7101 3DES support.
+- Added a setup option to force tranfermode with digital audio. Another common
+  used patched for the vdr-core is made unnecessary by this option.
+- Fixed camd33 EMM packet processing.
+- Fixed recording device allocation (1.4.x). You have to update the VDR core
+  patch. Thanks to dingo35.
+- Fixed compiling with VDR 1.5.0.
+
 22.06.2007: Version 0.8.0
+- Added Nagra2 0501 MECM support.
 - Added support for Nagra smartcards. Code is not well tested. Volunteers
   welcome. Timing is tricky, so you have to get cardreader clock AND -C
   parameter right.

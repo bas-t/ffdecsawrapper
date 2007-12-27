@@ -32,6 +32,7 @@ public:
   int ConcurrentFF;
   int CaIgnore[MAXCAIGN];
   int LocalPriority;
+  int ForceTransfer;
 public:
   cScSetup(void);
   void Check(void);
