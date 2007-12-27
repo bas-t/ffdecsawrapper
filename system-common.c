@@ -121,7 +121,7 @@ void cBNKey::Get(void *mem)
 
 cString cBNKey::Print(void)
 {
-  unsigned char mem[keylen];
+  unsigned char *mem=AUTOMEM(keylen);
   if(rotate) key->PutLE(mem,keylen); else key->Put(mem,keylen);
   char *str=(char *)malloc(keylen*2+2);
   if(str) HexStr(str,mem,keylen);

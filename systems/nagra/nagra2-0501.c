@@ -39,16 +39,12 @@ void cMap0501::DoMap(int f, unsigned char *data, int l)
   switch(f) {
     case 0x37:
       l=(l?l:wordsize)<<3;
-      H.GetLE(data,l);
-      MonMul(B,H,A);
+      B.GetLE(data,l);
+      MonMul(B,B,A);
       break;
     case 0x3a:
-      MakeJ();
-      BN_zero(R);
-      BN_set_bit(R,68*wordsize);
-      BN_mod(H,R,D,ctx);
-      for(int i=0; i<4; i++) MonMul(H,H,H);
-      MonMul(B,A,H);
+      MonInit();
+      MonMul(B,A,B);
       MonMul(B,A,B);
       break;
     default:
@@ -62,7 +58,7 @@ void cMap0501::DoMap(int f, unsigned char *data, int l)
 
 class cN2Prov0501 : public cN2Prov, private cMap0501, public cN2Emu {
 protected:
-  virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw);
+  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw);
   virtual bool NeedsCwSwap(void) { return true; }
 public:
   cN2Prov0501(int Id, int Flags);
@@ -76,7 +72,7 @@ cN2Prov0501::cN2Prov0501(int Id, int Flags)
 ,cMap0501(Id)
 {}
 
-bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
+bool cN2Prov0501::Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw)
 {
   if(algo==0x60) {
     hw[0]=hd[0];
@@ -113,6 +109,7 @@ int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
     SetSp(0x0FFF,0x0FE0);
     Set(0x0001,0xFF);
     Set(0x000E,0xFF);
+    Set(0x0000,0x04);
     ClearBreakpoints();
     AddBreakpoint(0x821f);
     while(!Run(5000)) {

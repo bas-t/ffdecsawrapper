@@ -124,7 +124,7 @@ bool cPlainKeySeca::Parse(const char *line)
                 break;
       }
     if(ok) {
-      unsigned char skey[keylen];
+      unsigned char *skey=AUTOMEM(keylen);
       len=GetHex(line,skey,keylen,false);
       if(IsBNKey()) {
         if(C2(keynr)=='E' && len==PLAINLEN_SECA_E) {
@@ -1225,8 +1225,8 @@ bool cSystemSeca::ProcessECM(const cEcmInfo *ecmD, unsigned char *data)
   bool key8=!(cParseSeca::SysMode(data)&0x10);
   cPlainKey *pk=0;
   cKeySnoop ks(this,'S',ecmD->provId,keyNr&0x0F);
+  unsigned char *buff=AUTOMEM(msgLen);
   while((pk=keys.FindKey('S',ecmD->provId,keyNr&0x0F,key8?8:16,pk))) {
-    unsigned char buff[msgLen];
     memcpy(buff,ecm,sizeof(buff)); // if decoding fails we need the original data
     
     unsigned char PK[16], signature[20];
@@ -1551,6 +1551,7 @@ void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
       }
     }
 
+  unsigned char *buff=AUTOMEM(msgLen);
   for(cSecaCardInfo *ci=Scards.First(); ci; ci=Scards.Next(ci)) {
     if(ci->MatchEMM(buffer) || (CheckNull(ci->sa,sizeof(ci->sa)) && ci->MatchID(buffer))) {
       unsigned char MK[16];
@@ -1563,7 +1564,7 @@ void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
         memcpy(&MK[8],ci->key,8);
         }
 
-      unsigned char buff[msgLen], signature[20];
+      unsigned char signature[20];
       memcpy(buff,emm,sizeof(buff)); // if decoding fails we need the original de-sse'd data
 
       if(!SE) {

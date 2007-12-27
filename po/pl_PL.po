@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2007-10-27 17:16+0200\n"
+"POT-Creation-Date: 2007-12-19 18:52+0100\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -159,6 +159,21 @@ msgstr "Klient karty: pod³±cz natychmiast"
 
 msgid "Nagra: min. ECM processing time"
 msgstr "Nagra: min. czas przetwarzania ECM"
+
+msgid "Nagra2: drop EMM-S packets"
+msgstr ""
+
+msgid "Nagra2: Enable AUXserver"
+msgstr ""
+
+msgid "Nagra2: AUXserver hostname"
+msgstr ""
+
+msgid "Nagra2: AUXserver port"
+msgstr ""
+
+msgid "Nagra2: AUXserver password"
+msgstr ""
 
 msgid "don't touch"
 msgstr "nie dotykaj"

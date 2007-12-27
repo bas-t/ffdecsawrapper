@@ -25,8 +25,8 @@
 #include "cpu.h"
 #include "log-nagra.h"
 
-#define LOGLBPUT(t...)  loglb->Printf(t)
-#define CCLOGLBPUT(t...)  do { if(doDisAsm) loglb->Printf(t); } while(0)
+#define LOGLBPUT(...)   loglb->Printf(__VA_ARGS__)
+#define CCLOGLBPUT(...) do { if(doDisAsm) loglb->Printf(__VA_ARGS__); } while(0)
 
 // -- cMapMem ------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ cMapRom::~cMapRom()
 
 bool cMapRom::IsFine(void)
 {
-  return (addr!=0);
+  return addr!=0 && size>0;
 }
 
 unsigned char cMapRom::Get(unsigned short ea)
@@ -146,6 +146,7 @@ c6805::c6805(void) {
   hasReadHandler=hasWriteHandler=false;
   ClearBreakpoints();
   InitMapper();
+  ResetCycles();
   memset(stats,0,sizeof(stats));
   loglb=new cLineBuff(128);
 }
@@ -180,7 +181,7 @@ bool c6805::AddMapper(cMap *map, unsigned short start, int size, unsigned char s
       }
     else PRINTF(L_SYS_EMU,"6805: too many mappers");
     }
-  else PRINTF(L_SYS_EMU,"6805: mapper not ready");
+  else PRINTF(L_SYS_EMU,"6805: mapper not ready (start=%02x:%04x size=%04x)",seg,start,size);
   delete map;
   return false;
 }
@@ -270,6 +271,11 @@ void c6805::PopCr(void)
   cr=pop();
 }
 
+void c6805::Push(unsigned char c)
+{
+  push(c);
+}
+
 void c6805::AddBreakpoint(unsigned short addr)
 {
   if(numBp<MAX_BREAKPOINTS) {
@@ -283,6 +289,19 @@ void c6805::ClearBreakpoints(void)
 {
   numBp=0;
   memset(bp,0,sizeof(bp));
+}
+
+void c6805::AddCycles(unsigned int num)
+{
+  if(num>0) {
+    clockcycles+=num;
+    TimerHandler(num);
+    }
+}
+
+void c6805::ResetCycles(void)
+{
+  clockcycles=0;
 }
 
 static const char * const ops[] = {
@@ -333,6 +352,26 @@ static const char opFlags[] = {
 /* 0xf0 */  0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x06, 0x05, 0x05, 0x05, 0x05, 0x00, 0x00, 0x05, 0x06,
   };
 
+static const unsigned char clock_cycles[] = {
+//         00  01  02  03  04  05  06  07  08  09  0a  0b  0c  0d  0e  0f
+/* 0x00 */  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  0,  0,  0,  0,  0,  0,
+/* 0x10 */  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  0,  0,  0,  0,  0,  0,
+/* 0x20 */  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
+/* 0x30 */  5,  0,  0,  5,  5,  0,  5,  5,  5,  5,  5,  0,  5,  4,  5,  5,
+/* 0x40 */  3,  0, 11,  3,  3,  0,  3,  3,  3,  3,  3,  0,  3,  3,  3,  3,
+/* 0x50 */  3,  0,  0,  3,  3,  0,  3,  3,  3,  3,  3,  0,  3,  3,  3,  3,
+/* 0x60 */  6,  0,  0,  6,  6,  0,  6,  6,  6,  6,  6,  0,  6,  5,  6,  6,
+/* 0x70 */  5,  0,  0,  5,  5,  0,  5,  5,  5,  5,  5,  0,  5,  4,  5,  5,
+/* 0x80 */  9,  6,  0, 10,  4,  4,  4,  0,  3,  3,  3,  0,  0,  0,  2,  2,
+/* 0x90 */  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
+/* 0xa0 */  2,  2,  2,  2,  2,  2,  2,  0,  2,  2,  2,  2,  0,  6,  2,  0,
+/* 0xb0 */  3,  3,  3,  3,  3,  3,  3,  4,  3,  3,  3,  3,  2,  5,  3,  4,
+/* 0xc0 */  4,  4,  4,  4,  4,  4,  4,  5,  4,  4,  4,  4,  3,  6,  4,  5,
+/* 0xd0 */  5,  5,  5,  5,  5,  5,  5,  6,  5,  5,  5,  5,  4,  7,  5,  6,
+/* 0xe0 */  4,  4,  4,  4,  4,  4,  4,  5,  4,  4,  4,  4,  3,  6,  4,  5,
+/* 0xf0 */  3,  3,  3,  3,  3,  3,  3,  4,  3,  3,  3,  3,  2,  5,  3,  4, 
+  };
+
 char * c6805::PADDR(unsigned char s, unsigned short ea)
 {
   snprintf(addrBuff,sizeof(addrBuff),((ea&0x8000) && s>0)?"%2$x:%1$04x":"%04x",ea,s);
@@ -368,7 +407,7 @@ int c6805::Run(int max_count)
     count++;
 
     if(!LOG(L_SYS_DISASM) && LOG(L_SYS_DISASM80)) {
-      bool flag=(pc>=0x80 && pc<0xE0);
+      bool flag=(pc>=0x80 && pc<0x200);
       if(doDisAsm && !flag) PRINTF(disAsmLogClass,"[...]");
       doDisAsm=flag;
       }
@@ -389,47 +428,72 @@ int c6805::Run(int max_count)
     bool paged=false, vbra=false;
     unsigned char ins=Get(pc++);
     char xs='X', xi='X';
+    int cycles=0;
  
     // check pre-bytes
     switch(ins) {
       case 0x31: // use SP indexed or indirect paged mode (ST19)
+        cycles+=2;
         ins=Get(pc++);
         switch(ins) {
-          case 0x22 ... 0x27: vbra=true; PRINTF(L_SYS_EMU,"WARN: V-flag not yet calculated"); break;
+          case 0x22: case 0x23: case 0x24: case 0x25:
+          case 0x26: case 0x27:
+            vbra=true; PRINTF(L_SYS_EMU,"WARN: V-flag not yet calculated"); break;
           case 0x75:
           case 0x8D:
-          case 0xC0 ... 0xCB:
-          case 0xCE ... 0xCF:
-          case 0xD0 ... 0xDB:
-          case 0xDE ... 0xDF: paged=true; indirect=true; break;
-          case 0xE0 ... 0xEB:
-          case 0xEE ... 0xEF: idx=sp; xi='S'; break;
+          case 0xC0: case 0xC1: case 0xC2: case 0xC3:
+          case 0xC4: case 0xC5: case 0xC6: case 0xC7:
+          case 0xC8: case 0xC9: case 0xCA: case 0xCB:
+          case 0xCE: case 0xCF:
+          case 0xD0: case 0xD1: case 0xD2: case 0xD3:
+          case 0xD4: case 0xD5: case 0xD6: case 0xD7:
+          case 0xD8: case 0xD9: case 0xDA: case 0xDB:
+          case 0xDE: case 0xDF:
+            paged=true; indirect=true; break;
+          case 0xE0: case 0xE1: case 0xE2: case 0xE3:
+          case 0xE4: case 0xE5: case 0xE6: case 0xE7:
+          case 0xE8: case 0xE9: case 0xEA: case 0xEB:
+          case 0xEE: case 0xEF:
+            idx=sp; xi='S'; break;
           }
         break;
       case 0x32: // use indirect SP indexed or indirect paged Y indexed mode (ST19)
+        cycles+=2;
         ins=Get(pc++);
         switch(ins) {
-          case 0x22 ... 0x27: vbra=true; PRINTF(L_SYS_EMU,"WARN: V-flag not yet calculated"); indirect=true; break;
+          case 0x22: case 0x23: case 0x24: case 0x25:
+          case 0x26: case 0x27:
+            vbra=true; PRINTF(L_SYS_EMU,"WARN: V-flag not yet calculated"); indirect=true; break;
           case 0xC3:
-          case 0xCE ... 0xCF:
-          case 0xD0 ... 0xDB:
-          case 0xDE ... 0xDF: paged=true; indirect=true; ex=&y; idx=*ex; xs='Y'; xi='Y'; break;
-          case 0xE0 ... 0xEB:
-          case 0xEE ... 0xEF: indirect=true; idx=sp; xi='S'; break;
+          case 0xCE: case 0xCF:
+          case 0xD0: case 0xD1: case 0xD2: case 0xD3:
+          case 0xD4: case 0xD5: case 0xD6: case 0xD7:
+          case 0xD8: case 0xD9: case 0xDA: case 0xDB:
+          case 0xDE: case 0xDF:
+            paged=true; indirect=true; ex=&y; idx=*ex; xs='Y'; xi='Y'; break;
+          case 0xE0: case 0xE1: case 0xE2: case 0xE3:
+          case 0xE4: case 0xE5: case 0xE6: case 0xE7:
+          case 0xE8: case 0xE9: case 0xEA: case 0xEB:
+          case 0xEE: case 0xEF:
+            indirect=true; idx=sp; xi='S'; break;
           }
         break;
       case 0x91: // use Y register with indirect addr mode (ST7)
+        cycles++;
         indirect=true;
         // fall through
       case 0x90: // use Y register (ST7)
+        cycles++;
         ex=&y; idx=*ex; xs='Y'; xi='Y';
         ins=Get(pc++);
         break;
       case 0x92: // use indirect addr mode (ST7)
+        cycles+=2;
         indirect=true;
         ins=Get(pc++);
         break;
       }
+    AddCycles(cycles+clock_cycles[ins]);
 
     if(doDisAsm) {
       char str[8];
@@ -759,7 +823,11 @@ int c6805::Run(int max_count)
       case 0x6E:
       case 0x7E:
         op=(op<<4)|(op>>4); tst(op); break;
-      case 0x00 ... 0x0F: // BRSET BRCLR
+      //case 0x00 ... 0x0F: // BRSET BRCLR
+      case 0x00: case 0x01: case 0x02: case 0x03:
+      case 0x04: case 0x05: case 0x06: case 0x07:
+      case 0x08: case 0x09: case 0x0A: case 0x0B:
+      case 0x0C: case 0x0D: case 0x0E: case 0x0F:
         {
         int bit=(ins&0x0F)>>1;
         CCLOGLBPUT(",#%x,",bit);
@@ -767,7 +835,11 @@ int c6805::Run(int max_count)
         branch((ins&0x01) ? !cc.c:cc.c);
         break;
         }
-      case 0x10 ... 0x1F: // BSET BCLR
+      //case 0x10 ... 0x1F: // BSET BCLR
+      case 0x10: case 0x11: case 0x12: case 0x13:
+      case 0x14: case 0x15: case 0x16: case 0x17:
+      case 0x18: case 0x19: case 0x1A: case 0x1B:
+      case 0x1C: case 0x1D: case 0x1E: case 0x1F:
         {
         int bit=(ins&0x0F)>>1;
         CCLOGLBPUT(",#%x",bit);

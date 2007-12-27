@@ -25,6 +25,10 @@
 #define WORD(buffer,index,mask) (((buffer[(index)]<<8) + buffer[(index)+1]) & mask)
 #define SCT_LEN(sct) (3+(((sct)[1]&0x0f)<<8)+(sct)[2])
 
+// replacement for variable-sized arrays
+#define AUTOARRAY(type,size) (type *)alloca(sizeof(type)*(size))
+#define AUTOMEM(size)        (unsigned char *)alloca(size)
+
 // ----------------------------------------------------------------
 
 #define DEV_DVB_FRONTEND "frontend"

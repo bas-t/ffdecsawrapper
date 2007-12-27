@@ -96,11 +96,7 @@ bool Ecm(unsigned char *buff, int cmdLen, int id)
   unsigned char cw[16];
 
   cN2Prov *ecmP=cN2Providers::GetProv(id,N2FLAG_NONE);
-  if(ecmP) printf("provider %04x capabilities%s%s%s%s\n",id,
-                    ecmP->HasFlags(N2FLAG_MECM)    ?" MECM":"",
-                    ecmP->HasFlags(N2FLAG_Bx)      ?" Bx":"",
-                    ecmP->HasFlags(N2FLAG_POSTAU)  ?" POSTPROCAU":"",
-                    ecmP->HasFlags(N2FLAG_INV)     ?" INVCW":"");
+  if(ecmP) ecmP->PrintCaps(L_SYS_ECM);
 
   int l=0, mecmAlgo=0;
   for(int i=16; i<cmdLen-10 && l!=3; ) {
@@ -135,7 +131,8 @@ printf("%02x: nano %02x\n",i,buff[i]);
   if(l!=3) return false;
   if(mecmAlgo>0) {
     if(ecmP && ecmP->HasFlags(N2FLAG_MECM)) {
-      if(!ecmP->MECM(buff[15],mecmAlgo,cw)) return false;
+static unsigned char odata[15] = { 0x80,0x30,0x47,0x07,0x45,0xec,0xc1,0xee,0xc5,0x53,0x91,0x2f,0x70,0x34,0x34 };
+      if(!ecmP->MECM(buff[15],mecmAlgo,odata,cw)) return false;
       }
     else { printf("MECM for provider %04x not supported\n",id); return false; }
     }

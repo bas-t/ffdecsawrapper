@@ -35,8 +35,6 @@ ADD_MODULE(L_SYS,lm_sys)
 
 int minEcmTime=400; // ms
 
-#ifndef TESTER
-
 // -- cPlainKeyNagra -----------------------------------------------------------
 
 #define PLAINLEN_NAGRA_H 8
@@ -196,8 +194,6 @@ cString cPlainKeyNagra::PrintKeyNr(void)
   if(TYPE(keynr)!=keytype) q+=snprintf(nr+q,sizeof(nr)-q," TYP%d",TYPE(keynr));
   return nr;
 }
-
-#endif // TESTER
 
 // -- cNagra -------------------------------------------------------------------
 

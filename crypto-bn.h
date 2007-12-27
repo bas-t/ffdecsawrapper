@@ -36,6 +36,7 @@ public:
   cBN(void) { BN_init(&big); }
   ~cBN() { BN_free(&big); }
   operator BIGNUM* () { return &big; }
+  BIGNUM *operator->() { return &big; }
   bool Get(const unsigned char *in, int n);
   bool GetLE(const unsigned char *in, int n);
   int Put(unsigned char *out, int n) const;

@@ -961,7 +961,7 @@ int cSmartCard::Read(unsigned char *data, int len, int to)
 
 int cSmartCard::Write(const unsigned char *data, int len)
 {
-  unsigned char tmp[len];
+  unsigned char *tmp=AUTOMEM(len);
   if(atr->convention==SM_INDIRECT) {
     memcpy(tmp,data,len);
     Invert(tmp,len);
@@ -969,7 +969,7 @@ int cSmartCard::Write(const unsigned char *data, int len)
     }
   int r=ser->Write(data,len);
   if(r>0) {
-    unsigned char buff[r];
+    unsigned char *buff=AUTOMEM(r);
     int rr=ser->Read(buff,r,cfg->serTO);
     if(rr<0) r=rr;
     }

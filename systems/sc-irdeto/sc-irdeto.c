@@ -50,7 +50,7 @@ ADD_MODULE(L_SC,lm_sc)
 
 static void BN_complement(const unsigned char *data, int len, BIGNUM *bn)
 {
-  unsigned char buff[len];
+  unsigned char *buff=AUTOMEM(len);
   for(int i=len-1; i>=0; i--) buff[i]=~data[i];
   BN_bin2bn(buff,len,bn);
   BN_add_word(bn,1);

@@ -58,7 +58,7 @@ int cBN::Put(unsigned char *out, int n) const
 {
   int s=BN_num_bytes(&big);
   if(s>n) {
-    unsigned char buff[s];
+    unsigned char *buff=AUTOMEM(s);
     BN_bn2bin(&big,buff);
     memcpy(out,buff+s-n,n);
     }
@@ -73,7 +73,7 @@ int cBN::Put(unsigned char *out, int n) const
 
 bool cBN::GetLE(const unsigned char *in, int n)
 {
-  unsigned char tmp[n];
+  unsigned char *tmp=AUTOMEM(n);
   RotateBytes(tmp,in,n);
   return BN_bin2bn(tmp,n,&big)!=0;
 }

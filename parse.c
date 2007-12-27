@@ -406,7 +406,7 @@ int cProviderViaccess::Assemble(cAssembleData *ad)
 
     case 0x8E:
       if(sharedEmm) {
-        unsigned char tmp[len+sharedLen];
+        unsigned char *tmp=AUTOMEM(len+sharedLen);
         unsigned char *ass=(unsigned char *)cParseViaccess::NanoStart(data);
         len-=(ass-data);
         if((data[6]&2)==0) {
@@ -635,7 +635,7 @@ int cCardCryptoworks::Assemble(cAssembleData *ad)
     case 0x86:
       if(sharedEmm) {
         int alen=len-5 + sharedLen-12;
-        unsigned char tmp[alen];
+        unsigned char *tmp=AUTOMEM(alen);
         memcpy(tmp,&data[5],len-5);
         memcpy(tmp+len-5,&sharedEmm[12],sharedLen-12);
 

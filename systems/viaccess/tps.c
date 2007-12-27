@@ -74,7 +74,7 @@ void cRC6::SetKey(const unsigned char *Key, int len)
   key[0]=RC6_P32;
   for(int v=1; v<RC6_MAX; v++) key[v]=key[v-1]+RC6_Q32;
   len/=4;
-  unsigned int a=0, b=0, l[len];
+  unsigned int a=0, b=0, *l=AUTOARRAY(unsigned int,len);
   memcpy(l,Key,len*4);
   for(int i=0,j=0,v=3*(len>RC6_MAX ? len : RC6_MAX) ; v>0; v--) {
     a=key[i]=rol(key[i]+a+b,3);
@@ -440,7 +440,13 @@ bool cOpenTVModule::DoDecompress(unsigned char *out_ptr, const unsigned char *in
         int off=0, len=0;
         unsigned char cmd=BYTE(); in_ptr++;
         switch(cmd>>4) {
-          case 0x0 ... 0x6:
+          case 0x0:
+          case 0x1:
+          case 0x2:
+          case 0x3:
+          case 0x4:
+          case 0x5:
+          case 0x6:
             off=((cmd&0xF)<<8)+BYTE(); in_ptr++;
             len=((cmd>>4)&0x7)+3;
             break;
@@ -461,14 +467,19 @@ bool cOpenTVModule::DoDecompress(unsigned char *out_ptr, const unsigned char *in
               }
             break;
             }
-          case 0x8 ... 0xB:
+          case 0x8:
+          case 0x9:
+          case 0xA:
+          case 0xB:
             if(cmd&0x20) NIBBLE(off); else off=0;
             off=(off<<1)|(cmd&0x1F); len=2;
             break;
           case 0xC:
             off=cmd&0x0F; len=3;
             break;
-          case 0xD ... 0xF:
+          case 0xD:
+          case 0xE:
+          case 0xF:
             NIBBLE(off);
             off|=cmd&0x0F; len=((cmd>>4)&0x3)+2;
             break;
@@ -717,6 +728,9 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
           for(int j=2; j < 0xC; j++)
             if(!memcmp(&d[addr+j],scan1,sizeof(scan1))) { cb1=addr; break; }
           }
+        else if(cb1 && !cb2) cb2=addr;
+        else if(cb1 && cb2 && !cb3) cb3=addr;
+/*
         else if((d[addr]&0xF0)==0x60 && (d[addr+1]&0xF0)==0xB0) {
           int vajw = (int)(((~(d[addr]&0x0F))<<4)|(d[addr+1]&0x0F));
           unsigned char hits=0;
@@ -733,6 +747,7 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
             else if(cb3==0) cb3=addr;
             }
           }
+*/
         }
       }
     }

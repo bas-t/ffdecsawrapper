@@ -281,7 +281,7 @@ void cCryptoworks::DecryptDES(unsigned char *data, unsigned char algo, const uns
 
 bool cCryptoworks::DecryptRSA(unsigned char *data, int len, unsigned char algo, const unsigned char *key22, BIGNUM *mod)
 {
-  unsigned char buf[64], mask[len];
+  unsigned char buf[64], *mask=AUTOMEM(len);
 
   LDUMP(L_SYS_VERBOSE,data+len,8,"rsa in:");
   memcpy(buf,data+len,8);
@@ -379,7 +379,7 @@ bool cPlainKeyCryptoworks::Parse(const char *line)
       keylen=IsBNKey() ? PLAINLEN_CW_R : PLAINLEN_CW_D;
       }
     if(ok) {
-      unsigned char skey[keylen];
+      unsigned char *skey=AUTOMEM(keylen);
       if(GetHex(line,skey,keylen)) {
         SetBinKey(skey,keylen);
         return true;

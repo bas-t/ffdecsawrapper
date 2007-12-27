@@ -80,7 +80,9 @@ int ReadRaw(const char *name, unsigned char *buff, int maxlen)
     int len=0;
     while(len<maxlen && fgets(line,sizeof(line),f)) {
       if(strstr(line,"dump: n=")) continue;
-      char *p=index(line,':');
+      char *p=index(line,'#');
+      if(p) *p=0;
+      p=index(line,':');
       if(p) p++; else p=line;
       while(1) {
         char *np;

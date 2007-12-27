@@ -38,11 +38,11 @@
 
 #define ADD_MODULE(MOD,NAME) static bool __add_mod_ ## NAME = cLogging::AddModule(MOD,&NAME);
 
-#define PRINTF(c,t...)      cLogging::Printf((c),t)
+#define PRINTF(c,...)       cLogging::Printf((c),__VA_ARGS__)
 #define PUTS(c,t)           cLogging::Puts((c),(t))
 #define PUTLB(c,lb)         cLogging::PutLB((c),(lb))
-#define HEXDUMP(c,d,n,t...) cLogging::Dump((c),(d),(n),t)
-#define LDUMP(c,d,n,t...)   cLogging::LineDump((c),(d),(n),t)
+#define HEXDUMP(c,d,n,...)  cLogging::Dump((c),(d),(n),__VA_ARGS__)
+#define LDUMP(c,d,n,...)    cLogging::LineDump((c),(d),(n),__VA_ARGS__)
 #define LOG(c)              cLogging::Enabled((c))
 
 // backward compatibility
@@ -50,7 +50,7 @@
 
 #define LBSTART(c)          do { int __c=(c); if(LOG(__c)) { cLogLineBuff __llb(__c)
 #define LBSTARTF(c)         do { int __c=(c); { cLogLineBuff __llb(__c)
-#define LBPUT(t...)         __llb.Printf(t)
+#define LBPUT(...)          __llb.Printf(__VA_ARGS__)
 #define LBFLUSH()           __llb.Flush()
 #define LBEND( )            } } while(0)
 
