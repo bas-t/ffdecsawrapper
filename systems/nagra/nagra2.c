@@ -70,9 +70,9 @@ bool cN2Emu::Init(int id, int romv)
     // ROM01 0x01:0x8000-0xffff
     if(!AddMapper(new cMapRom(0x8000,buff,0x0C000),0x8000,0x8000,0x01)) return false;
     // ROM02 0x02:0x8000-0xbfff
-    if(!AddMapper(new cMapRom(0x8000,buff,0x14000),0x8000,romv==110?0x8000:0x4000,0x02)) return false;
+    if(!AddMapper(new cMapRom(0x8000,buff,0x14000),0x8000,romv>=110?0x8000:0x4000,0x02)) return false;
 
-    snprintf(buff,sizeof(buff),"EEP%02X_%d.bin",(id>>8)&0xFF,romv);
+    snprintf(buff,sizeof(buff),"EEP%02X_%d.bin",(id>>8)&0xFF|0x01,romv);
     // Eeprom00 0x00:0x3000-0x37ff OTP 0x80
     if(!AddMapper(new cMapRom(0x3000,buff,0x0000),0x3000,0x0800,0x00)) return false;
     //XXX if(!AddMapper(new cMapEeprom(0x3000,buff,128,0x0000),0x3000,0x0800,0x00)) return false;
@@ -310,7 +310,7 @@ public:
 
 cN2Prov::cN2Prov(int Id, int Flags)
 {
-  keyValid=false; id=Id; flags=Flags;
+  keyValid=false; id=Id|0x100; flags=Flags;
 }
 
 void cN2Prov::PrintCaps(int c)
@@ -604,12 +604,15 @@ cSystemNagra2::~cSystemNagra2()
 
 bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
 {
-  if((ecm->provId>>8)==0x09 && data[4]==101) { // BEV rev248 morph
-    data[0x05]=9;                              // I _HATE_ this provider
-    data[0x06]&=0x1F;                          // specific stuff :(
-    data[0x07]=data[0x07]&0x10|0x86;
-    data[0x08]=0;
-    data[0x09]=data[0x09]&0x80|0x08;
+#define NA_SOURCE_START 0x8267 // cSource::FromString("S61.5W");
+#define NA_SOURCE_END   0x85c8 // cSource::FromString("S148W");
+  if(ecm->source>=NA_SOURCE_START && ecm->source<=NA_SOURCE_END) {
+    if(ecm->caId==0x1234) data[5]=0x09;		// NA rev 248 morph
+    else data[5]=0x01;				// I _HATE_ this provider
+    data[6]&=0x1F;				// specific stuff :(
+    data[7]=data[7]&0x10|0x86;
+    data[8]=0;
+    data[9]=data[9]&0x80|0x08;
     }
 
   int cmdLen=data[4]-5;

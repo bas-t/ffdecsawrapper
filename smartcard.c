@@ -999,11 +999,11 @@ int cSmartCard::Procedure(unsigned char ins, int restLen)
       if((buff&0xFE)==(ins&0xFE)) r=restLen;
       else if((~buff&0xFE)==(ins&0xFE)) r=1;
       else {
-        LBPUT("cannot handle procedure %02x (ins=%02x)\n",buff,ins);
+        LBPUT("cannot handle procedure %02x (ins=%02x)",buff,ins);
         return -1;
         }
       if(r>restLen) {
-        LBPUT("data overrun r=%d restLen=%d\n",r,restLen);
+        LBPUT("data overrun r=%d restLen=%d",r,restLen);
         return -1;
         }
       }
@@ -1177,7 +1177,7 @@ void cSmartCards::LoadData(const char *cfgdir)
 {
   mutex.Lock();
   dataList.Clear();
-  ConfRead("smartcard data",AddDirectory(cfgdir,DATAFILE));
+  ConfRead("smartcard data",AddDirectory(cfgdir,DATAFILE),true);
   mutex.Unlock();
 }
 

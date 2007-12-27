@@ -350,7 +350,7 @@ void cCamCryptVG2::LongMult(unsigned short *pData, unsigned short *pLen, unsigne
     pData[i]=(unsigned short)carry;
     carry>>=16;
     }
-  if(carry) pData[*pLen++]=carry;
+  if(carry) pData[(*pLen)++]=carry;
 }
 
 void cCamCryptVG2::PartialMod(unsigned short val, unsigned int count, unsigned short *outkey, const unsigned short *inkey)
@@ -392,8 +392,11 @@ static const unsigned char table1[256] = {
 
 void cCamCryptVG2::RotateRightAndHash(unsigned char *p)
 {
-  for(unsigned int i=0; i<16; i++)
-    p[i]=table1[ (p[i]>>1) | ((p[(i-1)&15]&1)<<7) ];
+  unsigned char t1=p[15];
+  for(int i=0; i<16; i++) {
+    unsigned char t2=t1;
+    t1=p[i]; p[i]=table1[(t1>>1)|((t2&1)<<7)];
+    }
 }
 
 // -- cCmdTable ----------------------------------------------------------------

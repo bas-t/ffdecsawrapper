@@ -536,7 +536,7 @@ void cCardClientCamd35::HandleEMMRequest(const struct CmdBlock *cb)
       if(!emmProcessing || emmCmd06) PRINTF(L_CC_CAMD35,"got cmd 02, doing cmd02 EMM");
       emmCmd06=false;
       }
-    else if(cb->udp_header.cmd==0x05 && cb->udp_header.len>=112) {
+    else if(cb->udp_header.cmd==0x05 && cb->udp_header.len>=111) {
       struct EmmReq05 *req=(struct EmmReq05 *)cb->data;
       numCaids=bswap_32(req->caidCount);
       for(int i=numCaids-1; i>=0; i--) Caids[i]=bswap_16(req->caids[i]);
@@ -550,6 +550,7 @@ void cCardClientCamd35::HandleEMMRequest(const struct CmdBlock *cb)
         case 0x06: SetCard(new cCardIrdeto(req->ua[3],&req->ua[0])); break;
         case 0x01: SetCard(new cCardSeca(&req->ua[0])); break;
         case 0x0d: SetCard(new cCardCryptoworks(&req->ua[0])); break;
+        case 0x05: SetCard(new cCardViaccess(&req->ua[0])); break;
         default:
           LBPUT(" (unhandled)");
           break;

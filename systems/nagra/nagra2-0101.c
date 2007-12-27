@@ -183,14 +183,14 @@ public:
   virtual int ProcessBx(unsigned char *data, int len, int pos);
   };
 
-static cN2ProvLinkReg<cN2Prov0101,0x0101,N2FLAG_MECM|N2FLAG_Bx> staticPL0101;
+static cN2ProvLinkReg<cN2Prov0101,0x0101,(N2FLAG_MECM|N2FLAG_Bx)> staticPL0101;
 
 cN2Prov0101::cN2Prov0101(int Id, int Flags)
 :cN2Prov(Id,Flags)
 {
   hasWriteHandler=hasReadHandler=true;
   special05=false;
-  hwCount=2;
+  hwCount=4;
 }
 
 bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
@@ -238,11 +238,12 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 
 int cN2Prov0101::ProcessBx(unsigned char *data, int len, int pos)
 {
-  if(Init(0x0101,102)) {
+  if(Init(id,102)) {
     SetMem(0x80,data,len);
     SetPc(0x80+pos);
     SetSp(0x0FFF,0x0FF0);
     ClearBreakpoints();
+    ForceSet(0x0001,0x0f,true); // fix xor 80
     AddBreakpoint(0x0000);
     AddBreakpoint(0x9569);
     AddBreakpoint(0xA822); // map handler
@@ -345,21 +346,12 @@ void cN2Prov0101::Stepper(void)
 class cN2Prov0901 : public cN2Prov0101 {
 public:
   cN2Prov0901(int Id, int Flags);
-  virtual int ProcessBx(unsigned char *data, int len, int pos);
   };
 
-static cN2ProvLinkReg<cN2Prov0901,0x0901,N2FLAG_MECM|N2FLAG_Bx> staticPL0901;
+static cN2ProvLinkReg<cN2Prov0901,0x0901,(N2FLAG_MECM|N2FLAG_Bx)> staticPL0901;
 
 cN2Prov0901::cN2Prov0901(int Id, int Flags)
 :cN2Prov0101(Id,Flags)
 {
   hwCount=4;
-}
-
-int cN2Prov0901::ProcessBx(unsigned char *data, int len, int pos)
-{
-  if(Init(0x0801,102)) {
-    return cN2Prov0101::ProcessBx(data,len,pos);
-    }
-  return -1;
 }

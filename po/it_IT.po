@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2007-09-13 19:11+0200\n"
+"POT-Creation-Date: 2007-10-27 17:16+0200\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -14,228 +14,175 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-15\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: sc.c:117 sc.c:1198
 msgid "off"
 msgstr ""
 
-#: sc.c:546 sc.c:852
 msgid "SoftCAM"
 msgstr "SoftCAM"
 
-#: sc.c:548
 msgid "Current keys:"
 msgstr "Chiave in uso:"
 
-#: sc.c:563
 msgid "Key update status:"
 msgstr ""
 
 #. TRANSLATORS: 2 leading spaces!
-#: sc.c:567
 msgid "  [Seen keys]"
 msgstr "  [Chiavi trovate]"
 
 #. TRANSLATORS: 2 leading spaces!
-#: sc.c:569
 msgid "  [New keys]"
 msgstr "  [Nuove chiavi]"
 
-#: sc.c:593
 msgid "Smartcard"
 msgstr ""
 
-#: sc.c:598
 msgid "Reset card"
 msgstr ""
 
-#: sc.c:604
 msgid "Really reset card?"
 msgstr ""
 
-#: sc.c:643
 msgid "Module config"
 msgstr ""
 
-#: sc.c:646
 msgid "Reset module to default"
 msgstr ""
 
-#: sc.c:680
 msgid "Really reset module to default?"
 msgstr ""
 
-#: sc.c:721
 msgid "Module"
 msgstr ""
 
-#: sc.c:736
 msgid "Message logging"
 msgstr ""
 
-#: sc.c:739
 msgid "Disable ALL modules"
 msgstr ""
 
-#: sc.c:740
 msgid "Reset ALL modules to default"
 msgstr ""
 
-#: sc.c:763
 msgid "Really disable ALL modules?"
 msgstr ""
 
-#: sc.c:771
 msgid "Really reset ALL modules to default?"
 msgstr ""
 
-#: sc.c:801
 msgid "Cryptsystem options"
 msgstr ""
 
-#: sc.c:858
 msgid "Cryptsystem options..."
 msgstr ""
 
-#: sc.c:859
 msgid "Message logging..."
 msgstr ""
 
-#: sc.c:864
 msgid "Smartcard interface"
 msgstr ""
 
-#: sc.c:866
 msgid "(empty)"
 msgstr "(nessuna)"
 
-#: sc.c:869
 msgid "Status information..."
 msgstr ""
 
-#: sc.c:870
 msgid "Flush ECM cache"
 msgstr ""
 
-#: sc.c:871
 msgid "Reload files"
 msgstr ""
 
-#: sc.c:898
 msgid "Really flush ECM cache?"
 msgstr ""
 
-#: sc.c:917
 msgid "Really reload files?"
 msgstr "Ricarica il file delle chiavi?"
 
-#: sc.c:924
 msgid "Active! Can't reload files now"
 msgstr "Chiave in uso!"
 
-#: sc.c:1033
 msgid "(none)"
 msgstr "(nessuno)"
 
-#: sc.c:1198
 msgid "active CAIDs"
 msgstr ""
 
-#: sc.c:1198
 msgid "all CAIDs"
 msgstr ""
 
-#: sc.c:1200
 msgid "Update keys (AU)"
 msgstr ""
 
-#: sc.c:1201
+msgid "Start AU on EPG scan"
+msgstr ""
+
 msgid "Concurrent FF streams"
 msgstr ""
 
-#: sc.c:1202
 msgid "Force TransferMode"
 msgstr ""
 
-#: sc.c:1203
 msgid "Prefer local systems"
 msgstr ""
 
-#: sc.c:1204
 msgid "Active on DVB card"
 msgstr ""
 
-#: sc.c:1205
 msgid "Ignore CAID"
 msgstr ""
 
-#: sc.c:1207
 msgid "Log to console"
 msgstr ""
 
-#: sc.c:1208
 msgid "Log to file"
 msgstr ""
 
-#: sc.c:1209
 msgid "Filename"
 msgstr ""
 
-#: sc.c:1210
 msgid "Filesize limit (KB)"
 msgstr ""
 
-#: sc.c:1211
 msgid "Log to syslog"
 msgstr ""
 
-#: sc.c:1281
 msgid "A software emulated CAM"
 msgstr ""
 
-#: system.c:250
 msgid "undisclosed key"
 msgstr ""
 
-#: systems/cardclient/cc.c:241
 msgid "Cardclient: connect immediately"
 msgstr ""
 
-#: systems/nagra/nagra1.c:977
 msgid "Nagra: min. ECM processing time"
 msgstr ""
 
-#: systems/sc-cryptoworks/sc-cryptoworks.c:81
 msgid "don't touch"
 msgstr ""
 
-#: systems/sc-cryptoworks/sc-cryptoworks.c:82
 msgid "disable"
 msgstr ""
 
-#: systems/sc-cryptoworks/sc-cryptoworks.c:86
 msgid "SC-Cryptoworks: Parental rating"
 msgstr ""
 
-#: systems/sc-seca/sc-seca.c:81
 msgid "allow ALL"
 msgstr ""
 
-#: systems/sc-seca/sc-seca.c:82
 msgid "block UNIQUE"
 msgstr ""
 
-#: systems/sc-seca/sc-seca.c:83
 msgid "block SHARED"
 msgstr ""
 
-#: systems/sc-seca/sc-seca.c:84
 msgid "block ALL"
 msgstr ""
 
-#: systems/sc-seca/sc-seca.c:100
 msgid "SC-Seca: EMM updates"
 msgstr ""
 
-#: systems/sc-seca/sc-seca.c:101
 msgid "SC-Seca: activate PPV"
 msgstr ""

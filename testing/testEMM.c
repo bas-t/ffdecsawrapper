@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "common.h"
 #include "data.h"
 #include "system.h"
 #include "compat.h"

@@ -228,7 +228,7 @@ bool cSmartCardConax::Init(void)
             }         
           }
         infoStr.Printf("|%04X|%s|%s-%s|\n",ent.id,ent.name,ent.date[0],ent.date[1]);
-        infoStr.Printf("|    |            |%s-%s\n",ent.date[2],ent.date[3]);
+        infoStr.Printf("|    |            |%s-%s|\n",ent.date[2],ent.date[3]);
         }
       } while((l=GetLen())>0);
     }

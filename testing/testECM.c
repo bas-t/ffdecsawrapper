@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     }
   DllsLoad(argv[1]);
   InitAll(argv[2]);
+  LogAll();
   unsigned char ecm[4096];
   ReadRaw(argv[5],ecm,sizeof(ecm));
     

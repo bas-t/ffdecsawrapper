@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <fnmatch.h>
 #define DEBUG
-#include "common.h"
 #include "data.h"
 #include "sc.h"
 #include "scsetup.h"
@@ -15,6 +14,7 @@
 #include "smartcard.h"
 #include "cam.h"
 #include "log.h"
+#include "version.h"
 
 #define LIBSC_PREFIX  "libsc-"
 #define SO_INDICATOR   ".so."
@@ -104,6 +104,11 @@ int ReadRaw(const char *name, unsigned char *buff, int maxlen)
 //
 //
 
+const char *ScVersion = SCVERSION;
+
+//
+//
+
 extern const char *I18nTranslate(const char *s, const char *Plugin)
 {
   return s;
@@ -133,8 +138,10 @@ cScSetup::cScSetup(void)
   memset(ScCaps,0,sizeof(ScCaps));
   ScCaps[0] = 1;
   ScCaps[1] = 2;
-  ConcurrentFF = 1;
+  ConcurrentFF = 0;
   memset(CaIgnore,0,sizeof(CaIgnore));
+  LocalPriority = 0;
+  ForceTransfer = 1;
 }
 
 void cScSetup::Check(void) {}

@@ -141,7 +141,7 @@ cSmartCardViaccess::cSmartCardViaccess(void)
 bool cSmartCardViaccess::Init(void)
 {
   static const unsigned char verifyBytes[] = { 0x90,0x00 };
-  if(atr->T!=0 || (atr->histLen<7 && memcmp(atr->hist+(atr->histLen-2),verifyBytes,sizeof(verifyBytes)))) {
+  if(atr->T!=0 || atr->histLen<7 || memcmp(&atr->hist[5],verifyBytes,sizeof(verifyBytes))) {
     PRINTF(L_SC_INIT,"doesn't look like a Viaccess card");
     return false;
     }
@@ -149,10 +149,12 @@ bool cSmartCardViaccess::Init(void)
   infoStr.Begin();
   infoStr.Strcat("Viaccess smartcard\n");
   char *ver=0;
-  switch((atr->hist[atr->histLen-4]<<8)|atr->hist[atr->histLen-3]) {
+  switch((atr->hist[3]<<8)|atr->hist[4]) {
     case 0x6268: ver="2.3"; break;
-    case 0x6668: ver="2.4(?)"; break;
-    case 0xa268:
+    case 0x6468:
+    case 0x6668: ver="2.4"; break;
+    case 0xa268: ver="2.5"; break;
+    case 0xc168: ver="2.6"; break;
     default: ver="unknown"; break;
     }
       

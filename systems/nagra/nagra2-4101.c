@@ -28,7 +28,7 @@ public:
   virtual int ProcessBx(unsigned char *data, int len, int pos);
   };
 
-static cN2ProvLinkReg<cN2Prov4101,0x4101,N2FLAG_POSTAU|N2FLAG_Bx> staticPL4101;
+static cN2ProvLinkReg<cN2Prov4101,0x4101,(N2FLAG_POSTAU|N2FLAG_Bx)> staticPL4101;
 
 cN2Prov4101::cN2Prov4101(int Id, int Flags)
 :cN2Prov(Id,Flags)
@@ -89,4 +89,4 @@ void cN2Prov4101::WriteHandler(unsigned char seg, unsigned short ea, unsigned ch
 
 // -- cN2Prov7101 ----------------------------------------------------------------
 
-static cN2ProvLinkReg<cN2Prov4101,0x7101,N2FLAG_POSTAU> staticPL7101;
+static cN2ProvLinkReg<cN2Prov4101,0x7101,(N2FLAG_POSTAU)> staticPL7101;
