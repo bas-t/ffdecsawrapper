@@ -1,0 +1,14 @@
+syntax: glob
+*.o
+*.so
+*.a
+.dependencies
+*/.dependencies
+po/*.mo
+po/*.pot
+*.orig
+*.rej
+*.bak
+
+syntax: regexp
+^testing/test[^.]*$
