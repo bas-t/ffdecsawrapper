@@ -127,15 +127,10 @@ private:
   cAuxSrv aux;
 #endif
   //
-  void GenCRC16Table(void);
   void MakePrime(BIGNUM *n, unsigned char *residues);
 protected:
-  unsigned short crc16table[256];
-  //
   void DoMap(int f, unsigned char *data=0, int l=0);
   unsigned int MapCycles() { return cycles; }
-public:
-  cMap0101(void);
   };
 
 const unsigned char cMap0101::primes[] = {
@@ -404,25 +399,6 @@ const unsigned short cMap0101::coef22[256][32] = {
   {436,17,16,17,16,17,17,16,27,26,27,26,26,27,26,27,37,38,38,37,38,37,38,38,48,49,48,49,49,48,49,48},
   };
 
-cMap0101::cMap0101(void)
-{
-  GenCRC16Table();
-}
-
-void cMap0101::GenCRC16Table(void)
-{
-  unsigned char hi[256];
-    for(int i=0; i<256; ++i) {
-      unsigned short c = i;
-      for(int j=0; j<8; ++j) c = (c>>1) ^ ((c&1) ? 0x8408 : 0); // ccitt poly
-      crc16table[0xff-i] = c & 0xff;
-      hi[i] = c>>8;
-      }
-    for(int i=0; i<32; ++i)
-      for(int j=0; j<8; ++j)
-        crc16table[i*8+j] |= hi[(0x87+(i*8)-j)&0xff]<<8;
-}
-
 void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
 {
   bool isPrime;
@@ -628,11 +604,13 @@ private:
   unsigned short CRCvalue;
   unsigned char CRCpos;
   unsigned int CRCstarttime;
+  unsigned short crc16table[256];
   //
   void AddRomCallbacks(void);
   bool RomCallbacks(void);
   bool ProcessMap(int f);
   bool ProcessDESMap(int f);
+  void GenCRC16Table(void);
 protected:
   int mecmAddr[2];
   int mecmKeyId;
@@ -661,6 +639,21 @@ cN2Prov0101::cN2Prov0101(int Id, int Flags)
 
   desSize=16;
   CRCvalue=0; CRCpos=0; CRCstarttime=0;
+  GenCRC16Table();
+}
+
+void cN2Prov0101::GenCRC16Table(void)
+{
+  unsigned char hi[256];
+    for(int i=0; i<256; ++i) {
+      unsigned short c = i;
+      for(int j=0; j<8; ++j) c = (c>>1) ^ ((c&1) ? 0x8408 : 0); // ccitt poly
+      crc16table[0xff-i] = c & 0xff;
+      hi[i] = c>>8;
+      }
+    for(int i=0; i<32; ++i)
+      for(int j=0; j<8; ++j)
+        crc16table[i*8+j] |= hi[(0x87+(i*8)-j)&0xff]<<8;
 }
 
 bool cN2Prov0101::Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw)
