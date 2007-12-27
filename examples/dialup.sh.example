@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# This script is called from VDR to start/stop dialup-network
+#
+# argument 1: wanted action, one of start,stop
+#
+
+RUN="/var/tmp/vdr.dialup.run"
+
+action="$1"
+
+case "$action" in
+up)
+  up ppp0
+  touch "$RUN"
+  sleep 2
+  ;;
+down)
+  down ppp0
+  rm -f "$RUN"
+  ;;
+esac
+
+exit 0

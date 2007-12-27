@@ -1,0 +1,8 @@
+#!/bin/bash
+
+URL="http://www.some-host.com/aes/"
+
+key=`wget -q -O- -U "Mozilla" "--referer=$URL" "$URL" | sed -ne '/007C00/ s/^.*clef Pri//p' | sed -ne 's/<pre>.*$//p' | sed -ne 's/: [0-9]\{2\} ://gp' | sed -ne 's/[^0-9A-F]//gp'`
+if [ "aa$key" != "aa" ]; then
+  echo "V 007C00 TPS $key"
+fi
