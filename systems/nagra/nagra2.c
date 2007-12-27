@@ -30,6 +30,170 @@
 #define SYSTEM_NAME          "Nagra2"
 #define SYSTEM_PRI           -10
 
+// -- cN2Timer -----------------------------------------------------------------
+
+cN2Timer::cN2Timer(void)
+{
+  cycles=0; ctrl=0; divisor=1; remainder=-1; latch=0xFF;
+}
+
+void cN2Timer::AddCycles(int count)
+{
+  if(Running()) {
+    remainder+=count;
+    if(remainder>=divisor) {
+      cycles-=remainder/divisor;
+      remainder%=divisor;
+      }
+    if(ctrl&tmCONTINUOUS) {
+      while(cycles<0) cycles+=latch+1;
+      }
+    else if(cycles<0 || (cycles==0 && remainder>=4)) {
+      cycles=0;
+      Stop();
+      }
+    }
+}
+
+void cN2Timer::Latch(unsigned char val)
+{
+  if(!Running()) {
+    latch=val; if(latch==0) latch=0x100;
+    cycles=latch; remainder=0;
+    ctrl|=tmLATCHED;
+    }
+}
+
+void cN2Timer::Ctrl(unsigned char val)
+{
+  if(Running()) {
+    ctrl=(ctrl&~tmRUNNING) | (val&tmRUNNING);
+    if(!Running()) Stop();
+    }
+  else {
+    ctrl=(ctrl&~tmMASK) | (val&tmMASK);
+    if(Running()) {
+      if((ctrl&0xc0)==0x40) divisor=1 << (2 *(1 + ((ctrl & 0x38) >> 3)));
+      else divisor=4; // This is wrong, but we haven't figured the right value out yet
+      if(divisor<=0) divisor=1; // sanity
+      if(!(ctrl&tmLATCHED)) cycles=(unsigned int)(cycles-1)&0xFF;
+      PRINTF(L_SYS_EMU,"n2timer: started latch=%x div=%d cycles=%x ctrl=%x",latch,divisor,cycles,ctrl);
+      remainder=-1;
+      if(!(ctrl&tmCONTINUOUS) && cycles==0) ctrl&=~tmRUNNING;
+      }
+    }
+}
+
+void cN2Timer::Stop(void)
+{
+  ctrl&=~(tmRUNNING|tmLATCHED);
+}
+
+// -- cMapMemHW ----------------------------------------------------------------
+
+cMapMemHW::cMapMemHW(void)
+:cMapMem(HW_OFFSET,HW_REGS)
+{
+  cycles=0;
+  CRCvalue=0; CRCpos=0; CRCstarttime=0;
+  GenCRC16Table();
+  PRINTF(L_SYS_EMU,"mapmemhw: new HW map off=%04x size=%04x",offset,size);
+}
+
+void cMapMemHW::GenCRC16Table(void)
+{
+  unsigned char hi[256];
+    for(int i=0; i<256; ++i) {
+      unsigned short c = i;
+      for(int j=0; j<8; ++j) c = (c>>1) ^ ((c&1) ? 0x8408 : 0); // ccitt poly
+      crc16table[0xff-i] = c & 0xff;
+      hi[i] = c>>8;
+      }
+    for(int i=0; i<32; ++i)
+      for(int j=0; j<8; ++j)
+        crc16table[i*8+j] |= hi[(0x87+(i*8)-j)&0xff]<<8;
+}
+
+void cMapMemHW::AddCycles(unsigned int num)
+{
+  cycles+=num;
+  for(int i=0; i<MAX_TIMERS; i++) timer[i].AddCycles(num);
+}
+
+unsigned char cMapMemHW::Get(unsigned short ea)
+{
+  if(ea<offset || ea>=offset+size) return 0;
+  ea-=offset;
+  switch(ea) {
+    case HW_SECURITY:
+      return 0x0F;
+    case HW_TIMER0_CONTROL:
+    case HW_TIMER1_CONTROL:
+    case HW_TIMER2_CONTROL:
+      return timer[TIMER_NUM(ea)].Ctrl();
+    case HW_TIMER0_DATA:
+    case HW_TIMER1_DATA:
+    case HW_TIMER2_DATA:
+      return timer[TIMER_NUM(ea)].Cycles();
+    case HW_TIMER0_LATCH:
+    case HW_TIMER1_LATCH:
+    case HW_TIMER2_LATCH:
+      return timer[TIMER_NUM(ea)].Latch();
+    case HW_CRC_CONTROL:
+      {
+      unsigned char r=mem[ea];
+      if(!(r&CRC_DISABLED) && cycles-CRCstarttime<CRCCALC_DELAY) r|=CRC_BUSY; // busy
+      else r&=~CRC_BUSY; // not busy
+      return r;
+      }
+    case HW_CRC_DATA:
+      {
+      unsigned char r=CRCvalue>>((CRCpos&1)<<3);
+      CRCpos=!CRCpos;
+      return r;
+      }
+    default:
+      return mem[ea];
+    }
+}
+
+void cMapMemHW::Set(unsigned short ea, unsigned char val)
+{
+  if(ea<offset || ea>=offset+size) return;
+  ea-=offset;
+  switch(ea) {
+    case HW_SECURITY:
+      break;
+    case HW_TIMER0_CONTROL:
+    case HW_TIMER1_CONTROL:
+    case HW_TIMER2_CONTROL:
+      timer[TIMER_NUM(ea)].Ctrl(val);
+      break;
+    case HW_TIMER0_LATCH:
+    case HW_TIMER1_LATCH:
+    case HW_TIMER2_LATCH:
+      timer[TIMER_NUM(ea)].Latch(val);
+      break;
+    case HW_CRC_CONTROL:
+      mem[ea]=val;
+      if(!(val&CRC_DISABLED)) {
+        CRCvalue=0; CRCpos=0;
+        CRCstarttime=cycles-CRCCALC_DELAY;
+        }
+      break;
+    case HW_CRC_DATA:
+      if(!(mem[HW_CRC_CONTROL]&CRC_DISABLED) && cycles-CRCstarttime>=CRCCALC_DELAY) {
+        CRCvalue=(CRCvalue>>8)^crc16table[(CRCvalue^val)&0xFF];
+        CRCpos=0;
+        CRCstarttime=cycles;
+        }
+      break;
+    default:
+      mem[ea]=val;
+      break;
+    }
+}
+
 // -- cN2Emu -------------------------------------------------------------------
 
 cN2Emu::cN2Emu(void)
@@ -297,6 +461,7 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       // fall through
     case IMPORT_LAST:
       regs[last]->GetLE(data,last>0?dl:8);
+      cycles=944; // certainly dependant on the wordsize, but for now enough for PW
       break;
 
     case EXPORT_J:
