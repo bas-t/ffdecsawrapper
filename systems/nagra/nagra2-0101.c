@@ -286,7 +286,7 @@ void cN2Prov0101::WriteHandler(unsigned char seg, unsigned short ea, unsigned ch
     if(ea==0x05) {
       special05=(op&0x40)!=0;
       }
-    else if(ea==0x16) {
+    else if(ea==0x0a || ea==0x12 || ea==0x16) {
       unsigned char old=Get(ea);
       if(old&2) op=(old&~0x02) | (op&0x02);
       }

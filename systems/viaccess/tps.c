@@ -1186,10 +1186,10 @@ int cTPS::Decrypt(int cardNum, int Source, int Transponder, unsigned char *data,
       case 0xEA:
         if(doPre) TpsDecrypt(&data[i+2],k->Mode(0),k->Key(0));
         if(doTPS) TpsDecrypt(&data[i+2],(hasDF)?k->Mode(2):1,k->Key(2));
+        if(doPost) { postMode=k->Mode(1); memcpy(postKey,k->Key(1),sizeof(postKey)); }
         break;
       }
     }
-  postMode=k->Mode(1); memcpy(postKey,k->Key(1),sizeof(postKey));
   return ret;
 }
 

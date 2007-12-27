@@ -182,7 +182,7 @@ msgstr "Tiedoston nimi"
 
 #: sc.c:1210
 msgid "Filesize limit (KB)"
-msgstr ""
+msgstr "Tiedoston maksimikoko (KB)"
 
 #: sc.c:1211
 msgid "Log to syslog"

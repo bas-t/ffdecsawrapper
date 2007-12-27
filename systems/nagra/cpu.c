@@ -35,7 +35,7 @@ cMapMem::cMapMem(unsigned short Offset, int Size)
   offset=Offset; size=Size;
   if((mem=(unsigned char *)malloc(size)))
     memset(mem,0,size);
-  PRINTF(L_SYS_EMU,"mapmem: new map off=%04x size=%04x",offset,size);
+//  PRINTF(L_SYS_EMU,"mapmem: new map off=%04x size=%04x",offset,size);
 }
 
 cMapMem::~cMapMem()
@@ -255,9 +255,9 @@ void c6805::SetSp(unsigned short SpHi, unsigned short SpLow)
   spLow   =SpLow;
 }
 
-void c6805::SetPc(unsigned short addr)
+void c6805::SetPc(unsigned short addr, unsigned char seg)
 {
-  pc=addr;
+  pc=addr; cr=seg;
 }
 
 void c6805::PopPc(void)
@@ -562,7 +562,7 @@ int c6805::Run(int max_count)
         case 0x0:			// bit
         case 0x1:
           op=Get(pr,ea);
-          if(hasReadHandler) ReadHandler(cr,ea,op);
+          if(hasReadHandler) ReadHandler(pr,ea,op);
           CCLOGLBPUT("{%02x} ",op);
           break;
         case 0xA:			// immediate

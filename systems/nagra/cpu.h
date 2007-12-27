@@ -140,7 +140,7 @@ protected:
   void SetMem(unsigned short addr, const unsigned char *data, int len, unsigned char seg=0);
   void ForceSet(unsigned short ea, unsigned char val, bool ro);
   void SetSp(unsigned short SpHi, unsigned short SpLow);
-  void SetPc(unsigned short addr);
+  void SetPc(unsigned short addr, unsigned char seg=0);
   unsigned short GetPc(void) const { return pc; }
   void PopPc(void);
   void PopCr(void);
