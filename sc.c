@@ -69,7 +69,7 @@
 #if !defined(VDR_IS_SC_PATCHED)
 #error You MUST patch the VDR core with the supplied patch. Next time read the README first.
 #endif
-#if VDR_IS_SC_PATCHED<401
+#if VDR_IS_SC_PATCHED<402
 #error Your VDR core is patched with an outdated patch version. Please upgrade to the supplied version.
 #endif
 #endif //APIVERSNUM >= 10500
@@ -951,6 +951,7 @@ cScSetup::cScSetup(void)
   ConcurrentFF = 0;
   memset(CaIgnore,0,sizeof(CaIgnore));
   LocalPriority = 0;
+  ForceTransfer = 1;
 }
 
 void cScSetup::Check(void)
@@ -967,6 +968,7 @@ void cScSetup::Check(void)
   PRINTF(L_CORE_LOAD,"** Key updates (AU) are %s",AutoUpdate?(AutoUpdate==1?"enabled (active CAIDs)":"enabled (all CAIDs)"):"DISABLED");
   PRINTF(L_CORE_LOAD,"** Local systems %stake priority over cached remote",LocalPriority?"":"DON'T ");
   PRINTF(L_CORE_LOAD,"** Concurrent FF recordings are %sallowed",ConcurrentFF?"":"NOT ");
+  PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital auido",ForceTransfer?"F":"DON'T f");
   LBSTART(L_CORE_LOAD);
   LBPUT("** ScCaps are"); for(int i=0; i<MAXSCCAPS ; i++) LBPUT(" %d",ScCaps[i]);
   LBFLUSH();
@@ -1192,9 +1194,10 @@ public:
 cScPlugin::cScPlugin(void)
 {
   static const char *logg[] = { "off","active CAIDs","all CAIDs" };
-  ScOpts=new cOpts(0,5);
+  ScOpts=new cOpts(0,6);
   ScOpts->Add(new cOptSel  ("AutoUpdate"   ,"Update keys (AU)"     ,&ScSetup.AutoUpdate,3,logg));
   ScOpts->Add(new cOptBool ("ConcurrentFF" ,"Concurrent FF streams",&ScSetup.ConcurrentFF));
+  ScOpts->Add(new cOptBool ("ForceTranfer" ,"Force TransferMode"   ,&ScSetup.ForceTransfer));
   ScOpts->Add(new cOptBool ("LocalPriority","Prefer local systems" ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,"Active on DVB card"   , ScSetup.ScCaps,MAXSCCAPS,0));
   ScOpts->Add(new cOptMInt ("CaIgnore"     ,"Ignore CAID"          , ScSetup.CaIgnore,MAXCAIGN,2));

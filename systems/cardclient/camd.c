@@ -45,18 +45,16 @@ protected:
   cNetSocket so;
   bool emmProcessing;
   char username[11], password[11];
-  int CAID;
-  unsigned char lastEmmReq[32];
   //
   virtual bool Login(void);
   bool ParseKeyConfig(const char *config, int *num);
   bool ParseUserConfig(const char *config, int *num);
   virtual bool SendMsg(cNetSocket *so, const unsigned char *data, int len);
   virtual int RecvMsg(cNetSocket *so, unsigned char *data, int len, int to=-1);
-  void HandleEMMRequest(const unsigned char *buff, int len);
+  virtual void HandleEMMRequest(const unsigned char *buff, int len) {}
+  virtual bool CanHandleEMM(int SysId) { return false; }
 public:
   cCardClientCommon(const char *Name, bool ConReply, bool LogReply, bool DoAES, int MinMsgLen);
-  virtual bool CanHandle(unsigned short SysId);
   virtual bool Init(const char *config);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw);
   virtual bool ProcessEMM(int caSys, const unsigned char *source);
@@ -68,8 +66,6 @@ cCardClientCommon::cCardClientCommon(const char *Name, bool ConReply, bool LogRe
 {
   conReply=ConReply; logReply=LogReply; doAES=DoAES; minMsgLen=MinMsgLen;
   emmProcessing=exclusive=false;
-  CAID=0;
-  memset(lastEmmReq,0,sizeof(lastEmmReq));
 }
 
 bool cCardClientCommon::ParseUserConfig(const char *config, int *num)
@@ -126,11 +122,6 @@ int cCardClientCommon::RecvMsg(cNetSocket *so, unsigned char *data, int len, int
   return n;
 }
 
-bool cCardClientCommon::CanHandle(unsigned short SysId)
-{
-  return (emmProcessing && SysId==CAID) || cCardClient::CanHandle(SysId);
-}
-
 bool cCardClientCommon::Init(const char *config)
 {
   cMutexLock lock(this);
@@ -178,25 +169,9 @@ bool cCardClientCommon::Login(void)
   return true;
 }
 
-void cCardClientCommon::HandleEMMRequest(const unsigned char *buff, int len)
-{
-  if(len>=13 && buff[0]==0 && !CheckNull(buff,len) && memcmp(buff,lastEmmReq,13)) {
-    CAID=buff[1]*256+buff[2];
-    ResetIdSet();
-    SetCard(new cCardIrdeto(buff[6],&buff[3]));
-    AddProv(new cProviderIrdeto(0,&buff[7]));
-    AddProv(new cProviderIrdeto(2,&buff[10]));
-    memcpy(lastEmmReq,buff,13);
-    PRINTF(L_CC_LOGIN,"%s: CAID: %04x HexSerial: %02X%02X%02X, HexBase: %02X",name,CAID,buff[3],buff[4],buff[5],buff[6]);
-    PRINTF(L_CC_LOGIN,"%s: Provider00: %02X%02X%02X, Provider10: %02X%02X%02X",name,buff[7],buff[8],buff[9],buff[10],buff[11],buff[12]);
-    if(!emmAllowed) PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);
-    emmProcessing=true;
-    }
-}
-
 bool cCardClientCommon::ProcessEMM(int caSys, const unsigned char *source)
 {
-  if(emmProcessing && emmAllowed) {
+  if(emmAllowed && CanHandleEMM(caSys)) {
     cMutexLock lock(this);
     if(MatchEMM(source)) {
       const int length=SCT_LEN(source);
@@ -269,15 +244,57 @@ bool cCardClientCommon::ProcessECM(const cEcmInfo *ecm, const unsigned char *sou
 // -- cCardClientCamd33 --------------------------------------------------------
 
 class cCardClientCamd33 : public cCardClientCommon {
+private:
+  int CAID;
+  unsigned char lastEmmReq[32];
+protected:
+  virtual void HandleEMMRequest(const unsigned char *buff, int len);
+  virtual bool CanHandleEMM(int SysId);
 public:
   cCardClientCamd33(const char *Name);
+  virtual bool CanHandle(unsigned short SysId);
   };
 
 static cCardClientLinkReg<cCardClientCamd33> __camd33("Camd33");
 
 cCardClientCamd33::cCardClientCamd33(const char *Name)
 :cCardClientCommon(Name,true,true,true,0)
-{}
+{
+  CAID=0;
+  memset(lastEmmReq,0,sizeof(lastEmmReq));
+}
+
+bool cCardClientCamd33::CanHandle(unsigned short SysId)
+{
+  return CanHandleEMM(SysId) || cCardClient::CanHandle(SysId);
+}
+
+bool cCardClientCamd33::CanHandleEMM(int SysId)
+{
+  return (emmProcessing && SysId==CAID);
+}
+
+void cCardClientCamd33::HandleEMMRequest(const unsigned char *buff, int len)
+{
+  if(len>=13 && buff[0]==0 && !CheckNull(buff,len) && memcmp(buff,lastEmmReq,13)) {
+    emmProcessing=false;
+    CAID=buff[1]*256+buff[2];
+    ResetIdSet();
+    switch(CAID>>8) {
+      case 0x17:
+      case 0x06:
+        SetCard(new cCardIrdeto(buff[6],&buff[3]));
+        AddProv(new cProviderIrdeto(0,&buff[7]));
+        AddProv(new cProviderIrdeto(2,&buff[10]));
+        memcpy(lastEmmReq,buff,13);
+        PRINTF(L_CC_LOGIN,"%s: CAID: %04x HexSerial: %02X%02X%02X, HexBase: %02X",name,CAID,buff[3],buff[4],buff[5],buff[6]);
+        PRINTF(L_CC_LOGIN,"%s: Provider00: %02X%02X%02X, Provider10: %02X%02X%02X",name,buff[7],buff[8],buff[9],buff[10],buff[11],buff[12]);
+        if(!emmAllowed) PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);
+        emmProcessing=true;
+        break;
+      }
+    }
+}
 
 // -- cCardClientCardd ---------------------------------------------------------
 
