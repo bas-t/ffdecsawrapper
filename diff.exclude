@@ -10,3 +10,5 @@ diff.exclude
 *.rej
 *.bak
 nagra2-prov.c
+*.mo
+*.pot

@@ -8,16 +8,6 @@ Description: SoftCAM for Irdeto, Seca, Viaccess, Nagra, Conax & Cryptoworks
 
 
 
-WARNING! This is the SC plugin development branch !!
-
-This is a beta release. We encourage everybody to try this release, nevertheless
-it should be used under controlled conditions.
-
-Feel free to put your bugreports, suggestions and/or wishes to the 4free or DVBN
-board. A bugreports should at least include the console log.
-
-
-
 What is it ?
 ------------
 
@@ -25,10 +15,6 @@ First: Most certainly it's not legal to use this software in most countries of
 the world. But probably you already know this...
 
 SC means softcam, which means a software CAM emulation.
-
-The main development goal for this branch is a full-featured implementation
-without the needs to patch VDR. Recent changes in the new VDR development branch
-opened a possibility for that.
 
 The plugin captures the DVB devices in an early startup stage of VDR startup
 (before VDR itself has got access to them) and makes VDR believe that there is
@@ -98,9 +84,14 @@ You should use commandline option -B to force detection as a budget card in such
 a case. This commandline option takes a device number as argument and may appear
 multiple times (compare VDR commandline option -D).
 
-For testing purpose you should start VDR in foreground always. The plugin gives
-a lot of additional information to the console. This may be helpful in case it
-doesn't work at once.
+By default the plugin logs his messages to console only. For testing purpose
+it's a good idea to start VDR in foreground so you can see any error messages.
+Other available log targets are file and syslog. You can enable/disable any of
+the log targets in the plugin setup menu. For the file target you have to set a
+destination filename too. If you set a filesize limit (in KByte) and the logfile
+grows bigger than the limit, the current logfile is renamed to logfile.old and a
+new logfile is started. If the filesize limit is zero, the logfile never is
+rotated.
 
 
 

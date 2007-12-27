@@ -571,6 +571,25 @@ const cTpsKey *cTpsKeys::GetKey(time_t t)
   return 0;
 }
 
+const cTpsKey *cTpsKeys::GetV2Key(int id)
+{
+  unsigned char tmp[56];
+  memset(tmp,0,sizeof(tmp));
+  cPlainKey *pk=keys.FindKey('V',id,MBC3('T','P','S'),16,0);
+  if(pk) {
+    pk->Get(&tmp[4+2*16]);
+    tmp[52+2]=1;
+    tmp[52+3]=0x1C;
+    cTpsKey *tk=new cTpsKey;
+    if(tk) {
+      tk->Set(tmp);
+      return tk;
+      }
+    }
+  else PRINTF(L_SYS_KEY,"missing %.4x TPS key\n",id);
+  return 0;
+}
+
 void cTpsKeys::Check(time_t now, int cardnum)
 {
   checkMutex.Lock();
@@ -709,7 +728,10 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
               }
             }
           if(hits==3) cb3=addr;
-          else if(hits==2) cb2=addr;
+          else if(hits==2) {
+            if(cb2==0) cb2=addr;
+            else if(cb3==0) cb3=addr;
+            }
           }
         }
       }
@@ -1094,7 +1116,7 @@ bool cTPSDecrypt::DecryptAlgo3(const unsigned char *key, unsigned char *data)
     for(int i=0; i<16; i++) st20.WriteByte(RAMS+0x400+i,key[i]);
     st20.Init(FLASHS+cb2off,RAMS+0xF000);
     st20.SetCallFrame(0,RAMS+0x400,RAMS+0x800,0);
-    int err=st20.Decode(20000);
+    int err=st20.Decode(30000);
     if(err<0) {
       PRINTF(L_SYS_TPS,"ST20 processing failed in callback2 (%d)",err);
       return false;
@@ -1140,19 +1162,20 @@ int cTPS::Decrypt(int cardNum, int Source, int Transponder, unsigned char *data,
   if(now<0) return -1;
 
   const cTpsKey *k=tpskeys.GetKey(now);
-  if(!k) {
-    PRINTF(L_SYS_TPS,"no TPS key available for current time of day");
-    return -1;
-    }
   doPost=0;
-  int opmode=k->Opmode(), doTPS=0, doPre=0, hasDF=0, ret=0;
+  int opmode=k?k->Opmode():4, doTPS=0, doPre=0, hasDF=0, ret=0;
   if((opmode&4) && data[0]==0xD2 && data[1]==0x01 && data[2]==0x01) {
     data+=3; len-=3; ret=3;
     if(data[0]==0x90) PRINTF(L_SYS_TPS,"TPS v1 is no longer supported");
     if(data[0]==0x40) data[0]=0x90;
     doTPS=1;
+    if(!k) k=tpskeys.GetV2Key(0x7c00);
     }
-  for(int i=0; i<len; i+=data[i+1]+2)
+  for(int i=0; i<len; i+=data[i+1]+2) {
+    if(!k && (doTPS || doPre || doPost)) {
+      PRINTF(L_SYS_TPS,"no TPS key available for current time of day");
+      return -1;
+      }
     switch(data[i]) {
       case 0xDF:
         if(!(opmode&4)) doTPS =(0x6996>>((data[i+2]&0xF)^(data[i+2]>>4)))&1;
@@ -1165,6 +1188,7 @@ int cTPS::Decrypt(int cardNum, int Source, int Transponder, unsigned char *data,
         if(doTPS) TpsDecrypt(&data[i+2],(hasDF)?k->Mode(2):1,k->Key(2));
         break;
       }
+    }
   postMode=k->Mode(1); memcpy(postKey,k->Key(1),sizeof(postKey));
   return ret;
 }

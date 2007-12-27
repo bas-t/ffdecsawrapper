@@ -69,6 +69,7 @@
 
 struct LogConfig {
   int logCon, logFile, logSys;
+  int maxFilesize;
   char logFilename[128];
   };
 

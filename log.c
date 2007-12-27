@@ -40,6 +40,7 @@ struct LogHeader {
 
 struct LogConfig logcfg = {
   1,0,0,
+  0,
   "/var/log/vdr-sc"
   };
 
@@ -55,6 +56,7 @@ static int cmask[LMOD_SUP]  = { LMOD_ENABLE|L_GEN_ALL };
 static cMutex logfileMutex;
 static FILE *logfile=0;
 static bool logfileShutup=false, logfileReopen=false;
+static long long logfileSize;
 
 static unsigned int lastCrc=0;
 static int lastC=0, lastCount=0;
@@ -125,36 +127,55 @@ void cLogging::LogLine(const struct LogHeader *lh, const char *txt, bool doCrc)
       }
     }
 
+  if(logcfg.logFile) {
+    logfileMutex.Lock();
+    if(logfileReopen) {
+      logfileReopen=false; logfileShutup=false;
+      if(logfile) {
+        PRINTF(L_GEN_DEBUG,"logfile closed, reopen as '%s'",logcfg.logFilename);
+        fclose(logfile);
+        logfile=0;
+        }
+      }
+    if(!logfile && !logfileShutup) {
+      logfile=fopen(logcfg.logFilename,"a");
+      if(logfile) {
+        setlinebuf(logfile);
+        logfileSize=ftell(logfile);
+        if(logfileSize<0) {
+          logfileSize=0;
+          PRINTF(L_GEN_ERROR,"cannot determine size of logfile '%s', assuming zero",logcfg.logFilename);
+          }
+        PRINTF(L_GEN_DEBUG,"logfile '%s' opened",logcfg.logFilename);
+        }
+      else {
+        logfileShutup=true;
+        PRINTF(L_GEN_ERROR,"failed to open logfile '%s': %s",logcfg.logFilename,strerror(errno));
+        }
+      }
+    if(logfile) {
+      int q=fprintf(logfile,"%s [%s] %s\n",lh->stamp,lh->tag,txt);
+      if(q>0) logfileSize+=q;
+
+      if(logcfg.maxFilesize>0 && logfileSize>((long long)logcfg.maxFilesize*1024)) {
+        fprintf(logfile,"%s [%s] %s\n",lh->stamp,lh->tag,"logfile closed, filesize limit reached");
+        fclose(logfile);
+        logfile=0; logfileShutup=false;
+        char *name;
+        asprintf(&name,"%s.old",logcfg.logFilename);
+        if(rename(logcfg.logFilename,name)) {
+          logfileShutup=true;
+          PRINTF(L_GEN_ERROR,"failed to rotate logfile: %s",strerror(errno));
+          PRINTF(L_GEN_ERROR,"logging to file disabled!");
+          }
+        free(name);
+        }
+      }
+    logfileMutex.Unlock();
+    }
+
   if(logcfg.logCon)
     printf("%s [%s] %s\n",lh->stamp,lh->tag,txt);
-
-  if(logcfg.logFile) {
-    if((!logfile && !logfileShutup) || logfileReopen) {
-      logfileMutex.Lock();
-      if(logfileReopen) {
-        logfileReopen=false;
-        if(logfile) {
-          PRINTF(L_GEN_DEBUG,"logfile closed, reopen as '%s'",logcfg.logFilename);
-          fclose(logfile);
-          logfile=0;
-          }
-        }
-      if(!logfile) {
-        logfile=fopen(logcfg.logFilename,"a");
-        if(logfile) {
-          setlinebuf(logfile);
-          PRINTF(L_GEN_DEBUG,"logfile '%s' opened",logcfg.logFilename);
-          }
-        else {
-          logfileShutup=true;
-          PRINTF(L_GEN_ERROR,"failed to open logfile '%s': %s",logcfg.logFilename,strerror(errno));
-          }
-        }
-      logfileMutex.Unlock();
-      }
-    if(logfile)
-      fprintf(logfile,"%s [%s] %s\n",lh->stamp,lh->tag,txt);
-    }
 
   if(logcfg.logSys || LMOD(lh->c)==L_GEN) {
     int pri=-1;

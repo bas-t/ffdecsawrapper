@@ -604,6 +604,14 @@ cSystemNagra2::~cSystemNagra2()
 
 bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
 {
+  if((ecm->provId>>8)==0x09 && data[4]==101) { // BEV rev248 morph
+    data[0x05]=9;                              // I _HATE_ this provider
+    data[0x06]&=0x1F;                          // specific stuff :(
+    data[0x07]=data[0x07]&0x10|0x86;
+    data[0x08]=0;
+    data[0x09]=data[0x09]&0x80|0x08;
+    }
+
   int cmdLen=data[4]-5;
   int id=(data[5]*256)+data[6];
   cTimeMs minTime;
@@ -830,7 +838,6 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
       case 0xAE: i+=11;break;
       case 0x12: i+=emmdata[i+1]+2; break;      // create tier
       case 0x20: i+=19; break;                  // modify tier
-//      case 0x13 ... 0x17: i+=4; break;		// Date
       case 0xE3: i+=emmdata[i+4]+5; break;	// Eeprom update
       case 0xE1:
       case 0xE2:
