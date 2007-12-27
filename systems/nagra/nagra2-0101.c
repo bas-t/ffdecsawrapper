@@ -989,7 +989,7 @@ int cN2Prov0101::ProcessBx(unsigned char *data, int len, int pos)
     while(!Run(1000)) {
       if(GetPc()==0x9569) {
         GetMem(0x80,data,len);
-        return max((int)a,6);
+        return a;
         }
       else if(GetPc()==0x0000) break;
       else if(!RomCallbacks()) break;
