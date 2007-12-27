@@ -17,11 +17,18 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "nagra2.h"
+
 // -- cAuxSrv ------------------------------------------------------------------
 
 //#define HAS_AUXSRV
 
 #ifdef HAS_AUXSRV
+#include "network.h"
 #define AUX_PROTOCOL_VERSION 2
 static int auxEnabled=0;
 static int auxPort=7777;

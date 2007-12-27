@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "nagra.h"
+#include "nagra-def.h"
 #include "log-nagra.h"
 #include "log-core.h"
 

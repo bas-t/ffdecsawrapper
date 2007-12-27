@@ -22,36 +22,15 @@
 #include <string.h>
 
 #include "system.h"
-#include "misc.h"
 #include "opts.h"
-#include "network.h"
-#include "crypto.h"
-#include "helper.h"
-
-#include <openssl/des.h>
-#include <openssl/sha.h>
-#include "openssl-compat.h"
 
 #include "nagra.h"
-#include "cpu.h"
-#include "log-nagra.h"
+#include "nagra2.h"
 
 #define SYSTEM_NAME          "Nagra2"
 #define SYSTEM_PRI           -10
 
 // -- cN2Emu -------------------------------------------------------------------
-
-class cN2Emu : protected c6805 {
-private:
-  bool initDone;
-protected:
-  bool Init(int id, int romv);
-  virtual bool RomInit(void) { return true; }
-  virtual void Stepper(void) {}
-public:
-  cN2Emu(void);
-  virtual ~cN2Emu() {}
-  };
 
 cN2Emu::cN2Emu(void)
 {
@@ -86,67 +65,6 @@ bool cN2Emu::Init(int id, int romv)
 }
 
 // -- cMapCore -----------------------------------------------------------------
-
-#define SETSIZE     0x02
-#define IMPORT_J    0x03
-#define IMPORT_A    0x04
-#define IMPORT_B    0x05
-#define IMPORT_C    0x06
-#define IMPORT_D    0x07
-#define IMPORT_LAST 0x08
-#define EXPORT_J    0x09
-#define EXPORT_A    0x0A
-#define EXPORT_B    0x0B
-#define EXPORT_C    0x0C
-#define EXPORT_D    0x0D
-#define EXPORT_LAST 0x0E
-#define SWAP_A      0x0F
-#define SWAP_B      0x10
-#define SWAP_C      0x11
-#define SWAP_D      0x12
-#define CLEAR_A     0x13
-#define CLEAR_B     0x14
-#define CLEAR_C     0x15
-#define CLEAR_D     0x16
-#define COPY_A_B    0x17
-#define COPY_B_A    0x18
-#define COPY_A_C    0x19
-#define COPY_C_A    0x1A
-#define COPY_C_D    0x1B
-#define COPY_D_C    0x1C
-
-class cMapCore {
-private:
-  int last;
-  cBN *regs[5];
-  cBN x, y, s;
-protected:
-  int wordsize;
-  cBN A, B, C, D, J, I;
-  cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180
-  cBN sA0, sC0, sE0, s100, s120, s140, s160;
-  cBNctx ctx;
-  SHA_CTX sctx;
-  // stateless
-  void MakeJ0(BIGNUM *j, BIGNUM *d);
-  void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
-  void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
-  // statefull
-  void MonInit(int bits=0);
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b) { MonMul(o,a,b,C,D,J); }
-  void MonExpNeg(void);
-  // ECC
-  void DoubleP(int temp);
-  void AddP(int temp);
-  void ToProjective(int set, BIGNUM *x, BIGNUM *y);
-  void ToAffine(void);
-  void CurveInit(BIGNUM *a);
-  //
-  bool DoMap(int f, unsigned char *data=0, int l=0);
-public:
-  cMapCore(void);
-  };
 
 cMapCore::cMapCore(void)
 {
@@ -450,37 +368,6 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
 
 // -- cN2Prov ------------------------------------------------------------------
 
-#define N2FLAG_NONE     0
-#define N2FLAG_MECM     1
-#define N2FLAG_Bx       2
-#define N2FLAG_POSTAU   4
-#define N2FLAG_Ex       8
-#define N2FLAG_INV      128
-
-class cN2Prov {
-private:
-  unsigned char seed[32], cwkey[8];
-  bool keyValid;
-protected:
-  int id, flags, seedSize;
-  cIDEA idea;
-  //
-  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw) { return false; }
-  virtual bool NeedsCwSwap(void) { return false; }
-  void ExpandInput(unsigned char *hw);
-public:
-  cN2Prov(int Id, int Flags);
-  virtual ~cN2Prov() {}
-  bool MECM(unsigned char in15, int algo, const unsigned char *ed, unsigned char *cw);
-  void SwapCW(unsigned char *cw);
-  virtual int ProcessBx(unsigned char *data, int len, int pos) { return -1; }
-  virtual int ProcessEx(unsigned char *data, int len, int pos) { return -1; }
-  virtual bool PostProcAU(int id, unsigned char *data) { return true; }
-  bool CanHandle(int Id) { return MATCH_ID(Id,id); }
-  bool HasFlags(int Flags) { return (flags&Flags)==Flags; }
-  void PrintCaps(int c);
-  };
-
 cN2Prov::cN2Prov(int Id, int Flags)
 {
   keyValid=false; id=Id|0x100; flags=Flags; seedSize=5;
@@ -564,40 +451,7 @@ void cN2Prov::SwapCW(unsigned char *cw)
     }
 }
 
-// -- cN2ProvLink & cN2Providers -----------------------------------------------
-
-class cN2Providers;
-
-class cN2ProvLink {
-friend class cN2Providers;
-private:
-  cN2ProvLink *next;
-protected:
-  int id, flags;
-  //
-  virtual cN2Prov *Create(void)=0;
-  bool CanHandle(int Id) { return MATCH_ID(Id,id); }
-  bool HasFlags(int Flags) { return (flags&Flags)==Flags; }
-public:
-  cN2ProvLink(int Id, int Flags);
-  virtual ~cN2ProvLink() {}
-  };
-
-class cN2Providers {
-friend class cN2ProvLink;
-private:
-  static cN2ProvLink *first;
-  //
-  static void Register(cN2ProvLink *plink);
-public:
-  static cN2Prov *GetProv(int Id, int Flags);
-  };
-
-template<class PROV, int ID, int FLAGS> class cN2ProvLinkReg : public cN2ProvLink {
-public:
-  cN2ProvLinkReg(void):cN2ProvLink(ID,FLAGS) {}
-  virtual cN2Prov *Create(void) { return new PROV(id,flags); }
-  };
+// -- cN2Providers -------------------------------------------------------------
 
 cN2ProvLink *cN2Providers::first=0;
 
@@ -618,15 +472,13 @@ cN2Prov *cN2Providers::GetProv(int Id, int Flags)
   return 0;
 }
 
+// -- cN2ProvLink --------------------------------------------------------------
+
 cN2ProvLink::cN2ProvLink(int Id, int Flags)
 {
   id=Id; flags=Flags;
   cN2Providers::Register(this);
 }
-
-#include "nagra2-prov.c"
-
-#ifndef TESTER
 
 // -- cNagra2 ------------------------------------------------------------------
 
@@ -1093,5 +945,3 @@ bool cSystemLinkNagra2::CanHandle(unsigned short SysId)
   return ((SysId&SYSTEM_MASK)==SYSTEM_NAGRA && (SysId&0xFF)>0) ||
           SysId==SYSTEM_NAGRA_BEV;
 }
-
-#endif //TESTER

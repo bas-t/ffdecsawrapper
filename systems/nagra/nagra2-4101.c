@@ -17,6 +17,12 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "nagra2.h"
+
 // -- cMap4101 -----------------------------------------------------------------
 
 class cMap4101 : public cMapCore {

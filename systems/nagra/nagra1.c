@@ -27,6 +27,7 @@
 #include "helper.h"
 
 #include "nagra.h"
+#include "nagra-def.h"
 #include "cpu.h"
 #include "log-nagra.h"
 
