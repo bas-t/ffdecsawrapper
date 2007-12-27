@@ -2,13 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define TESTER
 #include "crypto.h"
 #include "data.h"
 #include "system-common.h"
-#include "systems/nagra/cpu.c"
-#include "systems/nagra/nagra2.c"
-#include "systems/nagra/nagra.c"
+#include "systems/nagra/nagra2.h"
 
 #include "compat.h"
 

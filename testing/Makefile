@@ -40,7 +40,7 @@ $(VDRDIR)/%.o: $(VDRDIR)/%.c
 
 ### Targets:
 
-all: testECM testEMM testN1Emu testN2Emu
+all: testECM testEMM testN1Emu testN2Emu testN2RunEmu
 
 testECM.o: testECM.c compat.h
 testECM: testECM.o $(SHAREDOBJS) $(NOBJS)
@@ -54,14 +54,18 @@ testN1Emu.o: testN1Emu.c ../systems/nagra/nagra.c ../systems/nagra/nagra1.c ../s
 testN1Emu: testN1Emu.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
 
-testN2Emu.o: testN2Emu.c ../systems/nagra/nagra2*.c ../systems/nagra/cpu.c
+testN2Emu.o: testN2Emu.c
 testN2Emu: testN2Emu.o $(SHAREDOBJS) $(NOBJS)
-	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
+	$(CXX) $(CXXFLAGS) $^ $(LIBS) -L../systems/nagra -lsc-nagra -o $@
+
+testN2RunEmu.o: testN2RunEmu.c
+testN2RunEmu: testN2RunEmu.o $(SHAREDOBJS) $(NOBJS)
+	$(CXX) $(CXXFLAGS) $^ $(LIBS) -L../systems/nagra -lsc-nagra -o $@
 
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 clean:
 	@-rm -f *.o core* *~
-	@-rm -f testECM testEMM testN1Emu testN2Emu
+	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu
 	@-rm -f filterhelper
 	@-rm -f dump.txt
