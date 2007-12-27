@@ -25,6 +25,13 @@
 #define WORD(buffer,index,mask) (((buffer[(index)]<<8) + buffer[(index)+1]) & mask)
 #define SCT_LEN(sct) (3+(((sct)[1]&0x0f)<<8)+(sct)[2])
 
+#define MBC(a,b)    (((a)<<8)+(b))
+#define ADDC3(ab,c) ((ab)+((c)<<16))
+#define MBC3(a,b,c) ADDC3(MBC((a),(b)),(c))
+#define C2(x)       (((x)>>8)&0xFF)
+#define C3(x)       (((x)>>16)&0xFF)
+#define C2MASK      0xFFFF
+
 // replacement for variable-sized arrays
 #define AUTOARRAY(type,size) (type *)alloca(sizeof(type)*(size))
 #define AUTOMEM(size)        (unsigned char *)alloca(size)

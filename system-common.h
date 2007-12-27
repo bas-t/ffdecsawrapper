@@ -23,13 +23,6 @@
 #include "data.h"
 #include "system.h"
 
-#define MBC(a,b)    (((a)<<8)+(b))
-#define ADDC3(ab,c) ((ab)+((c)<<16))
-#define MBC3(a,b,c) ADDC3(MBC((a),(b)),(c))
-#define C2(x)       (((x)>>8)&0xFF)
-#define C3(x)       (((x)>>16)&0xFF)
-#define C2MASK      0xFFFF
-
 // ----------------------------------------------------------------
 
 class cHexKey : public cPlainKey {
