@@ -80,8 +80,6 @@
 // SC API version number for loading shared libraries
 #define SCAPIVERS 10
 
-const char *ScVersion = SCVERSION;
-
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
 static char *cfgsub=0;
