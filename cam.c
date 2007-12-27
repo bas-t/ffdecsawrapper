@@ -26,15 +26,17 @@
 #include <dlfcn.h>
 
 #include <linux/dvb/ca.h>
+#include <vdr/channels.h>
 #include <vdr/ci.h>
 #include <vdr/dvbdevice.h>
+#ifndef SASC
 #if APIVERSNUM >= 10500
 #include <vdr/dvbci.h>
 #endif
-#include <vdr/channels.h>
 #include <vdr/thread.h>
 
 #include "FFdecsa/FFdecsa.h"
+#endif //SASC
 
 #include "cam.h"
 #include "scsetup.h"
@@ -719,46 +721,6 @@ bool cEcmCache::ParseLine(const char *line, bool fromCache)
     }
   delete dat;
   return res;
-}
-
-// -- cPrgPid ---------------------------------------------------------------------
-
-class cPrgPid : public cSimpleItem {
-private:
-  int type;
-  int pid;
-  bool proc;
-public:
-  cPrgPid(int Type, int Pid);
-  int Pid(void) { return pid; }
-  int Type(void) { return type; }
-  bool Proc(void) { return proc; }
-  void Proc(bool is) { proc=is; };
-  };
-
-cPrgPid::cPrgPid(int Type, int Pid)
-{
-  type=Type; pid=Pid;
-  proc=false;
-}
-
-// -- cPrg ---------------------------------------------------------------------
-
-class cPrg : public cSimpleItem {
-private:
-  int prg;
-  bool isUpdate;
-public:
-  cSimpleList<cPrgPid> pids;
-  //
-  cPrg(int Prg, bool IsUpdate);
-  int Prg(void) { return prg; }
-  bool IsUpdate(void) { return isUpdate; }
-  };
-
-cPrg::cPrg(int Prg, bool IsUpdate)
-{
-  prg=Prg; isUpdate=IsUpdate;
 }
 
 // -- cEcmSys ------------------------------------------------------------------
@@ -1538,7 +1500,7 @@ void cCam::WriteCW(int index, unsigned char *cw, bool force)
       memcpy(&last[0],&cw[0],8);
       ca_descr.parity=0;
       memcpy(ca_descr.cw,&cw[0],8);
-      if(!device->SetCaDescr(&ca_descr))
+      if(!device->SetCaDescr(&ca_descr,force))
         PRINTF(L_GEN_ERROR,"CA_SET_DESCR failed (%s). Expect a black screen.",strerror(errno));
       }
 
@@ -1546,7 +1508,7 @@ void cCam::WriteCW(int index, unsigned char *cw, bool force)
       memcpy(&last[8],&cw[8],8);
       ca_descr.parity=1;
       memcpy(ca_descr.cw,&cw[8],8);
-      if(!device->SetCaDescr(&ca_descr))
+      if(!device->SetCaDescr(&ca_descr,force))
         PRINTF(L_GEN_ERROR,"CA_SET_DESCR failed (%s). Expect a black screen.",strerror(errno));
       }
     }
@@ -1674,6 +1636,8 @@ void cCam::RemHandler(cEcmHandler *handler)
   handlerList.Del(handler);
   indexMap[idx]=0;
 }
+
+#ifndef SASC
 
 // --- cChannelCaids -----------------------------------------------------------
 
@@ -2314,28 +2278,38 @@ bool cScCiAdapter::Assign(cDevice *Device, bool Query)
 #define MAX_CSA_PIDS 8192
 #define MAX_CSA_IDX  16
 
-class cDeCSA : public cMutex {
+//#define DEBUG_CSA
+
+class cDeCSA {
 private:
   int cs;
   unsigned char **range;
   unsigned char pidmap[MAX_CSA_PIDS];
   void *keys[MAX_CSA_IDX];
+  unsigned int even_odd[MAX_CSA_IDX];
+  cMutex mutex;
+  cCondVar wait;
+  bool active;
+  int cardindex;
   //
   bool GetKeyStruct(int idx);
 public:
-  cDeCSA(void);
+  cDeCSA(int CardIndex);
   ~cDeCSA();
   bool Decrypt(unsigned char *data, int len, bool force);
-  bool SetDescr(ca_descr_t *ca_descr);
+  bool SetDescr(ca_descr_t *ca_descr, bool initial);
   bool SetCaPid(ca_pid_t *ca_pid);
+  void SetActive(bool on);
   };
 
-cDeCSA::cDeCSA(void)
+cDeCSA::cDeCSA(int CardIndex)
 {
+  cardindex=CardIndex;
   cs=get_suggested_cluster_size();
-  PRINTF(L_CORE_CSA,"clustersize=%d rangesize=%d",cs,cs*2+5);
+  PRINTF(L_CORE_CSA,"%d: clustersize=%d rangesize=%d",cardindex,cs,cs*2+5);
   range=MALLOC(unsigned char *,(cs*2+5));
   memset(keys,0,sizeof(keys));
+  memset(even_odd,0,sizeof(even_odd));
   memset(pidmap,0,sizeof(pidmap));
 }
 
@@ -2346,55 +2320,67 @@ cDeCSA::~cDeCSA()
   free(range);
 }
 
+void cDeCSA::SetActive(bool on)
+{
+  active=on;
+  PRINTF(L_CORE_CSA,"%d: set active %s",cardindex,active?"on":"off");
+}
+
 bool cDeCSA::GetKeyStruct(int idx)
 {
   if(!keys[idx]) keys[idx]=get_key_struct();
   return keys[idx]!=0;
 }
 
-bool cDeCSA::SetDescr(ca_descr_t *ca_descr)
+bool cDeCSA::SetDescr(ca_descr_t *ca_descr, bool initial)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&mutex);
   int idx=ca_descr->index;
   if(idx<MAX_CSA_IDX && GetKeyStruct(idx)) {
-    if(ca_descr->parity==0) { // even key
-      set_even_control_word(keys[idx],ca_descr->cw);
-      PRINTF(L_CORE_CSA,"even key set");
+    if(!initial && active && ca_descr->parity==(even_odd[idx]&0x40)>>6) {
+      PRINTF(L_CORE_CSA,"%d.%d: %s key in use",cardindex,idx,ca_descr->parity?"odd":"even");
+      if(wait.TimedWait(mutex,100)) PRINTF(L_CORE_CSA,"%d.%d: successfully waited for release",cardindex,idx);
+      else PRINTF(L_CORE_CSA,"%d.%d: timed out. setting anyways",cardindex,idx);
       }
-    else {                    // odd key
-      set_odd_control_word(keys[idx],ca_descr->cw);
-      PRINTF(L_CORE_CSA,"odd key set");
-      }
+    PRINTF(L_CORE_CSA,"%d.%d: %s key set",cardindex,idx,ca_descr->parity?"odd":"even");
+    if(ca_descr->parity==0) set_even_control_word(keys[idx],ca_descr->cw);
+    else                    set_odd_control_word(keys[idx],ca_descr->cw);
     }
   return true;
 }
 
 bool cDeCSA::SetCaPid(ca_pid_t *ca_pid)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&mutex);
   if(ca_pid->index<MAX_CSA_IDX && ca_pid->pid<MAX_CSA_PIDS) {
     pidmap[ca_pid->pid]=ca_pid->index;
-    PRINTF(L_CORE_CSA,"set pid %04x to index %d",ca_pid->pid,ca_pid->index);
+    PRINTF(L_CORE_CSA,"%d.%d: set pid %04x",cardindex,ca_pid->index,ca_pid->pid);
     }
   return true;
 }
 
 bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&mutex);
   int r=-2, ccs=0, currIdx=-1;
   bool newRange=true;
   range[0]=0;
   len-=(TS_SIZE-1);
   for(int l=0; l<len; l+=TS_SIZE) {
     if(data[l]!=TS_SYNC_BYTE) {       // let higher level cope with that
-      PRINTF(L_CORE_CSA,"garbage in TS buffer");
+      PRINTF(L_CORE_CSA,"%d: garbage in TS buffer",cardindex);
       break;
       }
-    if(data[l+3]&0xC0) {              // encrypted
+    unsigned int ev_od=data[l+3]&0xC0;
+    if(ev_od==0x80 || ev_od==0xC0) { // encrypted
       int idx=pidmap[((data[l+1]<<8)+data[l+2])&(MAX_CSA_PIDS-1)];
       if(currIdx<0 || idx==currIdx) { // same or no index
         currIdx=idx;
+        if(ccs==0 && ev_od!=even_odd[idx]) {
+          even_odd[idx]=ev_od;
+          wait.Broadcast();
+          PRINTF(L_CORE_CSA,"%d.%d: change to %s key",cardindex,idx,(ev_od&0x40)?"odd":"even");
+          }
         if(newRange) {
           r+=2; newRange=false;
           range[r]=&data[l];
@@ -2403,29 +2389,25 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
         range[r+1]=&data[l+TS_SIZE];
         if(++ccs>=cs) break;
         }
-      else {                          // other index, create hole
-        PRINTF(L_CORE_CSA,"other index. current=%d idx=%d",currIdx,idx);
-        newRange=true;
-        }
+      else newRange=true;             // other index, create hole
       }
     else {                            // unencrypted
       // nothing, we don't create holes for unencrypted packets
       }
     }
-  if(force) PRINTF(L_CORE_CSA,"forced");
-  if(r>cs*2) PRINTF(L_CORE_CSA,"range overflow");
-  if(r<0) PRINTF(L_CORE_CSA,"nothing to decrypt");
-  if(r>=0 && (ccs>=cs || force) && GetKeyStruct(currIdx)) { // we have some range
-    LBSTARTF(L_CORE_CSA);
-    LBPUT("decrypting %3d packets (ccs=%3d cs=%3d %s)",ccs,ccs,cs,ccs>=cs?"OK ":"INC");
-    int n=decrypt_packets(keys[currIdx],range);
-    LBPUT(" -> %3d packets decrypted",n);
-    if(n>0) return true;
-    LBEND();
-    }
-  else {
-    if(ccs<cs && !force)
-      PRINTF(L_CORE_CSA,"incomplete cluster ccs=%3d cs=%3d",ccs,cs);
+  if(r>=0) {                          // we have some range
+    if(ccs>=cs || force) {
+      if(GetKeyStruct(currIdx)) {
+        int n=decrypt_packets(keys[currIdx],range);
+#ifdef DEBUG_CSA
+        PRINTF(L_CORE_CSA,"%d.%d: decrypting ccs=%3d cs=%3d %s -> %3d decrypted",cardindex,currIdx,ccs,cs,ccs>=cs?"OK ":"INC",n);
+#endif
+        if(n>0) return true;
+        }
+      }
+#ifdef DEBUG_CSA
+    else PRINTF(L_CORE_CSA,"%d.%d: incomplete cluster ccs=%3d cs=%3d",cardindex,currIdx,ccs,cs);
+#endif
     }
   return false;
 }
@@ -2459,12 +2441,14 @@ cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa,
   lastP=0; lastCount=0;
   ringBuffer=new cRingBufferLinear(Size,TS_SIZE,true,"FFdecsa-TS");
   ringBuffer->SetTimeouts(100,100);
+  if(decsa) decsa->SetActive(true);
   Start();
 }
 
 cDeCsaTSBuffer::~cDeCsaTSBuffer()
 {
   Cancel(3);
+  if(decsa) decsa->SetActive(false);
   delete ringBuffer;
 }
 
@@ -2519,9 +2503,13 @@ uchar *cDeCsaTSBuffer::Get(void)
   return NULL;
 }
 
+#endif //SASC
+
 // -- cScDvbDevice -------------------------------------------------------------
 
 int cScDvbDevice::budget=0;
+
+#ifndef SASC
 
 cScDvbDevice::cScDvbDevice(int n, int cafd)
 :cDvbDevice(n)
@@ -2584,7 +2572,7 @@ void cScDvbDevice::LateInit(void)
 #endif
   if(softcsa) {
     PRINTF(L_GEN_INFO,"Using software decryption on card %d",n);
-    decsa=new cDeCSA;
+    decsa=new cDeCSA(n);
     }
 }
 
@@ -2809,13 +2797,13 @@ bool cScDvbDevice::GetTSPacket(uchar *&Data)
   return false;
 }
 
-bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr)
+bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   if(!softcsa) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
     }
-  else if(decsa) return decsa->SetDescr(ca_descr);
+  else if(decsa) return decsa->SetDescr(ca_descr,initial);
   return false;
 }
 
@@ -2905,3 +2893,54 @@ void cScDvbDevice::DumpAV7110(void)
       }
     }
 }
+
+#else //SASC
+
+cScDvbDevice::cScDvbDevice(int n, int cafd)
+:cDvbDevice(n)
+{}
+
+cScDvbDevice::~cScDvbDevice()
+{}
+
+void cScDvbDevice::Shutdown(void)
+{}
+
+void cScDvbDevice::Startup(void)
+{}
+
+void cScDvbDevice::SetForceBudget(int n)
+{}
+
+bool cScDvbDevice::ForceBudget(int n)
+{
+   return true;
+}
+
+void cScDvbDevice::Capture(void)
+{}
+
+bool cScDvbDevice::Initialize(void)
+{
+  return true;
+}
+
+bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
+{
+  return false;
+}
+
+bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+{
+  return false;
+}
+
+bool cScDvbDevice::SetCaPid(ca_pid_t *ca_pid)
+{
+  return false;
+}
+
+void cScDvbDevice::DumpAV7110(void)
+{}
+
+#endif //SASC

@@ -886,7 +886,7 @@ bool cSmartCard::ParseAtr(struct Atr *Atr, int id, int clock)
   NEED(Atr->histLen);
   LBEND();
 
-  LBSTART(L_CORE_SERIAL);
+  LBSTART(L_CORE_SC);
   LBPUT("%d: historical:",id);
   for(int i=0 ; i<Atr->histLen ; i++) LBPUT(" %02x",atr[len+i]);
   LBFLUSH();

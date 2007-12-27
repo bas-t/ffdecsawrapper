@@ -52,6 +52,8 @@ extern int minEcmTime;
 #define N2_EMM_SEL 0x40
 #define N2_EMM_V   0x03
 
+#define MATCH_ID(x,y) ((((x)^(y))&~0x107)==0)
+
 class cPlainKeyNagra : public cDualKey {
 private:
   int ParseTag(const char *tag, const char * &line);
@@ -63,6 +65,7 @@ protected:
 public:
   cPlainKeyNagra(bool Super);
   virtual bool Parse(const char *line);
+  static bool IsBNKey(int kn);
   };
 
 // ----------------------------------------------------------------

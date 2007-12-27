@@ -28,11 +28,6 @@ SINCLUDES += $(shell echo "$(INCLUDES)" | sed -e 's+-I *+-I+g' | sed -e 's+-I\([
 
 -include *.mk
 
-### Implicit rules:
-
-%.o: %.c
-	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(SINCLUDES) $<
-
 # Dependencies:
 
 MAKEDEP = g++ -MM -MG
@@ -65,6 +60,9 @@ endef
 
 all: $(BUILDTARGETS)
 .PHONY: clean dist
+
+%.o: %.c
+	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(SINCLUDES) $<
 
 $(LIBSC): $(OBJS)
 	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(LIBS) $(SHAREDLIBS) -o $@

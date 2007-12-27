@@ -29,7 +29,8 @@
 #define L_SYS_CPUSTATS LCLASS(L_SYS,L_SYS_LASTDEF<<4)
 #define L_SYS_MAP      LCLASS(L_SYS,L_SYS_LASTDEF<<5)
 #define L_SYS_RAWEMM   LCLASS(L_SYS,L_SYS_LASTDEF<<6)
-#define L_SYS_ALL      LALL(L_SYS_RAWEMM)
+#define L_SYS_RAWECM   LCLASS(L_SYS,L_SYS_LASTDEF<<7)
+#define L_SYS_ALL      LALL(L_SYS_RAWECM)
 
 #define bprint(a) {fprintf(stdout, #a "="); BN_print_fp(stdout,a); fprintf(stdout,"\n");}
 

@@ -22,7 +22,6 @@
 #include <unistd.h>
 
 #include <vdr/tools.h>
-#include <vdr/i18n.h>
 
 #include "sc.h"
 #include "scsetup.h"
@@ -33,45 +32,10 @@
 
 // --- cFeature ----------------------------------------------------------------
 
-#define MAX_PHRASES 10
-
 cFeature Feature;
 
 bool cFeature::keyfile=false;
 bool cFeature::smartcard=false;
-bool cFeature::network=false;
-int cFeature::pcount=0;
-const tI18nPhrase *cFeature::phrases[MAX_PHRASES];
-
-void cFeature::AddPhrases(const tI18nPhrase * const Phrases)
-{
-  if(pcount<MAX_PHRASES)
-    phrases[pcount++]=Phrases;
-  else
-    PRINTF(L_GEN_ERROR,"feature: too many phrases");
-}
-
-tI18nPhrase *cFeature::GetPhrases(void)
-{
-  int num=1;
-  for(int i=0; i<pcount; i++) {
-    const tI18nPhrase *p=phrases[i];
-    for(; **p; p++) num++;
-    }
-  tI18nPhrase *all=MALLOC(tI18nPhrase,num);
-  if(all) {
-    tI18nPhrase *a=all;
-    for(int i=0; i<pcount; i++) {
-      const tI18nPhrase *p=phrases[i];
-      while(**p) {
-        memcpy(a,p,sizeof(tI18nPhrase));
-        a++; p++;
-        }
-      }
-    memset(a,0,sizeof(tI18nPhrase));
-    }
-  return all;
-}
 
 void cFeature::NeedsKeyFile(void)
 {

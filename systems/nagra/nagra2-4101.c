@@ -20,6 +20,7 @@
 // -- cN2Prov4101 ----------------------------------------------------------------
 
 class cN2Prov4101 : public cN2Prov {
+protected:
 public:
   cN2Prov4101(int Id, int Flags):cN2Prov(Id,Flags) {}
   virtual bool PostProcAU(int id, unsigned char *data);
@@ -45,3 +46,14 @@ bool cN2Prov4101::PostProcAU(int id, unsigned char *data)
     }
   return true;
 }
+
+// -- cN2Prov7101 ----------------------------------------------------------------
+
+/*
+class cN2Prov7101 : public cN2Prov4101 {
+public:
+  cN2Prov7101(int Id, int Flags):cN2Prov4101(Id,Flags) {}
+  };
+*/
+
+static cN2ProvLinkReg<cN2Prov4101,0x7101,N2FLAG_POSTAU> staticPL7101;

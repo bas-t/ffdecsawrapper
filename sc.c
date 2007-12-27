@@ -78,12 +78,13 @@
 #endif
 
 // SC API version number for loading shared libraries
-#define SCAPIVERS 8
+#define SCAPIVERS 9
 
 const char *ScVersion = SCVERSION;
 
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
+static char *cfgsub=0;
 
 static const struct LogModule lm_core = {
   (LMOD_ENABLE|L_CORE_ALL)&LOPT_MASK,
@@ -562,7 +563,9 @@ cMenuInfoSc::cMenuInfoSc(void)
     Add(new cScInfoItem(tr("Key update status:")));
     int fk, nk;
     cSystem::KeyStats(fk,nk);
+    // TRANSLATORS: 2 leading spaces!
     Add(new cScInfoItem(tr("  [Seen keys]"),fk));
+    // TRANSLATORS: 2 leading spaces!
     Add(new cScInfoItem(tr("  [New keys]"), nk));
     }
   Display();
@@ -968,7 +971,7 @@ void cScSetup::Check(void)
   PRINTF(L_CORE_LOAD,"** Key updates (AU) are %s",AutoUpdate?(AutoUpdate==1?"enabled (active CAIDs)":"enabled (all CAIDs)"):"DISABLED");
   PRINTF(L_CORE_LOAD,"** Local systems %stake priority over cached remote",LocalPriority?"":"DON'T ");
   PRINTF(L_CORE_LOAD,"** Concurrent FF recordings are %sallowed",ConcurrentFF?"":"NOT ");
-  PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital auido",ForceTransfer?"F":"DON'T f");
+  PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital audio",ForceTransfer?"F":"DON'T f");
   LBSTART(L_CORE_LOAD);
   LBPUT("** ScCaps are"); for(int i=0; i<MAXSCCAPS ; i++) LBPUT(" %d",ScCaps[i]);
   LBFLUSH();
@@ -1170,7 +1173,6 @@ bool cScDlls::Load(void)
 
 class cScPlugin : public cPlugin {
 private:
-  tI18nPhrase *phrases;
 #ifndef STATICBUILD
   cScDlls dlls;
 #endif
@@ -1193,20 +1195,19 @@ public:
 
 cScPlugin::cScPlugin(void)
 {
-  static const char *logg[] = { "off","active CAIDs","all CAIDs" };
+  static const char *logg[] = { trNOOP("off"),trNOOP("active CAIDs"),trNOOP("all CAIDs") };
   ScOpts=new cOpts(0,6);
-  ScOpts->Add(new cOptSel  ("AutoUpdate"   ,"Update keys (AU)"     ,&ScSetup.AutoUpdate,3,logg));
-  ScOpts->Add(new cOptBool ("ConcurrentFF" ,"Concurrent FF streams",&ScSetup.ConcurrentFF));
-  ScOpts->Add(new cOptBool ("ForceTranfer" ,"Force TransferMode"   ,&ScSetup.ForceTransfer));
-  ScOpts->Add(new cOptBool ("LocalPriority","Prefer local systems" ,&ScSetup.LocalPriority));
-  ScOpts->Add(new cOptMInt ("ScCaps"       ,"Active on DVB card"   , ScSetup.ScCaps,MAXSCCAPS,0));
-  ScOpts->Add(new cOptMInt ("CaIgnore"     ,"Ignore CAID"          , ScSetup.CaIgnore,MAXCAIGN,2));
+  ScOpts->Add(new cOptSel  ("AutoUpdate"   ,trNOOP("Update keys (AU)")     ,&ScSetup.AutoUpdate,3,logg));
+  ScOpts->Add(new cOptBool ("ConcurrentFF" ,trNOOP("Concurrent FF streams"),&ScSetup.ConcurrentFF));
+  ScOpts->Add(new cOptBool ("ForceTranfer" ,trNOOP("Force TransferMode")   ,&ScSetup.ForceTransfer));
+  ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
+  ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
+  ScOpts->Add(new cOptMInt ("CaIgnore"     ,trNOOP("Ignore CAID")          , ScSetup.CaIgnore,MAXCAIGN,2));
   LogOpts=new cOpts(0,4);
-  LogOpts->Add(new cOptBool ("LogConsole"  ,"Log to console"      ,&logcfg.logCon));
-  LogOpts->Add(new cOptBool ("LogFile"     ,"Log to file"         ,&logcfg.logFile));
-  LogOpts->Add(new cOptStr  ("LogFileName" ,"Filename"            ,logcfg.logFilename,sizeof(logcfg.logFilename),FileNameChars));
-  LogOpts->Add(new cOptBool ("LogSyslog"   ,"Log to syslog"       ,&logcfg.logSys));
-  phrases=0;
+  LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));
+  LogOpts->Add(new cOptBool ("LogFile"     ,trNOOP("Log to file")         ,&logcfg.logFile));
+  LogOpts->Add(new cOptStr  ("LogFileName" ,trNOOP("Filename")            ,logcfg.logFilename,sizeof(logcfg.logFilename),FileNameChars));
+  LogOpts->Add(new cOptBool ("LogSyslog"   ,trNOOP("Log to syslog")       ,&logcfg.logSys));
 #ifndef STATICBUILD
   dlls.Load();
 #endif
@@ -1242,11 +1243,12 @@ bool cScPlugin::Start(void)
     }
     
   ScPlugin=this;
-  Feature.AddPhrases(ScPhrases);
-  RegisterI18n((phrases=Feature.GetPhrases()));
-  filemaps.SetCfgDir(ConfigDirectory());
+#if APIVERSNUM < 10507
+  RegisterI18n(ScPhrases);
+#endif
+  filemaps.SetCfgDir(ConfigDirectory(cfgsub));
   ScSetup.Check();
-  if(!cSoftCAM::Load(ConfigDirectory())) return false;
+  if(!cSoftCAM::Load(ConfigDirectory(cfgsub))) return false;
   if(Feature.SmartCard()) {
 #ifdef DEFAULT_PORT
     smartcards.AddPort(DEFAULT_PORT);
@@ -1262,7 +1264,9 @@ void cScPlugin::Stop(void)
   cScDvbDevice::Shutdown();
   LogStatsDown();
   cSoftCAM::Shutdown();
-  RegisterI18n(NULL); free(phrases);
+#if APIVERSNUM < 10507
+  RegisterI18n(NULL);
+#endif
   PRINTF(L_GEN_DEBUG,"SC cleanup done");
 }
 
@@ -1281,18 +1285,20 @@ const char *cScPlugin::CommandLineHelp(void)
   static char *help_str=0;
   
   free(help_str);    //                                     for easier orientation, this is column 80|
-  asprintf(&help_str,"  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
+  asprintf(&help_str,"  -c DIR    --config=DIR   search config files in subdir DIR\n"
+                     "                           (default: %s)\n"
+                     "  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
                      "  -I        --inverse-cd   use inverse CD detection for the next serial device\n"
                      "  -R        --inverse-rst  use inverse RESET for the next serial device\n"
                      "  -C FREQ   --clock=FREQ   use FREQ as clock for the card reader on the next\n"
                      "                           serial device (rather than 3.5712 MHz\n"
-                     "  -s DEV,   --serial=DEV   activate Phoenix ISO interface on serial device DEV\n"
+                     "  -s DEV    --serial=DEV   activate Phoenix ISO interface on serial device DEV\n"
                      "                           (default: %s)\n"
-                     "  -d CMD,   --dialup=CMD   call CMD to start/stop dialup-network\n"
+                     "  -d CMD    --dialup=CMD   call CMD to start/stop dialup-network\n"
                      "                           (default: %s)\n"
-                     "  -t SECS,  --timeout=SECS shutdown timeout for dialup-network\n"
+                     "  -t SECS   --timeout=SECS shutdown timeout for dialup-network\n"
                      "                           (default: %d secs)\n",
-                     "none","none",netTimeout/1000
+                     cfgsub?cfgsub:"none","none","none",netTimeout/1000
                      );
   return help_str;
 }
@@ -1307,13 +1313,14 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       { "dialup",      required_argument, NULL, 'd' },
       { "external-au", required_argument, NULL, 'E' },
       { "budget",      required_argument, NULL, 'B' },
+      { "config",      required_argument, NULL, 'c' },
       { NULL }
     };
 
   int c, option_index=0;
   bool invCD=false, invRST=false;
   int clock=0;
-  while((c=getopt_long(argc,argv,"d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
+  while((c=getopt_long(argc,argv,"c:d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
     switch (c) {
       case 'I': invCD=true; break;
       case 'R': invRST=true; break;
@@ -1323,6 +1330,7 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       case 't': netTimeout=atoi(optarg)*1000; break;
       case 'E': externalAU=optarg; break;
       case 'B': cScDvbDevice::SetForceBudget(atoi(optarg)); break;
+      case 'c': cfgsub=optarg; break;
       default:  return false;
       }
     }
@@ -1331,7 +1339,7 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
 
 cMenuSetupPage *cScPlugin::SetupMenu(void)
 {
-  return new cMenuSetupSc(ConfigDirectory());
+  return new cMenuSetupSc(ConfigDirectory(cfgsub));
 }
 
 bool cScPlugin::SetupParse(const char *Name, const char *Value)
@@ -1375,7 +1383,7 @@ cString cScPlugin::SVDRPCommand(const char *Command, const char *Option, int &Re
       return "Softcam active. Can't reload files now";
       }
     else {
-      if(cSoftCAM::Load(ConfigDirectory()))
+      if(cSoftCAM::Load(ConfigDirectory(cfgsub)))
         return "Files reloaded successfully";
       else {
         ReplyCode=901;

@@ -24,11 +24,11 @@
 #include <ctype.h>
 
 #include <vdr/tools.h>
-#include <vdr/i18n.h>
 
 #include "data.h"
 #include "misc.h"
 #include "log-core.h"
+#include "i18n.h"
 
 // ----------------------------------------------------------------
 
@@ -48,12 +48,8 @@ class cHookManager;
 
 class cFeature {
 private:
-  static bool keyfile, smartcard, network;
-  static int pcount;
-  static const tI18nPhrase *phrases[];
+  static bool keyfile, smartcard;
 public:
-  void AddPhrases(const tI18nPhrase * const Phrases);
-  tI18nPhrase *GetPhrases(void);
   void NeedsKeyFile(void);
   void NeedsSmartCard(void);
   bool KeyFile(void) const { return keyfile; }

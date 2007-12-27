@@ -169,15 +169,26 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
 // -- cN2Prov0101 ----------------------------------------------------------------
 
 class cN2Prov0101 : public cN2Prov, public cN2Emu, private cMap0101 {
+private:
+  bool special05;
 protected:
   virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw);
   virtual void Stepper(void);
+  virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op);
+  virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op);
 public:
-  cN2Prov0101(int Id, int Flags):cN2Prov(Id,Flags) {}
+  cN2Prov0101(int Id, int Flags);
   virtual int ProcessBx(unsigned char *data, int len, int pos);
   };
 
 static cN2ProvLinkReg<cN2Prov0101,0x0101,N2FLAG_MECM|N2FLAG_Bx> staticPL0101;
+
+cN2Prov0101::cN2Prov0101(int Id, int Flags)
+:cN2Prov(Id,Flags)
+{
+  hasWriteHandler=hasReadHandler=true;
+  special05=false;
+}
 
 bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 {
@@ -185,15 +196,15 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     memcpy(hw,hd,3);
     ExpandInput(hw);
     hw[0x18]|=1; hw[0x40]|=1;
-    SetWordSize(2);
-    ImportReg(IMPORT_A,hw,3);
-    ImportReg(IMPORT_D,hw+24);
+    DoMap(SETSIZE,0,2);
+    DoMap(IMPORT_A,hw,3);
+    DoMap(IMPORT_D,hw+24);
     DoMap(0x3b);
-    ExportReg(EXPORT_C,hw);
-    ImportReg(IMPORT_A,hw+40,3);
-    ImportReg(IMPORT_D,hw+64);
+    DoMap(EXPORT_C,hw);
+    DoMap(IMPORT_A,hw+40,3);
+    DoMap(IMPORT_D,hw+64);
     DoMap(0x3b);
-    ExportReg(EXPORT_C,hw+40);
+    DoMap(EXPORT_C,hw+40);
     DoMap(0x43);
     DoMap(0x44,hw);
     DoMap(0x44,hw+64);
@@ -206,14 +217,15 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     memcpy(hw,hd,5);
     ExpandInput(hw);
     hw[127]|=0x80; hw[0]|=0x01;
-    SetWordSize(16);
-    ImportReg(IMPORT_A,hw);
+    DoMap(SETSIZE,0,16);
+    DoMap(IMPORT_A,hw);
     DoMap(0x4d);
     DoMap(0x4e);
-    ExportReg(EXPORT_A,hw,16,true);
-    ImportReg(IMPORT_A,hw);
+    DoMap(EXPORT_A,hw);
+    RotateBytes(hw,16);
+    DoMap(IMPORT_A,hw);
     DoMap(0x4e);
-    ExportReg(EXPORT_A,hw);
+    DoMap(EXPORT_A,hw);
     DoMap(0x57,hw,128);
     return true;
     }
@@ -244,21 +256,17 @@ int cN2Prov0101::ProcessBx(unsigned char *data, int len, int pos)
         unsigned char tmp[size];
         unsigned short addr=(Get(0x44)<<8)+Get(0x45);
         switch(a) {
-          case SETSIZE:
-            SetWordSize(Get(0x48)); break;
-          case IMPORT_A ... IMPORT_D:
-            GetMem(addr,tmp,size,0); ImportReg(a,tmp); break;
-          case EXPORT_A ... EXPORT_D:
-            ExportReg(a,tmp); SetMem(addr,tmp,size,0); break;
-          case 0x0F:
-            {
-            unsigned char tmp2[size];
-            GetMem(addr,tmp2,size,0);
-            ExportReg(EXPORT_A,tmp);
-            ImportReg(IMPORT_A,tmp2);
-            SetMem(addr,tmp,size,0);
-            break;
-            }
+          case 0x02:
+            DoMap(a,0,Get(0x48)); break;
+          case IMPORT_J ... IMPORT_LAST:
+            GetMem(addr,tmp,size,0); DoMap(a,tmp); break;
+          case EXPORT_J ... EXPORT_LAST:
+            DoMap(a,tmp); SetMem(addr,tmp,size,0); break;
+          case SWAP_A ... SWAP_D:
+            GetMem(addr,tmp,size,0); DoMap(a,tmp); SetMem(addr,tmp,size,0); break;
+          case CLEAR_A ... CLEAR_D:
+          case COPY_A_B ... COPY_D_C:
+            DoMap(a); break;
           default:
             PRINTF(L_SYS_EMM,"%04X: unrecognized map call %02x",id,a);
             return -1;
@@ -268,6 +276,31 @@ int cN2Prov0101::ProcessBx(unsigned char *data, int len, int pos)
       }
     }
   return -1;
+}
+
+void cN2Prov0101::WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+  if(cr==0x00) {
+    if(ea==0x05) {
+      special05=(op&0x40)!=0;
+      }
+    else if(ea==0x16) {
+      unsigned char old=Get(ea);
+      if(old&2) op=(old&~0x02) | (op&0x02);
+      }
+    }
+}
+
+void cN2Prov0101::ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+  if(special05) {
+    special05=false; // prevent loop
+    unsigned short start=Get(0x00,0x30C0);
+    unsigned short end=Get(0x00,0x30C1);
+    if(((ea>>8)>=start) && ((ea>>8)<=end)) op=0x00; // dataspace
+    else op=0x01;                                   // codespace
+    special05=true;
+    }
 }
 
 void cN2Prov0101::Stepper(void)
