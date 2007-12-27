@@ -99,23 +99,13 @@ bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 
 // -- cN2Prov0511 ----------------------------------------------------------------
 
-/*
-class cN2Prov0511 : public cN2Prov0501 {
-public:
-  cN2Prov0511(int Id, int Flags):cN2Prov0501(Id,Flags) {}
-  };
-*/
-
 static cN2ProvLinkReg<cN2Prov0501,0x0511,N2FLAG_MECM|N2FLAG_INV> staticPL0511;
 
 // -- cN2Prov1101 ----------------------------------------------------------------
 
-/*
-class cN2Prov1101 : public cN2Prov0501 {
-public:
-  cN2Prov1101(int Id, int Flags):cN2Prov0501(Id,Flags) {}
-  };
-*/
-
 static cN2ProvLinkReg<cN2Prov0501,0x1101,N2FLAG_MECM|N2FLAG_INV> staticPL1101;
+
+// -- cN2Prov3101 ----------------------------------------------------------------
+
+static cN2ProvLinkReg<cN2Prov0501,0x3101,N2FLAG_MECM|N2FLAG_INV> staticPL3101;
 

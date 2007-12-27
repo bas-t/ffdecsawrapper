@@ -744,16 +744,16 @@ bool cParseNDS::HasAddr(const unsigned char *data, const unsigned char *a)
 const unsigned char *cParseNDS::PayloadStart(const unsigned char *data)
 {
   //return &data[4 + NumAddr(data)*4 + 2];
-  if(AddrMode(data)==0) return &data[4 + 2];
-  else                  return &data[4 + NumAddr(data)*4];
+  if(AddrMode(data)==0) return &data[4];
+  else                  return &data[4+NumAddr(data)*4];
 }
 
 int cParseNDS::PayloadSize(const unsigned char *data)
 {
   //return emm[2]+emm[3]+4-1+5;
   int l=SCT_LEN(data);
-  if(AddrMode(data)==0) return l-(4 + 2);
-  else                  return l-(4 + NumAddr(data)*4);
+  if(AddrMode(data)==0) return l-(4);
+  else                  return l-(4+NumAddr(data)*4);
 }
 
 int cParseNDS::Assemble(cAssembleData *ad, const unsigned char *a)

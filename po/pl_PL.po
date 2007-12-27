@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2007-08-27 14:30+0200\n"
+"POT-Creation-Date: 2007-09-13 19:11+0200\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -181,10 +181,14 @@ msgid "Filename"
 msgstr ""
 
 #: sc.c:1210
+msgid "Filesize limit (KB)"
+msgstr ""
+
+#: sc.c:1211
 msgid "Log to syslog"
 msgstr ""
 
-#: sc.c:1280
+#: sc.c:1281
 msgid "A software emulated CAM"
 msgstr "Programowo emulowany CAM"
 

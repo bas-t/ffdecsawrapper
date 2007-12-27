@@ -1,6 +1,20 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+15.09.2007: Version 0.8.3
+- Added Nagra2 3101 MECM (same as 0501).
+- Added Nagra2 0901 new 0x40 MECM and rev248 morph (from sasc-ng).
+- Changed TPS AU instruction limit for st20 emulation. Fixed callback pointer
+  search and decryption in case super encryption is disabled temporarily.
+- Added a setup option to limit the size of the logfile.
+- Fixed Makefile for Debian compile.
+- Some fixes for sasc-ng compile/operation.
+- Now autogenerating i18n.c file with po2i18n.pl from po files on VDR < 1.5.7.
+  Note that after changes to the *.c files the po files have to be recreated, so
+  you should have gettext package installed.
+- Fixed plugin .mo filename for VDR 1.5.7.
+- Updated finnish translations.
+
 02.09.2007: Version 0.8.2
 - Reworked Nagra2 EMM nano handling, key updates and map core (the latter is
   partly based on Emunation 2.0.0 code).

@@ -73,15 +73,25 @@ PACKAGE = vdr-$(ARCHIVE)
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o data.o filter.o system.o i18n.o misc.o cam.o \
+OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o \
        smartcard.o network.o crypto.o system-common.o parse.o log.o
 
 ### Internationalization (I18N):
 
 PODIR     = po
 I18Npot   = $(PODIR)/$(PLUGIN).pot
-I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo,$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
+ifeq ($(strip $(APIVERSION)),1.5.7)
+  I18Nmo  = $(PLUGIN).mo
+else
+  I18Nmo  = vdr-$(PLUGIN).mo
+endif
+I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/$(I18Nmo),$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
 LOCALEDIR = $(VDRDIR)/locale
+HASLOCALE = $(shell grep -l 'I18N_DEFAULT_LOCALE' $(VDRDIR)/include/vdr/i18n.h)
+
+ifeq ($(strip $(HASLOCALE)),)
+  OBJS += i18n.o
+endif
 
 #
 # generic stuff
@@ -129,8 +139,8 @@ export CXXFLAGS
 
 MAKEDEP = g++ -MM -MG
 DEPFILE = .dependencies
-$(DEPFILE): $(OBJS:%.o=%.c) $(wildcard *.h)
-	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(OBJS:%.o=%.c) > $@
+$(DEPFILE): $(subst i18n.c,,$(OBJS:%.o=%.c)) $(wildcard *.h)
+	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(subst i18n.c,,$(OBJS:%.o=%.c)) > $@
 
 -include $(DEPFILE)
 
@@ -143,7 +153,7 @@ else
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems systems-pre
 endif
 
-ifneq ($(shell grep -l 'Phrases' $(VDRDIR)/i18n.c),$(VDRDIR)/i18n.c)
+ifneq ($(strip $(HASLOCALE)),)
 BUILDTARGETS += i18n
 endif
 
@@ -176,11 +186,14 @@ $(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
 %.mo: %.po
 	msgfmt -c -o $@ $<
 
-$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
+$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/$(I18Nmo): $(PODIR)/%.mo
 	@mkdir -p $(dir $@)
 	cp $< $@
 
 i18n: $(I18Nmsgs)
+
+i18n.c: $(PODIR)/*.po i18n-template.c po2i18n.pl
+	./po2i18n.pl <i18n-template.c >i18n.c
 
 systems:
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" all || exit 1; done
@@ -193,11 +206,11 @@ clean-systems:
 
 clean-core:
 	@$(MAKE) -C testing clean
-	@$(MAKE) -C $(FFDECSADIR) clean
+	@test -d $(FFDECSADIR) && $(MAKE) -C $(FFDECSADIR) clean
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
-	@-rm -f $(OBJS) $(DEPFILE) *.so *.tar.gz core* *~
-	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
+	@-rm -f $(OBJS) $(DEPFILE) i18n.c *.so *.tar.gz core* *~
+	@-rm -f $(PODIR)/*.mo
 
 clean-pre:
 	@-find "$(PREDIR)" -type f -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f

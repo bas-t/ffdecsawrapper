@@ -1203,10 +1203,11 @@ cScPlugin::cScPlugin(void)
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
   ScOpts->Add(new cOptMInt ("CaIgnore"     ,trNOOP("Ignore CAID")          , ScSetup.CaIgnore,MAXCAIGN,2));
-  LogOpts=new cOpts(0,4);
+  LogOpts=new cOpts(0,5);
   LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));
   LogOpts->Add(new cOptBool ("LogFile"     ,trNOOP("Log to file")         ,&logcfg.logFile));
   LogOpts->Add(new cOptStr  ("LogFileName" ,trNOOP("Filename")            ,logcfg.logFilename,sizeof(logcfg.logFilename),FileNameChars));
+  LogOpts->Add(new cOptInt  ("LogFileLimit",trNOOP("Filesize limit (KB)") ,&logcfg.maxFilesize,0,2000000));
   LogOpts->Add(new cOptBool ("LogSyslog"   ,trNOOP("Log to syslog")       ,&logcfg.logSys));
 #ifndef STATICBUILD
   dlls.Load();

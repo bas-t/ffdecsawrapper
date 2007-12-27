@@ -172,6 +172,8 @@ class cN2Prov0101 : public cN2Prov, public cN2Emu, private cMap0101 {
 private:
   bool special05;
 protected:
+  int hwCount;
+  //
   virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw);
   virtual void Stepper(void);
   virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op);
@@ -188,12 +190,13 @@ cN2Prov0101::cN2Prov0101(int Id, int Flags)
 {
   hasWriteHandler=hasReadHandler=true;
   special05=false;
+  hwCount=2;
 }
 
 bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 {
   if(algo==0x40) {
-    memcpy(hw,hd,3);
+    memcpy(hw,hd,hwCount+1);
     ExpandInput(hw);
     hw[0x18]|=1; hw[0x40]|=1;
     DoMap(SETSIZE,0,2);
@@ -208,9 +211,8 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     DoMap(0x43);
     DoMap(0x44,hw);
     DoMap(0x44,hw+64);
-    hw[0]=hw[64+4]; // ctx.h3&0xFF
-    hw[1]=hw[64+5]; //(ctx.h3>>8)&0xFF
-    memset(&hw[2],0,128-2);
+    memcpy(&hw[0],&hw[64+4],hwCount);
+    memset(&hw[hwCount],0,128-hwCount);
     return true;
     }
   else if(algo==0x60) { // map 4D/4E/57
@@ -342,11 +344,17 @@ void cN2Prov0101::Stepper(void)
 
 class cN2Prov0901 : public cN2Prov0101 {
 public:
-  cN2Prov0901(int Id, int Flags):cN2Prov0101(Id,Flags) {}
+  cN2Prov0901(int Id, int Flags);
   virtual int ProcessBx(unsigned char *data, int len, int pos);
   };
 
 static cN2ProvLinkReg<cN2Prov0901,0x0901,N2FLAG_MECM|N2FLAG_Bx> staticPL0901;
+
+cN2Prov0901::cN2Prov0901(int Id, int Flags)
+:cN2Prov0101(Id,Flags)
+{
+  hwCount=4;
+}
 
 int cN2Prov0901::ProcessBx(unsigned char *data, int len, int pos)
 {

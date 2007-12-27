@@ -202,12 +202,12 @@ public:
   static void Shutdown(void);
   static void SetForceBudget(int n);
   static bool ForceBudget(int n);
-  bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
-  bool SetCaPid(ca_pid_t *ca_pid);
+  virtual bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
+  virtual bool SetCaPid(ca_pid_t *ca_pid);
   void DumpAV7110(void);
   cCam *Cam(void) { return cam; }
   bool SoftCSA(void) { return softcsa; }
-  bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
+  virtual bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
   };
 
 #endif // ___CAM_H

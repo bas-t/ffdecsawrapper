@@ -21,8 +21,8 @@
 #define ___VERSION_H
 
 // all release versions must end with 0xFF !!
-#define SCVERSNUM 0x000802FF
-#define SCVERSION "0.8.2"
+#define SCVERSNUM 0x000803FF
+#define SCVERSION "0.8.3"
 
 extern const char *ScVersion;
 

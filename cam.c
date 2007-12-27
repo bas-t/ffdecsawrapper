@@ -2898,10 +2898,15 @@ void cScDvbDevice::DumpAV7110(void)
 
 cScDvbDevice::cScDvbDevice(int n, int cafd)
 :cDvbDevice(n)
-{}
+{
+  softcsa=false;
+  cam=new cCam(this,n);
+}
 
 cScDvbDevice::~cScDvbDevice()
-{}
+{
+  delete cam;
+}
 
 void cScDvbDevice::Shutdown(void)
 {}

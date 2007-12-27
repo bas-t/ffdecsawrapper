@@ -127,6 +127,7 @@ public:
   cTpsKeys(void);
   ~cTpsKeys();
   const cTpsKey *GetKey(time_t t);
+  const cTpsKey *GetV2Key(int id);
   void Check(time_t now, int cardnum);
   virtual bool ParseLine(const char *line, bool fromCache);
   virtual bool Save(FILE *f);

@@ -107,7 +107,16 @@ bool cPlainKeyVia::Parse(const char *line)
 
 cString cPlainKeyVia::PrintKeyNr(void)
 {
-  return cString::sprintf((keynr==MBC3('T','P','S'))?"TPS":"%02X",keynr);
+  char tmp[8], *kn=tmp;
+  switch(keynr) {
+    case MBC3('T','P','S'):
+      kn="TPS"; break;
+    case MBC3('M','K',0) ... MBC3('M','K',9):
+      snprintf(tmp,sizeof(tmp),"MK%d",C3(keynr)); break;
+    default:
+      snprintf(tmp,sizeof(tmp),"%02X",keynr); break;
+    }
+  return kn;
 }
 
 // -- cViaccessCardInfo --------------------------------------------------------
