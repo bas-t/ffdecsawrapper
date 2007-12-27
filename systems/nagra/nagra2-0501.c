@@ -42,6 +42,7 @@ cMap0501::cMap0501(int Id)
 void cMap0501::DoMap(int f, unsigned char *data, int l)
 {
   PRINTF(L_SYS_MAP,"%04x: calling function %02X",mId,f);
+  cycles=0;
   switch(f) {
     case 0x37:
       l=(l?l:wordsize)<<3;
@@ -63,9 +64,17 @@ void cMap0501::DoMap(int f, unsigned char *data, int l)
 // -- cN2Prov0501 --------------------------------------------------------------
 
 class cN2Prov0501 : public cN2Prov, private cMap0501, public cN2Emu {
+private:
+  cMapMemHW *hwMapper;
+  //
+  bool ProcessMap(int f);
+  bool RomCallbacks(void);
+  void AddRomCallbacks(void);
 protected:
   virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw);
   virtual bool NeedsCwSwap(void) { return true; }
+  virtual bool RomInit(void);
+  virtual void TimerHandler(unsigned int num);
 public:
   cN2Prov0501(int Id, int Flags);
   virtual int ProcessBx(unsigned char *data, int len, int pos);
@@ -76,7 +85,9 @@ static cN2ProvLinkReg<cN2Prov0501,0x0501,(N2FLAG_MECM|N2FLAG_INV|N2FLAG_Bx)> sta
 cN2Prov0501::cN2Prov0501(int Id, int Flags)
 :cN2Prov(Id,Flags)
 ,cMap0501(Id)
-{}
+{
+  hwMapper=0;
+}
 
 bool cN2Prov0501::Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw)
 {
@@ -107,6 +118,92 @@ bool cN2Prov0501::Algo(int algo, unsigned char *hd, const unsigned char *ed, uns
   return false;
 }
 
+bool cN2Prov0501::RomInit(void)
+{
+  if(!AddMapper(hwMapper=new cMapMemHW(),HW_OFFSET,HW_REGS,0x00)) return false;
+  return true;
+}
+
+bool cN2Prov0501::ProcessMap(int f)
+{
+  unsigned short addr;
+  int size=wordsize<<3;
+  unsigned char tmp[256];
+
+  switch(f) {
+    case SETSIZE: // set map size 
+      DoMap(f,0,Get(0x48));
+      if((wordsize<<3)>256) {
+        PRINTF(L_SYS_EMU,"%04x: MAP word size too large: %d",id,wordsize);
+        return false;
+        }
+      break;
+    case IMPORT_J: //Import Ram at [44:45] to Map Registers A-E, E is 0x03 the rest in sequence
+    case IMPORT_A:
+    case IMPORT_B:
+    case IMPORT_C:
+    case IMPORT_D:
+    case IMPORT_LAST:
+      addr=HILO(0x44);
+      GetMem(addr,tmp,size,0); DoMap(f,tmp);
+      AddCycles(MapCycles());
+      break;
+    case EXPORT_J: //Export Registers A-E with 44:45: 0x09 is E
+    case EXPORT_A:
+    case EXPORT_B:
+    case EXPORT_C:
+    case EXPORT_D:
+    case EXPORT_LAST:
+      addr=HILO(0x44);
+      DoMap(f,tmp); SetMem(addr,tmp,size,0);
+      break;
+    case SWAP_A: //Swap Registers A-D with 44:45
+    case SWAP_B:
+    case SWAP_C:
+    case SWAP_D:
+      addr=HILO(0x44);
+      GetMem(addr,tmp,size,0); DoMap(f,tmp); SetMem(addr,tmp,size,0);
+      break;
+    case CLEAR_A:
+    case CLEAR_B:
+    case CLEAR_C:
+    case CLEAR_D:
+    case COPY_A_B:
+    case COPY_B_A:
+    case COPY_A_C:
+    case COPY_C_A:
+    case COPY_C_D:
+    case COPY_D_C:
+      DoMap(f); break;
+    default:
+      PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
+      return false;
+    }
+  return true;
+}
+
+bool cN2Prov0501::RomCallbacks(void)
+{
+  unsigned int ea=GetPc();
+  if(ea&0x8000) ea|=(cr<<16);
+  switch(ea) {
+    case 0x3840: //MAP Handler
+      if(!ProcessMap(a)) return false;
+      break;
+    default:
+      PRINTF(L_SYS_EMU,"%04X: unknown ROM breakpoint %04x",id,ea);
+      return false;
+    }
+  if(ea>=0x8000) PopCr();
+  PopPc();
+  return true;
+}
+
+void cN2Prov0501::AddRomCallbacks(void)
+{
+  AddBreakpoint(0x3840); // map handler
+}
+
 int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
 {
   if(Init(id,120)) {
@@ -118,15 +215,23 @@ int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
     Set(0x0000,0x04);
     ClearBreakpoints();
     AddBreakpoint(0x821f);
+    AddBreakpoint(0x0000);
+    AddRomCallbacks();
     while(!Run(5000)) {
-      switch(GetPc()) {
-        case 0x821f:
-          GetMem(0x80,data,len);
-          return a;
+      if(GetPc()==0x821f) {
+        GetMem(0x80,data,len);
+        return a;
         }
+      else if(GetPc()==0x0000) break;
+      else if(!RomCallbacks()) break;
       }
     }
   return -1;
+}
+
+void cN2Prov0501::TimerHandler(unsigned int num)
+{
+  if(hwMapper) hwMapper->AddCycles(num);
 }
 
 // -- cN2Prov0511 ----------------------------------------------------------------

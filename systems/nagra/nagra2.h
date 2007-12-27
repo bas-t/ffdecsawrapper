@@ -39,6 +39,62 @@
 
 // ----------------------------------------------------------------
 
+class cN2Timer {
+private:
+  int ctrl, divisor, cycles, remainder, latch;
+  enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmMASK=0xFF, tmLATCHED=0x100 };
+  //
+  bool Running(void) { return ctrl&tmRUNNING; }
+  void Stop(void);
+public:
+  cN2Timer(void);
+  void AddCycles(int count);
+  unsigned int Cycles(void) { return (unsigned int)cycles; }
+  unsigned char Ctrl(void) { return ctrl&tmMASK; }
+  void Ctrl(unsigned char c);
+  unsigned char Latch(void) { return latch&0xFF; }
+  void Latch(unsigned char val);
+  };
+
+// ----------------------------------------------------------------
+
+#define HW_REGS   0x20
+#define HW_OFFSET 0x0000
+
+#define MAX_TIMERS 3
+#define TIMER_NUM(x) (((x)>>2)&3) // timer order doesn't match HW order
+
+class cMapMemHW : public cMapMem {
+private:
+  // memory mapped HW
+  enum {
+    HW_IO=0x00, HW_SECURITY,
+    HW_TIMER0_DATA=0x08, HW_TIMER0_LATCH, HW_TIMER0_CONTROL,
+    HW_CRC_CONTROL=0x0e, HW_CRC_DATA,
+    HW_TIMER1_DATA=0x10, HW_TIMER1_LATCH, HW_TIMER1_CONTROL,
+    HW_TIMER2_DATA=0x14, HW_TIMER2_LATCH, HW_TIMER2_CONTROL
+    };
+  // timer hardware
+  cN2Timer timer[MAX_TIMERS];
+  // CRC hardware
+  enum { CRCCALC_DELAY=9, CRC_BUSY=1, CRC_DISABLED=2 };
+  unsigned short CRCvalue;
+  unsigned char CRCpos;
+  unsigned int CRCstarttime;
+  unsigned short crc16table[256];
+  // counter
+  unsigned int cycles;
+  //
+  void GenCRC16Table(void);
+public:
+  cMapMemHW(void);
+  virtual unsigned char Get(unsigned short ea);
+  virtual void Set(unsigned short ea, unsigned char val);
+  void AddCycles(unsigned int num);
+  };
+
+// ----------------------------------------------------------------
+
 class cN2Emu : protected c6805 {
 private:
   bool initDone;
@@ -87,6 +143,7 @@ private:
   cBN *regs[5];
   cBN x, y, s;
 protected:
+  unsigned int cycles;
   int wordsize;
   cBN A, B, C, D, J, I;
   cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180
@@ -110,6 +167,7 @@ protected:
   void CurveInit(BIGNUM *a);
   //
   bool DoMap(int f, unsigned char *data=0, int l=0);
+  unsigned int MapCycles() { return cycles; }
 public:
   cMapCore(void);
   };
