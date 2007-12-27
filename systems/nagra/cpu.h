@@ -88,7 +88,7 @@ public:
 
 // ----------------------------------------------------------------
 
-#define MAX_BREAKPOINTS 4
+#define MAX_BREAKPOINTS 24
 #define MAX_MAPPER      8
 #define MAX_PAGES       4
 #define PAGE_SIZE       32*1024
@@ -107,6 +107,7 @@ private:
   int nextMapper;
   int pageMap[256];
   bool indirect;
+  unsigned int clockcycles;
   //
   void InitMapper(void);
   void ClearMapper(void);
@@ -144,9 +145,14 @@ protected:
   unsigned short GetPc(void) const { return pc; }
   void PopPc(void);
   void PopCr(void);
+  void Push(unsigned char c);
+  void ResetCycles(void);
+  void AddCycles(unsigned int num);
+  unsigned int Cycles(void) { return clockcycles; }
   virtual void Stepper(void)=0;
   virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op) {}
   virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op) {}
+  virtual void TimerHandler(unsigned int num) {}
 private:
   unsigned int stats[256];
   char addrBuff[32];

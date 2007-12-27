@@ -222,19 +222,23 @@ void cAction::Priority(int Pri)
 void cAction::Action(void)
 {
   if(pri>0) SetPriority(pri);
+  struct pollfd *pfd=0;
   while(Running()) {
-    int num=filters.Count();
-    if(num<=0) {
+    if(filters.Count()<=0) {
       cCondWait::SleepMs(100);
       }
     else {
       // first build pfd data
       Lock();
+      delete pfd; pfd=new struct pollfd[filters.Count()];
+      if(!pfd) {
+        PRINTF(L_GEN_ERROR,"action %s: pollfd: out of memory",id);
+        break;
+        }
+      int num=0;
       cPidFilter *filter;
-      struct pollfd pfd[num];
-      num=0;
-      memset(pfd,0,sizeof(pfd));
       for(filter=filters.First(); filter; filter=filters.Next(filter)) {
+        memset(&pfd[num],0,sizeof(struct pollfd));
         pfd[num].fd=filter->fd;
         pfd[num].events=POLLIN;
         num++;
@@ -289,4 +293,5 @@ void cAction::Action(void)
       Unlock();
       }
     }
+  delete pfd;
 }

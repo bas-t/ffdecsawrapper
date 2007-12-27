@@ -148,22 +148,22 @@ void cST20::SetReg(int reg, unsigned int val)
 
 unsigned char *cST20::Addr(unsigned int off)
 {
-  switch(off) {
-    case FLASHS ... FLASHE:
+  if(off>=FLASHS && off<=FLASHE) {
 #ifndef SAVE_DEBUG
-      return &flash[off-FLASHS];
+    return &flash[off-FLASHS];
 #else
-      off-=FLASHS; if(off<flashSize && flash) return &flash[off]; break;
+    off-=FLASHS; if(off<flashSize && flash) return &flash[off]; break;
 #endif
-    case RAMS ... RAME:
-#ifndef SAVE_DEBUG
-      return &ram[off-RAMS];
-#else
-      off-=RAMS; if(off<ramSize && ram) return &ram[off]; break;
-#endif
-    case IRAMS ... IRAME:
-      return &iram[off-IRAMS];
     }
+  else if(off>=RAMS && off<=RAME) {
+#ifndef SAVE_DEBUG
+    return &ram[off-RAMS];
+#else
+    off-=RAMS; if(off<ramSize && ram) return &ram[off]; break;
+#endif
+    }
+  else if(off>=IRAMS && off<=IRAME)
+    return &iram[off-IRAMS];
 #ifndef SAVE_DEBUG
   invalid=ERRORVAL; return (unsigned char *)&invalid;
 #else

@@ -428,6 +428,7 @@ void cSystemIrd::ProcessEMM(int pid, int caid, unsigned char *buffer)
   if((numKeys>0 && (id[0]!=lastKey || numKeys>1)) || mk) {
     memcpy(savebuf,buffer,n); // save the buffer
     cIrdCardInfo *ci=Icards.First();
+    unsigned char *chkkey=AUTOMEM(max(sizeof(ci->PMK),sizeof(ci->HMK)));
     while(ci) {
       ci->hexBase=cParseIrdeto::AddrBase(buffer);
       if((numKeys>0         && (ci->cProviderIrdeto::MatchEMM(buffer) || CheckNull(ci->provId,sizeof(ci->provId)) )) ||
@@ -439,7 +440,6 @@ void cSystemIrd::ProcessEMM(int pid, int caid, unsigned char *buffer)
           lastKey=id[i];
           SessionKeyCrypt(pk[i],ci->PMK,date);
           }
-        unsigned char chkkey[max(sizeof(ci->PMK),sizeof(ci->HMK))];
         int keylen;
         if(mk) {
           memcpy(chkkey,ci->HMK,sizeof(ci->HMK)); // key is modified in decryptIrd()

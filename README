@@ -214,7 +214,7 @@ right. The plugin searches for these files in the "nagra" subdirectory.
 
 For Nagra2 AU some providers need binary Rom and Eeprom files. The files have to
 be named "ROMxxx.bin" and "EEPyy_xxx.bin", where xxx is the ROM version (e.g.
-102) and yy is the upper part of the provider ID (e.g. 08 for BEV). The files
+102) and yy is the upper part of the provider ID (e.g. 09 for BEV). The files
 must contain the joined contents of all Rom/Eeprom pages. The plugin searches
 for these files in the "nagra" subdirectory.
 
@@ -332,14 +332,21 @@ SVDR interface
 
 The plugin implements a SVDR interface. Supported commands are:
    RELOAD
-     reload all configuration files (only if the softcam isn't active at the
+     Reload all configuration files (only if the softcam isn't active at the
      moment).
      Return codes: 550 - Softcam active, can't reload files.
                    901 - Reloading files not entirely successfull. Most of the
                          time this will leave you with an unusable softcam.
                    900 - Reload successfull.
 
-   LOG [on|off] module.option[,module.option][,...]
+   KEY string
+     Parse the given string and add the key to the key database (as if it was
+     received from EMM stream).
+     Return codes: 501 - Syntax error.
+                   900 - Key added.
+                   901 - Invalid key format or key already known.
+
+   LOG <on|off> module.option[,module.option][,...]
      Enables or disables all given message classes.
      Return codes: 501 - Syntax error or unknown message class.
                    900 - Options set and saved.
@@ -350,3 +357,8 @@ The plugin implements a SVDR interface. Supported commands are:
      message classes.
      Return codes: 901 - No message classes available.
                    900 - Message class status (multi line reply).
+
+   LOGFILE <on|off> [filename]
+     Enables or disables logging to file and optionaly sets the filename.",
+     Return codes: 501 - Syntax error.
+                   900 - Logfile option set and saved.

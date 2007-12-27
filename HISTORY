@@ -1,6 +1,22 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+21.12.2007: Version 0.8.6
+- Added Nagra2 0501 dyn. AU execution fix.
+- Added Nagra2 4101 map58 AU (though already outdated). Using unified ECC code
+  for map57 & map58.
+- Added instruction cycle counter to Nagra ST7/19 cpu emulation.
+- Added support for recent Nagra2 0101/0901 ECM (including map4e/22/3e cycle
+  calculation, timer/CRC hardware simulation, DES map, EEPROM updates, dynamic
+  ECM code, auxserver V2 call).
+- Added Nagra2 config option to drop EMM-S packets.
+- Added Nagra1 UK reg05 fix (i.e. moved it from N2 to N1).
+- Added TPS AU fix.
+- Added SVDR commands to inject keys and to configure logging to file.
+- Removed some gcc'isims (case ranges, named variadic macros, variable length
+  arrays).
+- Updated finnish translations.
+
 10.11.2007: Version 0.8.5
 - Added new Nagra2 0501 AU sheme.
 - Added Nagra2 NA 'temporarily' fixes.

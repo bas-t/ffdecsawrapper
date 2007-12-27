@@ -100,13 +100,13 @@ bool cCardClientCommon::ParseKeyConfig(const char *config, int *num)
 
 bool cCardClientCommon::SendMsg(cNetSocket *so, const unsigned char *data, int len)
 {
-  unsigned char buff2[minMsgLen];
+  unsigned char *buff2=AUTOMEM(minMsgLen);
   if(len<minMsgLen) {
     memcpy(buff2,data,len);
     memset(buff2+len,0,minMsgLen-len);
     data=buff2; len=minMsgLen;
     }
-  unsigned char buff[len+16];
+  unsigned char *buff=AUTOMEM(len+16);
   const int l=Encrypt(data,len,buff);
   if(l>0) { data=buff; len=l; }
   return cCardClient::SendMsg(so,data,len);
@@ -177,7 +177,7 @@ bool cCardClientCommon::ProcessEMM(int caSys, const unsigned char *source)
       const int length=SCT_LEN(source);
       int id=msEMM.Get(source,length,0);
       if(id>0) {
-        unsigned char buff[length+32];
+        unsigned char *buff=AUTOMEM(length+32);
         buff[0]=0x03;
         buff[1]=(caSys>>8);
         buff[2]=(caSys&0xFF);
@@ -201,7 +201,7 @@ bool cCardClientCommon::ProcessECM(const cEcmInfo *ecm, const unsigned char *sou
   while(exclusive) sleepCond.Wait(*this);
   if((so.Connected() || Login()) && (!emmProcessing || CanHandle(ecm->caId))) {
     const int length=SCT_LEN(source);
-    unsigned char buff[length+32];
+    unsigned char *buff=AUTOMEM(length+32);
     int n;
     while((n=RecvMsg(&so,buff,16,0))>0) HandleEMMRequest(buff,n);
     buff[0]=0x02;
@@ -467,7 +467,7 @@ bool cCardClientCamd35::SendBlock(struct CmdBlock *cb, int datalen)
   cb->udp_header.len=datalen;
   cb->udp_header.crc=bswap_32(crc32_le(0,&cb->data[0],datalen));
   datalen+=CBSIZE(cb);
-  unsigned char buff[datalen+UCSIZE(cb)+16];
+  unsigned char *buff=AUTOMEM(datalen+UCSIZE(cb)+16);
   *((unsigned int *)buff)=ucrc;
   HEXDUMP(L_CC_CAMDEXTR,cb,datalen+UCSIZE(cb),"send:");
   const int l=Encrypt((unsigned char *)cb+UCSIZE(cb),datalen,buff+UCSIZE(cb));

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2007-11-08 12:39+0100\n"
+"POT-Creation-Date: 2007-12-19 18:52+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -160,6 +160,21 @@ msgid "Cardclient: connect immediately"
 msgstr ""
 
 msgid "Nagra: min. ECM processing time"
+msgstr ""
+
+msgid "Nagra2: drop EMM-S packets"
+msgstr ""
+
+msgid "Nagra2: Enable AUXserver"
+msgstr ""
+
+msgid "Nagra2: AUXserver hostname"
+msgstr ""
+
+msgid "Nagra2: AUXserver port"
+msgstr ""
+
+msgid "Nagra2: AUXserver password"
 msgstr ""
 
 msgid "don't touch"

@@ -263,6 +263,7 @@ public:
   cPlainKey *FindKey(int Type, int Id, int Keynr, int Size, cPlainKey *key=0);
   cPlainKey *FindKeyNoTrig(int Type, int Id, int Keynr, int Size, cPlainKey *key=0);
   bool NewKey(int Type, int Id, int Keynr, void *Key, int Keylen);
+  bool NewKeyParse(const char *line);
   void HouseKeeping(void);
   };
 

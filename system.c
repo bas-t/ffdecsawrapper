@@ -525,20 +525,20 @@ int cMsgCache::Get(const unsigned char *msg, int len, unsigned char *store)
     }
   else {
     id=(s-&caches[0])+1;
-    switch(s->mode) {
-      case GOOD:
-        if(store && storeSize>0)
-          memcpy(store,&stores[(id-1)*storeSize],storeSize);
-        PRINTF(L_CORE_MSGCACHE,"%d/%p: msg is cached as GOOD (%d)",getpid(),this,id);
-        return 0;
-      case FAIL1...FAIL2:
-        PRINTF(L_CORE_MSGCACHE,"%d/%p: msg is cached as FAIL%d (%d)",getpid(),this,s->mode,id);
-        s->mode|=QUEUED;
-        return id;
-      case FAILN:
-      default:
-        PRINTF(L_CORE_MSGCACHE,"%d/%p: msg is cached as FAILN (%d)",getpid(),this,id);
-        return -1;
+    if(s->mode==GOOD) {
+      if(store && storeSize>0)
+        memcpy(store,&stores[(id-1)*storeSize],storeSize);
+      PRINTF(L_CORE_MSGCACHE,"%d/%p: msg is cached as GOOD (%d)",getpid(),this,id);
+      return 0;
+      }
+    else if(s->mode>=FAIL1 && s->mode<=FAIL2) {
+      PRINTF(L_CORE_MSGCACHE,"%d/%p: msg is cached as FAIL%d (%d)",getpid(),this,s->mode,id);
+      s->mode|=QUEUED;
+      return id;
+      }
+    else {
+      PRINTF(L_CORE_MSGCACHE,"%d/%p: msg is cached as FAILN (%d)",getpid(),this,id);
+      return -1;
       }
     }
 }
@@ -559,23 +559,18 @@ int cMsgCache::Cache(int id, bool result, const unsigned char *store)
     return 0;
     }
   else {
-    switch(s->mode&MASK) {
-      case GOOD:
-        s->mode=FREE;
-        // fall through
-      case FREE:
-      case FAIL1...FAIL2:
-        s->mode=(s->mode&MASK)+1;
-        if(s->mode<maxFail) {
-          LBPUT("(FAIL%d)",s->mode);
-          break;
-          }
-        // fall through
-      case FAILN:
-        s->mode=FAILN;
-        LBPUT("(FAILN)");
-        break;
+    int m=s->mode&MASK;
+    if(m==GOOD)
+      m=s->mode=FREE;
+    if(m==FREE || (m>=FAIL1 && m<=FAIL2)) {
+      s->mode=(s->mode&MASK)+1;
+      if(s->mode<maxFail)
+        LBPUT("(FAIL%d)",s->mode);
+      else
+        m=s->mode=FAILN;
       }
+    if(m==FAILN)
+      LBPUT("(FAILN)");
     return s->mode;
     }
   LBEND();

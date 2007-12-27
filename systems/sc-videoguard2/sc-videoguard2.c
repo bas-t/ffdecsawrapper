@@ -413,7 +413,7 @@ struct CmdTab {
   unsigned char size;
   unsigned char Nentries; 
   unsigned char dummy;
-  CmdTabEntry e[0];
+  CmdTabEntry e[1];
 };
 
 class CmdTable {

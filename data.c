@@ -763,6 +763,21 @@ void cPlainKeys::ExternalUpdate(void)
     }
 }
 
+bool cPlainKeys::NewKeyParse(const char *line)
+{
+  cPlainKey *nk=NewFromType(toupper(line[0]));
+  if(nk && nk->Parse(line)) {
+    cPlainKey *k=0;
+    while((k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,-1,k)))
+      if(k->Cmp(nk)) break;
+    if(!k) {
+      AddNewKey(nk,2,true);
+      return true;
+      }
+    }
+  return false;
+}
+
 void cPlainKeys::Action(void)
 {
   last.Set(EXT_AU_MIN);
@@ -774,17 +789,7 @@ void cPlainKeys::Action(void)
     while(fgets(buff,sizeof(buff),pipe)) {
       char *line=skipspace(stripspace(buff));
       if(line[0]==0 || line[0]==';' || line[0]=='#') continue;
-      cPlainKey *nk=NewFromType(toupper(line[0]));
-      if(nk && nk->Parse(line)) {
-        cPlainKey *k=0;
-        while((k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,-1,k)))
-          if(k->Cmp(nk)) break;
-        if(!k) {
-          AddNewKey(nk,2,true);
-          nk=0;
-          }
-        }
-      delete nk;
+      NewKeyParse(line);
       }
     }
   pipe.Close();

@@ -186,21 +186,49 @@ bool cEmu::MathMapHandler(void)
 // -- cEmuRom3Core -------------------------------------------------------------
 
 class cEmuRom3Core : public cEmu {
+private:
+  bool special05;
 protected:
   virtual void Stepper(void);
+  virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op);
+  virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op);
   bool CoreInitSetup(void);
   bool DoMaps(bool hasExt);
+public:
+  cEmuRom3Core(void);
   };
 
-void cEmuRom3Core::Stepper(void)
+cEmuRom3Core::cEmuRom3Core(void)
 {
-  int rnd=random();
-  unsigned char mem4=Get(0x04);
-  if(!bitset(mem4,2)) {
-    Set(0x06,(rnd&0xff00)>>8);
-    Set(0x07,rnd&0xff);
-    }
+  special05=false;
 }
+
+void cEmuRom3Core::WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+  if(ea==0x05) special05=(op&0x40)!=0;
+}
+
+void cEmuRom3Core::ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+  if(special05) {
+    special05=false; // prevent loop
+    unsigned short start=Get(0x30C0);
+    unsigned short end=Get(0x30C1);
+    if(((ea>>8)>=start) && ((ea>>8)<=end)) op=0x00; // dataspace
+    else op=0x01;                                   // codespace
+    special05=true;
+    }
+  else
+    switch(ea) {
+      case 0x06:
+      case 0x07:
+        if(!(Get(0x04)&4)) op=random()&0xFF;
+        break;
+      }
+}
+
+void cEmuRom3Core::Stepper(void)
+{}
 
 bool cEmuRom3Core::CoreInitSetup(void)
 {
@@ -403,7 +431,9 @@ bool cEmuRom10::MathMapHandler(void)
         }
       return true;
 
-    case 0x0e ... 0x10:
+    case 0x0e:
+    case 0x0F:
+    case 0x10:
       {
       const unsigned short addr=(Get(0x4d)<<8)|Get(0x4e);
       unsigned char tmp[64];
@@ -705,7 +735,7 @@ bool cSystemNagra::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   pk->Get(sessionKey);
 
   const int desLen=(ecmLen-9) & ~7; // datalen - signature - ks byte
-  unsigned char decrypted[desLen];
+  unsigned char *decrypted=AUTOMEM(desLen);
   for(int i=(desLen/8)-1; decrypt && i>=0; i--) {
     const int off=i*8;
     Decrypt(data+11+off,sessionKey,decrypted+off);
@@ -769,7 +799,7 @@ bool cSystemNagra::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
       hasVerifyKey=true;
       }
     else if(doLog) PRINTF(L_SYS_KEY,"missing %04x V TYP%d key (non-fatal)",mecmProvId,keyType);
-    unsigned char decrMecmData[mecmRSALen];
+    unsigned char *decrMecmData=AUTOMEM(mecmRSALen);
     if(!DecryptECM(&mecmData[4],decrMecmData,hasVerifyKey?verifyKey:0,mecmRSALen,e1,n1,n2))
       return false;
 
@@ -870,7 +900,14 @@ void cSystemNagra::ProcessEMM(int pid, int caid, unsigned char *buffer)
     switch(emmdata[i]) { // Check filter type
       case 0x00: // One card
         i+=7; break;
-      case 0x01 ... 0x20: // Group of cards
+      case 0x01: case 0x02: case 0x03: case 0x04: // Group of cards
+      case 0x05: case 0x06: case 0x07: case 0x08:
+      case 0x09: case 0x0A: case 0x0B: case 0x0C:
+      case 0x0D: case 0x0E: case 0x0F: case 0x10:
+      case 0x11: case 0x12: case 0x13: case 0x14:
+      case 0x15: case 0x16: case 0x17: case 0x18:
+      case 0x19: case 0x1A: case 0x1B: case 0x1C:
+      case 0x1D: case 0x1E: case 0x1F: case 0x20:
         i+=emmdata[i]+0x7; break;
       case 0x3e:
         i+=6; break;

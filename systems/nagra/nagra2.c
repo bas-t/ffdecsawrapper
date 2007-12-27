@@ -46,6 +46,7 @@ private:
   bool initDone;
 protected:
   bool Init(int id, int romv);
+  virtual bool RomInit(void) { return true; }
   virtual void Stepper(void) {}
 public:
   cN2Emu(void);
@@ -74,14 +75,14 @@ bool cN2Emu::Init(int id, int romv)
 
     snprintf(buff,sizeof(buff),"EEP%02X_%d.bin",(id>>8)&0xFF|0x01,romv);
     // Eeprom00 0x00:0x3000-0x37ff OTP 0x80
-    if(!AddMapper(new cMapRom(0x3000,buff,0x0000),0x3000,0x0800,0x00)) return false;
-    //XXX if(!AddMapper(new cMapEeprom(0x3000,buff,128,0x0000),0x3000,0x0800,0x00)) return false;
+    //XXX if(!AddMapper(new cMapRom(0x3000,buff,0x0000),0x3000,0x0800,0x00)) return false;
+    if(!AddMapper(new cMapEeprom(0x3000,buff,128,0x0000),0x3000,0x0800,0x00)) return false;
     // Eeprom80 0x80:0x8000-0xbfff
-    if(!AddMapper(new cMapRom(0x8000,buff,0x0800),0x8000,0x4000,0x80)) return false;
-    //XXX if(!AddMapper(new cMapEeprom(0x8000,buff,  0,0x0800),0x8000,0x4000,0x80)) return false;
-    initDone=true;
+    //XXX if(!AddMapper(new cMapRom(0x8000,buff,0x0800),0x8000,0x4000,0x80)) return false;
+    if(!AddMapper(new cMapEeprom(0x8000,buff,  0,0x0800),0x8000,0x4000,0x80)) return false;
+    initDone=RomInit();
     }
-  return true;
+  return initDone;
 }
 
 // -- cMapCore -----------------------------------------------------------------
@@ -116,17 +117,32 @@ bool cN2Emu::Init(int id, int romv)
 
 class cMapCore {
 private:
-  cBN x, y, s, j;
-  SHA_CTX sctx;
-protected:
-  cBN A, B, C, D, J;
-  cBN H, R;
-  cBNctx ctx;
-  int wordsize, last;
+  int last;
   cBN *regs[5];
+  cBN x, y, s;
+protected:
+  int wordsize;
+  cBN A, B, C, D, J, I;
+  cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180
+  cBN sA0, sC0, sE0, s100, s120, s140, s160;
+  cBNctx ctx;
+  SHA_CTX sctx;
+  // stateless
+  void MakeJ0(BIGNUM *j, BIGNUM *d);
+  void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
+  void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
+  // statefull
+  void MonInit(int bits=0);
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b) { MonMul(o,a,b,C,D,J); }
+  void MonExpNeg(void);
+  // ECC
+  void DoubleP(int temp);
+  void AddP(int temp);
+  void ToProjective(int set, BIGNUM *x, BIGNUM *y);
+  void ToAffine(void);
+  void CurveInit(BIGNUM *a);
   //
-  void MakeJ(void);
-  void MonMul(BIGNUM *o, BIGNUM *i1, BIGNUM *i2);
   bool DoMap(int f, unsigned char *data=0, int l=0);
 public:
   cMapCore(void);
@@ -138,58 +154,213 @@ cMapCore::cMapCore(void)
   regs[0]=&J; regs[1]=&A; regs[2]=&B; regs[3]=&C; regs[4]=&D;
 }
 
-void cMapCore::MakeJ(void)
+void cMapCore::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
+{
+  BN_add(r,a,b);
+  if(BN_cmp(r,d)>=0) BN_sub(r,r,d);
+  BN_mask_bits(r,wordsize<<6);
+}
+
+void cMapCore::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
+{
+  cBN p;
+  BN_set_bit(p,wordsize<<6);
+  BN_mod_sub(r,d,b,p,ctx);
+  BN_mask_bits(r,wordsize<<6);
+}
+
+void cMapCore::MakeJ0(BIGNUM *j, BIGNUM *d)
 {
 #if OPENSSL_VERSION_NUMBER < 0x0090700fL
 #error BN_mod_inverse is probably buggy in your openssl version
 #endif
   BN_zero(x);
-  BN_sub(J,x,D);
-  BN_set_bit(J,0);
+  BN_sub(j,x,d);
+  BN_set_bit(j,0);
   BN_set_bit(x,64);
-  BN_mod_inverse(J,J,x,ctx);
+  BN_mod_inverse(j,j,x,ctx);
 }
 
-void cMapCore::MonMul(BIGNUM *o, BIGNUM *i1, BIGNUM *i2)
+void cMapCore::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j)
 {
-  int words=(BN_num_bytes(i1)+7)>>3;
+  int words=(BN_num_bytes(d)+7)>>3;
   BN_zero(s);
-  for(int i=0; i<words; i++) {	
-    BN_rshift(x,i1,i<<6);
+  for(int i=0; i<words;) {
+    BN_rshift(x,a,(i++)<<6);
     BN_mask_bits(x,64);
-    BN_mul(x,x,i2,ctx);
+    BN_mul(x,x,b,ctx);
     BN_add(s,s,x);
 
     BN_copy(x,s);
     BN_mask_bits(x,64);
-    BN_mul(x,x,J,ctx);
-    if(i==(words-1)) {
+    BN_mul(x,x,j,ctx);
+    if(i==words) {
       BN_lshift(y,x,64);
       BN_add(y,y,x);
       // Low
-      BN_rshift(C,y,2);
-      BN_add(C,C,s);
-      BN_rshift(C,C,52);
-      BN_mask_bits(C,12);
+      BN_rshift(c,y,2);
+      BN_add(c,c,s);
+      BN_rshift(c,c,52);
+      BN_mask_bits(c,12);
       }
 
     BN_mask_bits(x,64);
-    BN_mul(x,x,D,ctx);
+    BN_mul(x,x,d,ctx);
     BN_add(s,s,x);
-    if(i==(words-1)) {
+    if(i==words) {
       // High
       BN_lshift(y,s,12);
-      BN_add(C,C,y);
-      BN_mask_bits(C,wordsize<<6);
+      BN_add(c,c,y);
+      BN_mask_bits(c,wordsize<<6);
       }
 
     BN_rshift(s,s,64);
-    if(BN_cmp(s,D)==1) {
+    if(BN_cmp(s,d)==1) {
       BN_copy(x,s);
-      BN_sub(s,x,D);
+      BN_sub(s,x,d);
       }
     }
   BN_copy(o,s);
+}
+
+void cMapCore::MonInit(int bits)
+{
+  // Calculate J0 & H montgomery elements in J and B
+  MakeJ0(J,D);
+  BN_zero(I);
+  BN_set_bit(I,bits ? bits : 68*wordsize);
+  BN_mod(B,I,D,ctx);
+  for(int i=0; i<4; i++) MonMul(B,B,B);
+}
+
+void cMapCore::MonExpNeg(void)
+{
+  if(BN_is_zero(D)) { BN_set_word(A,1); return; }
+  cBN e;
+  BN_copy(e,D);
+  BN_mask_bits(e,8);		// check LSB
+  unsigned int n=BN_get_word(e);
+  BN_copy(e,D);
+  if(n) BN_sub_word(e,0x02);	// N -2
+  else  BN_add_word(e,0xFE);	// N + 254 ('carryless' -2)
+  BN_copy(A,B);
+  for(int i=BN_num_bits(e)-2; i>-1; i--) {
+    MonMul(B,B,B);
+    if(BN_is_bit_set(e,i)) MonMul(B,A,B);
+    }
+  BN_set_word(A,1);
+  MonMul(B,A,B);
+}
+
+void cMapCore::DoubleP(int temp)
+{
+  ModAdd(B,Py,Py,D);
+  MonMul(sC0,Pz,B);
+  MonMul(B,B,B);
+  MonMul(B,Px,B);
+  ModSub(sA0,D,B);
+  MonMul(B,Px,Px);
+  BN_copy(A,B);
+  ModAdd(B,B,B,D);
+  ModAdd(A,B,A,D);
+  MonMul(B,Pz,Pz);
+  MonMul(B,B,B);
+  MonMul(B,s160,B);
+  ModAdd(B,B,A,D);
+  BN_copy(A,B);
+  MonMul(B,B,B);
+  BN_copy(C,sA0);
+  ModAdd(B,C,B,D);
+  ModAdd(B,C,B,D);
+  if(temp==0) BN_copy(Px,B); else BN_copy(sA0,B);
+  ModAdd(B,C,B,D);
+  MonMul(B,A,B);
+  BN_copy(A,B);
+  MonMul(B,Py,Py);
+  ModAdd(B,B,B,D);
+  MonMul(B,B,B);
+  ModAdd(B,B,B,D);
+  ModAdd(B,B,A,D);
+  ModSub(B,D,B);
+  if(temp==0) { BN_copy(Py,B); BN_copy(Pz,sC0); }
+  else BN_copy(sA0,sC0);
+}
+
+void cMapCore::AddP(int temp)
+{
+  MonMul(B,Pz,Pz);
+  MonMul(sA0,Pz,B);
+  MonMul(B,Qx,B);
+  BN_copy(A,B);
+  ModSub(B,D,B);
+  ModAdd(B,Px,B,D);
+  BN_copy(sC0,B);
+  MonMul(I,Pz,B);
+  if(temp==0) BN_copy(Pz,I); else BN_copy(sA0,I);
+  MonMul(B,B,B);
+  BN_copy(sE0,B);
+  ModAdd(A,Px,A,D);
+  MonMul(A,A,B);
+  BN_copy(s100,A);
+  MonMul(B,sA0,Qy);
+  BN_copy(sA0,B);
+  ModSub(B,D,B);
+  ModAdd(B,Py,B,D);
+  BN_copy(s120,B);
+  MonMul(B,B,B);
+  BN_swap(A,B);
+  ModSub(B,D,B);
+  ModAdd(B,A,B,D);
+  if(temp==0) BN_copy(Px,B); else BN_copy(sA0,B);
+  ModAdd(B,B,B,D);
+  ModSub(B,D,B);
+  ModAdd(B,B,s100,D);
+  ModAdd(A,sA0,Py,D);
+  MonMul(sA0,s120,B);
+  MonMul(B,sE0,sC0);
+  MonMul(B,A,B);
+  ModSub(B,D,B);
+  ModAdd(B,B,sA0,D);
+  MonMul(B,s140,B);
+  if(temp==0) BN_copy(Py,B); else BN_copy(sA0,B);
+}
+
+void cMapCore::ToProjective(int set, BIGNUM *x, BIGNUM *y)
+{
+  if(set==0) {
+    BN_set_word(I,1); MonMul(Pz,I,B);
+    BN_copy(Qz,Pz);
+    MonMul(Px,x,B);
+    MonMul(Py,y,B);
+    }
+  else {
+    MonMul(Qx,x,B);
+    MonMul(Qy,y,B);
+    }
+}
+
+void cMapCore::ToAffine(void)
+{
+  BN_set_word(I,1);
+  MonMul(B,Pz,Pz); MonMul(B,Pz,B); MonMul(B,I,B);
+  MonExpNeg();
+  BN_set_word(I,1);
+  MonMul(A,Py,B); MonMul(Py,I,A);
+  MonMul(B,Pz,B); MonMul(B,Px,B); MonMul(Px,I,B);
+}
+
+void cMapCore::CurveInit(BIGNUM *a)
+{
+  BN_zero(Px); BN_zero(Py); BN_zero(Pz); BN_zero(Qx); BN_zero(Qy); BN_zero(Qz);
+  BN_zero(sA0); BN_zero(sC0); BN_zero(sE0); BN_zero(s100);
+  BN_zero(s120); BN_zero(s140); BN_zero(s160);
+  MonInit();
+  BN_copy(A,B);
+  BN_copy(I,D);
+  BN_add_word(I,1);
+  BN_rshift(I,I,1);
+  MonMul(s140,I,B);
+  MonMul(s160,B,a);
 }
 
 bool cMapCore::DoMap(int f, unsigned char *data, int l)
@@ -283,25 +454,27 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
 #define N2FLAG_MECM     1
 #define N2FLAG_Bx       2
 #define N2FLAG_POSTAU   4
+#define N2FLAG_Ex       8
 #define N2FLAG_INV      128
 
 class cN2Prov {
 private:
-  unsigned seed[5], cwkey[8];
+  unsigned char seed[32], cwkey[8];
   bool keyValid;
-  cIDEA idea;
 protected:
-  int id, flags;
+  int id, flags, seedSize;
+  cIDEA idea;
   //
-  virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw) { return false; }
+  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw) { return false; }
   virtual bool NeedsCwSwap(void) { return false; }
   void ExpandInput(unsigned char *hw);
 public:
   cN2Prov(int Id, int Flags);
   virtual ~cN2Prov() {}
-  bool MECM(unsigned char in15, int algo, unsigned char *cws);
+  bool MECM(unsigned char in15, int algo, const unsigned char *ed, unsigned char *cw);
   void SwapCW(unsigned char *cw);
   virtual int ProcessBx(unsigned char *data, int len, int pos) { return -1; }
+  virtual int ProcessEx(unsigned char *data, int len, int pos) { return -1; }
   virtual bool PostProcAU(int id, unsigned char *data) { return true; }
   bool CanHandle(int Id) { return MATCH_ID(Id,id); }
   bool HasFlags(int Flags) { return (flags&Flags)==Flags; }
@@ -310,14 +483,15 @@ public:
 
 cN2Prov::cN2Prov(int Id, int Flags)
 {
-  keyValid=false; id=Id|0x100; flags=Flags;
+  keyValid=false; id=Id|0x100; flags=Flags; seedSize=5;
 }
 
 void cN2Prov::PrintCaps(int c)
 {
-  PRINTF(c,"provider %04x capabilities%s%s%s%s",id,
+  PRINTF(c,"provider %04x capabilities%s%s%s%s%s",id,
            HasFlags(N2FLAG_MECM)    ?" MECM":"",
            HasFlags(N2FLAG_Bx)      ?" Bx":"",
+           HasFlags(N2FLAG_Ex)      ?" Ex":"",
            HasFlags(N2FLAG_POSTAU)  ?" POSTPROCAU":"",
            HasFlags(N2FLAG_INV)     ?" INVCW":"");
 }
@@ -339,27 +513,27 @@ void cN2Prov::ExpandInput(unsigned char *hw)
     }
 }
 
-bool cN2Prov::MECM(unsigned char in15, int algo, unsigned char *cw)
+bool cN2Prov::MECM(unsigned char in15, int algo, const unsigned char *ed, unsigned char *cw)
 {
-  unsigned char hd[5], hw[128+64], buf[20];
+  unsigned char hd[32], hw[128+64], buf[20];
   hd[0]=in15&0x7F;
   hd[1]=cw[14];
   hd[2]=cw[15];
   hd[3]=cw[6];
   hd[4]=cw[7];
 
-  if(keyValid && !memcmp(seed,hd,5)) {	// key cached
+  if(keyValid && !memcmp(seed,hd,seedSize)) {	// key cached
     memcpy(buf,cwkey,8);
     }
   else {				// key not cached
     memset(hw,0,sizeof(hw));
-    if(!Algo(algo,hd,hw)) return false;
+    if(!Algo(algo,hd,ed,hw)) return false;
     memcpy(&hw[128],hw,64);
     RotateBytes(&hw[64],128);
     SHA1(&hw[64],128,buf);
     RotateBytes(buf,20);
 
-    memcpy(seed,hd,5);
+    memcpy(seed,hd,seedSize);
     memcpy(cwkey,buf,8);
     keyValid=true;
     }  
@@ -578,6 +752,8 @@ bool cNagra2::DecryptEMM(const unsigned char *in, unsigned char *out, const unsi
 
 // -- cSystemNagra2 ------------------------------------------------------------
 
+static int dropEMMs=1;
+
 class cSystemNagra2 : public cSystem, protected cNagra2 {
 private:
   int lastEcmId, lastEmmId;
@@ -606,6 +782,8 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
 {
 #define NA_SOURCE_START 0x8267 // cSource::FromString("S61.5W");
 #define NA_SOURCE_END   0x85c8 // cSource::FromString("S148W");
+  unsigned char odata[15];
+  memcpy(odata,data,sizeof(odata));
   if(ecm->source>=NA_SOURCE_START && ecm->source<=NA_SOURCE_END) {
     if(ecm->caId==0x1234) data[5]=0x09;		// NA rev 248 morph
     else data[5]=0x01;				// I _HATE_ this provider
@@ -679,7 +857,13 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
         break;
       case 0x00:
         i+=2; break;
-      case 0x30 ... 0x36:
+      case 0x30:
+      case 0x31:
+      case 0x32:
+      case 0x33:
+      case 0x34:
+      case 0x35:
+      case 0x36:
       case 0xB0:
         i+=buff[i+1]+2;
         break;
@@ -696,7 +880,7 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   if(l!=3) return false;
   if(mecmAlgo>0) {
     if(ecmP && ecmP->HasFlags(N2FLAG_MECM)) {
-      if(!ecmP->MECM(buff[15],mecmAlgo,cw)) return false;
+      if(!ecmP->MECM(buff[15],mecmAlgo,odata,cw)) return false;
       }
     else { PRINTF(L_SYS_ECM,"MECM for provider %04x not supported",id); return false; }
     }
@@ -713,6 +897,7 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
   int cmdLen=buffer[9]-5;
   int id=buffer[10]*256+buffer[11];
 
+  if(buffer[0]==0x83 && dropEMMs) return; // skip EMM-S if disabled
   if(cmdLen<96 || SCT_LEN(buffer)<cmdLen+15) {
     PRINTF(L_SYS_EMM,"bad EMM message msgLen=%d sctLen=%d",cmdLen,SCT_LEN(buffer));
     return;
@@ -816,7 +1001,10 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
         id=(emmdata[i+1]<<8)|emmdata[i+2];
         i+=3;
         break;
-      case 0xB0 ... 0xBF: // Update with ROM CPU code
+      case 0xB0: case 0xB1: case 0xB2: case 0xB3: // Update with ROM CPU code
+      case 0xB4: case 0xB5: case 0xB6: case 0xB7:
+      case 0xB8: case 0xB9: case 0xBA: case 0xBB:
+      case 0xBC: case 0xBD: case 0xBE: case 0xBF:
         {
         int bx=emmdata[i]&15;
         if(!emmP || !emmP->HasFlags(N2FLAG_Bx)) {
@@ -841,7 +1029,24 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
       case 0xAE: i+=11;break;
       case 0x12: i+=emmdata[i+1]+2; break;      // create tier
       case 0x20: i+=19; break;                  // modify tier
-      case 0xE3: i+=emmdata[i+4]+5; break;	// Eeprom update
+      case 0x9F: i+=6; break;
+      case 0xE3:                                // Eeprom update
+        {
+        int ex=emmdata[i]&15;
+        if(!emmP || !emmP->HasFlags(N2FLAG_Ex)) {
+          i+=emmdata[i+4]+5;
+          PRINTF(L_SYS_EMM,"E%X for provider %04x not supported",ex,id);
+          break;
+          }
+        int r;
+        if((r=emmP->ProcessEx(emmdata,cmdLen,i+1))>0)
+          i+=r;
+        else {
+          PRINTF(L_SYS_EMM,"E%X executing failed for %04x",ex,id);
+          i=cmdLen;
+          }
+        break;
+        }
       case 0xE1:
       case 0xE2:
       case 0x00: i=cmdLen; break;		// end of processing
@@ -859,52 +1064,6 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
 
 // -- cSystemLinkNagra2 --------------------------------------------------------
 
-static const tI18nPhrase Phrases2[] = {
-  { "Nagra2: AUXserver hostname",
-    "Nagra2: AUXserver Hostname",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "Nagra2: AUX-palvelimen osoite",
-    "",
-    "",
-    "",
-    "",
-  },
-  { "Nagra2: AUXserver port",
-    "Nagra2: AUXserver Port",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "Nagra2: AUX-palvelimen portti",
-    "",
-    "",
-    "",
-    "",
-  },
-  { "Nagra2: AUXserver password",
-    "Nagra2: AUXserver Passwort",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "Nagra2: AUX-palvelimen salasana",
-    "",
-    "",
-    "",
-    "",
-  },
-  { NULL }
-  };
-
 class cSystemLinkNagra2 : public cSystemLink {
 public:
   cSystemLinkNagra2(void);
@@ -917,13 +1076,14 @@ static cSystemLinkNagra2 staticInitN2;
 cSystemLinkNagra2::cSystemLinkNagra2(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
+  opts=new cOpts(SYSTEM_NAME,5);
+  opts->Add(new cOptBool("DropEMMS",trNOOP("Nagra2: drop EMM-S packets"),&dropEMMs));
 #ifdef HAS_AUXSRV
   static const char allowed_chars[] = "0123456789abcdefghijklmnopqrstuvwxyz-.";
-  opts=new cOpts(SYSTEM_NAME,3);
-  opts->Add(new cOptStr("AuxServerAddr","Nagra2: AUXserver hostname",auxAddr,sizeof(auxAddr),allowed_chars));
-  opts->Add(new cOptInt("AuxServerPort","Nagra2: AUXserver port",&auxPort,0,65535));
-  opts->Add(new cOptStr("AuxServerPass","Nagra2: AUXserver password",auxPassword,sizeof(auxPassword),allowed_chars));
-  Feature.AddPhrases(Phrases2);
+  opts->Add(new cOptBool("AuxServerEnable",trNOOP("Nagra2: Enable AUXserver"),&auxEnabled));
+  opts->Add(new cOptStr("AuxServerAddr",trNOOP("Nagra2: AUXserver hostname"),auxAddr,sizeof(auxAddr),allowed_chars));
+  opts->Add(new cOptInt("AuxServerPort",trNOOP("Nagra2: AUXserver port"),&auxPort,0,65535));
+  opts->Add(new cOptStr("AuxServerPass",trNOOP("Nagra2: AUXserver password"),auxPassword,sizeof(auxPassword),allowed_chars));
 #endif
   Feature.NeedsKeyFile();
 }

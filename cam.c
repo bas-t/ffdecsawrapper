@@ -602,7 +602,7 @@ bool cEcmData::Parse(const char *buf)
     SetName(Name);
     const char *line=buf+num;
     if(nu>0 && *line++==':') {
-      unsigned char dat[nu];
+      unsigned char *dat=AUTOMEM(nu);
       if(GetHex(line,dat,nu,true)==nu) AddData(dat,nu);
       }
     return true;
@@ -614,7 +614,7 @@ bool cEcmData::Save(FILE *f)
 {
   fprintf(f,"%d:%x:%x:%s:%x/%x:%x:%x/%x",prgId,source,transponder,name,caId,emmCaId,provId,ecm_pid,ecm_table);
   if(data) {
-    char str[dataLen*2+2];
+    char *str=AUTOARRAY(char,dataLen*2+2);
     fprintf(f,":%d:%s\n",dataLen,HexStr(str,data,dataLen));
     }
   else

@@ -64,3 +64,4 @@ clean:
 	@-rm -f *.o core* *~
 	@-rm -f testECM testEMM testN1Emu testN2Emu
 	@-rm -f filterhelper
+	@-rm -f dump.txt

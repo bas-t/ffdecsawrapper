@@ -1369,10 +1369,14 @@ const char **cScPlugin::SVDRPHelpPages(void)
   static const char *HelpPages[] = {
     "RELOAD\n"
     "    Reload all configuration files.",
+    "KEY <string>\n",
+    "    Add key to the key database (as if it was received from EMM stream).",
     "LOG <on|off> <class>[,<class>...]\n"
     "    Turn the given message class(es) on or off.",
     "LOGCFG\n"
     "    Display available message classes and their status.",
+    "LOGFILE <on|off> [<filename>]\n"
+    "    Enables/disables logging to file and optionaly sets the filename.",
     NULL
     };
   return HelpPages;
@@ -1394,9 +1398,22 @@ cString cScPlugin::SVDRPCommand(const char *Command, const char *Option, int &Re
         }
       }
     }
+  else if(!strcasecmp(Command,"KEY")) {
+    if(Option && *Option) {
+      if(keys.NewKeyParse(skipspace(Option)))
+        return "Key update successfull";
+      else {
+        ReplyCode=901;
+        return "Key already known or invalid key format";
+        }
+      }
+    else { ReplyCode=501; return "Missing args"; }
+    }
   else if(!strcasecmp(Command,"LOG")) {
     if(Option && *Option) {
-      char *opt=strdup(Option);
+      char tmp[1024];
+      strn0cpy(tmp,Option,sizeof(tmp));
+      char *opt=tmp;
       opt=skipspace(opt);
       bool mode;
       if(!strncasecmp(opt,"ON ",3)) { mode=true; opt+=3; }
@@ -1435,6 +1452,35 @@ cString cScPlugin::SVDRPCommand(const char *Command, const char *Option, int &Re
       }
     if(lb.Length()>0) return lb.Line();
     ReplyCode=901; return "No config available";
+    }
+  else if(!strcasecmp(Command,"LOGFILE")){
+    if(Option && *Option) {
+      char tmp[1024];
+      strn0cpy(tmp,Option,sizeof(tmp));
+      char *opt=tmp;
+      opt=skipspace(opt);
+      bool mode;
+      if(!strncasecmp(opt,"ON",2)) { mode=true; opt+=2; }
+      else if(!strncasecmp(opt,"OFF",3)) { mode=false; opt+=3; }
+      else { ReplyCode=501; return "Bad mode, valid: on off"; }
+      cLineBuff lb(256);
+      if(mode) {
+        logcfg.logFile=true;
+        if(*opt==' ' || *opt=='\t') {
+          opt=stripspace(skipspace(opt));
+          strn0cpy(logcfg.logFilename,opt,sizeof(logcfg.logFilename));
+          }
+        lb.Printf("logging to file enabled, file %s",logcfg.logFilename);
+        }
+      else {
+        logcfg.logFile=false;
+        lb.Printf("logging to file disabled");
+        }
+      ScSetup.Store(true);
+      Setup.Save();
+      return lb.Line();
+      }
+    else { ReplyCode=501; return "Missing args"; }
     }
   return NULL;
 }
