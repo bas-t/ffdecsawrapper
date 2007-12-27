@@ -29,7 +29,7 @@ static const struct LogModule lm_sys = {
   (LMOD_ENABLE|L_SYS_ALL)&LOPT_MASK,
   (LMOD_ENABLE|L_SYS_DEFDEF|L_SYS_EMU|L_SYS_DISASM80|L_SYS_MAP)&LOPT_MASK,
   "nagra",
-  { L_SYS_DEFNAMES,"emu","disasm","disasm80","cpuStats","map","rawemm" }
+  { L_SYS_DEFNAMES,"emu","disasm","disasm80","cpuStats","map","rawemm","rawecm" }
   };
 ADD_MODULE(L_SYS,lm_sys)
 
@@ -51,9 +51,9 @@ cPlainKeyNagra::cPlainKeyNagra(bool Super)
 :cDualKey(Super,true)
 {}
 
-bool cPlainKeyNagra::IsBNKey(void) const
+bool cPlainKeyNagra::IsBNKey(int kn)
 {
-  switch(keynr & C2MASK) {
+  switch(kn & C2MASK) {
     // Nagra1
     case MBC('M','1'):
     case MBC('E','1'):
@@ -67,6 +67,11 @@ bool cPlainKeyNagra::IsBNKey(void) const
       return true;
     }
   return false;
+}
+
+bool cPlainKeyNagra::IsBNKey(void) const
+{
+  return IsBNKey(keynr);
 }
 
 int cPlainKeyNagra::ParseTag(const char *tag, const char * &line)

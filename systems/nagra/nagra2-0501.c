@@ -77,23 +77,45 @@ bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     ExpandInput(hw);
     hw[63]|=0x80;
     hw[95]=hw[127]=hw[95]&0x7F;
-    SetWordSize(4);
-    ImportReg(IMPORT_J,hw+0x18);
-    ImportReg(IMPORT_D,hw+0x20);
-    ImportReg(IMPORT_A,hw+0x60);
+    DoMap(SETSIZE,0,4);
+    DoMap(IMPORT_J,hw+0x18);
+    DoMap(IMPORT_D,hw+0x20);
+    DoMap(IMPORT_A,hw+0x60);
     DoMap(0x37,hw+0x40);
-    ExportReg(EXPORT_C,hw);
+    DoMap(EXPORT_C,hw);
     DoMap(0x3a);
-    ExportReg(EXPORT_C,hw+0x20);
+    DoMap(EXPORT_C,hw+0x20);
     DoMap(0x43);
     DoMap(0x44,hw);
     hw[0]&=7;
-    ExportReg(EXPORT_B,hw+3);
+    DoMap(EXPORT_B,hw+3);
     memset(hw+3+0x20,0,128-(3+0x20));
     return true;
     }
 
-  PRINTF(L_SYS_ECM,"0501: unknown MECM algo %02x",algo);
+  PRINTF(L_SYS_ECM,"%04X: unknown MECM algo %02x",id,algo);
   return false;
 }
+
+// -- cN2Prov0511 ----------------------------------------------------------------
+
+/*
+class cN2Prov0511 : public cN2Prov0501 {
+public:
+  cN2Prov0511(int Id, int Flags):cN2Prov0501(Id,Flags) {}
+  };
+*/
+
+static cN2ProvLinkReg<cN2Prov0501,0x0511,N2FLAG_MECM|N2FLAG_INV> staticPL0511;
+
+// -- cN2Prov1101 ----------------------------------------------------------------
+
+/*
+class cN2Prov1101 : public cN2Prov0501 {
+public:
+  cN2Prov1101(int Id, int Flags):cN2Prov0501(Id,Flags) {}
+  };
+*/
+
+static cN2ProvLinkReg<cN2Prov0501,0x1101,N2FLAG_MECM|N2FLAG_INV> staticPL1101;
 

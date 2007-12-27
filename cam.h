@@ -59,6 +59,34 @@ extern cEcmCache ecmcache;
 
 // ----------------------------------------------------------------
 
+class cPrgPid : public cSimpleItem {
+private:
+  int type, pid;
+  bool proc;
+public:
+  cPrgPid(int Type, int Pid) { type=Type; pid=Pid; proc=false; }
+  int Pid(void) { return pid; }
+  int Type(void) { return type; }
+  bool Proc(void) { return proc; }
+  void Proc(bool is) { proc=is; };
+  };
+
+// ----------------------------------------------------------------
+
+class cPrg : public cSimpleItem {
+private:
+  int prg;
+  bool isUpdate;
+public:
+  cSimpleList<cPrgPid> pids;
+  //
+  cPrg(int Prg, bool IsUpdate) { prg=Prg; isUpdate=IsUpdate; }
+  int Prg(void) { return prg; }
+  bool IsUpdate(void) { return isUpdate; }
+  };
+
+// ----------------------------------------------------------------
+
 #if APIVERSNUM >= 10500
 typedef int caid_t;
 #else
@@ -138,10 +166,13 @@ private:
   cMutex lruMutex;
   static int budget;
   //
+#ifndef SASC
   void LateInit(void);
   void EarlyShutdown(void);
   int FindLRUPrg(int source, int transponder, int prg);
+#endif //SASC
 protected:
+#ifndef SASC
 #if APIVERSNUM >= 10500
   virtual bool Ready(void);
 #else
@@ -153,22 +184,25 @@ protected:
   virtual bool OpenDvr(void);
   virtual void CloseDvr(void);
   virtual bool GetTSPacket(uchar *&Data);
+#endif //SASC
 public:
   cScDvbDevice(int n, int cafd);
   ~cScDvbDevice();
+#ifndef SASC
 #if APIVERSNUM >= 10501
   virtual bool HasCi(void);
 #endif
 #if APIVERSNUM < 10500
   virtual int ProvidesCa(const cChannel *Channel) const;
 #endif
+#endif //SASC
   static void Capture(void);
   static bool Initialize(void);
   static void Startup(void);
   static void Shutdown(void);
   static void SetForceBudget(int n);
   static bool ForceBudget(int n);
-  bool SetCaDescr(ca_descr_t *ca_descr);
+  bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   bool SetCaPid(ca_pid_t *ca_pid);
   void DumpAV7110(void);
   cCam *Cam(void) { return cam; }

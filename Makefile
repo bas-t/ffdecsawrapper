@@ -51,6 +51,7 @@ SHAREDLIBS    =
 ### Allow user defined options to overwrite defaults:
 
 -include $(VDRDIR)/Make.config
+-include Make.config
 
 ### The version number of VDR (taken from VDR's "config.h"):
 
@@ -74,6 +75,13 @@ PACKAGE = vdr-$(ARCHIVE)
 
 OBJS = $(PLUGIN).o data.o filter.o system.o i18n.o misc.o cam.o \
        smartcard.o network.o crypto.o system-common.o parse.o log.o
+
+### Internationalization (I18N):
+
+PODIR     = po
+I18Npot   = $(PODIR)/$(PLUGIN).pot
+I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo,$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
+LOCALEDIR = $(VDRDIR)/locale
 
 #
 # generic stuff
@@ -102,6 +110,12 @@ CSAFLAGS   ?= -Wall -fPIC -g -O3 -mmmx -fomit-frame-pointer -fexpensive-optimiza
 FFDECSADIR  = FFdecsa
 FFDECSA     = $(FFDECSADIR)/FFdecsa.o
 
+# SASC
+ifdef SASC
+DEFINES += -DSASC
+FFDECSA =
+endif
+
 # export for system makefiles
 export SCAPIVERS
 export APIVERSION
@@ -110,11 +124,6 @@ export SHAREDDEFINES
 export SHAREDLIBS
 export CXX
 export CXXFLAGS
-
-### Implicit rules:
-
-%.o: %.c
-	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $<
 
 # Dependencies:
 
@@ -134,8 +143,16 @@ else
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems systems-pre
 endif
 
+ifneq ($(shell grep -l 'Phrases' $(VDRDIR)/i18n.c),$(VDRDIR)/i18n.c)
+BUILDTARGETS += i18n
+endif
+
+default-target: all
 all: $(BUILDTARGETS)
-.PHONY: systems systems-pre clean clean-core clean-systems clean-pre dist srcdist
+.PHONY: i18n systems systems-pre clean clean-core clean-systems clean-pre dist srcdist
+
+%.o: %.c
+	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $<
 
 libvdr-$(PLUGIN).so: $(OBJS) $(FFDECSA)
 	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(FFDECSA) $(LIBS) $(SHAREDLIBS) -o $@
@@ -148,6 +165,22 @@ $(LIBDIR)/libvdr-$(PLUGIN).a: $(OBJS)
 
 $(FFDECSA): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
 	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT) -DPARALLEL_MODE=$(PARALLEL)" -C $(FFDECSADIR) all
+
+$(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
+	xgettext -C -cTRANSLATORS --no-wrap -F -k -ktr -ktrNOOP --msgid-bugs-address='<noone@nowhere.org>' -o $@ $^
+
+%.po: $(I18Npot)
+	msgmerge -U --no-wrap -F --backup=none -q $@ $<
+	@touch $@
+
+%.mo: %.po
+	msgfmt -c -o $@ $<
+
+$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
+	@mkdir -p $(dir $@)
+	cp $< $@
+
+i18n: $(I18Nmsgs)
 
 systems:
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" all || exit 1; done
@@ -164,6 +197,7 @@ clean-core:
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
 	@-rm -f $(OBJS) $(DEPFILE) *.so *.tar.gz core* *~
+	@-rm -f $(PODIR)/*.mo $(PODIR)/*.pot
 
 clean-pre:
 	@-find "$(PREDIR)" -type f -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f

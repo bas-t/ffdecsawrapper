@@ -70,7 +70,7 @@ bool cN2Emu::Init(int id, int romv)
     // ROM01 0x01:0x8000-0xffff
     if(!AddMapper(new cMapRom(0x8000,buff,0x0C000),0x8000,0x8000,0x01)) return false;
     // ROM02 0x02:0x8000-0xbfff
-    if(!AddMapper(new cMapRom(0x8000,buff,0x14000),0x8000,0x4000,0x02)) return false;
+    if(!AddMapper(new cMapRom(0x8000,buff,0x14000),0x8000,romv==110?0x8000:0x4000,0x02)) return false;
 
     snprintf(buff,sizeof(buff),"EEP%02X_%d.bin",(id>>8)&0xFF,romv);
     // Eeprom00 0x00:0x3000-0x37ff OTP 0x80
@@ -86,16 +86,33 @@ bool cN2Emu::Init(int id, int romv)
 
 // -- cMapCore -----------------------------------------------------------------
 
-#define SETSIZE  0x02
-#define IMPORT_J 0x03
-#define IMPORT_A 0x04
-#define IMPORT_B 0x05
-#define IMPORT_C 0x06
-#define IMPORT_D 0x07
-#define EXPORT_A 0x0A
-#define EXPORT_B 0x0B
-#define EXPORT_C 0x0C
-#define EXPORT_D 0x0D
+#define SETSIZE     0x02
+#define IMPORT_J    0x03
+#define IMPORT_A    0x04
+#define IMPORT_B    0x05
+#define IMPORT_C    0x06
+#define IMPORT_D    0x07
+#define IMPORT_LAST 0x08
+#define EXPORT_J    0x09
+#define EXPORT_A    0x0A
+#define EXPORT_B    0x0B
+#define EXPORT_C    0x0C
+#define EXPORT_D    0x0D
+#define EXPORT_LAST 0x0E
+#define SWAP_A      0x0F
+#define SWAP_B      0x10
+#define SWAP_C      0x11
+#define SWAP_D      0x12
+#define CLEAR_A     0x13
+#define CLEAR_B     0x14
+#define CLEAR_C     0x15
+#define CLEAR_D     0x16
+#define COPY_A_B    0x17
+#define COPY_B_A    0x18
+#define COPY_A_C    0x19
+#define COPY_C_A    0x1A
+#define COPY_C_D    0x1B
+#define COPY_D_C    0x1C
 
 class cMapCore {
 private:
@@ -105,11 +122,9 @@ protected:
   cBN A, B, C, D, J;
   cBN H, R;
   cBNctx ctx;
-  int wordsize;
+  int wordsize, last;
+  cBN *regs[5];
   //
-  void ImportReg(unsigned char reg, const unsigned char *data, int l=0);
-  void ExportReg(unsigned char reg, unsigned char *data, int l=0, bool BE=false);
-  void SetWordSize(int l) { wordsize=l; }
   void MakeJ(void);
   void MonMul(BIGNUM *o, BIGNUM *i1, BIGNUM *i2);
   bool DoMap(int f, unsigned char *data=0, int l=0);
@@ -119,35 +134,8 @@ public:
 
 cMapCore::cMapCore(void)
 {
-  wordsize=4;
-}
-
-void cMapCore::ImportReg(unsigned char reg, const unsigned char *in, int l)
-{
-  l=(l?l:wordsize)<<3;
-  switch(reg) {
-    case IMPORT_J: J.GetLE(in,8); break;
-    case IMPORT_A: A.GetLE(in,l); break;
-    case IMPORT_B: B.GetLE(in,l); break;
-    case IMPORT_C: C.GetLE(in,l); break;
-    case IMPORT_D: D.GetLE(in,l); break;
-    default: PRINTF(L_GEN_DEBUG,"internal: nagramap import register not supported"); return;
-    }
-}
-
-void cMapCore::ExportReg(unsigned char reg, unsigned char *out, int l, bool BE)
-{
-  l=(l?l:wordsize)<<3;
-  cBN *ptr;
-  switch(reg) {
-    case EXPORT_A: ptr=&A; break;
-    case EXPORT_B: ptr=&B; break;
-    case EXPORT_C: ptr=&C; break;
-    case EXPORT_D: ptr=&D; break;
-    default: PRINTF(L_GEN_DEBUG,"internal: nagramap export register not supported"); return;
-    }
-  if(!BE) ptr->PutLE(out,l);
-  else ptr->Put(out,l);
+  wordsize=4; last=1;
+  regs[0]=&J; regs[1]=&A; regs[2]=&B; regs[3]=&C; regs[4]=&D;
 }
 
 void cMapCore::MakeJ(void)
@@ -206,7 +194,63 @@ void cMapCore::MonMul(BIGNUM *o, BIGNUM *i1, BIGNUM *i2)
 
 bool cMapCore::DoMap(int f, unsigned char *data, int l)
 {
+  int dl=(l?l:wordsize)<<3;
   switch(f) {
+    case SETSIZE:
+      wordsize=l; break;
+
+    case IMPORT_J:    
+    case IMPORT_A:    
+    case IMPORT_B:    
+    case IMPORT_C:    
+    case IMPORT_D:
+      last=f-IMPORT_J;
+      // fall through
+    case IMPORT_LAST:
+      regs[last]->GetLE(data,last>0?dl:8);
+      break;
+
+    case EXPORT_J:
+    case EXPORT_A:
+    case EXPORT_B:
+    case EXPORT_C:
+    case EXPORT_D:
+      last=f-EXPORT_J;
+      // fall through
+    case EXPORT_LAST:
+      regs[last]->PutLE(data,last>0?dl:8);
+      break;
+
+    case SWAP_A:
+    case SWAP_B:
+    case SWAP_C:
+    case SWAP_D:
+      last=f-SWAP_A+1;
+      x.GetLE(data,dl);
+      regs[last]->PutLE(data,dl);
+      BN_copy(*regs[last],x);
+      break;
+
+    case CLEAR_A:
+    case CLEAR_B:
+    case CLEAR_C:
+    case CLEAR_D:
+      last=f-CLEAR_A+1; BN_zero(*regs[last]);
+      break;
+
+    case COPY_A_B:
+      last=2; BN_copy(B,A); break;
+    case COPY_B_A:
+      last=1; BN_copy(A,B); break;
+    case COPY_A_C:
+      last=3; BN_copy(C,A); break;
+    case COPY_C_A:
+      last=1; BN_copy(A,C); break;
+    case COPY_C_D:
+      last=4; BN_copy(D,C); break;
+    case COPY_D_C:
+      last=3; BN_copy(C,D); break;
+
     case 0x43: // init SHA1
       SHA1_Init(&sctx);
       break;
@@ -235,6 +279,12 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
 
 // -- cN2Prov ------------------------------------------------------------------
 
+#define N2FLAG_NONE     0
+#define N2FLAG_MECM     1
+#define N2FLAG_Bx       2
+#define N2FLAG_POSTAU   4
+#define N2FLAG_INV      128
+
 class cN2Prov {
 private:
   unsigned seed[5], cwkey[8];
@@ -253,13 +303,23 @@ public:
   void SwapCW(unsigned char *cw);
   virtual int ProcessBx(unsigned char *data, int len, int pos) { return -1; }
   virtual bool PostProcAU(int id, unsigned char *data) { return true; }
-  bool CanHandle(int Id) { return ((Id^id)&~0x107)==0; }
+  bool CanHandle(int Id) { return MATCH_ID(Id,id); }
   bool HasFlags(int Flags) { return (flags&Flags)==Flags; }
+  void PrintCaps(int c);
   };
 
 cN2Prov::cN2Prov(int Id, int Flags)
 {
   keyValid=false; id=Id; flags=Flags;
+}
+
+void cN2Prov::PrintCaps(int c)
+{
+  PRINTF(c,"provider %04x capabilities%s%s%s%s",id,
+           HasFlags(N2FLAG_MECM)    ?" MECM":"",
+           HasFlags(N2FLAG_Bx)      ?" Bx":"",
+           HasFlags(N2FLAG_POSTAU)  ?" POSTPROCAU":"",
+           HasFlags(N2FLAG_INV)     ?" INVCW":"");
 }
 
 void cN2Prov::ExpandInput(unsigned char *hw)
@@ -332,12 +392,6 @@ void cN2Prov::SwapCW(unsigned char *cw)
 
 // -- cN2ProvLink & cN2Providers -----------------------------------------------
 
-#define N2FLAG_NONE     0
-#define N2FLAG_MECM     1
-#define N2FLAG_Bx       2
-#define N2FLAG_POSTAU   4
-#define N2FLAG_INV      128
-
 class cN2Providers;
 
 class cN2ProvLink {
@@ -348,7 +402,7 @@ protected:
   int id, flags;
   //
   virtual cN2Prov *Create(void)=0;
-  bool CanHandle(int Id) { return ((Id^id)&~0x107)==0; }
+  bool CanHandle(int Id) { return MATCH_ID(Id,id); }
   bool HasFlags(int Flags) { return (flags&Flags)==Flags; }
 public:
   cN2ProvLink(int Id, int Flags);
@@ -589,18 +643,15 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   if((!ecmP && id!=lastEcmId) || (ecmP && !ecmP->CanHandle(id))) {
     delete ecmP;
     ecmP=cN2Providers::GetProv(id,N2FLAG_NONE);
-    if(ecmP) PRINTF(L_SYS_ECM,"provider %04x capabilities%s%s%s%s",id,
-                      ecmP->HasFlags(N2FLAG_MECM)    ?" MECM":"",
-                      ecmP->HasFlags(N2FLAG_Bx)      ?" Bx":"",
-                      ecmP->HasFlags(N2FLAG_POSTAU)  ?" POSTPROCAU":"",
-                      ecmP->HasFlags(N2FLAG_INV)     ?" INVCW":"");
+    if(ecmP) ecmP->PrintCaps(L_SYS_ECM);
     }
   lastEcmId=id;
 
+  HEXDUMP(L_SYS_RAWECM,buff,cmdLen,"Nagra2 RAWECM");
   int l=0, mecmAlgo=0;
   LBSTARTF(L_SYS_ECM);
   bool contFail=false;
-  for(int i=16; i<cmdLen-10 && l!=3; ) {
+  for(int i=(buff[14]&0x10)?16:20; i<cmdLen-10 && l!=3; ) {
     switch(buff[i]) {
       case 0x10:
       case 0x11:
@@ -617,8 +668,6 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
         break;
       case 0x00:
         i+=2; break;
-      case 0x13 ... 0x17:
-        i+=4; break;
       case 0x30 ... 0x36:
       case 0xB0:
         i+=buff[i+1]+2;
@@ -660,7 +709,7 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
 
   int keyset=(buffer[12]&0x03);
   int sel=(buffer[12]&0x10)<<2;
-  int rsasel=(id==0x4101 || id==0x4001) ? 0:sel; // D+ hack
+  int rsasel=(MATCH_ID(id,0x4101) || MATCH_ID(id,0x7101)) ? 0:sel; // D+ hack
   int sigsel=(buffer[13]&0x80)>>1;
   cPlainKey *pk;
   cBN n;
@@ -693,11 +742,7 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
   if((!emmP && id!=lastEmmId) || (emmP && !emmP->CanHandle(id))) {
     delete emmP;
     emmP=cN2Providers::GetProv(id,N2FLAG_NONE);
-    if(emmP) PRINTF(L_SYS_EMM,"provider %04x capabilities%s%s%s%s",id,
-                      emmP->HasFlags(N2FLAG_MECM)    ?" MECM":"",
-                      emmP->HasFlags(N2FLAG_Bx)      ?" Bx":"",
-                      emmP->HasFlags(N2FLAG_POSTAU)  ?" POSTPROCAU":"",
-                      emmP->HasFlags(N2FLAG_INV)     ?" INVCW":"");
+    if(emmP) emmP->PrintCaps(L_SYS_EMM);
     }
   lastEmmId=id;
 
@@ -708,15 +753,45 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
   for(int i=8+2+4+4; i<cmdLen-22; ) {
     switch(emmdata[i]) {
       case 0x42: // plain Key update
-        if(emmdata[i+2]==0x10 && (emmdata[i+3]&0xBF)==0x06 &&
-           (emmdata[i+4]&0xF8)==0x08 && emmdata[i+5]==0x00 && emmdata[i+6]==0x10) {
-          if(!emmP || emmP->PostProcAU(id,&emmdata[i])) {
-            FoundKey();
-            if(keys.NewKey('N',id,(emmdata[i+3]&0x40)>>6,&emmdata[i+7],16)) NewKey();
-            cLoaders::SaveCache();
+        if((((emmdata[i+3]|0xF3)+1)&0xFF) != 0) {
+          int len=emmdata[i+2];
+          int off=emmdata[i+5];
+          int ulen=emmdata[i+6];
+          if(len>0 && ulen>0 && off+ulen<=len) {
+            int ks=emmdata[i+3], kn;
+            if(ks==0x06 || ks==0x46) kn=(ks>>6)&1; else kn=MBC(N2_MAGIC,ks);
+            unsigned char key[256];
+            memset(key,0,sizeof(key));
+            if((pk=keys.FindKey('N',id,kn,len))) {
+              if(cPlainKeyNagra::IsBNKey(kn)) { pk->Get(n); n.PutLE(key,len); }
+              else pk->Get(key);
+              }
+            bool ok=false;
+            if((emmdata[i+1]&0x7F)==0) ok=true;
+            else {
+              if(emmP && emmP->HasFlags(N2FLAG_POSTAU)) {
+                if(emmP->PostProcAU(id,&emmdata[i])) ok=true;
+                }
+              else PRINTF(L_SYS_EMM,"POSTAU for provider %04x not supported",id);
+              }
+            if(ok) {
+              memcpy(&key[off],&emmdata[i+7],ulen);
+              FoundKey();
+              if(cPlainKeyNagra::IsBNKey(kn)) {
+                n.GetLE(key,len);
+                if(keys.NewKey('N',id,kn,n,len)) NewKey();
+                }
+              else {
+                if(keys.NewKey('N',id,kn,key,len)) NewKey();
+                }
+              cLoaders::SaveCache();
+              }
+            i+=ulen;
             }
+          else PRINTF(L_SYS_EMM,"nano42 key size mismatch len=%d off=%d ulen=%d",len,off,ulen);
           }
-        i+=23;
+        else PRINTF(L_SYS_EMM,"nano42 0xf3 status exceeded");
+        i+=7;
         break;
       case 0xE0: // DN key update
         if(emmdata[i+1]==0x25) {
@@ -724,23 +799,11 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
           if(keys.NewKey('N',id,(emmdata[i+16]&0x40)>>6,&emmdata[i+23],16)) NewKey();
           cLoaders::SaveCache();
           }
-        i+=39;
+        i+=emmdata[i+1]+2;
         break;
       case 0x83: // change data prov. id
         id=(emmdata[i+1]<<8)|emmdata[i+2];
         i+=3;
-        break;
-      case 0xA4: // conditional (always no match assumed for now)
-        i+=emmdata[i+1]+2+4;
-        break;
-      case 0xA6:
-        i+=15;
-        break;
-      case 0xAE:
-        i+=11;
-        break;
-      case 0x13 ... 0x17: // Date
-        i+=4;
         break;
       case 0xB0 ... 0xBF: // Update with ROM CPU code
         {
@@ -759,14 +822,19 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
           }
         break;
         }
-      case 0xE3: // Eeprom update
-        i+=emmdata[i+4]+4;
-        break;
+      case 0xA4: i+=emmdata[i+1]+2+4; break;	// conditional (always no match assumed for now)
+      case 0xA6: i+=15; break;
+      case 0xAA: i+=emmdata[i+1]+5; break;
+      case 0xAD: i+=emmdata[i+1]+2; break;
+      case 0xA2:
+      case 0xAE: i+=11;break;
+      case 0x12: i+=emmdata[i+1]+2; break;      // create tier
+      case 0x20: i+=19; break;                  // modify tier
+//      case 0x13 ... 0x17: i+=4; break;		// Date
+      case 0xE3: i+=emmdata[i+4]+5; break;	// Eeprom update
       case 0xE1:
       case 0xE2:
-      case 0x00: // end of processing
-        i=cmdLen;
-        break;
+      case 0x00: i=cmdLen; break;		// end of processing
       default:
         if(!contFail) LBPUT("unknown EMM nano");
         LBPUT(" %02x",emmdata[i]);

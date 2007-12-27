@@ -1,9 +1,23 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+02.09.2007: Version 0.8.2
+- Reworked Nagra2 EMM nano handling, key updates and map core (the latter is
+  partly based on Emunation 2.0.0 code).
+- Added Nagra2 0101 register 0x05,0x16 fix (not well tested).
+- Added Nagra2 0511,1101 MECM (same as 0501).
+- Added compatibility option for sasc-ng.
+- Added commandline option -c to select a config subdirectory.
+- Fixed FFdecsa to prevent CW change while key in use. Based on racepatch from
+  DVBN.
+- Fixed cardclient camd35 packet ID compare (short vs. int).
+- Fixed Nagra2 skipping expiry date in ECM.
+- Added support for VDR 1.5.7+ gettext sheme (most po-files need to be revised
+  by translators).
+
 06.07.2007: Version 0.8.1
 - Added Nagra2 7101 3DES support.
-- Added a setup option to force tranfermode with digital audio. Another common
+- Added a setup option to force transfermode with digital audio. Another common
   used patched for the vdr-core is made unnecessary by this option.
 - Fixed camd33 EMM packet processing.
 - Fixed recording device allocation (1.4.x). You have to update the VDR core

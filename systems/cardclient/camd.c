@@ -413,7 +413,8 @@ struct EmmReq05 {
 
 class cCardClientCamd35 : public cCardClient, public cAES, private cIdSet {
 private:
-  unsigned int ucrc, pinid;
+  unsigned int ucrc;
+  unsigned short pinid;
   bool exclusive, emmCmd06;
   cCondVar sleepCond;
   cTimeMs time;
@@ -670,7 +671,7 @@ bool cCardClientCamd35::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     unsigned char buff[300];
     memset(buff,0xff,sizeof(buff));
     struct CmdBlock *cb=(struct CmdBlock *)buff;
-    const unsigned int pid=pinid++;
+    const unsigned short pid=pinid++;
     int n;
     while((n=RecvBlock(cb,sizeof(buff),0))>0) {
       if(cb->udp_header.cmd==0x01 || cb->udp_header.cmd==0x44)

@@ -234,30 +234,11 @@ void cSystemCardClient::ProcessEMM(int pid, int caid, unsigned char *buffer)
 
 // -- cSystemLinkCardClient -----------------------------------------------------------
 
-static const tI18nPhrase Phrases[] = {
-  { "Cardclient: connect immediately",
-    "Cardclient: sofort verbinden",
-    "",
-    "",
-    "Cardclient: direct contact maken",
-    "",
-    "Cardclient: connecter immediatement",
-    "",
-    "Korttiasiakas: yhdistä välittömästi",
-    "Klient karty: pod³±cz natychmiast",
-    "",
-    "",
-    "",
-  },
-  { NULL }
-  };
-
 cSystemLinkCardClient::cSystemLinkCardClient(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
   opts=new cOpts(SYSTEM_NAME,1);
-  opts->Add(new cOptBool("Immediate","Cardclient: connect immediately",&immediate));
-  Feature.AddPhrases(Phrases);
+  opts->Add(new cOptBool("Immediate",trNOOP("Cardclient: connect immediately"),&immediate));
 }
 
 cCardClient *cSystemLinkCardClient::FindBySysId(unsigned short id, cCardClient *cc)

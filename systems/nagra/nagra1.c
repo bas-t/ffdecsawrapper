@@ -961,24 +961,6 @@ void cSystemNagra::ProcessEMM(int pid, int caid, unsigned char *buffer)
 
 // -- cSystemLinkNagra ---------------------------------------------------------
 
-static const tI18nPhrase Phrases[] = {
-  { "Nagra: min. ECM processing time",
-    "Nagra: min. ECM Bearbeitungszeit",
-    "",
-    "",
-    "Nagra: min. ECM bewerkingstijd",
-    "",
-    "Nagra: min. durée du processus ECM",
-    "",
-    "Nagra: Min. ECM-prosessointiaika",
-    "Nagra: min. czas przetwarzania ECM",
-    "",
-    "",
-    "",
-  },
-  { NULL }
-  };
-
 class cSystemLinkNagra : public cSystemLink {
 public:
   cSystemLinkNagra(void);
@@ -992,9 +974,8 @@ cSystemLinkNagra::cSystemLinkNagra(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
   opts=new cOpts(SYSTEM_NAME,1);
-  opts->Add(new cOptInt("MinEcmTime","Nagra: min. ECM processing time",&minEcmTime,0,5000));
+  opts->Add(new cOptInt("MinEcmTime",trNOOP("Nagra: min. ECM processing time"),&minEcmTime,0,5000));
   Feature.NeedsKeyFile();
-  Feature.AddPhrases(Phrases);
 }
 
 bool cSystemLinkNagra::CanHandle(unsigned short SysId)

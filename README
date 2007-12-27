@@ -95,7 +95,8 @@ device numbering inside VDR.
 Note that some budget card drivers provide a CA device too. This might make VDR
 and the plugin detect the card as a full-featured card, thus disabling FFdecsa.
 You should use commandline option -B to force detection as a budget card in such
-a case.
+a case. This commandline option takes a device number as argument and may appear
+multiple times (compare VDR commandline option -D).
 
 For testing purpose you should start VDR in foreground always. The plugin gives
 a lot of additional information to the console. This may be helpful in case it
@@ -193,23 +194,19 @@ core control all aspects of operation, there is no way to enforce a limit
 Additional files
 ----------------
 
-All config files must be located in a subdirectory (of your VDR config
-directory) called "plugins". The private plugin cache file is saved to this
-directory too. The keyfile must be named "SoftCam.Key".
+All config files must be located in the VDR plugin config directory. If you want
+to use a dedicated subdirectory for this plugin, you can use commandline option
+-c to name the subdirectory (e.g. -c sc). The private plugin cache file is saved
+to this directory too. The keyfile must be named "SoftCam.Key".
 
 For Seca2 support you need binary files which contain the hash & mask tables.
 The file format is the same as for Yankse. The files must be located in the
-"plugins/seca" subdirectory. The name sheme is s2_TTTT_XXXX.bin where TTTT is
+"seca" subdirectory. The name sheme is s2_TTTT_XXXX.bin where TTTT is
 one of "hash","mt" and XXXX is the provider ID (e.g. s2_hash_0064.bin,
 s2_mt_0070.bin). The hash file must be 1536 bytes long. The mt file is normaly
 16384 bytes long, but this may differ for your provider. For advanced Seca2
 providers you may need additional table files. At the moment these are
 s2_sse.bin, s2_sse_XXXX.bin and s2_cw_XXXX.bin.
-
-Although there is support for Viaccess TPS AU, you still can provide a "tps.bin"
-file in the "plugins/viaccess" subdirectory in case AU doesn't work for your
-provider. Be aware that in most cases this file has to be updated on a daily
-basis.
 
 Note, that for this @SHL implementation the key must be in Z 00 00 <key> format
 (the V 000000 00 <key> format doesn't work).
@@ -222,13 +219,13 @@ For Nagra1 AU you need appropriate binary Rom and Eeprom files. The files have
 to be named "ROMX.bin", "ROMXext.bin" or "eepX_Z.bin", where X is the ROM number
 (decimal) and Z is the upper part of the provider ID (hexadecimal). The Eeprom
 files may be updated from the EMM data, take care that the permissions are set
-right. The plugin searches for these files in the "plugins/nagra" subdirectory.
+right. The plugin searches for these files in the "nagra" subdirectory.
 
 For Nagra2 AU some providers need binary Rom and Eeprom files. The files have to
 be named "ROMxxx.bin" and "EEPyy_xxx.bin", where xxx is the ROM version (e.g.
 102) and yy is the upper part of the provider ID (e.g. 08 for BEV). The files
 must contain the joined contents of all Rom/Eeprom pages. The plugin searches
-for these files in the "plugins/nagra" subdirectory.
+for these files in the "nagra" subdirectory.
 
 
 
@@ -317,6 +314,25 @@ defaults to 60 seconds, e.g. "-t 120".
 The current cardclient implementation is loosely based on the Streamboard
 client (contributed by S.Laurel from the Streamboard), which was included in
 earlier releases.
+
+
+
+Summary of commandline options
+------------------------------
+
+-c DIR    --config=DIR   search config files in subdir DIR
+                         (default: none)
+-B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)
+-I        --inverse-cd   use inverse CD detection for the next serial device
+-R        --inverse-rst  use inverse RESET for the next serial device
+-C FREQ   --clock=FREQ   use FREQ as clock for the card reader on the next
+                         serial device (rather than 3.5712 MHz
+-s DEV    --serial=DEV   activate Phoenix ISO interface on serial device DEV
+                         (default: none)
+-d CMD    --dialup=CMD   call CMD to start/stop dialup-network
+                         (default: none)
+-t SECS   --timeout=SECS shutdown timeout for dialup-network
+                         (default: 60 secs)
 
 
 

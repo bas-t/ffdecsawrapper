@@ -643,11 +643,8 @@ bool cSmartCardIrdeto::Update(int pid, int caid, const unsigned char *data)
         cmd[5]=dataLen+ADDRLEN;
         memset(cmd+sizeof(emmCmd),0,ADDRLEN);
         memcpy(cmd+sizeof(emmCmd),&data[3],len);
-//        if(data[len+3]==0x01 && data[len+4]==0x00) {
-          memcpy(cmd+sizeof(emmCmd)+ADDRLEN,&data[len+5],dataLen);
-          if(DoCmd(cmd,0x0000)>0 && Status()) return true;
-//          }
-//        else d(printf("smartcardirdeto: bad EMM format, 0x0100 marker is 0x%02x%02x\n",data[len+3],data[len+4]))
+        memcpy(cmd+sizeof(emmCmd)+ADDRLEN,&data[len+5],dataLen);
+        if(DoCmd(cmd,0x0000)>0 && Status()) return true;
         }
       }
     else PRINTF(L_SC_ERROR,"addrlen %d > %d",len,ADDRLEN);

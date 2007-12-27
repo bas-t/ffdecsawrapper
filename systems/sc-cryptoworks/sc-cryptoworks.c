@@ -65,52 +65,6 @@ cSystemScCryptoworks::cSystemScCryptoworks(void)
 
 // -- cSystemLinkScCryptoworks --------------------------------------------------------
 
-static const tI18nPhrase Phrases[] = {
-  { "SC-Cryptoworks: Parental rating",
-    "SC-Cryptoworks: Altersbeschränkung",
-    "",
-    "",
-    "SC-Cryptoworks: Leeftijdsadvies",
-    "",
-    "SC-Cryptoworks: Autorisation parentale",
-    "",
-    "SC-Cryptoworks: Ikäraja",
-    "SC-Cryptoworks: wska¼nik rodzica",
-    "",
-    "",
-    "",
-  },
-  { "don't touch",
-    "nicht ändern",
-    "",
-    "",
-    "niet wijzigen",
-    "",
-    "Ne pas modifier",
-    "",
-    "älä koske",
-    "nie dotykaj",
-    "",
-    "",
-    "",
-  },
-  { "disable",
-    "ausschalten",
-    "",
-    "",
-    "uitschakelen",
-    "",
-    "Désactiver",
-    "",
-    "poista",
-    "wy³±cz",
-    "",
-    "",
-    "",
-  },
-  { NULL }
-  };
-
 class cSystemLinkScCryptoworks : public cSystemLink {
 public:
   cSystemLinkScCryptoworks(void);
@@ -124,14 +78,13 @@ cSystemLinkScCryptoworks::cSystemLinkScCryptoworks(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
   static const char *rat[] = {
-    "don't touch",
-    "disable"
+    trNOOP("don't touch"),
+    trNOOP("disable")
     };
 
   opts=new cOpts(SYSTEM_NAME,1);
-  opts->Add(new cOptSel("DisableParental","SC-Cryptoworks: Parental rating",&disableParental,sizeof(rat)/sizeof(char *),rat));
+  opts->Add(new cOptSel("DisableParental",trNOOP("SC-Cryptoworks: Parental rating"),&disableParental,sizeof(rat)/sizeof(char *),rat));
   Feature.NeedsSmartCard();
-  Feature.AddPhrases(Phrases);
 }
 
 bool cSystemLinkScCryptoworks::CanHandle(unsigned short SysId)

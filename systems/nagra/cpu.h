@@ -95,6 +95,9 @@ public:
 
 #define bitset(d,bit) (((d)>>(bit))&1)
 
+#define HILO(ea)      ((Get(ea)<<8)+Get((ea)+1))
+#define HILOS(s,ea)   ((Get((s),(ea))<<8)+Get((s),(ea)+1))
+
 class c6805 {
 private:
   unsigned short pc, sp, spHi, spLow;
@@ -122,6 +125,7 @@ private:
 protected:
   unsigned char a, x, y, cr, dr;
   struct CC { unsigned char c, z, n, i, h, v; } cc;
+  bool hasReadHandler, hasWriteHandler;
   //
   int Run(int max_count);
   void AddBreakpoint(unsigned short addr);
@@ -141,6 +145,8 @@ protected:
   void PopPc(void);
   void PopCr(void);
   virtual void Stepper(void)=0;
+  virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op) {}
+  virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op) {}
 private:
   unsigned int stats[256];
   char addrBuff[32];

@@ -138,13 +138,12 @@ void cMapEeprom::Set(unsigned short ea, unsigned char val)
 
 // -- c6805 --------------------------------------------------------------------
 
-#define HILO(ea)      ((Get(ea)<<8)+Get((ea)+1))
-#define HILOS(s,ea)   ((Get((s),(ea))<<8)+Get((s),(ea)+1))
 #define PAGEOFF(ea,s) (((ea)&0x8000) ? pageMap[s]:0)
 
 c6805::c6805(void) {
   cc.c=0; cc.z=0; cc.n=0; cc.i=0; cc.h=0; cc.v=1;
   pc=0; a=0; x=0; y=0; cr=dr=0; sp=spHi=0x100; spLow=0xC0;
+  hasReadHandler=hasWriteHandler=false;
   ClearBreakpoints();
   InitMapper();
   memset(stats,0,sizeof(stats));
@@ -221,12 +220,14 @@ unsigned char c6805::Get(unsigned char seg, unsigned short ea) const
 
 void c6805::Set(unsigned short ea, unsigned char val)
 {
+  if(hasWriteHandler) WriteHandler(cr,ea,val);
   unsigned char mapId=mapMap[ea+PAGEOFF(ea,cr)];
   if(!(mapId&0x80)) mapper[mapId&0x7f]->Set(ea,val);
 }
 
 void c6805::Set(unsigned char seg, unsigned short ea, unsigned char val)
 {
+  if(hasWriteHandler) WriteHandler(seg,ea,val);
   unsigned char mapId=mapMap[ea+PAGEOFF(ea,seg)];
   if(!(mapId&0x80)) mapper[mapId&0x7f]->Set(ea,val);
 }
@@ -346,13 +347,13 @@ int c6805::Run(int max_count)
 // 2 - instruction counter exeeded
 // 3 - unsupported instruction
 
+  bool disAsmHeader=false;
   disAsmLogClass=L_SYS_DISASM;
   if(LOG(L_SYS_DISASM)) doDisAsm=true;
   else {
     doDisAsm=false;
     if(LOG(L_SYS_DISASM80)) disAsmLogClass=L_SYS_DISASM80;
     }
-  PRINTF(disAsmLogClass,"cr:-pc- aa xx yy dr -sp- VHINZC -mem@pc- -mem@sp-");
 
   int count=0;
   while (1) {
@@ -372,6 +373,10 @@ int c6805::Run(int max_count)
       doDisAsm=flag;
       }
 
+    if(doDisAsm && !disAsmHeader) {
+      PRINTF(disAsmLogClass,"cr:-pc- aa xx yy dr -sp- VHINZC -mem@pc- -mem@sp-");
+      disAsmHeader=true;
+      }
     CCLOGLBPUT("%02x:%04x %02x %02x %02x %02x %04x %c%c%c%c%c%c %02x%02x%02x%02x %02x%02x%02x%02x ",
                cr,pc,a,x,y,dr,sp,
                cc.v?'V':'.',cc.h?'H':'.',cc.i?'I':'.',cc.n?'N':'.',cc.z?'Z':'.',cc.c?'C':'.',
@@ -557,6 +562,7 @@ int c6805::Run(int max_count)
         case 0x0:			// bit
         case 0x1:
           op=Get(pr,ea);
+          if(hasReadHandler) ReadHandler(cr,ea,op);
           CCLOGLBPUT("{%02x} ",op);
           break;
         case 0xA:			// immediate

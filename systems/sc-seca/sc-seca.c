@@ -77,99 +77,11 @@ cSystemScSeca::cSystemScSeca(void)
 
 // -- cSystemLinkScSeca --------------------------------------------------------
 
-static const tI18nPhrase Phrases[] = {
-  { "SC-Seca: EMM updates",
-    "SC-Seca: EMM updates",
-    "",
-    "",
-    "SC-Seca: EMM updates",
-    "",
-    "SC-Seca: Mise à jour EMM",
-    "",
-    "SC-Seca: EMM-päivitykset",
-    "SC-Seca: aktualizacje EMM",
-    "",
-    "",
-    "",
-  },
-  { "allow ALL",
-    "alle erlauben",
-    "",
-    "",
-    "ALLES toestaan",
-    "",
-    "Permettre tous",
-    "",
-    "salli kaikki",
-    "dopu¶æ wszystkie",
-    "",
-    "",
-    "",
-  },
-  { "block UNIQUE",
-    "UNIQUE blocken",
-    "",
-    "",
-    "UNIEKE blokkeren",
-    "",
-    "Bloquer UNIQUE",
-    "",
-    "estä uniikit",
-    "blokuj unikaty",
-    "",
-    "",
-    "",
-  },
-  { "block SHARED",
-    "SHARED blocken",
-    "",
-    "",
-    "GEDEELDE blokkeren",
-    "",
-    "Bloquer PARTAGE",
-    "",
-    "estä jaetut",
-    "blokuj dzielone",
-    "",
-    "",
-    "",
-  },
-  { "block ALL",
-    "alle blocken",
-    "",
-    "",
-    "ALLES blokkeren",
-    "",
-    "Bloquer TOUS",
-    "",
-    "estä kaikki",
-    "blokuj wszystkie",
-    "",
-    "",
-    "",
-  },
-  { "SC-Seca: activate PPV",
-    "SC-Seca: PPV aktivieren",
-    "",
-    "",
-    "SC-Seca: activeer PPV",
-    "",
-    "SC-Seca: activer PPV",
-    "",
-    "SC-Seca: Aktivoi PPV",
-    "SC-Seca: aktywuj PPV",
-    "",
-    "",
-    "",
-  },
-  { NULL }
-  };
-
 static const char *block[] = {
-  "allow ALL",
-  "block UNIQUE",
-  "block SHARED",
-  "block ALL"
+  trNOOP("allow ALL"),
+  trNOOP("block UNIQUE"),
+  trNOOP("block SHARED"),
+  trNOOP("block ALL")
   };
 
 class cSystemLinkScSeca : public cSystemLink {
@@ -185,12 +97,11 @@ cSystemLinkScSeca::cSystemLinkScSeca(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
   opts=new cOpts(SYSTEM_NAME,2);
-  opts->Add(new cOptSel("Blocker","SC-Seca: EMM updates",&blocker,sizeof(block)/sizeof(char *),block));
-  cOpt *opt=new cOptBool("Ppv","SC-Seca: activate PPV",&ppv);
+  opts->Add(new cOptSel("Blocker",trNOOP("SC-Seca: EMM updates"),&blocker,sizeof(block)/sizeof(char *),block));
+  cOpt *opt=new cOptBool("Ppv",trNOOP("SC-Seca: activate PPV"),&ppv);
   if(opt) opt->Persistant(false);
   opts->Add(opt);
   Feature.NeedsSmartCard();
-  Feature.AddPhrases(Phrases);
 }
 
 bool cSystemLinkScSeca::CanHandle(unsigned short SysId)
