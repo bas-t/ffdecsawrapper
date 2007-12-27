@@ -1,6 +1,16 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+30.09.2007: Version 0.8.4
+- Added Nagra2 4101 Bx support.
+- Added smartcard NDS Videoguard2 code (untested). Needs NDS seed and boxid in
+  smartcard.conf (later only for newer card revisions). This is based on code
+  from sasc-ng changeset r155.
+- Fixed Nagra cpu emu SetPc and ReadHandler call.
+- Fixed crash on TPS ECM when no TPS encryption is used and no TPS AU keys are
+  available (null pointer dereference).
+- Updated russian and finnish translations.
+
 15.09.2007: Version 0.8.3
 - Added Nagra2 3101 MECM (same as 0501).
 - Added Nagra2 0901 new 0x40 MECM and rev248 morph (from sasc-ng).
