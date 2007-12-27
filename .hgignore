@@ -2,6 +2,7 @@ syntax: glob
 *.o
 *.so
 *.a
+*.tar.gz
 .dependencies
 */.dependencies
 po/*.mo
@@ -9,6 +10,7 @@ po/*.pot
 *.orig
 *.rej
 *.bak
+version.c
 
 syntax: regexp
 ^testing/test[^.]*$

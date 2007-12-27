@@ -22,10 +22,11 @@
 #
 PLUGIN = sc
 
-### The version number of this plugin (taken from the main source file):
+### The version number of this plugin
 
-VERSION = $(shell grep 'define SCVERSION' version.h | awk '{ print $$3 }' | sed -e 's/[";]//g')
-SCAPIVERS = $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(PLUGIN).c)
+VERSION := $(shell if test -d .hg; then cat .release; echo -n '-'; (hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'; else cat .release; fi)
+RELEASE := $(shell cat .release)
+SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(PLUGIN).c)
 
 ### The directory environment:
 
@@ -55,25 +56,20 @@ SHAREDLIBS    =
 
 ### The version number of VDR (taken from VDR's "config.h"):
 
-VDRVERSION = $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+APIVERSION := $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 ifeq ($(strip $(APIVERSION)),)
    APIVERSION = $(VDRVERSION)
 endif
-VDRVERSNUM = $(shell sed -ne '/define VDRVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+VDRVERSNUM := $(shell sed -ne '/define VDRVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+APIVERSNUM := $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 ifeq ($(strip $(APIVERSNUM)),)
    APIVERSNUM = $(VDRVERSNUM)
 endif
 
-### The name of the distribution archive:
-
-ARCHIVE = $(PLUGIN)-$(VERSION)
-PACKAGE = vdr-$(ARCHIVE)
-
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o \
+OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o version.o \
        smartcard.o network.o crypto.o system-common.o parse.o log.o
 
 ### Internationalization (I18N):
@@ -195,6 +191,13 @@ i18n: $(I18Nmsgs)
 i18n.c: $(PODIR)/*.po i18n-template.c po2i18n.pl
 	./po2i18n.pl <i18n-template.c >i18n.c
 
+version.c: FORCE
+	@echo >$@.new "/* generated file, do not edit */"; \
+	 echo >>$@.new 'const char *ScVersion =' '"'$(VERSION)'";'; \
+	 diff $@.new $@ >$@.diff 2>&1; \
+	 if test -s $@.diff; then mv -f $@.new $@; fi; \
+	 rm -f $@.new $@.diff;
+
 systems:
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" all || exit 1; done
 
@@ -209,7 +212,7 @@ clean-core:
 	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
-	@-rm -f $(OBJS) $(DEPFILE) i18n.c *.so *.tar.gz core* *~
+	@-rm -f $(OBJS) $(DEPFILE) version.c i18n.c *.so *.tar.gz core* *~
 	@-rm -f $(PODIR)/*.mo
 
 clean-pre:
@@ -217,22 +220,26 @@ clean-pre:
 
 clean: clean-core clean-systems
 
+dist: ARCHIVE := $(PLUGIN)-$(RELEASE)
 dist: clean-core
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" dist; done
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a * $(TMPDIR)/$(ARCHIVE)
+	@cp -a .release * $(TMPDIR)/$(ARCHIVE)
 	@path="$(TMPDIR)/$(ARCHIVE)/$(notdir $(SYSDIR))";\
 	 for i in `ls -A -I ".*" $$path`; do if [ -f "$$path/$$i/nonpublic.mk" ]; then rm -rf "$$path/$$i"; fi; if [ -f "$$path/$$i/nonpublic.sh" ]; then (cd $$path/$$i ; source ./nonpublic.sh ; rm ./nonpublic.sh); fi; done
 	@strip --strip-unneeded --preserve-dates $(TMPDIR)/$(ARCHIVE)/$(notdir $(PREDIR))/*
-	@tar czf $(PACKAGE).tar.gz -C $(TMPDIR) $(ARCHIVE)
+	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Distribution package created as $(PACKAGE).tar.gz
+	@echo Distribution package created as vdr-$(ARCHIVE).tar.gz
 
-fulldist: clean clean-pre
+copy: ARCHIVE := $(PLUGIN)-$(VERSION)
+copy: clean clean-pre
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a * $(TMPDIR)/$(ARCHIVE)
-	@tar czf $(PACKAGE)-full.tar.gz -C $(TMPDIR) $(ARCHIVE)
+	@cp -a .release * $(TMPDIR)/$(ARCHIVE)
+	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Full distribution package created as $(PACKAGE)-full.tar.gz
+	@echo Full copy package created as vdr-$(ARCHIVE).tar.gz
+
+FORCE:

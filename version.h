@@ -20,10 +20,6 @@
 #ifndef ___VERSION_H
 #define ___VERSION_H
 
-// all release versions must end with 0xFF !!
-#define SCVERSNUM 0x000806FF
-#define SCVERSION "0.8.6"
-
 extern const char *ScVersion;
 
 #endif
