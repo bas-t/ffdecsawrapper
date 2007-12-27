@@ -114,6 +114,7 @@ private:
   cEcmHandler *GetHandler(int sid, bool needZero, bool noshift);
   void RemHandler(cEcmHandler *handler);
   int GetFreeIndex(void);
+  void LogStartup(void);
 public:
   cCam(cScDvbDevice *dev, int CardNum);
   virtual ~cCam();
@@ -129,6 +130,7 @@ public:
   bool Active(void);
   void HouseKeeping(void);
   void Tune(const cChannel *channel);
+  void PostTune(void);
   void SetPid(int type, int pid, bool on);
   void Stop(void);
   void AddPrg(cPrg *prg);

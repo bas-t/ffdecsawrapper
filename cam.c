@@ -354,6 +354,10 @@ private:
   cPidFilter *catfilt;
   int catVers;
   //
+  enum ePreMode { pmNone, pmStart, pmWait, pmActive, pmStop };
+  ePreMode prescan;
+  cTimeMs pretime;
+  //
   cPidFilter *AddFilter(int Pid, int Section, int Mask, int Mode, int IdleTime, bool Crc);
   void SetChains(void);
   void ClearChains(void);
@@ -367,13 +371,14 @@ public:
   void EcmStatus(const cEcmInfo *ecm, bool on);
   void Up(void);
   void Down(void);
+  void PreScan(void);
   };
 
 cLogger::cLogger(int CardNum, bool soft)
 :cAction("logger",CardNum)
 {
   cardNum=CardNum; softCSA=soft;
-  catfilt=0; up=false;
+  catfilt=0; up=false; prescan=pmNone;
   Priority(10);
 }
 
@@ -401,8 +406,15 @@ void cLogger::Down(void)
     PRINTF(L_CORE_AUEXTRA,"%d: DOWN",cardNum);
     ClearChains();
     DelAllFilter();
-    catfilt=0; up=false;
+    catfilt=0; up=false; prescan=pmNone;
     }
+  Unlock();
+}
+
+void cLogger::PreScan(void)
+{
+  Lock();
+  prescan=pmStart; Up();
   Unlock();
 }
 
@@ -423,7 +435,9 @@ void cLogger::EcmStatus(const cEcmInfo *ecm, bool on)
         break;
         }
     }
+  if(prescan>=pmWait) prescan=pmStop;
   SetChains();
+  prescan=pmNone;
   Unlock();
 }
 
@@ -431,7 +445,7 @@ void cLogger::SetChains(void)
 {
   for(cLogChain *chain=chains.First(); chain; chain=chains.Next(chain)) {
     bool act=false;
-    if(ScSetup.AutoUpdate>1) act=true;
+    if(ScSetup.AutoUpdate>1 || prescan==pmActive) act=true;
     else if(ScSetup.AutoUpdate==1) {
       for(cEcmInfo *e=active.First(); e; e=active.Next(e))
         if((e->emmCaId && chain->caid==e->emmCaId) || chain->caid==e->caId) {
@@ -439,7 +453,7 @@ void cLogger::SetChains(void)
           }
        }
     if(act) StartChain(chain);
-    else StopChain(chain,false);
+    else StopChain(chain,prescan==pmStop);
     }
 }
 
@@ -530,7 +544,9 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
             }
           }
         SetChains();
+        if(prescan==pmStart) { prescan=pmWait; pretime.Set(2000); }
         }
+      if(prescan==pmWait && pretime.TimedOut()) { prescan=pmActive; SetChains(); }
       }
     else {
       HEXDUMP(L_HEX_EMM,data,len,"EMM pid 0x%04x",filter->Pid());
@@ -1355,6 +1371,14 @@ void cCam::Tune(const cChannel *channel)
   else PRINTF(L_CORE_PIDS,"%d: tune to same source/transponder",cardNum);
 }
 
+void cCam::PostTune(void)
+{
+  if(ScSetup.PrestartAU) {
+    LogStartup();
+    if(logger) logger->PreScan();
+    }
+}
+
 void cCam::SetPid(int type, int pid, bool on)
 {
   cMutexLock lock(this);
@@ -1439,7 +1463,7 @@ void cCam::HouseKeeping(void)
     if(handler->IsRemoveable()) RemHandler(handler);
     handler=next;
     }
-  if(handlerList.Count()<1) {
+  if(handlerList.Count()<1 && !ScSetup.PrestartAU) {
     delete hookman; hookman=0;
     delete logger; logger=0;
     }
@@ -1450,13 +1474,19 @@ bool cCam::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
   return device->GetPrgCaids(source,transponder,prg,c);
 }
 
-void cCam::LogEcmStatus(const cEcmInfo *ecm, bool on)
+void cCam::LogStartup(void)
 {
   cMutexLock lock(this);
-  if(!logger && on && ScSetup.AutoUpdate) {
+  if(!logger && ScSetup.AutoUpdate) {
     logger=new cLogger(cardNum,IsSoftCSA());
     LogStatsUp();
     }
+}
+
+void cCam::LogEcmStatus(const cEcmInfo *ecm, bool on)
+{
+  cMutexLock lock(this);
+  if(on) LogStartup();
   if(logger) logger->EcmStatus(ecm,on);
 }
 
@@ -2617,8 +2647,13 @@ void cScDvbDevice::Capture(void)
   objdump -T <path-to-vdr>/vdr | grep -E "(useDevice|nextCardIndex)"
   Insert the symbol names below.
 */
+#if __GNUC__ >= 3
   vdr_nci=(int *)dlsym(RTLD_DEFAULT,"_ZN7cDevice13nextCardIndexE");
   vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_ZN7cDevice9useDeviceE");
+#else
+  vdr_nci=(int *)dlsym(RTLD_DEFAULT,"_7cDevice.nextCardIndex");
+  vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_7cDevice.useDevice");
+#endif
   if(vdr_nci && vdr_ud) { vdr_save_ud=*vdr_ud; *vdr_ud=1<<30; }
 }
 
@@ -2705,7 +2740,9 @@ bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
   lrucaid[0].prg=Channel->Sid();
   lruMutex.Unlock();
   if(cam) cam->Tune(Channel);
-  return cDvbDevice::SetChannelDevice(Channel,LiveView);
+  bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
+  if(ret && cam) cam->PostTune();
+  return ret;
 }
 
 bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)

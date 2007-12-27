@@ -70,7 +70,7 @@ extern cFileMaps filemaps;
 class cConfRead {
 public:
   virtual ~cConfRead() {}
-  bool ConfRead(const char *type, const char *filename);
+  bool ConfRead(const char *type, const char *filename, bool missingok=false);
   virtual bool ParseLine(const char *line, bool fromCache)=0;
   };
 

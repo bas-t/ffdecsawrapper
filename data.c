@@ -144,7 +144,7 @@ cFileMap *cFileMaps::GetFileMap(const char *name, const char *domain, bool rw)
 
 // -- cConfRead ----------------------------------------------------------------
 
-bool cConfRead::ConfRead(const char *type, const char *filename)
+bool cConfRead::ConfRead(const char *type, const char *filename, bool missingok)
 {
   bool res=false;
   FILE *f=fopen(filename,"r");
@@ -164,7 +164,7 @@ bool cConfRead::ConfRead(const char *type, const char *filename)
       }
     fclose(f);
     }
-  else PRINTF(L_GEN_ERROR,"Failed to open file '%s': %s",filename,strerror(errno));
+  else if(!missingok) PRINTF(L_GEN_ERROR,"Failed to open file '%s': %s",filename,strerror(errno));
   return res;
 }
 

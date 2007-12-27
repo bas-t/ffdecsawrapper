@@ -206,7 +206,7 @@ public:
     char type[32];
     snprintf(type,sizeof(type),"%s card infos",SysName);
     cString cname=AddDirectory(cfgdir,kidName);
-    ConfRead(type,cname);
+    ConfRead(type,cname,true);
     PRINTF(L_CORE_LOAD,"loaded %d %s cards from %s",this->Count(),SysName,*cname);
     return HaveCards();
     }

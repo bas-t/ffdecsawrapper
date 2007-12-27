@@ -33,6 +33,7 @@ public:
   int CaIgnore[MAXCAIGN];
   int LocalPriority;
   int ForceTransfer;
+  int PrestartAU;
 public:
   cScSetup(void);
   void Check(void);

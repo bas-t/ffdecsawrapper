@@ -8,6 +8,7 @@
 #include "system-common.h"
 #include "systems/nagra/cpu.c"
 #include "systems/nagra/nagra2.c"
+#include "systems/nagra/nagra.c"
 
 #include "compat.h"
 
@@ -159,6 +160,8 @@ int main(int argc, char *argv[])
     }
   
   InitAll(argv[1]);
+  LogAll();
+  cLogging::SetModuleOption(LCLASS(L_SYS,L_SYS_DISASM),false);
   unsigned char data[256];
   int len=ReadRaw(argv[4],data,sizeof(data));
   if((mode==1 && len!=64) || (mode==2 && len!=96)) {

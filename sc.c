@@ -78,7 +78,7 @@
 #endif
 
 // SC API version number for loading shared libraries
-#define SCAPIVERS 9
+#define SCAPIVERS 10
 
 const char *ScVersion = SCVERSION;
 
@@ -454,7 +454,7 @@ void cOptMInt::Store(const char *PreStr)
   char b[256];
   int p=0;
   for(int i=0; i<size; i++)
-    if(storage[i]) p+=snprintf(b+p,sizeof(b)-p,mode>1 ? "%x ":"%d ",storage[i]);
+    if(storage[i] || mode==0) p+=snprintf(b+p,sizeof(b)-p,mode>1 ? "%x ":"%d ",storage[i]);
   ScPlugin->SetupStore(FullName(PreStr),p>0?b:0);
 }
 
@@ -955,6 +955,7 @@ cScSetup::cScSetup(void)
   memset(CaIgnore,0,sizeof(CaIgnore));
   LocalPriority = 0;
   ForceTransfer = 1;
+  PrestartAU = 0;
 }
 
 void cScSetup::Check(void)
@@ -968,7 +969,7 @@ void cScSetup::Check(void)
       }
 
   PRINTF(L_CORE_LOAD,"** Plugin config:");
-  PRINTF(L_CORE_LOAD,"** Key updates (AU) are %s",AutoUpdate?(AutoUpdate==1?"enabled (active CAIDs)":"enabled (all CAIDs)"):"DISABLED");
+  PRINTF(L_CORE_LOAD,"** Key updates (AU) are %s (%sprestart)",AutoUpdate?(AutoUpdate==1?"enabled (active CAIDs)":"enabled (all CAIDs)"):"DISABLED",PrestartAU?"":"no ");
   PRINTF(L_CORE_LOAD,"** Local systems %stake priority over cached remote",LocalPriority?"":"DON'T ");
   PRINTF(L_CORE_LOAD,"** Concurrent FF recordings are %sallowed",ConcurrentFF?"":"NOT ");
   PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital audio",ForceTransfer?"F":"DON'T f");
@@ -1196,8 +1197,9 @@ public:
 cScPlugin::cScPlugin(void)
 {
   static const char *logg[] = { trNOOP("off"),trNOOP("active CAIDs"),trNOOP("all CAIDs") };
-  ScOpts=new cOpts(0,6);
+  ScOpts=new cOpts(0,7);
   ScOpts->Add(new cOptSel  ("AutoUpdate"   ,trNOOP("Update keys (AU)")     ,&ScSetup.AutoUpdate,3,logg));
+  ScOpts->Add(new cOptBool ("PrestartAU"   ,trNOOP("Start AU on EPG scan") ,&ScSetup.PrestartAU));
   ScOpts->Add(new cOptBool ("ConcurrentFF" ,trNOOP("Concurrent FF streams"),&ScSetup.ConcurrentFF));
   ScOpts->Add(new cOptBool ("ForceTranfer" ,trNOOP("Force TransferMode")   ,&ScSetup.ForceTransfer));
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));

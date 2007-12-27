@@ -177,10 +177,10 @@ $(FFDECSA): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
 	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT) -DPARALLEL_MODE=$(PARALLEL)" -C $(FFDECSADIR) all
 
 $(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
-	xgettext -C -cTRANSLATORS --no-wrap -F -k -ktr -ktrNOOP --msgid-bugs-address='<noone@nowhere.org>' -o $@ $^
+	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --msgid-bugs-address='<noone@nowhere.org>' -o $@ $^
 
 %.po: $(I18Npot)
-	msgmerge -U --no-wrap -F --backup=none -q $@ $<
+	msgmerge -U --no-wrap --no-location --backup=none -q $@ $<
 	@touch $@
 
 %.mo: %.po
@@ -206,7 +206,7 @@ clean-systems:
 
 clean-core:
 	@$(MAKE) -C testing clean
-	@test -d $(FFDECSADIR) && $(MAKE) -C $(FFDECSADIR) clean
+	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
 	@-rm -f $(OBJS) $(DEPFILE) i18n.c *.so *.tar.gz core* *~

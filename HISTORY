@@ -1,6 +1,23 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+10.11.2007: Version 0.8.5
+- Added new Nagra2 0501 AU sheme.
+- Added Nagra2 NA 'temporarily' fixes.
+- For simplicity the high provider id is used always now, when loading an EEP
+  file in Nagra2 emu. e.g. for provider 0901 you have to rename the file to
+  EEP09_102.bin.
+- Added an option to start AutoUpdate even if no audio/video pids are set (e.g.
+  EPG scan). Has to be enabled from the plugin setup menu.
+- Fixed cardclient camd35 EMM request length check.
+- Fixed smartcard Viaccess ATR check and transcription errors in smartcard NDS
+  camcrypt. Thanks to dr.aus.
+- Fixed saving ScCaps to config if all cards are disabled.
+- Fixed sasc-ng compile (FFdecsa dir).
+- Obmit error messages about (optional) config files (e.g. *.KID).
+- Added some glue for gcc 2.95 compile.
+- Added Hungarian translations.
+
 30.09.2007: Version 0.8.4
 - Added Nagra2 4101 Bx support.
 - Added smartcard NDS Videoguard2 code (untested). Needs NDS seed and boxid in
