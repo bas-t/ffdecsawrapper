@@ -9,6 +9,7 @@ diff.exclude
 *.orig
 *.rej
 *.bak
-nagra2-prov.c
 *.mo
 *.pot
+dump.txt
+.hg
