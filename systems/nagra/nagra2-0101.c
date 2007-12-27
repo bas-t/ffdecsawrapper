@@ -901,9 +901,9 @@ bool cN2Prov0101::ProcessDESMap(int f)
       break;
     case 0x0e:  // get DES key1 and key2
       GetMem(HILO(0x25),data,8,Get(0x24));
-      DES_key_sched(DES_CAST(data),&desks1);
+      DES_key_sched((DES_cblock *)data,&desks1);
       GetMem(HILO(0x28),data,8,Get(0x27));
-      DES_key_sched(DES_CAST(data),&desks2);
+      DES_key_sched((DES_cblock *)data,&desks2);
       break;
     case 0x0f:  // set DES size
       desSize=Get(0x2d);
