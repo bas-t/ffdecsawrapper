@@ -25,7 +25,7 @@
 
 // -- cAuxSrv ------------------------------------------------------------------
 
-//#define HAS_AUXSRV
+#define HAS_AUXSRV
 
 #ifdef HAS_AUXSRV
 #include "network.h"
@@ -468,6 +468,10 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       MakePrime(B,data);
       break;
     case 0x57:
+#ifdef HAS_AUXSRV
+      cycles=aux.Map(0x57,data,0x60,0x40);
+      if(cycles>0) { cycles-=6; break; }
+#endif
       {
       cBN a, b, x, y, scalar;
       D.GetLE(data+0x60,16);
@@ -758,6 +762,18 @@ bool cN2Prov0101::ProcessMap(int f)
       GetMem(0x400,tmp,53,0);
       DoMap(f,tmp);
       SetMem(0x400,tmp,53,0);
+      AddCycles(MapCycles());
+      break;
+    case 0x57:
+      addr=HILO(0x46);
+      GetMem(HILO(addr   ),tmp,16,0);
+      GetMem(HILO(addr+2 ),tmp+0x10,16,0);
+      GetMem(HILO(addr+4 ),tmp+0x20,16,0);
+      GetMem(HILO(addr+6 ),tmp+0x30,16,0);
+      GetMem(HILO(addr+8 ),tmp+0x40,16,0);
+      GetMem(HILO(addr+10),tmp+0x50,16,0);
+      DoMap(f,tmp);
+      SetMem(0x400,tmp,0x40,0);
       AddCycles(MapCycles());
       break;
     default:
