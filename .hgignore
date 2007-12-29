@@ -11,6 +11,7 @@ po/*.pot
 *.rej
 *.bak
 version.c
+i18n.c
 
 syntax: regexp
 ^testing/test[^.]*$
