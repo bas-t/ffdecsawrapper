@@ -135,8 +135,9 @@ export CXXFLAGS
 
 MAKEDEP = g++ -MM -MG
 DEPFILE = .dependencies
-$(DEPFILE): $(subst i18n.c,,$(OBJS:%.o=%.c)) $(wildcard *.h)
-	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(subst i18n.c,,$(OBJS:%.o=%.c)) > $@
+DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c))) $(wildcard *.h)
+$(DEPFILE): $(DEPFILES) $(wildcard *.h)
+	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(DEPFILES) > $@
 
 -include $(DEPFILE)
 
@@ -189,7 +190,7 @@ $(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/$(I18Nmo): $(PODIR)/%.mo
 i18n: $(I18Nmsgs)
 
 i18n.c: $(PODIR)/*.po i18n-template.c po2i18n.pl
-	./po2i18n.pl <i18n-template.c >i18n.c
+	perl ./po2i18n.pl <i18n-template.c >i18n.c
 
 version.c: FORCE
 	@echo >$@.new "/* generated file, do not edit */"; \
