@@ -629,6 +629,22 @@ cPlainKeyType::cPlainKeyType(int Type, bool Super)
   cPlainKeys::Register(this,Super);
 }
 
+// -- cLastKey -----------------------------------------------------------------
+
+cLastKey::cLastKey(void)
+{
+  lastType=lastId=lastKeynr=-1;
+}
+
+bool cLastKey::NotLast(int Type, int Id, int Keynr)
+{
+  if(lastType!=Type || lastId!=Id || lastKeynr!=Keynr) {
+    lastType=Type; lastId=Id; lastKeynr=Keynr;
+    return true;
+    }
+  return false;
+}
+
 // -- cPlainKeys ---------------------------------------------------------------
 
 const char *externalAU=0;
@@ -651,17 +667,17 @@ void cPlainKeys::Register(cPlainKeyType *pkt, bool Super)
   first=pkt;
 }
 
+void cPlainKeys::Trigger(int Type, int Id, int Keynr)
+{
+  if(lastkey.NotLast(Type,Id,Keynr))
+    PRINTF(L_CORE_AUEXTERN,"triggered from findkey (%s)",*KeyString(Type,Id,Keynr));
+  ExternalUpdate();
+}
+
 cPlainKey *cPlainKeys::FindKey(int Type, int Id, int Keynr, int Size, cPlainKey *key)
 {
   key=FindKeyNoTrig(Type,Id,Keynr,Size,key);
-  if(!key) {
-    static int lastType=-1, lastId=-1, lastKeynr=-1;
-    if(externalAU && (lastType!=Type || lastId!=Id || lastKeynr!=Keynr)) {
-      PRINTF(L_CORE_AUEXTERN,"triggered from findkey (type=%X id=%X keynr=%X)",Type,Id,Keynr);
-      lastType=Type; lastId=Id; lastKeynr=Keynr;
-      }
-    ExternalUpdate();
-    }
+  if(!key) Trigger(Type,Id,Keynr);
   return key;
 }
 
@@ -806,6 +822,16 @@ cPlainKey *cPlainKeys::NewFromType(int type)
   PRINTF(L_CORE_LOAD,"unknown key type '%c', adding dummy",type);
   pkt=new cPlainKeyTypeDummy(type);
   return pkt->Create();
+}
+
+cString cPlainKeys::KeyString(int Type, int Id, int Keynr)
+{
+  cPlainKey *pk=NewFromType(Type);
+  if(pk) {
+    pk->type=Type; pk->id=Id; pk->keynr=Keynr;
+    return cString::sprintf("%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
+    }
+  return "unknown";
 }
 
 bool cPlainKeys::ParseLine(const char *line, bool fromCache)

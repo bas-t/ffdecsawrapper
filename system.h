@@ -98,7 +98,7 @@ friend class cKeySnoop;
 private:
   static int foundKeys, newKeys;
   int pri, cardNum;
-  int lastType, lastId, lastKeynr;
+  cLastKey lastkey;
   char *lastTxt;
   char currentKeyStr[48];
   struct EcmCheck *check;

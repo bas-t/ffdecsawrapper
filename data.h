@@ -240,6 +240,16 @@ public:
 
 // ----------------------------------------------------------------
 
+class cLastKey {
+private:
+  int lastType, lastId, lastKeynr;
+public:
+  cLastKey(void);
+  bool NotLast(int Type, int Id, int Keynr);
+  };
+
+// ----------------------------------------------------------------
+
 extern const char *externalAU;
 
 class cPlainKeys : public cLoader, private cConfRead, private cThread, public cSimpleList<cPlainKey> {
@@ -248,6 +258,7 @@ private:
   static cPlainKeyType *first;
   cPlainKey *mark;
   cTimeMs trigger, last;
+  cLastKey lastkey;
   //
   static void Register(cPlainKeyType *pkt, bool Super);
   cPlainKey *NewFromType(int type);
@@ -262,6 +273,8 @@ public:
   virtual bool ParseLine(const char *line, bool Au);
   cPlainKey *FindKey(int Type, int Id, int Keynr, int Size, cPlainKey *key=0);
   cPlainKey *FindKeyNoTrig(int Type, int Id, int Keynr, int Size, cPlainKey *key=0);
+  void Trigger(int Type, int Id, int Keynr);
+  cString KeyString(int Type, int Id, int Keynr);
   bool NewKey(int Type, int Id, int Keynr, void *Key, int Keylen);
   bool NewKeyParse(const char *line);
   void HouseKeeping(void);
