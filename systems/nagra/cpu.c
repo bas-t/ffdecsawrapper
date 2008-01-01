@@ -259,6 +259,7 @@ void c6805::SetSp(unsigned short SpHi, unsigned short SpLow)
 void c6805::SetPc(unsigned short addr, unsigned char seg)
 {
   pc=addr; cr=seg;
+  ResetCycles();
 }
 
 void c6805::PopPc(void)
@@ -413,13 +414,14 @@ int c6805::Run(int max_count)
       }
 
     if(doDisAsm && !disAsmHeader) {
-      PRINTF(disAsmLogClass,"cr:-pc- aa xx yy dr -sp- VHINZC -mem@pc- -mem@sp-");
+      PRINTF(disAsmLogClass,"cr:-pc- aa xx yy dr -sp- VHINZC -mem@pc- -mem@sp- -cycles-");
       disAsmHeader=true;
       }
-    CCLOGLBPUT("%02x:%04x %02x %02x %02x %02x %04x %c%c%c%c%c%c %02x%02x%02x%02x %02x%02x%02x%02x ",
+    CCLOGLBPUT("%02x:%04x %02x %02x %02x %02x %04x %c%c%c%c%c%c %02x%02x%02x%02x %02x%02x%02x%02x %08x ",
                cr,pc,a,x,y,dr,sp,
                cc.v?'V':'.',cc.h?'H':'.',cc.i?'I':'.',cc.n?'N':'.',cc.z?'Z':'.',cc.c?'C':'.',
-               Get(pc),Get(pc+1),Get(pc+2),Get(pc+3),Get(sp+1),Get(sp+2),Get(sp+3),Get(sp+4));
+               Get(pc),Get(pc+1),Get(pc+2),Get(pc+3),Get(sp+1),Get(sp+2),Get(sp+3),Get(sp+4),
+               clockcycles);
 
     Stepper();
     unsigned char *ex=&x;
