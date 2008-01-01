@@ -24,8 +24,10 @@ PLUGIN = sc
 
 ### The version number of this plugin
 
-VERSION := $(shell if test -d .hg; then cat .release; echo -n '-'; (hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'; else cat .release; fi)
-RELEASE := $(shell cat .release)
+DISTFILE = .distvers
+RELEASE := $(shell grep 'define SC_RELEASE' version.h | awk '{ print $$3 }' | sed -e 's/[";]//g')
+SUBREL  := $(shell if test -d .hg; then echo -n "HG-"; (hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'; else cat $(DISTFILE); fi)
+VERSION := $(RELEASE)-$(SUBREL)
 SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(PLUGIN).c)
 
 ### The directory environment:
@@ -217,7 +219,7 @@ clean-core:
 	@-rm -f $(PODIR)/*.mo
 
 clean-pre:
-	@-find "$(PREDIR)" -type f -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f
+	@-find "$(PREDIR)" -type f -not -name ".empty" -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f
 
 clean: clean-core clean-systems
 
@@ -226,7 +228,8 @@ dist: clean-core
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" dist; done
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a .release * $(TMPDIR)/$(ARCHIVE)
+	@cp -a * $(TMPDIR)/$(ARCHIVE)
+	@echo -n "release" >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
 	@path="$(TMPDIR)/$(ARCHIVE)/$(notdir $(SYSDIR))";\
 	 for i in `ls -A -I ".*" $$path`; do if [ -f "$$path/$$i/nonpublic.mk" ]; then rm -rf "$$path/$$i"; fi; if [ -f "$$path/$$i/nonpublic.sh" ]; then (cd $$path/$$i ; source ./nonpublic.sh ; rm ./nonpublic.sh); fi; done
 	@strip --strip-unneeded --preserve-dates $(TMPDIR)/$(ARCHIVE)/$(notdir $(PREDIR))/*
@@ -238,7 +241,8 @@ copy: ARCHIVE := $(PLUGIN)-$(VERSION)
 copy: clean clean-pre
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a .release * $(TMPDIR)/$(ARCHIVE)
+	@cp -a .hgtags .hgignore * $(TMPDIR)/$(ARCHIVE)
+	@echo -n $(SUBREL) | sed -e 's/HG-/CP-/' >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
 	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
 	@echo Full copy package created as vdr-$(ARCHIVE).tar.gz
