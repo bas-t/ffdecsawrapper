@@ -450,34 +450,40 @@ void cMapCore::CurveInit(BIGNUM *a)
 
 bool cMapCore::DoMap(int f, unsigned char *data, int l)
 {
-  int dl=(l?l:wordsize)<<3;
+  if(l==0) l=wordsize;
+  const int dl=l<<3;
+  cycles=0;
   switch(f) {
     case SETSIZE:
-      wordsize=l; break;
+      wordsize=l; cycles=475-6; break;
 
-    case IMPORT_J:    
-    case IMPORT_A:    
-    case IMPORT_B:    
-    case IMPORT_C:    
+    case IMPORT_J:
+      cycles=890-6;
+      // fall through
+    case IMPORT_A:
+    case IMPORT_B:
+    case IMPORT_C:
     case IMPORT_D:
+      if(!cycles) cycles=771+160*l-6;
       last=f-IMPORT_J;
       // fall through
     case IMPORT_LAST:
-      {
-      int s=last>0?dl:8;
-      regs[last]->GetLE(data,s);
-      cycles=772+160*(s>>3); // stil not sure if correct
+      if(!cycles) cycles=656+160*l-6; // Even for 'J' cycles is dependent on 'l'
+      regs[last]->GetLE(data,last>0?dl:8);
       break;
-      }
 
     case EXPORT_J:
+      cycles=897-6;
+      // fall through
     case EXPORT_A:
     case EXPORT_B:
     case EXPORT_C:
     case EXPORT_D:
+      if(!cycles) cycles=778+160*l-6;
       last=f-EXPORT_J;
       // fall through
     case EXPORT_LAST:
+      if(!cycles) cycles=668+160*l-6; // Even for 'J' cycles is dependent on 'l'
       regs[last]->PutLE(data,last>0?dl:8);
       break;
 
@@ -485,6 +491,7 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case SWAP_B:
     case SWAP_C:
     case SWAP_D:
+      cycles=776+248*l-6;
       last=f-SWAP_A+1;
       x.GetLE(data,dl);
       regs[last]->PutLE(data,dl);
@@ -495,21 +502,22 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case CLEAR_B:
     case CLEAR_C:
     case CLEAR_D:
+      cycles=467+5*l-6;
       last=f-CLEAR_A+1; BN_zero(*regs[last]);
       break;
 
     case COPY_A_B:
-      last=2; BN_copy(B,A); break;
+      last=2; BN_copy(B,A); cycles=467+5*l-6; break;
     case COPY_B_A:
-      last=1; BN_copy(A,B); break;
+      last=1; BN_copy(A,B); cycles=467+5*l-6; break;
     case COPY_A_C:
-      last=3; BN_copy(C,A); break;
+      last=3; BN_copy(C,A); cycles=467+5*l-6; break;
     case COPY_C_A:
-      last=1; BN_copy(A,C); break;
+      last=1; BN_copy(A,C); cycles=467+5*l-6; break;
     case COPY_C_D:
-      last=4; BN_copy(D,C); break;
+      last=4; BN_copy(D,C); cycles=467+5*l-6; break;
     case COPY_D_C:
-      last=3; BN_copy(C,D); break;
+      last=3; BN_copy(C,D); cycles=467+5*l-6; break;
 
     case 0x43: // init SHA1
       SHA1_Init(&sctx);
