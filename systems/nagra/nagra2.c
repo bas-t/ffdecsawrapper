@@ -68,7 +68,10 @@ void cN2Timer::Ctrl(unsigned char val)
 {
   if(Running()) {
     ctrl=(ctrl&~tmRUNNING) | (val&tmRUNNING);
-    if(!Running()) Stop();
+    if(!Running()) {
+      Stop();
+      PRINTF(L_SYS_EMU,"n2timer: stopped cycles=%x ctrl=%x",cycles,ctrl);
+      }
     }
   else {
     ctrl=(ctrl&~tmMASK) | (val&tmMASK);
