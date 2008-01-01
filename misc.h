@@ -20,6 +20,8 @@
 #ifndef ___MISC_H
 #define ___MISC_H
 
+#include <alloca.h>
+
 // ----------------------------------------------------------------
 
 #define WORD(buffer,index,mask) (((buffer[(index)]<<8) + buffer[(index)+1]) & mask)
