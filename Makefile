@@ -135,7 +135,7 @@ export CXXFLAGS
 
 MAKEDEP = g++ -MM -MG
 DEPFILE = .dependencies
-DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c))) $(wildcard *.h)
+DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c)))
 $(DEPFILE): $(DEPFILES) $(wildcard *.h)
 	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(DEPFILES) > $@
 
