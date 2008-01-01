@@ -1534,9 +1534,9 @@ void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
     cPlainKey *pk;
     cBN exp, mod;
     
-    if(!(pk=keys.FindKey('S',provId,MBC3('E',rsaKeynr,EMM_MAGIC),-1))) return;
+    if(!(pk=keys.FindKeyNoTrig('S',provId,MBC3('E',rsaKeynr,EMM_MAGIC),-1))) return;
     pk->Get(exp);
-    if(!(pk=keys.FindKey('S',provId,MBC3('M',rsaKeynr,EMM_MAGIC),-1))) return;
+    if(!(pk=keys.FindKeyNoTrig('S',provId,MBC3('M',rsaKeynr,EMM_MAGIC),-1))) return;
     pk->Get(mod);
  
     if(rsa.RSA(emm+2,emm+2,msgLen-2,exp,mod)!=msgLen-2) return;

@@ -934,18 +934,18 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
   cBN n;
   unsigned char ideaKey[24], vKey[16];
   bool hasVerifyKey=false;
-  if(!(pk=keys.FindKey('N',id,MBC(N2_MAGIC,keyset+0x10+rsasel),96)))  {
+  if(!(pk=keys.FindKeyNoTrig('N',id,MBC(N2_MAGIC,keyset+0x10+rsasel),96)))  {
     PRINTF(L_SYS_EMM,"missing %04x NN %.02X RSA key (96 bytes)",id,keyset+0x10+rsasel);
     return;
     }
   pk->Get(n);
-  if((pk=keys.FindKey('N',id,MBC(N2_MAGIC,0x03+sigsel),sizeof(vKey)))) {
+  if((pk=keys.FindKeyNoTrig('N',id,MBC(N2_MAGIC,0x03+sigsel),sizeof(vKey)))) {
     pk->Get(vKey);
     hasVerifyKey=true;
     }
   else if(id!=lastEmmId) PRINTF(L_SYS_EMM,"missing %04x NN %.02X signature key (non-fatal)",id,0x03+sigsel);
-  if(!(pk=keys.FindKey('N',id,MBC(N2_MAGIC,keyset),24))) {
-    if(!(pk=keys.FindKey('N',id,MBC(N2_MAGIC,keyset+sel),16))) {
+  if(!(pk=keys.FindKeyNoTrig('N',id,MBC(N2_MAGIC,keyset),24))) {
+    if(!(pk=keys.FindKeyNoTrig('N',id,MBC(N2_MAGIC,keyset+sel),16))) {
       PRINTF(L_SYS_EMM,"missing %04x NN %.02x IDEA key (24 or 16 bytes)",id,keyset+sel);
       return;
       }
@@ -981,7 +981,7 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
             if(ks==0x06 || ks==0x46) kn=(ks>>6)&1; else kn=MBC(N2_MAGIC,ks);
             unsigned char key[256];
             memset(key,0,sizeof(key));
-            if((pk=keys.FindKey('N',id,kn,len))) {
+            if((pk=keys.FindKeyNoTrig('N',id,kn,len))) {
               if(cPlainKeyNagra::IsBNKey(kn)) { pk->Get(n); n.PutLE(key,len); }
               else pk->Get(key);
               }
