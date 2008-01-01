@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "off"
-msgstr ""
+msgstr "spento"
 
 msgid "SoftCAM"
 msgstr "SoftCAM"
@@ -24,7 +24,7 @@ msgid "Current keys:"
 msgstr "Chiave in uso:"
 
 msgid "Key update status:"
-msgstr ""
+msgstr "Stato aggiornamento chiavi:"
 
 #. TRANSLATORS: 2 leading spaces!
 msgid "  [Seen keys]"
@@ -35,169 +35,169 @@ msgid "  [New keys]"
 msgstr "  [Nuove chiavi]"
 
 msgid "Smartcard"
-msgstr ""
+msgstr "Smartcard"
 
 msgid "Reset card"
-msgstr ""
+msgstr "Reimposta scheda"
 
 msgid "Really reset card?"
-msgstr ""
+msgstr "Reimpostare la scheda?"
 
 msgid "Module config"
-msgstr ""
+msgstr "Configurazione modulo"
 
 msgid "Reset module to default"
-msgstr ""
+msgstr "Reimposta modulo ai default"
 
 msgid "Really reset module to default?"
-msgstr ""
+msgstr "Reimpostare modulo ai default?"
 
 msgid "Module"
-msgstr ""
+msgstr "Modulo"
 
 msgid "Message logging"
-msgstr ""
+msgstr "Messaggio di log"
 
 msgid "Disable ALL modules"
-msgstr ""
+msgstr "Disabilita TUTTI i moduli"
 
 msgid "Reset ALL modules to default"
-msgstr ""
+msgstr "Reimposta TUTTI i moduli ai default"
 
 msgid "Really disable ALL modules?"
-msgstr ""
+msgstr "Disabilitare TUTTI i moduli?"
 
 msgid "Really reset ALL modules to default?"
-msgstr ""
+msgstr "Reimpostare TUTTI i moduli ai default?"
 
 msgid "Cryptsystem options"
-msgstr ""
+msgstr "Opzioni Cryptsystem"
 
 msgid "Cryptsystem options..."
-msgstr ""
+msgstr "Opzioni Cryptsystem..."
 
 msgid "Message logging..."
-msgstr ""
+msgstr "Messaggio di log..."
 
 msgid "Smartcard interface"
-msgstr ""
+msgstr "Interfaccia Smartcard"
 
 msgid "(empty)"
-msgstr "(nessuna)"
+msgstr "(vuota)"
 
 msgid "Status information..."
-msgstr ""
+msgstr "Informazioni stato..."
 
 msgid "Flush ECM cache"
-msgstr ""
+msgstr "Svuota cache ECM"
 
 msgid "Reload files"
-msgstr ""
+msgstr "Ricarica il file delle chiavi"
 
 msgid "Really flush ECM cache?"
-msgstr ""
+msgstr "Svuotare cache ECM?"
 
 msgid "Really reload files?"
-msgstr "Ricarica il file delle chiavi?"
+msgstr "Ricaricare il file delle chiavi?"
 
 msgid "Active! Can't reload files now"
-msgstr "Chiave in uso!"
+msgstr "Chiave in uso! Impossibile ricaricare adesso"
 
 msgid "(none)"
-msgstr "(nessuno)"
+msgstr "(nessuna)"
 
 msgid "active CAIDs"
-msgstr ""
+msgstr "CAIDs attivi"
 
 msgid "all CAIDs"
-msgstr ""
+msgstr "tutti i CAIDs"
 
 msgid "Update keys (AU)"
-msgstr ""
+msgstr "Aggiorna chiavi (AU)"
 
 msgid "Start AU on EPG scan"
-msgstr ""
+msgstr "Avvia AU con la scansione EPG"
 
 msgid "Concurrent FF streams"
-msgstr ""
+msgstr "Flussi simultanei per scheda FF"
 
 msgid "Force TransferMode"
-msgstr ""
+msgstr "Forza mod. trasferimento"
 
 msgid "Prefer local systems"
-msgstr ""
+msgstr "Preferisci sistemi locali"
 
 msgid "Active on DVB card"
-msgstr ""
+msgstr "Attiva sulla scheda DVB"
 
 msgid "Ignore CAID"
-msgstr ""
+msgstr "Ignora CAID"
 
 msgid "Log to console"
-msgstr ""
+msgstr "Log in console"
 
 msgid "Log to file"
-msgstr ""
+msgstr "Log in un file"
 
 msgid "Filename"
-msgstr ""
+msgstr "Nome file"
 
 msgid "Filesize limit (KB)"
-msgstr ""
+msgstr "Limite dimensione file (KB)"
 
 msgid "Log to syslog"
-msgstr ""
+msgstr "Log in Syslog"
 
 msgid "A software emulated CAM"
-msgstr ""
+msgstr "Un software di emulazione CAM"
 
 msgid "undisclosed key"
-msgstr ""
+msgstr "chiave nascosta"
 
 msgid "Cardclient: connect immediately"
-msgstr ""
+msgstr "Cardclient: connetti immediatamente"
 
 msgid "Nagra: min. ECM processing time"
-msgstr ""
+msgstr "Nagra: tempo min. elaborazione ECM"
 
 msgid "Nagra2: drop EMM-S packets"
-msgstr ""
+msgstr "Nagra2: elimina pacchetti EMM-S"
 
 msgid "Nagra2: Enable AUXserver"
-msgstr ""
+msgstr "Nagra2: abilita AUXserver"
 
 msgid "Nagra2: AUXserver hostname"
-msgstr ""
+msgstr "Nagra2: nome AUXserver"
 
 msgid "Nagra2: AUXserver port"
-msgstr ""
+msgstr "Nagra2: porta AUXserver"
 
 msgid "Nagra2: AUXserver password"
-msgstr ""
+msgstr "Nagra2: password AUXserver"
 
 msgid "don't touch"
-msgstr ""
+msgstr "non toccare"
 
 msgid "disable"
-msgstr ""
+msgstr "disabilita"
 
 msgid "SC-Cryptoworks: Parental rating"
-msgstr ""
+msgstr "SC-Cryptoworks: Controllo parentale"
 
 msgid "allow ALL"
-msgstr ""
+msgstr "permetti TUTTI"
 
 msgid "block UNIQUE"
-msgstr ""
+msgstr "blocco UNICO"
 
 msgid "block SHARED"
-msgstr ""
+msgstr "blocco CONDIVISO"
 
 msgid "block ALL"
-msgstr ""
+msgstr "blocca TUTTO"
 
 msgid "SC-Seca: EMM updates"
-msgstr ""
+msgstr "SC-Seca: aggiornamenti EMM"
 
 msgid "SC-Seca: activate PPV"
-msgstr ""
+msgstr "SC-Seca: attiva PPV" 
