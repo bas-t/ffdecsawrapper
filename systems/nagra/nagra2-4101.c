@@ -108,7 +108,7 @@ bool cN2Prov4101::PostProcAU(int id, unsigned char *data)
 {
   if(data[1]==0x01) {
     cPlainKey *pk;
-    if(!(pk=keys.FindKey('N',id,MBC(N2_MAGIC,0x30),16))) {
+    if(!(pk=keys.FindKeyNoTrig('N',id,MBC(N2_MAGIC,0x30),16))) {
       PRINTF(L_SYS_EMM,"missing %04x NN 30 3DES key (16 bytes)",id);
       return false;
       }
