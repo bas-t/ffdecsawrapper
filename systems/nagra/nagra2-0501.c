@@ -127,7 +127,7 @@ bool cN2Prov0501::RomInit(void)
 bool cN2Prov0501::ProcessMap(int f)
 {
   unsigned short addr;
-  int size=wordsize<<3;
+  int size;
   unsigned char tmp[256];
 
   switch(f) {
@@ -144,8 +144,8 @@ bool cN2Prov0501::ProcessMap(int f)
     case IMPORT_C:
     case IMPORT_D:
     case IMPORT_LAST:
-      addr=HILO(0x44);
-      GetMem(addr,tmp,size,0); DoMap(f,tmp);
+      addr=HILO(0x44); size=Get(0x48);
+      GetMem(addr,tmp,size<<3,0); DoMap(f,tmp,size);
       AddCycles(MapCycles());
       break;
     case EXPORT_J: //Export Registers A-E with 44:45: 0x09 is E
@@ -154,15 +154,15 @@ bool cN2Prov0501::ProcessMap(int f)
     case EXPORT_C:
     case EXPORT_D:
     case EXPORT_LAST:
-      addr=HILO(0x44);
-      DoMap(f,tmp); SetMem(addr,tmp,size,0);
+      addr=HILO(0x44); size=Get(0x48);
+      DoMap(f,tmp,size); SetMem(addr,tmp,size<<3,0);
       break;
     case SWAP_A: //Swap Registers A-D with 44:45
     case SWAP_B:
     case SWAP_C:
     case SWAP_D:
-      addr=HILO(0x44);
-      GetMem(addr,tmp,size,0); DoMap(f,tmp); SetMem(addr,tmp,size,0);
+      addr=HILO(0x44); size=Get(0x48);
+      GetMem(addr,tmp,size<<3,0); DoMap(f,tmp,size); SetMem(addr,tmp,size<<3,0);
       break;
     case CLEAR_A:
     case CLEAR_B:
