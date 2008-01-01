@@ -460,9 +460,12 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       last=f-IMPORT_J;
       // fall through
     case IMPORT_LAST:
-      regs[last]->GetLE(data,last>0?dl:8);
-      cycles=944; // certainly dependant on the wordsize, but for now enough for PW
+      {
+      int s=last>0?dl:8;
+      regs[last]->GetLE(data,s);
+      cycles=772+160*(s>>3); // stil not sure if correct
       break;
+      }
 
     case EXPORT_J:
     case EXPORT_A:
