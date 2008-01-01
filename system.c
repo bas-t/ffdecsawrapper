@@ -95,7 +95,7 @@ int cSystem::newKeys=0;
 cSystem::cSystem(const char *Name, int Pri)
 {
   name=Name; pri=Pri;
-  lastType=0; currentKeyStr[0]=0; doLog=true; cardNum=-1; logecm=0;
+  currentKeyStr[0]=0; doLog=true; cardNum=-1; logecm=0;
   check=new struct EcmCheck;
   memset(check,0,sizeof(struct EcmCheck));
   // default config
@@ -237,8 +237,7 @@ void cSystem::CheckECMResult(const cEcmInfo *ecm, const unsigned char *data, boo
 
 void cSystem::KeyOK(cPlainKey *pk)
 {
-  if(pk->type!=lastType || pk->id!=lastId || pk->keynr!=lastKeynr) {
-    lastType=pk->type; lastId=pk->id; lastKeynr=pk->keynr;
+  if(lastkey.NotLast(pk->type,pk->id,pk->keynr)) {
     strn0cpy(currentKeyStr,pk->ToString(),sizeof(currentKeyStr));
     PRINTF(L_CORE_ECM,"system: using key %s",*pk->ToString(true));
     doLog=true;
@@ -253,11 +252,9 @@ void cSystem::KeyOK(const char *txt)
 
 void cSystem::KeyFail(int type, int id, int keynr)
 {
-  if(type!=lastType || id!=lastId || keynr!=lastKeynr) {
-    lastType=type; lastId=id; lastKeynr=keynr;
-    if(doLog)
-      PRINTF(L_CORE_ECM,"system: no key found for %c %.2x %.2x",lastType,lastId,lastKeynr);
-    }
+  keys.Trigger(type,id,keynr);
+  if(lastkey.NotLast(type,id,keynr) && doLog)
+    PRINTF(L_CORE_ECM,"system: no key found for %s",*keys.KeyString(type,id,keynr));
 }
 
 // -- cSystemLink --------------------------------------------------------------
