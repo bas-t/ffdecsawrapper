@@ -847,7 +847,7 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
     return false;
     }
   pk->Get(m1);
-  if((pk=keys.FindKey('N',id,'V',sizeof(vKey)))) {
+  if((pk=keys.FindKeyNoTrig('N',id,'V',sizeof(vKey)))) {
     pk->Get(vKey);
     hasVerifyKey=true;
     }
