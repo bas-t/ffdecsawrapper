@@ -1227,7 +1227,7 @@ bool cSystemSeca::ProcessECM(const cEcmInfo *ecmD, unsigned char *data)
   cKeySnoop ks(this,'S',ecmD->provId,keyNr&0x0F);
   unsigned char *buff=AUTOMEM(msgLen);
   while((pk=keys.FindKey('S',ecmD->provId,keyNr&0x0F,key8?8:16,pk))) {
-    memcpy(buff,ecm,sizeof(buff)); // if decoding fails we need the original data
+    memcpy(buff,ecm,msgLen); // if decoding fails we need the original data
     
     unsigned char PK[16], signature[20];
     pk->Get(PK);
@@ -1565,7 +1565,7 @@ void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
         }
 
       unsigned char signature[20];
-      memcpy(buff,emm,sizeof(buff)); // if decoding fails we need the original de-sse'd data
+      memcpy(buff,emm,msgLen); // if decoding fails we need the original de-sse'd data
 
       if(!SE) {
         for(int i=0 ; i<=64 && i<msgLen-8; i+=8) Decrypt(&buff[i],MK,T1,T2);
