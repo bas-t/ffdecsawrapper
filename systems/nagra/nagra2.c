@@ -829,7 +829,8 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   cTimeMs minTime;
 
   if(id==0x4101) StartLog(ecm,0x1881); // D+ AU
-    
+  if(id==0x0505 || id==0x0503 || id==0x0511) id=0x0501; // PremStar  ugly again :(
+
   if(cmdLen<64 || SCT_LEN(data)<cmdLen+10) {
     if(doLog) PRINTF(L_SYS_ECM,"bad ECM message msgLen=%d sctLen=%d",cmdLen,SCT_LEN(data));
     return false;
