@@ -47,6 +47,7 @@ ADD_MODULE(L_SYS,lm_sys)
 
 class cPlainKeyVia : public cPlainKeyStd {
 protected:
+  virtual int IdSize(void) { return 6; }
   virtual cString PrintKeyNr(void);
 public:
   cPlainKeyVia(bool Super);
