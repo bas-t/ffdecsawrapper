@@ -22,8 +22,10 @@
 
 #include <vdr/thread.h>
 #include <vdr/tools.h>
+
 #include "misc.h"
 
+class cStructLoaders;
 class cLoaders;
 class cPidFilter;
 class cPlainKeys;
@@ -64,6 +66,88 @@ public:
   };
 
 extern cFileMaps filemaps;
+
+//--------------------------------------------------------------
+
+class cStructItem : public cSimpleItem {
+private:
+  char *comment;
+  bool deleted, special;
+protected:
+  void SetSpecial(void) { special=true; }
+public:
+  cStructItem(void);
+  virtual ~cStructItem();
+  virtual cString ToString(bool hide=false)=0;
+  bool Save(FILE *f);
+  //
+  void SetComment(const char *com);
+  const char *Comment(void) const { return comment; }
+  void Delete(void) { deleted=true; }
+  bool Deleted(void) const { return deleted; }
+  bool Special(void) const { return special; }
+  bool Valid(void) const { return !deleted && !special; }
+  };
+
+//--------------------------------------------------------------
+
+class cStructLoader : public cSimpleList<cStructItem> {
+friend class cStructLoaders;
+private:
+  cStructLoader *next;
+  //
+  cRwLock lock;
+  const char *type, *filename;
+  char *path;
+  time_t mtime;
+  bool modified, readwrite, missingok, loaded, disabled, watch, verbose;
+  //
+  time_t MTime(void);
+protected:
+  virtual cStructItem *ParseLine(char *line)=0;
+  void Modified(bool mod=true) { modified=mod; }
+  bool IsModified(void) const { return modified; }
+  void ListLock(bool rw) { lock.Lock(rw); }
+  void ListUnlock(void) { lock.Unlock(); }
+  virtual void PostLoad(void) {}
+public:
+  cStructLoader(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb);
+  virtual ~cStructLoader();
+  void AddItem(cStructItem *n, const char *com, cStructItem *ref);
+  void DelItem(cStructItem *d, bool keep=false);
+  //
+  void SetCfgDir(const char *cfgdir);
+  bool Load(bool reload);
+  void Save(void);
+  void Purge(void);
+  void Disable(void) { disabled=true; }
+  };
+
+//--------------------------------------------------------------
+
+template<class T> class cStructList : public cStructLoader {
+public:
+  cStructList<T>(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb):cStructLoader(Type,Filename,rw,miok,wat,verb) {}
+  T *First(void) const { return (T *)cStructLoader::First(); }
+  T *Last(void) const { return (T *)cStructLoader::Last(); }
+  T *Next(const T *item) const { return (T *)cStructLoader::Next(item); }
+  };
+
+//--------------------------------------------------------------
+
+class cStructLoaders {
+friend class cStructLoader;
+private:
+  static cStructLoader *first;
+  static cTimeMs lastReload, lastPurge, lastSave;
+  //
+  static void Register(cStructLoader *ld);
+public:
+  static void SetCfgDir(const char *cfgdir);
+  static void Load(bool reload);
+  static void Save(void);
+  static void Purge(void);
+  };
 
 // ----------------------------------------------------------------
 
@@ -166,16 +250,12 @@ public:
 
 class cMutableKey;
 
-class cPlainKey : public cSimpleItem {
+class cPlainKey : public cStructItem {
 friend class cPlainKeys;
 friend class cMutableKey;
 private:
-  bool au, del, super;
+  bool super;
 protected:
-  void SetInvalid(void) { del=true; }
-  void SetAuto(void) { au=true; }
-  bool IsAuto(void) const { return au; }
-  bool IsInvalid(void) const { return del; }
   void SetSupersede(bool val) { super=val; }
   bool CanSupersede(void) const { return super; }
   virtual int IdSize(void);
@@ -187,8 +267,7 @@ public:
   //
   cPlainKey(bool CanSupersede);
   virtual bool Parse(const char *line)=0;
-  bool Save(FILE *f);
-  cString ToString(bool hide=false);
+  virtual cString ToString(bool hide=false);
   virtual bool Cmp(void *Key, int Keylen)=0;
   virtual bool Cmp(cPlainKey *k)=0;
   virtual void Get(void *mem)=0;
@@ -252,31 +331,29 @@ public:
 
 extern const char *externalAU;
 
-class cPlainKeys : public cLoader, private cConfRead, private cThread, public cSimpleList<cPlainKey> {
+class cPlainKeys : private cThread, public cStructList<cPlainKey> {
 friend class cPlainKeyType;
 private:
   static cPlainKeyType *first;
-  cPlainKey *mark;
   cTimeMs trigger, last;
   cLastKey lastkey;
   //
   static void Register(cPlainKeyType *pkt, bool Super);
   cPlainKey *NewFromType(int type);
-  void AddNewKey(cPlainKey *nk, int mode, bool log);
+  bool AddNewKey(cPlainKey *nk, const char *reason);
   void ExternalUpdate(void);
 protected:
   virtual void Action(void);
+  virtual void PostLoad(void);
 public:
   cPlainKeys(void);
-  bool Load(const char *cfgdir);
-  virtual bool Save(FILE *f);
-  virtual bool ParseLine(const char *line, bool Au);
+  virtual cPlainKey *ParseLine(char *line);
   cPlainKey *FindKey(int Type, int Id, int Keynr, int Size, cPlainKey *key=0);
   cPlainKey *FindKeyNoTrig(int Type, int Id, int Keynr, int Size, cPlainKey *key=0);
   void Trigger(int Type, int Id, int Keynr);
   cString KeyString(int Type, int Id, int Keynr);
   bool NewKey(int Type, int Id, int Keynr, void *Key, int Keylen);
-  bool NewKeyParse(const char *line);
+  bool NewKeyParse(char *line, const char *reason);
   void HouseKeeping(void);
   };
 

@@ -1444,12 +1444,12 @@ char *cCam::CurrentKeyStr(int num)
   return 0;
 }
 
-bool cCam::Active(void)
+bool cCam::Active(bool log)
 {
   cMutexLock lock(this);
   for(cEcmHandler *handler=handlerList.First(); handler; handler=handlerList.Next(handler))
     if(!handler->IsIdle()) {
-      PRINTF(L_GEN_INFO,"handler %s on card %d is not idle",handler->Id(),cardNum);
+      if(log) PRINTF(L_GEN_INFO,"handler %s on card %d is not idle",handler->Id(),cardNum);
       return true;
       }
   return false;

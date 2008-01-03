@@ -20,11 +20,10 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-
-#include <vdr/tools.h>
 
 #include "data.h"
 #include "misc.h"
@@ -140,6 +139,278 @@ cFileMap *cFileMaps::GetFileMap(const char *name, const char *domain, bool rw)
   fm=new cFileMap(path,rw);
   Add(fm);
   return fm;  
+}
+
+// -- cStructItem --------------------------------------------------------------
+
+cStructItem::cStructItem(void)
+{
+  comment=0; deleted=special=false;
+}
+
+cStructItem::~cStructItem()
+{
+  free(comment);
+}
+
+void cStructItem::SetComment(const char *com)
+{
+  free(comment);
+  comment=strdup(com);
+}
+
+bool cStructItem::Save(FILE *f)
+{
+  fprintf(f,"%s%s\n",*ToString(false),comment?comment:"");
+  return ferror(f)==0;
+}
+
+// -- cCommentItem -------------------------------------------------------------
+
+class cCommentItem : public cStructItem {
+public:
+  cCommentItem(void);
+  virtual cString ToString(bool hide=false) { return ""; }
+  };
+
+cCommentItem::cCommentItem(void)
+{
+  SetSpecial();
+}
+
+// -- cStructLoader ------------------------------------------------------------
+
+cStructLoader::cStructLoader(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb)
+:lock(true)
+{
+  path=0; mtime=0; modified=loaded=disabled=false;
+  type=Type; filename=Filename;
+  readwrite=rw; missingok=miok; watch=wat; verbose=verb;
+  cStructLoaders::Register(this);
+}
+
+cStructLoader::~cStructLoader()
+{
+  free(path);
+}
+
+void cStructLoader::AddItem(cStructItem *n, const char *com, cStructItem *ref)
+{
+  n->SetComment(com);
+  ListLock(true);
+  cStructItem *a=0;
+  if(ref) { // insert before reference
+    for(a=First(); a; a=Next(a))
+      if(Next(a)==ref) break;
+    }
+  if(!a) { // insert before first non-special
+    for(a=First(); a;) {
+      cStructItem *nn=Next(a);
+      if(nn && !nn->Special()) break;
+      a=nn;
+      }
+    }
+  Add(n,a);
+  Modified();
+  ListUnlock();
+}
+
+void cStructLoader::DelItem(cStructItem *d, bool keep)
+{
+  if(d) {
+    d->Delete();
+    if(keep) {
+      cStructItem *n=new cCommentItem;
+      n->SetComment(cString::sprintf(";%s%s",*d->ToString(false),d->Comment()?d->Comment():""));
+      Add(n,d);
+      }
+    Modified();
+    }
+}
+
+void cStructLoader::SetCfgDir(const char *cfgdir)
+{
+  free(path);
+  path=strdup(AddDirectory(cfgdir,filename));
+}
+
+time_t cStructLoader::MTime(void)
+{
+  struct stat64 st;
+  if(stat64(path,&st)!=0) {
+    PRINTF(L_GEN_ERROR,"failed fstat %s: %s",path,strerror(errno));
+    PRINTF(L_GEN_WARN,"automatic reload of %s disabled",path);
+    st.st_mtime=0;
+    }
+  return st.st_mtime;
+}
+
+bool cStructLoader::Load(bool reload)
+{
+  if(reload && !watch) return true;
+  FILE *f=fopen(path,"r");
+  if(f) {
+    int curr_mtime=MTime();
+    if(access(path,R_OK|W_OK)!=0) {
+      if(errno!=EACCES)
+        PRINTF(L_GEN_ERROR,"failed access %s: %s",path,strerror(errno));
+      PRINTF(L_GEN_WARN,"no write permission on %s. Changes will not be saved!",path);
+      readwrite=false;
+      }
+
+    loaded=true;
+    ListLock(true);
+    bool doload=false;
+    if(!reload) {
+      Clear(); Modified(false);
+      mtime=curr_mtime;
+      doload=true;
+      }
+    else if(mtime && mtime<curr_mtime) {
+      PRINTF(L_CORE_LOAD,"detected change of %s",path);
+      if(IsModified())
+        PRINTF(L_CORE_LOAD,"discarding in-memory changes");
+      for(cStructItem *a=First(); a; a=Next(a)) DelItem(a);
+      Modified(false);
+      mtime=curr_mtime;
+      doload=true;
+      }
+    if(doload) {
+      PRINTF(L_GEN_INFO,"loading %s from %s",type,path);
+      int lineNum=0, num=0;
+      char buff[4096];
+      while(fgets(buff,sizeof(buff),f)) {
+        lineNum++;
+        if(!index(buff,'\n') && !feof(f)) {
+          PRINTF(L_GEN_ERROR,"file %s readbuffer overflow line#%d",path,lineNum);
+          loaded=false;
+          break;
+          }
+        strreplace(buff,'\n',0); strreplace(buff,'\r',0); // chomp
+        bool hasContent=false;
+        char *ls;
+        for(ls=buff; *ls; ls++) {
+          if(*ls==';' || *ls=='#') {		  // comment
+            if(hasContent)
+              while(ls>buff && ls[-1]<=' ') ls--; // search back to non-whitespace
+            break;
+            }
+          if(*ls>' ') hasContent=true;		  // line contains something usefull
+          }
+        cStructItem *it=0;
+        if(hasContent) {
+          char save=*ls;
+          *ls=0; it=ParseLine(buff); *ls=save;
+          if(!it) {
+            PRINTF(L_GEN_ERROR,"file %s has error in line #%d",path,lineNum);
+            ls=buff;
+            }
+          else num++;
+          }
+        else ls=buff;
+        if(!it) it=new cCommentItem;
+        if(it) {
+          it->SetComment(ls);
+          Add(it);
+          }
+        else {
+          PRINTF(L_GEN_ERROR,"out of memory loading file %s",path);
+          loaded=false;
+          break;
+          }
+        }
+      PRINTF(L_CORE_LOAD,"loaded %d %s from %s",num,type,path);
+      PostLoad();
+      }
+    ListUnlock();
+
+    fclose(f);
+    }
+  else {
+    if(verbose) PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
+    loaded=missingok;
+    }
+  if(!loaded) PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
+  return loaded;
+}
+
+void cStructLoader::Purge(void)
+{
+  ListLock(true);
+  for(cStructItem *it=First(); it;) {
+    cStructItem *n=Next(it);
+    if(it->Deleted()) Del(it);
+    it=n;
+    }
+  ListUnlock();
+}
+
+void cStructLoader::Save(void)
+{
+  ListLock(false);
+  if(readwrite && loaded && IsModified()) {
+    cSafeFile f(path);
+    if(f.Open()) {
+      for(cStructItem *it=First(); it; it=Next(it))
+        if(!it->Deleted() && !it->Save(f)) break;
+      f.Close();
+      mtime=MTime();
+      PRINTF(L_CORE_LOAD,"saved %s to %s",type,path);
+      Modified(false);
+      }
+    }
+  ListUnlock();
+}
+
+// -- cStructLoaders -----------------------------------------------------------
+
+#define RELOAD_TIMEOUT  20000
+#define PURGE_TIMEOUT   60000
+#define SAVE_TIMEOUT     5000
+
+cStructLoader *cStructLoaders::first=0;
+cTimeMs cStructLoaders::lastReload;
+cTimeMs cStructLoaders::lastPurge;
+cTimeMs cStructLoaders::lastSave;
+
+void cStructLoaders::Register(cStructLoader *ld)
+{
+  PRINTF(L_CORE_DYN,"structloaders: registering loader %s",ld->type);
+  ld->next=first;
+  first=ld;
+}
+
+void cStructLoaders::SetCfgDir(const char *cfgdir)
+{
+  for(cStructLoader *ld=first; ld; ld=ld->next)
+    ld->SetCfgDir(cfgdir);
+}
+
+void cStructLoaders::Load(bool reload)
+{
+  if(!reload || lastReload.TimedOut()) {
+    for(cStructLoader *ld=first; ld; ld=ld->next)
+      if(!ld->disabled) ld->Load(reload);
+    lastReload.Set(RELOAD_TIMEOUT);
+    }
+}
+
+void cStructLoaders::Save(void)
+{
+  if(lastSave.TimedOut()) {
+    for(cStructLoader *ld=first; ld; ld=ld->next)
+      if(!ld->disabled) ld->Save();
+    lastSave.Set(SAVE_TIMEOUT);
+    }
+}
+
+void cStructLoaders::Purge(void)
+{
+  if(lastPurge.TimedOut()) {
+    for(cStructLoader *ld=first; ld; ld=ld->next)
+      if(!ld->disabled) ld->Purge();
+    lastPurge.Set(PURGE_TIMEOUT);
+    }
 }
 
 // -- cConfRead ----------------------------------------------------------------
@@ -460,7 +731,6 @@ void cEcmInfo::SetName(const char *Name)
 
 cPlainKey::cPlainKey(bool CanSupersede)
 {
-  au=del=false;
   super=CanSupersede;
 }
 
@@ -478,12 +748,6 @@ cString cPlainKey::PrintKeyNr(void)
 int cPlainKey::IdSize(void)
 {
   return id>0xFF ? (id>0xFFFF ? 6 : 4) : 2;
-}
-
-bool cPlainKey::Save(FILE *f)
-{
-  fprintf(f,"%s\n",*ToString(false));
-  return ferror(f)==0;
 }
 
 cString cPlainKey::ToString(bool hide)
@@ -654,11 +918,8 @@ cPlainKeys keys;
 cPlainKeyType *cPlainKeys::first=0;
 
 cPlainKeys::cPlainKeys(void)
-:cLoader("KEY")
-//,cThread("ExternalAU")
-{
-  mark=0;
-}
+:cStructList<cPlainKey>("keys",KEY_FILE,true,true,true,true)
+{}
 
 void cPlainKeys::Register(cPlainKeyType *pkt, bool Super)
 {
@@ -683,81 +944,91 @@ cPlainKey *cPlainKeys::FindKey(int Type, int Id, int Keynr, int Size, cPlainKey 
 
 cPlainKey *cPlainKeys::FindKeyNoTrig(int Type, int Id, int Keynr, int Size, cPlainKey *key)
 {
-  Lock();
-  if(key) key=Next(key); else key=First();
-  while(key) {
-    if(!key->IsInvalid() && key->type==Type && key->id==Id && key->keynr==Keynr && (Size<0 || key->Size()==Size)) break;
-    key=Next(key);
-    }
-  Unlock();
+  ListLock(false);
+  for(key=key?Next(key):First(); key; key=Next(key))
+    if(key->Valid() && key->type==Type && key->id==Id && key->keynr==Keynr && (Size<0 || key->Size()==Size))
+      break;
+  ListUnlock();
   return key;
+}
+
+cPlainKey *cPlainKeys::NewFromType(int type)
+{
+  cPlainKeyType *pkt;
+  for(pkt=first; pkt; pkt=pkt->next)
+    if(pkt->type==type) return pkt->Create();
+  PRINTF(L_CORE_LOAD,"unknown key type '%c', adding dummy",type);
+  pkt=new cPlainKeyTypeDummy(type);
+  return pkt->Create();
+}
+
+bool cPlainKeys::AddNewKey(cPlainKey *nk, const char *reason)
+{
+  cPlainKey *k;
+  for(k=0; (k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,-1,k)); )
+    if(k->Cmp(nk)) return false;
+
+  cPlainKey *ref=0;
+  PRINTF(L_GEN_INFO,"key update for ID %s",*nk->ToString(true));
+  for(k=0; (k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,nk->Size(),k)); ) {
+    if(nk->CanSupersede()) {
+      PRINTF(L_GEN_INFO,"supersedes key: %s",*k->ToString(true));
+      DelItem(k,true);
+      }
+    if(!ref) ref=k;
+    }
+  char stamp[32], com[256];
+  time_t tt=time(0);
+  struct tm tm_r;
+  strftime(stamp,sizeof(stamp),"%d.%m.%Y %T",localtime_r(&tt,&tm_r));
+  snprintf(com,sizeof(com)," ; %s %s",reason,stamp);
+  AddItem(nk,com,ref);
+  return true;
 }
 
 bool cPlainKeys::NewKey(int Type, int Id, int Keynr, void *Key, int Keylen)
 {
-  cPlainKey *k=0;
-  while((k=FindKeyNoTrig(Type,Id,Keynr,-1,k)))
-    if(k->Cmp(Key,Keylen)) return false;
-
   cPlainKey *nk=NewFromType(Type);
   if(nk) {
     nk->Set(Type,Id,Keynr,Key,Keylen);
-    AddNewKey(nk,2,true);
-    return true;
+    return AddNewKey(nk,"from AU");
     }
-  else PRINTF(L_GEN_ERROR,"no memory for new key ID %c %.2x!",Type,Id);
   return false;
 }
 
-void cPlainKeys::AddNewKey(cPlainKey *nk, int mode, bool log)
+bool cPlainKeys::NewKeyParse(char *line, const char *reason)
 {
-  if(mode>=1) {
-    nk->SetAuto();
-    if(log) PRINTF(L_GEN_INFO,"key update for ID %s",*nk->ToString(true));
-    if(nk->CanSupersede()) {
-      cPlainKey *k=0;
-      while((k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,nk->Size(),k))) {
-        if(!k->IsInvalid()) {
-          k->SetInvalid();
-          if(k->IsAuto()) Modified();
-          if(log) PRINTF(L_GEN_INFO,"supersedes key: %s%s",*k->ToString(true),k->IsAuto()?" (auto)":"");
-          }
-        }
-      }
-    }
-  Lock();
-  switch(mode) {
-    case 0: Add(nk); break;
-    case 1: if(!mark) Ins(nk); else Add(nk,mark);
-            mark=nk;
-            break;
-    case 2: Ins(nk); Modified(); break;
-    }
-  Unlock();
+  cPlainKey *nk=ParseLine(line);
+  return nk && AddNewKey(nk,reason);
 }
 
-bool cPlainKeys::Load(const char *cfgdir)
+cPlainKey *cPlainKeys::ParseLine(char *line)
 {
-  Lock();
-  Clear(); mark=0;
-  cString cname=AddDirectory(cfgdir,KEY_FILE);
-  ConfRead("keys",cname);
-  int n=Count();
-  PRINTF(L_CORE_LOAD,"loaded %d keys from %s",n,*cname);
-  if(n && LOG(L_CORE_KEYS)) {
-    cPlainKey *dat=First();
-    while(dat) {
-      if(!dat->IsInvalid()) PRINTF(L_CORE_KEYS,"keys %s",*dat->ToString(false));
-      dat=Next(dat);
-      }
+  char *s=skipspace(line);
+  cPlainKey *k=NewFromType(toupper(*s));
+  if(k && !k->Parse(line)) { delete k; k=0; }
+  return k;
+}
+
+cString cPlainKeys::KeyString(int Type, int Id, int Keynr)
+{
+  cPlainKey *pk=NewFromType(Type);
+  if(pk) {
+    pk->type=Type; pk->id=Id; pk->keynr=Keynr;
+    return cString::sprintf("%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
     }
-  Unlock();
-  return (n!=0);
+  return "unknown";
+}
+
+void cPlainKeys::PostLoad(void)
+{
+  if(Count() && LOG(L_CORE_KEYS))
+    for(cPlainKey *dat=First(); dat; dat=Next(dat))
+      if(dat->Valid()) PRINTF(L_CORE_KEYS,"keys %s",*dat->ToString(false));
 }
 
 void cPlainKeys::HouseKeeping(void)
 {
-  cLoaders::SaveCache();
   if(trigger.TimedOut()) {
     trigger.Set(EXT_AU_INT);
     if(externalAU) PRINTF(L_CORE_AUEXTERN,"triggered from housekeeping");
@@ -779,21 +1050,6 @@ void cPlainKeys::ExternalUpdate(void)
     }
 }
 
-bool cPlainKeys::NewKeyParse(const char *line)
-{
-  cPlainKey *nk=NewFromType(toupper(line[0]));
-  if(nk && nk->Parse(line)) {
-    cPlainKey *k=0;
-    while((k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,-1,k)))
-      if(k->Cmp(nk)) break;
-    if(!k) {
-      AddNewKey(nk,2,true);
-      return true;
-      }
-    }
-  return false;
-}
-
 void cPlainKeys::Action(void)
 {
   last.Set(EXT_AU_MIN);
@@ -805,59 +1061,9 @@ void cPlainKeys::Action(void)
     while(fgets(buff,sizeof(buff),pipe)) {
       char *line=skipspace(stripspace(buff));
       if(line[0]==0 || line[0]==';' || line[0]=='#') continue;
-      NewKeyParse(line);
+      NewKeyParse(line,"from ExtAU");
       }
     }
   pipe.Close();
   PRINTF(L_CORE_AUEXTERN,"done (elapsed %d)",(int)start.Elapsed());
-}
-
-cPlainKey *cPlainKeys::NewFromType(int type)
-{
-  cPlainKeyType *pkt=first;
-  while(pkt) {
-    if(pkt->type==type) return pkt->Create();
-    pkt=pkt->next;
-    }
-  PRINTF(L_CORE_LOAD,"unknown key type '%c', adding dummy",type);
-  pkt=new cPlainKeyTypeDummy(type);
-  return pkt->Create();
-}
-
-cString cPlainKeys::KeyString(int Type, int Id, int Keynr)
-{
-  cPlainKey *pk=NewFromType(Type);
-  if(pk) {
-    pk->type=Type; pk->id=Id; pk->keynr=Keynr;
-    return cString::sprintf("%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
-    }
-  return "unknown";
-}
-
-bool cPlainKeys::ParseLine(const char *line, bool fromCache)
-{
-  char *s=skipspace(line);
-  cPlainKey *k=NewFromType(toupper(*s));
-  if(k) {
-    if(k->Parse((char *)line)) AddNewKey(k,fromCache?1:0,false);
-    else delete k;
-    return true;
-    }
-  return false;
-}
-
-bool cPlainKeys::Save(FILE *f)
-{
-  bool res=true;
-  Lock();
-  cPlainKey *dat=First();
-  while(dat) {
-    if(dat->IsAuto() && !dat->IsInvalid()) {
-      if(!dat->Save(f)) { res=false; break; }
-      }
-    dat=Next(dat);
-    }
-  Modified(!res);
-  Unlock();
-  return res;
 }
