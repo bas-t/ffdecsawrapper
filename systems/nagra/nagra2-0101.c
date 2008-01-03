@@ -25,15 +25,13 @@
 
 // -- cAuxSrv ------------------------------------------------------------------
 
-#define HAS_AUXSRV
-
 #ifdef HAS_AUXSRV
 #include "network.h"
 #define AUX_PROTOCOL_VERSION 2
-static int auxEnabled=0;
-static int auxPort=7777;
-static char auxAddr[80]="localhost";
-static char auxPassword[250]="auxserver";
+int auxEnabled=0;
+int auxPort=7777;
+char auxAddr[80]="localhost";
+char auxPassword[250]="auxserver";
 
 class cAuxSrv : public cMutex {
 private:
