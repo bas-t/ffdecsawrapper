@@ -29,22 +29,22 @@
 
 void RotateBytes(unsigned char *out, const unsigned char *in, int n)
 {
-  // loop is executed atleast once, so it's not a good idea to
-  // call with n=0 !!
-  out+=n;
-  do { *(--out)=*(in++); } while(--n);
+  if(n>0) {
+    out+=n;
+    do { *(--out)=*(in++); } while(--n);
+    }
 }
 
 void RotateBytes(unsigned char *in, int n)
 {
-  // loop is executed atleast once, so it's not a good idea to
-  // call with n=0 !!
-  unsigned char *e=in+n-1;
-  do {
-    unsigned char temp=*in;
-    *in++=*e;
-    *e-- =temp;
-    } while(in<e);
+  if(n>1) {
+    unsigned char *e=in+n-1;
+    do {
+      unsigned char temp=*in;
+      *in++=*e;
+      *e-- =temp;
+      } while(in<e);
+    }
 }
 
 // -- cBN ----------------------------------------------------------------------
