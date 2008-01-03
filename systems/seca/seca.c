@@ -129,8 +129,7 @@ bool cPlainKeySeca::Parse(const char *line)
       if(IsBNKey()) {
         if(C2(keynr)=='E' && len==PLAINLEN_SECA_E) {
           // support short exponent keys
-          memset(&skey[len],0,keylen-len);
-          len=keylen;
+          keylen=len;
           }
         }
       else {
