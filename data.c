@@ -156,7 +156,7 @@ cStructItem::~cStructItem()
 void cStructItem::SetComment(const char *com)
 {
   free(comment);
-  comment=strdup(com);
+  comment=com ? strdup(com):0;
 }
 
 bool cStructItem::Save(FILE *f)
@@ -222,9 +222,25 @@ void cStructLoader::DelItem(cStructItem *d, bool keep)
     if(keep) {
       cStructItem *n=new cCommentItem;
       n->SetComment(cString::sprintf(";%s%s",*d->ToString(false),d->Comment()?d->Comment():""));
+      ListLock(true);
       Add(n,d);
+      ListUnlock();
       }
     Modified();
+    }
+}
+
+void cStructLoader::AutoGenWarn(void)
+{
+  if(Count()==0) {
+    cStructItem *n=new cCommentItem;
+    n->SetComment("## This is a generated file. DO NOT EDIT!!");
+    cStructItem *n2=new cCommentItem;
+    n2->SetComment("## This file will be OVERWRITTEN WITHOUT WARNING!!");
+    ListLock(true);
+    Add(n);
+    Add(n2);
+    ListUnlock();
     }
 }
 

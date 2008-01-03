@@ -41,18 +41,16 @@ class cPrg;
 
 // ----------------------------------------------------------------
 
-class cEcmCache : public cLoader, cMutex, cSimpleList<cEcmData> {
+class cEcmCache : public cStructList<cEcmData> {
 private:
   cEcmData *Exists(cEcmInfo *e);
 public:
   cEcmCache(void);
-  void Load(void);
   void New(cEcmInfo *e);
   int GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int Transponder);
   void Delete(cEcmInfo *e);
   void Flush(void);
-  virtual bool Save(FILE *f);
-  virtual bool ParseLine(const char *line, bool fromCache);
+  virtual cStructItem *ParseLine(char *line);
   };
 
 extern cEcmCache ecmcache;
