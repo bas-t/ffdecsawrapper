@@ -109,6 +109,7 @@ protected:
   bool IsModified(void) const { return modified; }
   void ListLock(bool rw) { lock.Lock(rw); }
   void ListUnlock(void) { lock.Unlock(); }
+  void AutoGenWarn(void);
   virtual void PostLoad(void) {}
 public:
   cStructLoader(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb);
@@ -214,7 +215,7 @@ public:
 
 // ----------------------------------------------------------------
 
-class cEcmInfo : public cSimpleItem {
+class cEcmInfo : public cStructItem {
 private:
   bool cached, failed;
   //
@@ -234,6 +235,7 @@ public:
   cEcmInfo(const cEcmInfo *e);
   cEcmInfo(const char *Name, int Pid, int CaId, int ProvId);
   ~cEcmInfo();
+  virtual cString ToString(bool hide=false) { return ""; }
   bool Compare(const cEcmInfo *e);
   bool Update(const cEcmInfo *e);
   void SetSource(int PrgId, int Source, int Transponder);

@@ -1006,7 +1006,6 @@ bool cScSetup::Ignore(unsigned short caid)
 
 bool cSoftCAM::Load(const char *cfgdir)
 {
-  ecmcache.Load();
   if(!Feature.KeyFile()) keys.Disable();
   cStructLoaders::Load(false);
   if(Feature.KeyFile() && keys.Count()<1)
