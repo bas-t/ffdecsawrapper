@@ -17,11 +17,10 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
+#include <ctype.h>
 
-#include "system.h"
 #include "system-common.h"
 #include "crypto.h"
 #include "data.h"

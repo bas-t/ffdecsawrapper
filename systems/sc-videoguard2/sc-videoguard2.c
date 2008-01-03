@@ -17,7 +17,6 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -29,6 +28,7 @@
 #include "parse.h"
 #include "helper.h"
 #include "log-sc.h"
+#include "log-core.h"
 
 #define SYSTEM_VIDEOGUARD2   0x0900
 

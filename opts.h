@@ -20,6 +20,8 @@
 #ifndef ___OPTS_H
 #define ___OPTS_H
 
+#include "i18n.h"
+
 class cOsdMenu;
 
 // ----------------------------------------------------------------

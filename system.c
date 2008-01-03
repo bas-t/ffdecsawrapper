@@ -29,6 +29,7 @@
 #include "data.h"
 #include "opts.h"
 #include "log-core.h"
+#include "i18n.h"
 
 // --- cFeature ----------------------------------------------------------------
 
