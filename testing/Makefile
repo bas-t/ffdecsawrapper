@@ -21,7 +21,7 @@ APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/
 INCLUDES = -I.. -I$(VDRDIR)/include
 DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -DSCAPIVERS=$(SCAPIVERS) -D_GNU_SOURCE
 
-OBJS = misc.o log.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o
+OBJS = misc.o log.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
 SHAREDOBJS = compat.o $(VDRDIR)/tools.o $(VDRDIR)/thread.o
 LIBS = -lpthread -ljpeg -ldl -lcrypto
 

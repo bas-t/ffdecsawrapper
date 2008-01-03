@@ -25,15 +25,13 @@
 
 // -- cAuxSrv ------------------------------------------------------------------
 
-#define HAS_AUXSRV
-
 #ifdef HAS_AUXSRV
 #include "network.h"
 #define AUX_PROTOCOL_VERSION 2
-static int auxEnabled=0;
-static int auxPort=7777;
-static char auxAddr[80]="localhost";
-static char auxPassword[250]="auxserver";
+int auxEnabled=0;
+int auxPort=7777;
+char auxAddr[80]="localhost";
+char auxPassword[250]="auxserver";
 
 class cAuxSrv : public cMutex {
 private:
@@ -474,11 +472,11 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
 #endif
       {
       cBN a, b, x, y, scalar;
-      D.GetLE(data+0x60,16);
-      x.GetLE(data+0x00,16);
-      y.GetLE(data+0x30,16);
-      b.GetLE(data+0x10,16);
-      a.GetLE(data+0x70,16);
+      D.GetLE(data+0x00,16);
+      x.GetLE(data+0x10,16);
+      y.GetLE(data+0x20,16);
+      b.GetLE(data+0x30,16);
+      a.GetLE(data+0x40,16);
       scalar.GetLE(data+0x50,16);
       int scalarbits=BN_num_bits(scalar);
       if(scalarbits>=2 && !BN_is_zero(x) && !BN_is_zero(y) && !BN_is_zero(b)) {
@@ -507,12 +505,12 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
           }
         ToAffine();
         }
-      memset(data+0x20,0,64);
-      Px.PutLE(&data[0x20],16);
+      memset(data,0,0x60);
+      Px.PutLE(&data[0x00],16);
       unsigned char tmp[16];
       Qz.PutLE(tmp,16);
-      memcpy(&data[0x30],&tmp[0x0C],4);
-      Py.PutLE(&data[0x40],16);
+      memcpy(&data[0x10],&tmp[0x0C],4);
+      Py.PutLE(&data[0x20],16);
       break;
       }
     default:
@@ -898,8 +896,8 @@ void cN2Prov0101::AddRomCallbacks(void)
 int cN2Prov0101::ProcessBx(unsigned char *data, int len, int pos)
 {
   if(Init(id,102)) {
-    SetMem(0x80,data,len);
-    SetPc(0x80+pos);
+    SetMem(0x92,data+pos-1,len-pos+1);
+    SetPc(0x93);
     SetSp(0x0FFF,0x0EF8);
     ClearBreakpoints();
     AddBreakpoint(0x9569);
