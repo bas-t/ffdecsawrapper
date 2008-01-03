@@ -127,7 +127,7 @@ public:
   void AddHook(cLogHook *hook);
   bool TriggerHook(int id);
   // Plugin API
-  bool Active(void);
+  bool Active(bool log);
   void HouseKeeping(void);
   void Tune(const cChannel *channel);
   void PostTune(void);
