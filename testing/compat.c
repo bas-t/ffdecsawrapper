@@ -106,11 +106,6 @@ int ReadRaw(const char *name, unsigned char *buff, int maxlen)
 //
 //
 
-const char *ScVersion = SCVERSION;
-
-//
-//
-
 extern const char *I18nTranslate(const char *s, const char *Plugin)
 {
   return s;
