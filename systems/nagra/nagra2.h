@@ -39,6 +39,17 @@
 
 // ----------------------------------------------------------------
 
+#define HAS_AUXSRV
+
+#ifdef HAS_AUXSRV
+extern int auxEnabled;
+extern int auxPort;
+extern char auxAddr[80];
+extern char auxPassword[250];
+#endif
+
+// ----------------------------------------------------------------
+
 class cN2Timer {
 private:
   int ctrl, divisor, cycles, remainder, latch;
