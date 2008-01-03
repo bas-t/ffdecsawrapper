@@ -17,7 +17,6 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -168,17 +167,14 @@ cString cPlainKeySeca::PrintKeyNr(void)
 
 // -- cSecaCardInfo ------------------------------------------------------------
 
-class cSecaCardInfo : public cProviderSeca {
+class cSecaCardInfo : public cStructItem, public cProviderSeca {
 private:
   int len;
 public:
   unsigned char key[16];
   //
   bool Parse(const char *line);
-  bool Save(FILE *f) { return true; }
-  bool IsUpdated(void) { return false; }
-  void Updated(void) {}
-  bool Cmp(cSecaCardInfo *ci) { return false; }
+  virtual cString ToString(bool hide=false) { return ""; }
   int KeySize(void) { return len; }
   };
 
@@ -194,7 +190,7 @@ bool cSecaCardInfo::Parse(const char *line)
 
 class cSecaCardInfos : public cCardInfos<cSecaCardInfo> {
 public:
-  cSecaCardInfos(void):cCardInfos<cSecaCardInfo>(SYSTEM_NAME) {}
+  cSecaCardInfos(void):cCardInfos<cSecaCardInfo>("Seca cards","Seca.KID",false) {}
   };
 
 static cSecaCardInfos Scards;
@@ -1633,7 +1629,6 @@ public:
   cSystemLinkSeca(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual cSystem *Create(void) { return new cSystemSeca; }
-  virtual bool Init(const char *cfgdir);
   };
 
 static cSystemLinkSeca staticInit;
@@ -1648,10 +1643,4 @@ bool cSystemLinkSeca::CanHandle(unsigned short SysId)
 {
   SysId&=SYSTEM_MASK;
   return SYSTEM_CAN_HANDLE(SysId);
-}
-
-bool cSystemLinkSeca::Init(const char *cfgdir)
-{
-  Scards.Load(cfgdir,SYSTEM_NAME,"Seca.KID");
-  return true;
 }
