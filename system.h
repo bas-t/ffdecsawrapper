@@ -20,15 +20,10 @@
 #ifndef ___SYSTEM_H
 #define ___SYSTEM_H
 
-#include <stdio.h>
-#include <ctype.h>
-
 #include <vdr/tools.h>
 
 #include "data.h"
 #include "misc.h"
-#include "log-core.h"
-#include "i18n.h"
 
 // ----------------------------------------------------------------
 
@@ -188,63 +183,6 @@ public:
   static bool ConfigParse(const char *Name, const char *Value);
   static void ConfigStore(bool AsIs);
   static cOpts *GetSystemOpts(bool start);
-  };
-
-// ----------------------------------------------------------------
-
-template<class T> class cCardInfos : public cSimpleList<T>, public cLoader, cConfRead {
-private:
-  const char *sysname;
-public:
-  cCardInfos(const char *id):cLoader(id) {}
-  virtual ~cCardInfos() {}
-  bool HaveCards(void) { return (this->Count()!=0); }
-  bool Load(const char *cfgdir, const char *SysName, const char *kidName)
-    {
-    sysname=SysName;
-    this->Clear();
-    char type[32];
-    snprintf(type,sizeof(type),"%s card infos",SysName);
-    cString cname=AddDirectory(cfgdir,kidName);
-    ConfRead(type,cname,true);
-    PRINTF(L_CORE_LOAD,"loaded %d %s cards from %s",this->Count(),SysName,*cname);
-    return HaveCards();
-    }
-  virtual bool ParseLine(const char *line, bool fromCache)
-    {
-      T *k=new T;
-      if(k) {
-        if(k->Parse((char *)line)) {
-          if(!fromCache) { Add(k); k=0; }
-          else {
-            T *o=this->First();
-            while(o) {
-              if(o->Cmp(k)) {
-                Add(k,o); k->Updated(); k=0;
-                Del(o);
-                break;
-                }
-              o=this->Next(o);
-              }
-            }
-          }
-        delete k;
-        return true;
-        }
-      PRINTF(L_GEN_ERROR,"not enough memory for %s card infos!",sysname);
-      return false;
-    }
-  virtual bool Save(FILE *f)
-    {
-    bool res=true;
-    T *k=this->First();
-    while(k) {
-      if(k->IsUpdated() && !k->Save(f)) { res=false; break; }
-      k=this->Next(k);
-      }
-    Modified(!res);
-    return res;
-    }
   };
 
 // ----------------------------------------------------------------

@@ -17,7 +17,7 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "system-common.h"
@@ -48,26 +48,14 @@ static cPlainKeyTypeReg<cPlainKeyStd,'I',false> KeyReg;
 
 // -- cIrdCardInfo -------------------------------------------------------------
 
-class cIrdCardInfo : public cProviderIrdeto, public cCardIrdeto {
-private:
-  bool updated;
+class cIrdCardInfo : public cStructItem, public cProviderIrdeto, public cCardIrdeto {
 public:
   unsigned char PMK[8], HMK[10];
   bool haveHMK;
   //
-  cIrdCardInfo(void);
   bool Parse(const char *line);
-  bool Save(FILE *f);
-  bool Update(unsigned char *pmk, unsigned char *id);
-  bool IsUpdated(void) { return updated; }
-  void Updated(void) { updated=true; }
-  bool Cmp(cIrdCardInfo *ci);
+  virtual cString ToString(bool hide=false);
   };
-
-cIrdCardInfo::cIrdCardInfo(void)
-{
-  updated=false;
-}
 
 bool cIrdCardInfo::Parse(const char *line)
 {
@@ -78,51 +66,42 @@ bool cIrdCardInfo::Parse(const char *line)
          GetHex(line,PMK,sizeof(PMK));
 }
 
-bool cIrdCardInfo::Save(FILE *f)
+cString cIrdCardInfo::ToString(bool hide)
 {
   char s1[20], s2[20], s3[20], s4[20];
-  fprintf(f,"%s %s %02x %s %s\n",
+  return cString::sprintf("%s %s %02x %s %s",
      HexStr(s1,hexSer,sizeof(hexSer)),HexStr(s2,HMK,sizeof(HMK)),provBase,
      HexStr(s3,provId,sizeof(provId)),HexStr(s4,PMK,sizeof(PMK)));
-  return ferror(f)==0;
-}
-
-bool cIrdCardInfo::Cmp(cIrdCardInfo *ci)
-{
-  return (!memcmp(hexSer,ci->hexSer,sizeof(hexSer)) &&
-          !memcmp(HMK,ci->HMK,sizeof(HMK)));
-}
-
-bool cIrdCardInfo::Update(unsigned char *pmk, unsigned char *id)
-{
-  bool res=false;
-  char str[20], str2[12];
-  if(memcmp(PMK,pmk,sizeof(PMK))) {
-    PRINTF(L_GEN_INFO,"new PMK for I card %s: %s",HexStr(str2,hexSer,sizeof(hexSer)),KeyStr(str,pmk));
-    memcpy(PMK,pmk,sizeof(PMK));
-    Updated(); res=true;
-    }
-  if(id && memcmp(provId,id,sizeof(provId))) {
-    PRINTF(L_GEN_INFO,"new PrvID for I card %s: %s",HexStr(str2,hexSer,sizeof(hexSer)),HexStr(str,id,sizeof(provId)));
-    memcpy(provId,id,sizeof(provId));
-    Updated(); res=true;
-    }
-  return res;
 }
 
 // -- cIrdCardInfos ------------------------------------------------------------
 
 class cIrdCardInfos : public cCardInfos<cIrdCardInfo> {
 public:
-  cIrdCardInfos(void):cCardInfos<cIrdCardInfo>(SYSTEM_NAME) {}
-  bool Update(cIrdCardInfo *ci, unsigned char *pmk, unsigned char *id);
+  cIrdCardInfos(void);
+  bool Update(cIrdCardInfo *ci, const unsigned char *pmk, const unsigned char *id);
   };
 
 static cIrdCardInfos Icards;
 
-bool cIrdCardInfos::Update(cIrdCardInfo *ci, unsigned char *pmk, unsigned char *id)
+cIrdCardInfos::cIrdCardInfos(void)
+:cCardInfos<cIrdCardInfo>("Irdeto cards","Ird-Beta.KID",true)
+{}
+
+bool cIrdCardInfos::Update(cIrdCardInfo *ci, const unsigned char *pmk, const unsigned char *id)
 {
-  bool res=ci->Update(pmk,id);
+  bool res=false;
+  char str[20], str2[12];
+  if(memcmp(ci->PMK,pmk,sizeof(ci->PMK))) {
+    PRINTF(L_GEN_INFO,"new PMK for I card %s: %s",HexStr(str2,ci->hexSer,sizeof(ci->hexSer)),KeyStr(str,pmk));
+    memcpy(ci->PMK,pmk,sizeof(ci->PMK));
+    res=true;
+    }
+  if(id && memcmp(ci->provId,id,sizeof(ci->provId))) {
+    PRINTF(L_GEN_INFO,"new PrvID for I card %s: %s",HexStr(str2,ci->hexSer,sizeof(ci->hexSer)),HexStr(str,id,sizeof(ci->provId)));
+    memcpy(ci->provId,id,sizeof(ci->provId));
+    res=true;
+    }
   if(res) Modified();
   return res;
 }
@@ -490,7 +469,6 @@ public:
   cSystemLinkIrd(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual cSystem *Create(void) { return new cSystemIrd; }
-  virtual bool Init(const char *cfgdir);
   };
 
 static cSystemLinkIrd staticInit;
@@ -505,10 +483,4 @@ bool cSystemLinkIrd::CanHandle(unsigned short SysId)
 {
   SysId&=SYSTEM_MASK;
   return SYSTEM_CAN_HANDLE(SysId);
-}
-
-bool cSystemLinkIrd::Init(const char *cfgdir)
-{
-  Icards.Load(cfgdir,SYSTEM_NAME,"Ird-Beta.KID");
-  return true;
 }

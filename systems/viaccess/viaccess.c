@@ -17,14 +17,17 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-#include "viaccess.h"
-#include "tps.h"
 #include "system-common.h"
 #include "misc.h"
 #include "parse.h"
+#include "log-core.h"
+
+#include "viaccess.h"
+#include "tps.h"
 #include "log-viaccess.h"
 
 #define SYSTEM_NAME          "Viaccess"
@@ -122,15 +125,12 @@ cString cPlainKeyVia::PrintKeyNr(void)
 
 // -- cViaccessCardInfo --------------------------------------------------------
 
-class cViaccessCardInfo : public cProviderViaccess, public cCardViaccess {
+class cViaccessCardInfo : public cStructItem, public cProviderViaccess, public cCardViaccess {
 public:
   unsigned char keyno, key[8];
   //
   bool Parse(const char *line);
-  bool Save(FILE *f) { return true; }
-  bool IsUpdated(void) { return false; }
-  void Updated(void) {}
-  bool Cmp(cViaccessCardInfo *ci) { return false; }
+  virtual cString ToString(bool hide=false) { return ""; }
   };
 
 bool cViaccessCardInfo::Parse(const char *line)
@@ -146,7 +146,7 @@ bool cViaccessCardInfo::Parse(const char *line)
 
 class cViaccessCardInfos : public cCardInfos<cViaccessCardInfo> {
 public:
-  cViaccessCardInfos(void):cCardInfos<cViaccessCardInfo>(SYSTEM_NAME) {}
+  cViaccessCardInfos(void):cCardInfos<cViaccessCardInfo>("Viaccess cards","Viaccess.KID",false) {}
   };
 
 static cViaccessCardInfos Vcards;
@@ -525,7 +525,6 @@ public:
   cSystemLinkViaccess(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual cSystem *Create(void) { return new cSystemViaccess; }
-  virtual bool Init(const char *cfgdir);
   };
 
 static cSystemLinkViaccess staticInit;
@@ -540,10 +539,4 @@ bool cSystemLinkViaccess::CanHandle(unsigned short SysId)
 {
   SysId&=SYSTEM_MASK;
   return SYSTEM_CAN_HANDLE(SysId);
-}
-
-bool cSystemLinkViaccess::Init(const char *cfgdir)
-{
-  Vcards.Load(cfgdir,SYSTEM_NAME,"Viaccess.KID");
-  return true;
 }
