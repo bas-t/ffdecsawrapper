@@ -17,9 +17,9 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "system-common.h"
 #include "smartcard.h"
@@ -29,6 +29,7 @@
 #include "opts.h"
 #include "misc.h"
 #include "log-sc.h"
+#include "log-core.h"
 
 #define SYSTEM_NAME          "SC-Cryptoworks"
 #define SYSTEM_PRI           -5
