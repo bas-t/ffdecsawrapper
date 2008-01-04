@@ -66,7 +66,6 @@ bool cPlainKeyConstCw::Matches(const cEcmInfo *ecm)
 bool cPlainKeyConstCw::Parse(const char *line)
 {
   unsigned char caid[2], skey[PLAINLEN_CW];
-  const char *sline=line;
   if(GetChar(line,&type,1) && GetHex(line,caid,2)) {
     int num;
     char srcBuf[16];
@@ -85,7 +84,6 @@ bool cPlainKeyConstCw::Parse(const char *line)
         }
       }
     }
-  FormatError("constcw",sline);
   return false;
 }
 

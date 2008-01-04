@@ -95,7 +95,6 @@ bool cPlainKeySeca::IsBNKey(void) const
 bool cPlainKeySeca::Parse(const char *line)
 {
   unsigned char sid[2];
-  const char *sline=line;
   int len;
   if(GetChar(line,&type,1) && (len=GetHex(line,sid,2,false))) {
     type=toupper(type); id=Bin2Int(sid,len);
@@ -143,7 +142,6 @@ bool cPlainKeySeca::Parse(const char *line)
         }
       }
     }
-  FormatError("seca",sline);
   return false;
 }
 

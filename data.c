@@ -510,32 +510,6 @@ void cStructLoaders::Purge(void)
     }
 }
 
-// -- cConfRead ----------------------------------------------------------------
-
-bool cConfRead::ConfRead(const char *type, const char *filename, bool missingok)
-{
-  bool res=false;
-  FILE *f=fopen(filename,"r");
-  if(f) {
-    res=true;
-    PRINTF(L_GEN_INFO,"loading %s from %s",type,filename);
-    char buff[1024];
-    while(fgets(buff,sizeof(buff),f)) {
-      if(!index(buff,'\n') && !feof(f))
-        PRINTF(L_GEN_ERROR,"confread %s fgets readbuffer overflow",type);
-      char *line=skipspace(stripspace(buff));
-      if(line[0]==0 || line[0]==';' || line[0]=='#') continue; // skip empty & comment lines
-      if(!ParseLine(line,false)) {
-        PRINTF(L_GEN_ERROR,"file '%s' has error in line '%s'",filename,buff);
-        res=false;
-        }
-      }
-    fclose(f);
-    }
-  else if(!missingok) PRINTF(L_GEN_ERROR,"Failed to open file '%s': %s",filename,strerror(errno));
-  return res;
-}
-
 // -- cPid ---------------------------------------------------------------------
 
 cPid::cPid(int Pid, int Section, int Mask, int Mode)
@@ -675,11 +649,6 @@ int cPlainKey::IdSize(void)
 cString cPlainKey::ToString(bool hide)
 {
   return cString::sprintf(hide ? "%c %.*X %s %.4s..." : "%c %.*X %s %s",type,IdSize(),id,*PrintKeyNr(),*Print());
-}
-
-void cPlainKey::FormatError(const char *type, const char *sline)
-{
-  PRINTF(L_GEN_WARN,"%s key: bad format '%.15s%s'\n",type,sline,(strlen(sline)>15)?"...":"");
 }
 
 // -- cMutableKey --------------------------------------------------------------
