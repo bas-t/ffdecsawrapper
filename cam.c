@@ -618,7 +618,7 @@ cString cEcmData::ToString(bool hide)
 cEcmCache ecmcache;
 
 cEcmCache::cEcmCache(void)
-:cStructList<cEcmData>("ecm cache",ECMCACHE_FILE,true,true,false,false)
+:cStructList<cEcmData>("ecm cache",ECMCACHE_FILE,SL_READWRITE|SL_MISSINGOK)
 {}
 
 void cEcmCache::New(cEcmInfo *e)
