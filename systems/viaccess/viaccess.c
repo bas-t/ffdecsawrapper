@@ -130,7 +130,6 @@ public:
   unsigned char keyno, key[8];
   //
   bool Parse(const char *line);
-  virtual cString ToString(bool hide=false) { return ""; }
   };
 
 bool cViaccessCardInfo::Parse(const char *line)

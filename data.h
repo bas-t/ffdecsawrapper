@@ -78,7 +78,7 @@ protected:
 public:
   cStructItem(void);
   virtual ~cStructItem();
-  virtual cString ToString(bool hide=false)=0;
+  virtual cString ToString(bool hide) { return ""; }
   bool Save(FILE *f);
   //
   void SetComment(const char *com);
@@ -272,7 +272,7 @@ public:
   //
   cPlainKey(bool CanSupersede);
   virtual bool Parse(const char *line)=0;
-  virtual cString ToString(bool hide=false);
+  virtual cString ToString(bool hide);
   virtual bool Cmp(void *Key, int Keylen)=0;
   virtual bool Cmp(cPlainKey *k)=0;
   virtual void Get(void *mem)=0;

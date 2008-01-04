@@ -239,7 +239,7 @@ void cSystem::CheckECMResult(const cEcmInfo *ecm, const unsigned char *data, boo
 void cSystem::KeyOK(cPlainKey *pk)
 {
   if(lastkey.NotLast(pk->type,pk->id,pk->keynr)) {
-    strn0cpy(currentKeyStr,pk->ToString(),sizeof(currentKeyStr));
+    strn0cpy(currentKeyStr,pk->ToString(false),sizeof(currentKeyStr));
     PRINTF(L_CORE_ECM,"system: using key %s",*pk->ToString(true));
     doLog=true;
     }

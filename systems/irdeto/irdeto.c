@@ -54,7 +54,7 @@ public:
   bool haveHMK;
   //
   bool Parse(const char *line);
-  virtual cString ToString(bool hide=false);
+  virtual cString ToString(bool hide);
   };
 
 bool cIrdCardInfo::Parse(const char *line)
