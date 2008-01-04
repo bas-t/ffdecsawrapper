@@ -155,7 +155,7 @@ public:
 class cStructLoaderPlain : public cStructLoader {
 protected:
   virtual cStructItem *ParseLine(char *line) { return 0; }
-  virtual bool ParseLinePlain(char *line)=0;
+  virtual bool ParseLinePlain(const char *line)=0;
   virtual void PreSave(FILE *f);
   virtual void PostSave(FILE *f) {};
 public:

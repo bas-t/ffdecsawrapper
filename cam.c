@@ -691,7 +691,7 @@ void cEcmCache::Flush(void)
   ListUnlock();
 }
 
-bool cEcmCache::ParseLinePlain(char *line)
+bool cEcmCache::ParseLinePlain(const char *line)
 {
   cEcmData *dat=new cEcmData;
   if(dat && dat->Parse(line) && !Exists(dat)) { Add(dat); return true; }

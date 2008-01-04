@@ -45,7 +45,7 @@ class cEcmCache : public cStructListPlain<cEcmData> {
 private:
   cEcmData *Exists(cEcmInfo *e);
 protected:
-  virtual bool ParseLinePlain(char *line);
+  virtual bool ParseLinePlain(const char *line);
 public:
   cEcmCache(void);
   void New(cEcmInfo *e);

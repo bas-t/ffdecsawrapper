@@ -125,7 +125,7 @@ private:
   cString Time(time_t t);
   bool ProcessAu(const cOpenTVModule *mod);
 protected:
-  virtual bool ParseLinePlain(char *line);
+  virtual bool ParseLinePlain(const char *line);
   virtual void PostSave(FILE *f);
 public:
   cTpsKeys(void);

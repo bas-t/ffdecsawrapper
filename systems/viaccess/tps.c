@@ -892,7 +892,7 @@ void cTpsKeys::DecryptBin(const unsigned char *in, unsigned char *out)
 }
 */
 
-bool cTpsKeys::ParseLinePlain(char *line)
+bool cTpsKeys::ParseLinePlain(const char *line)
 {
   unsigned char tmp[60];
   if(line[0]=='X') {
@@ -915,7 +915,7 @@ bool cTpsKeys::ParseLinePlain(char *line)
         if(sscanf(&line[2],"%x %x %n",&off,&crc,&len)==2) {
           line+=len+2;
           unsigned char buff[210];
-          if((len=GetHex((const char *)line,buff,200,false))) {
+          if((len=GetHex(line,buff,200,false))) {
             if(crc==crc32_le(0,buff,len) && off>=0 && off+len<=algolen) {
               memcpy(&algomem[off],buff,len);
               algoread+=len;
@@ -934,7 +934,7 @@ bool cTpsKeys::ParseLinePlain(char *line)
     else PRINTF(L_SYS_TPS,"unknown extention during cache load");
     }
   else {
-    if(GetHex((const char *)line,tmp,sizeof(tmp))) {
+    if(GetHex(line,tmp,sizeof(tmp))) {
       unsigned int crc=crc32_le(0,&tmp[4],sizeof(tmp)-4);
       if(*((unsigned int *)tmp)==crc) {
         cTpsKey *k=new cTpsKey;
