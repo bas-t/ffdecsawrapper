@@ -109,7 +109,8 @@ bool cPlainKeyVia::Parse(const char *line)
 
 cString cPlainKeyVia::PrintKeyNr(void)
 {
-  char tmp[8], *kn=tmp;
+  char tmp[8];
+  const char *kn=tmp;
   switch(keynr) {
     case MBC3('T','P','S'):
       kn="TPS"; break;
@@ -471,7 +472,7 @@ void cSystemViaccess::ProcessEMM(int pid, int caid, unsigned char *data)
                   numKeys++;
                   }
                 else {
-                  PRINTF(L_SYS_EMM,"%d: key length mismatch %d!=%d",CardNum(),plen,sizeof(newKey[0]));
+                  PRINTF(L_SYS_EMM,"%d: key length mismatch %d!=%d",CardNum(),plen,(int)sizeof(newKey[0]));
                   cnt=scanlen;
                   }
                 break;
