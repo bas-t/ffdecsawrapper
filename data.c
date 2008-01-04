@@ -180,12 +180,11 @@ cCommentItem::cCommentItem(void)
 
 // -- cStructLoader ------------------------------------------------------------
 
-cStructLoader::cStructLoader(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb)
+cStructLoader::cStructLoader(const char *Type, const char *Filename, int Flags)
 :lock(true)
 {
-  path=0; mtime=0; modified=loaded=disabled=false;
-  type=Type; filename=Filename;
-  readwrite=rw; missingok=miok; watch=wat; verbose=verb;
+  path=0; mtime=0;
+  type=Type; filename=Filename; flags=Flags&SL_CUSTOMMASK;
   cStructLoaders::Register(this);
 }
 
@@ -261,9 +260,9 @@ time_t cStructLoader::MTime(void)
   return st.st_mtime;
 }
 
-bool cStructLoader::Load(bool reload)
+void cStructLoader::Load(bool reload)
 {
-  if(reload && !watch) return true;
+  if(SL_TSTFLAG(SL_DISABLED) || (reload && !SL_TSTFLAG(SL_WATCH))) return;
   FILE *f=fopen(path,"r");
   if(f) {
     int curr_mtime=MTime();
@@ -271,10 +270,10 @@ bool cStructLoader::Load(bool reload)
       if(errno!=EACCES)
         PRINTF(L_GEN_ERROR,"failed access %s: %s",path,strerror(errno));
       PRINTF(L_GEN_WARN,"no write permission on %s. Changes will not be saved!",path);
-      readwrite=false;
+      SL_CLRFLAG(SL_READWRITE);
       }
 
-    loaded=true;
+    SL_SETFLAG(SL_LOADED);
     ListLock(true);
     bool doload=false;
     if(!reload) {
@@ -299,7 +298,7 @@ bool cStructLoader::Load(bool reload)
         lineNum++;
         if(!index(buff,'\n') && !feof(f)) {
           PRINTF(L_GEN_ERROR,"file %s readbuffer overflow line#%d",path,lineNum);
-          loaded=false;
+          SL_CLRFLAG(SL_LOADED);
           break;
           }
         strreplace(buff,'\n',0); strreplace(buff,'\r',0); // chomp
@@ -331,7 +330,7 @@ bool cStructLoader::Load(bool reload)
           }
         else {
           PRINTF(L_GEN_ERROR,"out of memory loading file %s",path);
-          loaded=false;
+          SL_CLRFLAG(SL_LOADED);
           break;
           }
         }
@@ -343,39 +342,43 @@ bool cStructLoader::Load(bool reload)
     fclose(f);
     }
   else {
-    if(verbose) PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
-    loaded=missingok;
+    if(SL_TSTFLAG(SL_VERBOSE))
+      PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
+    if(SL_TSTFLAG(SL_MISSINGOK)) SL_SETFLAG(SL_LOADED);
+    else SL_CLRFLAG(SL_LOADED);
     }
-  if(!loaded) PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
-  return loaded;
+  if(!SL_TSTFLAG(SL_LOADED))
+    PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
 }
 
 void cStructLoader::Purge(void)
 {
-  ListLock(true);
-  for(cStructItem *it=First(); it;) {
-    cStructItem *n=Next(it);
-    if(it->Deleted()) Del(it);
-    it=n;
+  if(!SL_TSTFLAG(SL_DISABLED)) {
+    ListLock(true);
+    for(cStructItem *it=First(); it;) {
+      cStructItem *n=Next(it);
+      if(it->Deleted()) Del(it);
+      it=n;
+      }
+    ListUnlock();
     }
-  ListUnlock();
 }
 
 void cStructLoader::Save(void)
 {
-  ListLock(false);
-  if(readwrite && loaded && IsModified()) {
+  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED) && IsModified()) {
     cSafeFile f(path);
     if(f.Open()) {
+      ListLock(false);
       for(cStructItem *it=First(); it; it=Next(it))
         if(!it->Deleted() && !it->Save(f)) break;
       f.Close();
       mtime=MTime();
-      PRINTF(L_CORE_LOAD,"saved %s to %s",type,path);
       Modified(false);
+      ListUnlock();
+      PRINTF(L_CORE_LOAD,"saved %s to %s",type,path);
       }
     }
-  ListUnlock();
 }
 
 // -- cStructLoaders -----------------------------------------------------------
@@ -405,8 +408,7 @@ void cStructLoaders::SetCfgDir(const char *cfgdir)
 void cStructLoaders::Load(bool reload)
 {
   if(!reload || lastReload.TimedOut()) {
-    for(cStructLoader *ld=first; ld; ld=ld->next)
-      if(!ld->disabled) ld->Load(reload);
+    for(cStructLoader *ld=first; ld; ld=ld->next) ld->Load(reload);
     lastReload.Set(RELOAD_TIMEOUT);
     }
 }
@@ -414,8 +416,7 @@ void cStructLoaders::Load(bool reload)
 void cStructLoaders::Save(void)
 {
   if(lastSave.TimedOut()) {
-    for(cStructLoader *ld=first; ld; ld=ld->next)
-      if(!ld->disabled) ld->Save();
+    for(cStructLoader *ld=first; ld; ld=ld->next) ld->Save();
     lastSave.Set(SAVE_TIMEOUT);
     }
 }
@@ -423,8 +424,7 @@ void cStructLoaders::Save(void)
 void cStructLoaders::Purge(void)
 {
   if(lastPurge.TimedOut()) {
-    for(cStructLoader *ld=first; ld; ld=ld->next)
-      if(!ld->disabled) ld->Purge();
+    for(cStructLoader *ld=first; ld; ld=ld->next) ld->Purge();
     lastPurge.Set(PURGE_TIMEOUT);
     }
 }
@@ -934,7 +934,7 @@ cPlainKeys keys;
 cPlainKeyType *cPlainKeys::first=0;
 
 cPlainKeys::cPlainKeys(void)
-:cStructList<cPlainKey>("keys",KEY_FILE,true,true,true,true)
+:cStructList<cPlainKey>("keys",KEY_FILE,SL_READWRITE|SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
 {}
 
 void cPlainKeys::Register(cPlainKeyType *pkt, bool Super)

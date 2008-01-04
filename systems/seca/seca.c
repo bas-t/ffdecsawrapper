@@ -190,7 +190,7 @@ bool cSecaCardInfo::Parse(const char *line)
 
 class cSecaCardInfos : public cCardInfos<cSecaCardInfo> {
 public:
-  cSecaCardInfos(void):cCardInfos<cSecaCardInfo>("Seca cards","Seca.KID",false) {}
+  cSecaCardInfos(void):cCardInfos<cSecaCardInfo>("Seca cards","Seca.KID",0) {}
   };
 
 static cSecaCardInfos Scards;

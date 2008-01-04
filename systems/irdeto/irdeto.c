@@ -85,7 +85,7 @@ public:
 static cIrdCardInfos Icards;
 
 cIrdCardInfos::cIrdCardInfos(void)
-:cCardInfos<cIrdCardInfo>("Irdeto cards","Ird-Beta.KID",true)
+:cCardInfos<cIrdCardInfo>("Irdeto cards","Ird-Beta.KID",SL_READWRITE)
 {}
 
 bool cIrdCardInfos::Update(cIrdCardInfo *ci, const unsigned char *pmk, const unsigned char *id)

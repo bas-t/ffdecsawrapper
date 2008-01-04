@@ -91,47 +91,81 @@ public:
 
 //--------------------------------------------------------------
 
+#define SL_READWRITE 1
+#define SL_MISSINGOK 2
+#define SL_WATCH     4
+#define SL_VERBOSE   8
+#define SL_CUSTOMMASK 0xFF
+#define SL_LOADED    0x100
+#define SL_MODIFIED  0x200
+#define SL_DISABLED  0x300
+
+#define SL_SETFLAG(x) flags|=(x)
+#define SL_CLRFLAG(x) flags&=~(x)
+#define SL_TSTFLAG(x) (flags&(x))
+
 class cStructLoader : public cSimpleList<cStructItem> {
 friend class cStructLoaders;
 private:
   cStructLoader *next;
-  //
   cRwLock lock;
+  //
+protected:
+  int flags;
   const char *type, *filename;
   char *path;
   time_t mtime;
-  bool modified, readwrite, missingok, loaded, disabled, watch, verbose;
   //
-  time_t MTime(void);
-protected:
   virtual cStructItem *ParseLine(char *line)=0;
-  void Modified(bool mod=true) { modified=mod; }
-  bool IsModified(void) const { return modified; }
+  void Modified(bool mod=true) { if(mod) SL_SETFLAG(SL_MODIFIED); else SL_CLRFLAG(SL_MODIFIED); }
+  bool IsModified(void) const { return SL_TSTFLAG(SL_MODIFIED); }
   void ListLock(bool rw) { lock.Lock(rw); }
   void ListUnlock(void) { lock.Unlock(); }
   void AutoGenWarn(void);
   virtual void PostLoad(void) {}
+  time_t MTime(void);
 public:
-  cStructLoader(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb);
+  cStructLoader(const char *Type, const char *Filename, int Flags);
   virtual ~cStructLoader();
   void AddItem(cStructItem *n, const char *com, cStructItem *ref);
   void DelItem(cStructItem *d, bool keep=false);
   //
   void SetCfgDir(const char *cfgdir);
-  bool Load(bool reload);
-  void Save(void);
-  void Purge(void);
-  void Disable(void) { disabled=true; }
+  virtual void Load(bool reload);
+  virtual void Save(void);
+  virtual void Purge(void);
+  void Disable(void) { SL_SETFLAG(SL_DISABLED); }
   };
 
 //--------------------------------------------------------------
 
 template<class T> class cStructList : public cStructLoader {
 public:
-  cStructList<T>(const char *Type, const char *Filename, bool rw, bool miok, bool wat, bool verb):cStructLoader(Type,Filename,rw,miok,wat,verb) {}
+  cStructList<T>(const char *Type, const char *Filename, int Flags):cStructLoader(Type,Filename,Flags) {}
   T *First(void) const { return (T *)cStructLoader::First(); }
   T *Last(void) const { return (T *)cStructLoader::Last(); }
   T *Next(const T *item) const { return (T *)cStructLoader::Next(item); }
+  };
+
+//--------------------------------------------------------------
+
+class cStructLoaderPlain : public cStructLoader {
+protected:
+public:
+  cStructLoaderPlain(const char *Type, const char *Filename, int Flags);
+  virtual void Load(bool reload);
+  virtual void Save(void);
+  virtual void Purge(void);
+  };
+
+//--------------------------------------------------------------
+
+template<class T> class cStructListPlain : public cStructLoaderPlain {
+public:
+  cStructListPlain<T>(const char *Type, const char *Filename, int Flags):cStructLoaderPlain(Type,Filename,Flags) {}
+  T *First(void) const { return (T *)cStructLoaderPlain::First(); }
+  T *Last(void) const { return (T *)cStructLoaderPlain::Last(); }
+  T *Next(const T *item) const { return (T *)cStructLoaderPlain::Next(item); }
   };
 
 //--------------------------------------------------------------

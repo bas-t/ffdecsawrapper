@@ -146,7 +146,7 @@ bool cViaccessCardInfo::Parse(const char *line)
 
 class cViaccessCardInfos : public cCardInfos<cViaccessCardInfo> {
 public:
-  cViaccessCardInfos(void):cCardInfos<cViaccessCardInfo>("Viaccess cards","Viaccess.KID",false) {}
+  cViaccessCardInfos(void):cCardInfos<cViaccessCardInfo>("Viaccess cards","Viaccess.KID",0) {}
   };
 
 static cViaccessCardInfos Vcards;
