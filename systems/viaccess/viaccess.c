@@ -503,7 +503,6 @@ void cSystemViaccess::ProcessEMM(int pid, int caid, unsigned char *data)
                     FoundKey();
                     if(keys.NewKey('V',updPrv[numKeys],updKey[numKeys],newKey[numKeys],8)) NewKey();
                     }
-                  cLoaders::SaveCache();
                   }
                 else
                   PRINTF(L_SYS_EMM,"%02X%02X %02X %s %s - FAIL",mkey->ident[0],mkey->ident[1],mkey->keyno,addr,ptext[updtype]);

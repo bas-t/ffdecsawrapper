@@ -31,7 +31,6 @@
 #include "log-core.h"
 
 #define KEY_FILE     "SoftCam.Key"
-#define CACACHE_FILE "ca.cache"
 #define EXT_AU_INT   (15*60*1000) // ms interval for external AU
 #define EXT_AU_MIN   ( 2*60*1000) // ms min. interval for external AU
 
@@ -446,7 +445,6 @@ void cStructLoaderPlain::PreSave(FILE *f)
             "## This file will be OVERWRITTEN WITHOUT WARNING!!\n");
 }
 
-
 // -- cStructLoaders -----------------------------------------------------------
 
 #define RELOAD_TIMEOUT  20000
@@ -519,181 +517,6 @@ bool cConfRead::ConfRead(const char *type, const char *filename, bool missingok)
     }
   else if(!missingok) PRINTF(L_GEN_ERROR,"Failed to open file '%s': %s",filename,strerror(errno));
   return res;
-}
-
-// -- cLineDummy ---------------------------------------------------------------
-
-class cLineDummy : public cSimpleItem {
-private:
-  char *store;
-public:
-  cLineDummy(void);
-  ~cLineDummy();
-  bool Parse(const char *line);
-  bool Save(FILE *f);
-  };
-
-cLineDummy::cLineDummy(void)
-{
-  store=0;
-}
-
-cLineDummy::~cLineDummy()
-{
-  free(store);
-}
-
-bool cLineDummy::Parse(const char *line)
-{
-  free(store);
-  store=strdup(line);
-  return store!=0;
-}
-
-bool cLineDummy::Save(FILE *f)
-{
-  fprintf(f,"%s",store);
-  return ferror(f)==0;
-}
-
-// -- cLoaderDummy -------------------------------------------------------------
-
-class cLoaderDummy : public cSimpleList<cLineDummy>, public cLoader {
-public:
-  cLoaderDummy(const char *Id);
-  virtual bool ParseLine(const char *line, bool fromCache);
-  virtual bool Save(FILE *f);
-  };
-
-cLoaderDummy::cLoaderDummy(const char *id)
-:cLoader(id)
-{}
-
-bool cLoaderDummy::ParseLine(const char *line, bool fromCache)
-{
-  if(fromCache) {
-    cLineDummy *k=new cLineDummy;
-    if(k) {
-      if(k->Parse(line)) Add(k);
-      else delete k;
-      return true;
-      }
-    PRINTF(L_GEN_ERROR,"not enough memory for %s loader dummy!",Id());
-    }
-  return false;
-}
-
-bool cLoaderDummy::Save(FILE *f)
-{
-  bool res=true;
-  for(cLineDummy *k=First(); k; k=Next(k))
-    if(!k->Save(f)) { res=false; break; }
-  Modified(!res);
-  return res;
-}
-
-// -- cLoader ------------------------------------------------------------------
-
-cLoader::cLoader(const char *Id)
-{
-  id=Id; modified=false;
-  cLoaders::Register(this);
-}
-
-// -- cLoaders -----------------------------------------------------------------
-
-cLoader *cLoaders::first=0;
-cMutex cLoaders::lock;
-char *cLoaders::cacheFile=0;
-
-void cLoaders::Register(cLoader *ld)
-{
-  PRINTF(L_CORE_DYN,"loaders: registering loader %s",ld->id);
-  ld->next=first;
-  first=ld;
-}
-
-void cLoaders::LoadCache(const char *cfgdir)
-{
-  lock.Lock();
-  cacheFile=strdup(AddDirectory(cfgdir,CACACHE_FILE));
-  if(access(cacheFile,F_OK)==0) {
-    PRINTF(L_GEN_INFO,"loading ca cache from %s",cacheFile);
-    FILE *f=fopen(cacheFile,"r");
-    if(f) {
-      char buf[512];
-      cLoader *ld=0;
-      while(fgets(buf,sizeof(buf),f)) {
-        if(!index(buf,'\n'))
-          PRINTF(L_GEN_ERROR,"loaders fgets readbuffer overflow");
-        if(buf[0]=='#') continue;
-        if(!strncmp(buf,":::",3)) { // new loader section
-          ld=FindLoader(stripspace(&buf[3]));
-          if(!ld) {
-            PRINTF(L_CORE_LOAD,"unknown loader section '%s', adding dummy",&buf[3]);
-            ld=new cLoaderDummy(strdup(&buf[3]));
-            }
-          }
-        else if(ld) {
-          if(!ld->ParseLine(buf,true)) {
-            PRINTF(L_CORE_LOAD,"loader '%s' failed on line '%s'",ld->Id(),buf);
-            }
-          }
-        }
-      fclose(f);
-      }
-    else LOG_ERROR_STR(cacheFile);
-    }
-  lock.Unlock();
-}
-
-void cLoaders::SaveCache(void)
-{
-  lock.Lock();
-  if(cacheFile && IsModified()) {
-    cSafeFile f(cacheFile);
-    if(f.Open()) {
-      fprintf(f,"## This is a generated file. DO NOT EDIT!!\n"
-                "## This file will be OVERWRITTEN WITHOUT WARNING!!\n");
-
-      cLoader *ld=first;
-      while(ld) {
-        fprintf(f,":::%s\n",ld->Id());
-        if(!ld->Save(f)) break;
-        ld=ld->next;
-        }
-      f.Close();
-      PRINTF(L_CORE_LOAD,"saved cache to file");
-      }
-    }
-  lock.Unlock();
-}
-
-bool cLoaders::IsModified(void)
-{
-  bool res=false;
-  lock.Lock();
-  cLoader *ld=first;
-  while(ld) {
-    if(ld->IsModified()) { 
-      res=true; break;
-      }
-    ld=ld->next;
-    }
-  lock.Unlock();
-  return res;
-}
-
-cLoader *cLoaders::FindLoader(const char *id)
-{
-  lock.Lock();
-  cLoader *ld=first;
-  while(ld) {
-    if(!strcmp(id,ld->Id())) break;
-    ld=ld->next;
-    }
-  lock.Unlock();
-  return ld;
 }
 
 // -- cPid ---------------------------------------------------------------------

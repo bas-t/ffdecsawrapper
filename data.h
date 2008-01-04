@@ -200,42 +200,6 @@ public:
 
 // ----------------------------------------------------------------
 
-class cLoader {
-friend class cLoaders;
-private:
-  cLoader *next;
-  bool modified;
-  const char *id;
-protected:
-  void Modified(bool mod=true) { modified=mod; }
-public:
-  cLoader(const char *Id);
-  virtual ~cLoader() {}
-  virtual bool ParseLine(const char *line, bool fromCache)=0;
-  virtual bool Save(FILE *f)=0;
-  bool IsModified(void) const { return modified; }
-  const char *Id(void) const { return id; }
-  };
-
-// ----------------------------------------------------------------
-
-class cLoaders {
-friend class cLoader;
-private:
-  static cLoader *first;
-  static cMutex lock;
-  static char *cacheFile;
-  //
-  static void Register(cLoader *ld);
-  static cLoader *FindLoader(const char *id);
-  static bool IsModified(void);
-public:
-  static void LoadCache(const char *cfgdir);
-  static void SaveCache(void);
-  };
-
-// ----------------------------------------------------------------
-
 class cPid : public cSimpleItem {
 public:
   int pid, sct, mask, mode;

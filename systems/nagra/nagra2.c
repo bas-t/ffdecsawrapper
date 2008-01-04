@@ -1012,7 +1012,6 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
               else {
                 if(keys.NewKey('N',id,kn,key,len)) NewKey();
                 }
-              cLoaders::SaveCache();
               }
             i+=ulen;
             }
@@ -1025,7 +1024,6 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
         if(emmdata[i+1]==0x25) {
           FoundKey();
           if(keys.NewKey('N',id,(emmdata[i+16]&0x40)>>6,&emmdata[i+23],16)) NewKey();
-          cLoaders::SaveCache();
           }
         i+=emmdata[i+1]+2;
         break;
