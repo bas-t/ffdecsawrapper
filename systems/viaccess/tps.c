@@ -541,6 +541,16 @@ void cTpsKey::Put(unsigned char *mem) const
     }
 }
 
+cString cTpsKey::ToString(bool hide)
+{
+  unsigned char tmp[60];
+  Put(&tmp[4]);
+  *((unsigned int *)tmp)=crc32_le(0,&tmp[4],sizeof(tmp)-4);
+  char str[420];
+  HexStr(str,tmp,sizeof(tmp));
+  return str;
+}
+
 // -- cTpsAuHook ---------------------------------------------------------------
 
 #define BUFF_SIZE 20000
@@ -560,26 +570,25 @@ public:
 cTpsKeys tpskeys;
 
 cTpsKeys::cTpsKeys(void)
-:cLoader("TpsAu")
+:cStructListPlain<cTpsKey>("TPS keys","tps.cache",SL_READWRITE|SL_MISSINGOK|SL_NOPURGE)
 ,lastLoad(-LOADBIN_TIME)
 ,lastAu(-TPSAU_TIME)
 {
-  list=new cSimpleList<cTpsKey>;
   first=last=0; algomem=0;
 }
 
 cTpsKeys::~cTpsKeys()
 {
-  delete list;
   free(algomem);
 }
 
 const cTpsKey *cTpsKeys::GetKey(time_t t)
 {
-  cMutexLock lock(this);
-  for(cTpsKey *k=list->First(); k; k=list->Next(k))
-    if(t<k->Timestamp()) return k;
-  return 0;
+  ListLock(false);
+  cTpsKey *k;
+  for(k=First(); k; k=Next(k)) if(t<k->Timestamp()) break;
+  ListUnlock();
+  return k;
 }
 
 const cTpsKey *cTpsKeys::GetV2Key(int id)
@@ -604,7 +613,7 @@ const cTpsKey *cTpsKeys::GetV2Key(int id)
 void cTpsKeys::Check(time_t now, int cardnum)
 {
   checkMutex.Lock();
-  if(first==0 && last==0 && list->Count()>0)
+  if(first==0 && last==0 && Count()>0)
     GetFirstLast();
   if(now>0 && lastCheck.Elapsed()>CHECK_TIME) {
     Purge(now);
@@ -635,35 +644,35 @@ void cTpsKeys::Check(time_t now, int cardnum)
 
 void cTpsKeys::Purge(time_t now)
 {
-  cMutexLock lock(this);
   PRINTF(L_SYS_TPSAU,"purging TPS keylist");
   bool del=false;
-  for(cTpsKey *k=list->First(); k;) {
-    cTpsKey *n=list->Next(k);
-    if(k->Timestamp()<now-3600) { list->Del(k); del=true; }
+  ListLock(true);
+  for(cTpsKey *k=First(); k;) {
+    cTpsKey *n=Next(k);
+    if(k->Timestamp()<now-3600) { Del(k); del=true; }
     k=n;
     }
-  if(del) { 
+  ListUnlock();
+  if(del) {
     GetFirstLast();
     Modified();
-    cLoaders::SaveCache();
     }
 }
 
 void cTpsKeys::Join(cSimpleList<cTpsKey> *nlist)
 {
-  cMutexLock lock(this);
+  ListLock(true);
   cTpsKey *k;
   while((k=nlist->First())) {
     nlist->Del(k,false);
-    cTpsKey *p=list->First();
+    cTpsKey *p=First();
     do {
       if(!p) {
-        list->Add(k);
+        Add(k);
         Modified();
         break;
         }
-      cTpsKey *n=list->Next(p);
+      cTpsKey *n=Next(p);
       if(k->Timestamp()==p->Timestamp()) {
         p->Set(k);
         Modified();
@@ -671,16 +680,16 @@ void cTpsKeys::Join(cSimpleList<cTpsKey> *nlist)
         break;
         }
       if(k->Timestamp()>p->Timestamp() && (!n || k->Timestamp()<n->Timestamp())) {
-        list->Add(k,p);
+        Add(k,p);
         Modified();
         break;
         }
       p=n;
       } while(p);
     }
+  ListUnlock();
   delete nlist;
   GetFirstLast();
-  cLoaders::SaveCache();
 }
 
 cString cTpsKeys::Time(time_t t)
@@ -693,15 +702,17 @@ cString cTpsKeys::Time(time_t t)
 
 void cTpsKeys::GetFirstLast(void)
 {
-  if(list->Count()>0) {
-    cTpsKey *k=list->First();
+  if(Count()>0) {
+    ListLock(false);
+    cTpsKey *k=First();
     first=last=k->Timestamp();
-    for(; k; k=list->Next(k)) {
+    for(; k; k=Next(k)) {
       if(k->Timestamp()<last)
         PRINTF(L_SYS_TPSAU,"TPS keys not in accending order!");
       last=k->Timestamp();
       }
-    PRINTF(L_SYS_TPS,"%d TPS keys available (from %s to %s)",list->Count(),*Time(first),*Time(last));
+    PRINTF(L_SYS_TPS,"%d TPS keys available (from %s to %s)",Count(),*Time(first),*Time(last));
+    ListUnlock();
     }
   else {
     last=first=0;
@@ -881,7 +892,7 @@ void cTpsKeys::DecryptBin(const unsigned char *in, unsigned char *out)
 }
 */
 
-bool cTpsKeys::ParseLine(const char *line, bool fromCache)
+bool cTpsKeys::ParseLinePlain(char *line)
 {
   unsigned char tmp[60];
   if(line[0]=='X') {
@@ -904,7 +915,7 @@ bool cTpsKeys::ParseLine(const char *line, bool fromCache)
         if(sscanf(&line[2],"%x %x %n",&off,&crc,&len)==2) {
           line+=len+2;
           unsigned char buff[210];
-          if((len=GetHex(line,buff,200,false))) {
+          if((len=GetHex((const char *)line,buff,200,false))) {
             if(crc==crc32_le(0,buff,len) && off>=0 && off+len<=algolen) {
               memcpy(&algomem[off],buff,len);
               algoread+=len;
@@ -923,11 +934,11 @@ bool cTpsKeys::ParseLine(const char *line, bool fromCache)
     else PRINTF(L_SYS_TPS,"unknown extention during cache load");
     }
   else {
-    if(GetHex(line,tmp,sizeof(tmp))) {
+    if(GetHex((const char *)line,tmp,sizeof(tmp))) {
       unsigned int crc=crc32_le(0,&tmp[4],sizeof(tmp)-4);
       if(*((unsigned int *)tmp)==crc) {
         cTpsKey *k=new cTpsKey;
-        if(k) { k->Set(&tmp[4]); list->Add(k); }
+        if(k) { k->Set(&tmp[4]); Add(k); }
         return true;
         }
       else PRINTF(L_SYS_TPS,"CRC failed during cache load");
@@ -936,32 +947,19 @@ bool cTpsKeys::ParseLine(const char *line, bool fromCache)
   return false;
 }
 
-bool cTpsKeys::Save(FILE *f)
+void cTpsKeys::PostSave(FILE *f)
 {
-  cMutexLock lock(this);
-  bool res=true;
   char str[420];
-  for(cTpsKey *k=list->First(); k; k=list->Next(k)) {
-    unsigned char tmp[60];
-    k->Put(&tmp[4]);
-    *((unsigned int *)tmp)=crc32_le(0,&tmp[4],sizeof(tmp)-4);
-    fprintf(f,"%s\n",HexStr(str,tmp,sizeof(tmp)));
-    res=(ferror(f)==0 && res);
-    }
   unsigned char *mem;
   int len=0, cb1=0, cb2=0, cb3=0;
   if((mem=DumpAlgo3(len,cb1,cb2,cb3))) {
     fprintf(f,"XS %04X %04X %04X %04X\n",len,cb1,cb2,cb3);
-    res=(ferror(f)==0 && res);
     for(int i=0; i<len; i+=200) {
       int l=min(200,len-i);
       fprintf(f,"XC %04X %08X %s\n",i,crc32_le(0,&mem[i],l),HexStr(str,&mem[i],l));
-      res=(ferror(f)==0 && res);
       }
     free(mem);
     }
-  Modified(!res);
-  return res;
 }
 
 // -- cTpsAuHook ---------------------------------------------------------------

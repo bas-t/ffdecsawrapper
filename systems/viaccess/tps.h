@@ -83,7 +83,7 @@ public:
 
 // ----------------------------------------------------------------
 
-class cTpsKey : public cSimpleItem {
+class cTpsKey : public cStructItem {
 private:
   time_t timestamp;
   int opmode;
@@ -91,6 +91,8 @@ private:
     unsigned char mode;
     unsigned char key[16];
     } step[3];
+  //
+  void Put(unsigned char *mem) const;
 public:
   cTpsKey(void);
   const unsigned char *Key(int st) const { return step[st].key; }
@@ -99,15 +101,14 @@ public:
   time_t Timestamp(void) const { return timestamp; }
   void Set(const cTpsKey *k);
   void Set(const unsigned char *mem);
-  void Put(unsigned char *mem) const;
+  virtual cString ToString(bool hide=false);
   };
 
 // ----------------------------------------------------------------
 
-class cTpsKeys : public cMutex, public cLoader, private cTPSDecrypt {
+class cTpsKeys : public cStructListPlain<cTpsKey>, private cTPSDecrypt {
 friend class cTpsAuHook;
 private:
-  cSimpleList<cTpsKey> *list;
   time_t first, last;
   //
   cTimeMs lastCheck, lastLoad, lastAu;
@@ -123,14 +124,15 @@ private:
 //  void DecryptBin(const unsigned char *in, unsigned char *out);
   cString Time(time_t t);
   bool ProcessAu(const cOpenTVModule *mod);
+protected:
+  virtual bool ParseLinePlain(char *line);
+  virtual void PostSave(FILE *f);
 public:
   cTpsKeys(void);
   ~cTpsKeys();
   const cTpsKey *GetKey(time_t t);
   const cTpsKey *GetV2Key(int id);
   void Check(time_t now, int cardnum);
-  virtual bool ParseLine(const char *line, bool fromCache);
-  virtual bool Save(FILE *f);
   };
 
 extern cTpsKeys tpskeys;
