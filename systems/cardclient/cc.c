@@ -17,7 +17,6 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -160,14 +159,13 @@ cCardClientLink::cCardClientLink(const char *Name)
 
 // -- cSystemLinkCardClient -----------------------------------------------------------
 
-class cSystemLinkCardClient : public cSystemLink, private cConfRead, cSimpleList<cCardClient> {
+class cSystemLinkCardClient : public cSystemLink, public cStructListPlain<cCardClient> {
 protected:
-  virtual bool ParseLine(const char *line, bool fromCache);
+  virtual bool ParseLinePlain(char *line);
 public:
   cSystemLinkCardClient(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual cSystem *Create(void);
-  virtual bool Init(const char *cfgdir);
   virtual void Clean(void);
   cCardClient *FindBySysId(unsigned short id, cCardClient *cc);
   };
@@ -236,6 +234,7 @@ void cSystemCardClient::ProcessEMM(int pid, int caid, unsigned char *buffer)
 
 cSystemLinkCardClient::cSystemLinkCardClient(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
+,cStructListPlain<cCardClient>("cardclient config",CONF_FILE,SL_MISSINGOK|SL_VERBOSE|SL_NOPURGE)
 {
   opts=new cOpts(SYSTEM_NAME,1);
   opts->Add(new cOptBool("Immediate",trNOOP("Cardclient: connect immediately"),&immediate));
@@ -243,12 +242,11 @@ cSystemLinkCardClient::cSystemLinkCardClient(void)
 
 cCardClient *cSystemLinkCardClient::FindBySysId(unsigned short id, cCardClient *cc)
 {
-  if(cc) cc=Next(cc); else cc=First();
-  while(cc) {
-    if(cc->CanHandle(id)) return cc;
-    cc=Next(cc);
-    }
-  return 0;
+  ListLock(false);
+  for(cc=cc ? Next(cc):First(); cc; cc=Next(cc)) 
+    if(cc->CanHandle(id)) break;
+  ListUnlock();
+  return cc;
 }
 
 bool cSystemLinkCardClient::CanHandle(unsigned short SysId)
@@ -261,15 +259,7 @@ cSystem *cSystemLinkCardClient::Create(void)
   return new cSystemCardClient();
 }
 
-bool cSystemLinkCardClient::Init(const char *cfgdir)
-{
-  Clear();
-  ConfRead("cardclient config",AddDirectory(cfgdir,CONF_FILE));
-  PRINTF(L_CC_CORE,"created %d client(s)",Count());
-  return true;
-}
-
-bool cSystemLinkCardClient::ParseLine(const char *line, bool fromCache)
+bool cSystemLinkCardClient::ParseLinePlain(char *line)
 {
   char name[32];
   int num;
@@ -297,5 +287,5 @@ bool cSystemLinkCardClient::ParseLine(const char *line, bool fromCache)
 
 void cSystemLinkCardClient::Clean(void)
 {
-  Clear();
+  ListLock(true); Clear(); ListUnlock();
 }
