@@ -647,7 +647,7 @@ cEcmData *cEcmCache::Exists(cEcmInfo *e)
 {
   cEcmData *dat;
   for(dat=First(); dat; dat=Next(dat))
-    if(dat->Valid() && dat->Compare(e)) break;
+    if(dat->Compare(e)) break;
   return dat;
 }
 
@@ -657,7 +657,7 @@ int cEcmCache::GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int T
   list->Clear();
   ListLock(false);
   for(cEcmData *dat=First(); dat; dat=Next(dat)) {
-    if(dat->Valid() && dat->prgId==sid && dat->source==Source && dat->transponder==Transponder) {
+    if(dat->prgId==sid && dat->source==Source && dat->transponder==Transponder) {
       cEcmInfo *e=new cEcmInfo(dat);
       if(e) {
         PRINTF(L_CORE_ECM,"from cache: system %s (%04x) id %04x with ecm %x/%x",e->name,e->caId,e->provId,e->ecm_pid,e->ecm_table);

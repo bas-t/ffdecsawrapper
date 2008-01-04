@@ -131,6 +131,7 @@ public:
   virtual ~cStructLoader();
   void AddItem(cStructItem *n, const char *com, cStructItem *ref);
   void DelItem(cStructItem *d, bool keep=false);
+  cStructItem *NextValid(cStructItem *it) const;
   //
   void SetCfgDir(const char *cfgdir);
   virtual void Load(bool reload);
@@ -144,9 +145,8 @@ public:
 template<class T> class cStructList : public cStructLoader {
 public:
   cStructList<T>(const char *Type, const char *Filename, int Flags):cStructLoader(Type,Filename,Flags) {}
-  T *First(void) const { return (T *)cStructLoader::First(); }
-  T *Last(void) const { return (T *)cStructLoader::Last(); }
-  T *Next(const T *item) const { return (T *)cStructLoader::Next(item); }
+  T *First(void) const { return (T *)NextValid(cStructLoader::First()); }
+  T *Next(const T *item) const { return (T *)NextValid(cStructLoader::Next(item)); }
   };
 
 //--------------------------------------------------------------
@@ -168,9 +168,8 @@ public:
 template<class T> class cStructListPlain : public cStructLoaderPlain {
 public:
   cStructListPlain<T>(const char *Type, const char *Filename, int Flags):cStructLoaderPlain(Type,Filename,Flags) {}
-  T *First(void) const { return (T *)cStructLoaderPlain::First(); }
-  T *Last(void) const { return (T *)cStructLoaderPlain::Last(); }
-  T *Next(const T *item) const { return (T *)cStructLoaderPlain::Next(item); }
+  T *First(void) const { return (T *)NextValid(cStructLoaderPlain::First()); }
+  T *Next(const T *item) const { return (T *)NextValid(cStructLoaderPlain::Next(item)); }
   };
 
 //--------------------------------------------------------------

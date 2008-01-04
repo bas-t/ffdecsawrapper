@@ -228,6 +228,12 @@ void cStructLoader::DelItem(cStructItem *d, bool keep)
     }
 }
 
+cStructItem *cStructLoader::NextValid(cStructItem *it) const
+{
+  while(it && !it->Valid()) it=Next(it);
+  return it;
+}
+
 void cStructLoader::SetCfgDir(const char *cfgdir)
 {
   free(path);
@@ -851,7 +857,7 @@ cPlainKey *cPlainKeys::FindKeyNoTrig(int Type, int Id, int Keynr, int Size, cPla
 {
   ListLock(false);
   for(key=key?Next(key):First(); key; key=Next(key))
-    if(key->Valid() && key->type==Type && key->id==Id && key->keynr==Keynr && (Size<0 || key->Size()==Size))
+    if(key->type==Type && key->id==Id && key->keynr==Keynr && (Size<0 || key->Size()==Size))
       break;
   ListUnlock();
   return key;
@@ -929,7 +935,7 @@ void cPlainKeys::PostLoad(void)
 {
   if(Count() && LOG(L_CORE_KEYS))
     for(cPlainKey *dat=First(); dat; dat=Next(dat))
-      if(dat->Valid()) PRINTF(L_CORE_KEYS,"keys %s",*dat->ToString(false));
+      PRINTF(L_CORE_KEYS,"keys %s",*dat->ToString(false));
 }
 
 void cPlainKeys::HouseKeeping(void)
