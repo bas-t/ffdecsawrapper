@@ -261,6 +261,16 @@ void cStructLoader::CheckAccess(void)
     }
 }
 
+bool cStructLoader::CheckUnmodified(void)
+{
+  time_t curr_mtime=MTime();
+  if(mtime && mtime<curr_mtime && SL_TSTFLAG(SL_WATCH)) {
+     PRINTF(L_CORE_LOAD,"abort save as file %s has been changed externaly",path);
+     return false;
+     }
+  return true;
+}
+
 void cStructLoader::Load(bool reload)
 {
   if(SL_TSTFLAG(SL_DISABLED) || (reload && !SL_TSTFLAG(SL_WATCH))) return;
@@ -361,7 +371,8 @@ void cStructLoader::Purge(void)
 
 void cStructLoader::Save(void)
 {
-  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED) && IsModified()) {
+  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED)
+      && IsModified() && CheckUnmodified()) {
     cSafeFile f(path);
     if(f.Open()) {
       ListLock(false);
@@ -429,7 +440,8 @@ void cStructLoaderPlain::Load(bool reload)
 
 void cStructLoaderPlain::Save(void)
 {
-  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED) && IsModified()) {
+  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED)
+      && IsModified() && CheckUnmodified()) {
     cSafeFile f(path);
     if(f.Open()) {
       ListLock(false);

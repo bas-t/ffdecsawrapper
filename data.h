@@ -118,6 +118,7 @@ protected:
   time_t mtime;
   //
   void CheckAccess(void);
+  bool CheckUnmodified(void);
   time_t MTime(void);
   //
   virtual cStructItem *ParseLine(char *line)=0;
