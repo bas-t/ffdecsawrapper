@@ -895,7 +895,6 @@ eOSState cMenuSetupSc::ProcessKey(eKeys Key)
       state=osContinue;
       if(Interface->Confirm(tr("Really flush ECM cache?"))) {
         ecmcache.Flush();
-        cLoaders::SaveCache();
         state=osEnd;
         }
       break;
@@ -1013,14 +1012,11 @@ bool cSoftCAM::Load(const char *cfgdir)
 
   if(!cSystems::Init(cfgdir)) return false;
   if(Feature.SmartCard()) smartcards.LoadData(cfgdir);
-  cLoaders::LoadCache(cfgdir);
-  cLoaders::SaveCache();
   return true;
 }
 
 void cSoftCAM::HouseKeeping(void)
 {
-  cLoaders::SaveCache();
   if(Feature.KeyFile()) keys.HouseKeeping();
   if(!Active(false)) cStructLoaders::Purge();
   cStructLoaders::Load(true);

@@ -1612,7 +1612,6 @@ void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
           if(keys.NewKey('S',provId,keyN[i],key[i],8)) NewKey();
          }
         LBEND();
-        cLoaders::SaveCache();
         break;
         }
       else if(!CheckNull(ci->sa,sizeof(ci->sa)))

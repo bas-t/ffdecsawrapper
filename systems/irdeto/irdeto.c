@@ -447,7 +447,6 @@ void cSystemIrd::ProcessEMM(int pid, int caid, unsigned char *buffer)
             FoundKey();
             if(Icards.Update(ci,mk,prvId[0]?prvId:0)) NewKey();
             }
-          cLoaders::SaveCache();
           break;
           }
         else {

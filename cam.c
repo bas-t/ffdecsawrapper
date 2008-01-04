@@ -1212,7 +1212,6 @@ void cEcmHandler::EcmOk(void)
     if(e->Cached() && e->Failed()) ecmcache.Delete(e);
     e=ecmList.Next(e);
     }
-  cLoaders::SaveCache();
 }
 
 void cEcmHandler::EcmFail(void)
