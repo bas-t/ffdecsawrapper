@@ -95,10 +95,11 @@ public:
 #define SL_MISSINGOK 2
 #define SL_WATCH     4
 #define SL_VERBOSE   8
+#define SL_NOPURGE   16
 #define SL_CUSTOMMASK 0xFF
 #define SL_LOADED    0x100
 #define SL_MODIFIED  0x200
-#define SL_DISABLED  0x300
+#define SL_DISABLED  0x400
 
 #define SL_SETFLAG(x) flags|=(x)
 #define SL_CLRFLAG(x) flags&=~(x)
@@ -116,14 +117,15 @@ protected:
   char *path;
   time_t mtime;
   //
+  void CheckAccess(void);
+  time_t MTime(void);
+  //
   virtual cStructItem *ParseLine(char *line)=0;
   void Modified(bool mod=true) { if(mod) SL_SETFLAG(SL_MODIFIED); else SL_CLRFLAG(SL_MODIFIED); }
   bool IsModified(void) const { return SL_TSTFLAG(SL_MODIFIED); }
   void ListLock(bool rw) { lock.Lock(rw); }
   void ListUnlock(void) { lock.Unlock(); }
-  void AutoGenWarn(void);
   virtual void PostLoad(void) {}
-  time_t MTime(void);
 public:
   cStructLoader(const char *Type, const char *Filename, int Flags);
   virtual ~cStructLoader();
@@ -133,7 +135,7 @@ public:
   void SetCfgDir(const char *cfgdir);
   virtual void Load(bool reload);
   virtual void Save(void);
-  virtual void Purge(void);
+  void Purge(void);
   void Disable(void) { SL_SETFLAG(SL_DISABLED); }
   };
 
@@ -151,11 +153,14 @@ public:
 
 class cStructLoaderPlain : public cStructLoader {
 protected:
+  virtual cStructItem *ParseLine(char *line) { return 0; }
+  virtual bool ParseLinePlain(char *line)=0;
 public:
   cStructLoaderPlain(const char *Type, const char *Filename, int Flags);
   virtual void Load(bool reload);
   virtual void Save(void);
-  virtual void Purge(void);
+  virtual void PreSave(FILE *f);
+  virtual void PostSave(FILE *f) {};
   };
 
 //--------------------------------------------------------------
