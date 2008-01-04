@@ -581,7 +581,7 @@ eOSState cMenuInfoSc::ProcessKey(eKeys Key)
 class cMenuInfoCard : public cMenuText {
 private:
   int port;
-  char infoStr[1024];
+  char infoStr[4096];
 public:
   cMenuInfoCard(int Port);
   virtual eOSState ProcessKey(eKeys Key);
