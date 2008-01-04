@@ -80,7 +80,6 @@ bool cPlainKeyVia::SetBinKey(unsigned char *Mem, int Keylen)
 bool cPlainKeyVia::Parse(const char *line)
 {
   unsigned char sid[3], skeynr, skey[VIA2_KEYLEN];
-  const char *sline=line;
   int len;
   if(GetChar(line,&type,1) && (len=GetHex(line,sid,3,false))) {
      type=toupper(type); id=Bin2Int(sid,len);
@@ -105,7 +104,6 @@ bool cPlainKeyVia::Parse(const char *line)
        return true;
        }
     }
-  FormatError("viaccess",sline);
   return false;
 }
 

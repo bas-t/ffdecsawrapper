@@ -1107,7 +1107,7 @@ static const char *serModes[] = { 0,"8e2","8o2","8n2" };
 
 cSmartCards::cSmartCards(void)
 :cThread("SmartcardWatcher")
-,cStructList<cSmartCardData>("smartcard data",DATAFILE,SL_MISSINGOK|SL_WATCH)
+,cStructList<cSmartCardData>("smartcard data",DATAFILE,SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
 {
   for(int i=0 ; i<MAX_PORTS ; i++) ports[i].Serial=0;
   firstRun=true;

@@ -150,14 +150,12 @@ cPlainKeyConax::cPlainKeyConax(bool Super)
 bool cPlainKeyConax::Parse(const char *line)
 {
   unsigned char sid, skey[PLAINLEN_CONAX];
-  const char *sline=line;
   if(GetChar(line,&type,1) && GetHex(line,&sid,1) &&
      GetChar(line,&keynr,1) && GetHex(line,skey,PLAINLEN_CONAX)) {
     type=toupper(type); keynr=toupper(keynr); id=sid;
     SetBinKey(skey,PLAINLEN_CONAX);
     return true;
     }
-  FormatError("conax",sline);
   return false;
 }
 

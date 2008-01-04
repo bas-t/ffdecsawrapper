@@ -191,15 +191,6 @@ public:
 
 // ----------------------------------------------------------------
 
-class cConfRead {
-public:
-  virtual ~cConfRead() {}
-  bool ConfRead(const char *type, const char *filename, bool missingok=false);
-  virtual bool ParseLine(const char *line, bool fromCache)=0;
-  };
-
-// ----------------------------------------------------------------
-
 class cPid : public cSimpleItem {
 public:
   int pid, sct, mask, mode;
@@ -266,7 +257,6 @@ protected:
   virtual int IdSize(void);
   virtual cString Print(void)=0;
   virtual cString PrintKeyNr(void);
-  void FormatError(const char *type, const char *sline);
 public:
   int type, id, keynr;
   //

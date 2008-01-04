@@ -153,7 +153,6 @@ cPlainKeyStd::cPlainKeyStd(bool Super)
 bool cPlainKeyStd::Parse(const char *line)
 {
   unsigned char sid[3], skeynr, skey[PLAINLEN_STD];
-  const char *sline=line;
   int len;
   if(GetChar(line,&type,1) && (len=GetHex(line,sid,3,false)) &&
      GetHex(line,&skeynr,1) && GetHex(line,skey,PLAINLEN_STD)) {
@@ -161,7 +160,6 @@ bool cPlainKeyStd::Parse(const char *line)
     SetBinKey(skey,PLAINLEN_STD);
     return true;
     }
-  FormatError("standard",sline);
   return false;
 }
 
