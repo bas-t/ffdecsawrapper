@@ -19,11 +19,8 @@
 
 #include <ctype.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdarg.h>
-#include <fcntl.h>
 #include <string.h>
-#include <sys/time.h>
 
 #include <vdr/tools.h>
 #include <vdr/thread.h>

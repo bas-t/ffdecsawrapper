@@ -319,7 +319,7 @@ void cStructLoader::Load(bool reload)
         cStructItem *it=0;
         if(hasContent) {
           char save=*ls;
-          *ls=0; it=ParseLine(buff); *ls=save;
+          *ls=0; it=ParseLine(skipspace(buff)); *ls=save;
           if(!it) {
             PRINTF(L_GEN_ERROR,"file %s has error in line #%d",path,lineNum);
             ls=buff;
@@ -419,7 +419,7 @@ void cStructLoaderPlain::Load(bool reload)
         }
       if(hasContent) {
         *ls=0;
-        if(!ParseLinePlain(buff))
+        if(!ParseLinePlain(skipspace(buff)))
           PRINTF(L_GEN_ERROR,"file %s has error in line #%d",path,lineNum);
         }
       }

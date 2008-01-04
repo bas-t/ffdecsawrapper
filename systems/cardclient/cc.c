@@ -161,7 +161,7 @@ cCardClientLink::cCardClientLink(const char *Name)
 
 class cSystemLinkCardClient : public cSystemLink, public cStructListPlain<cCardClient> {
 protected:
-  virtual bool ParseLinePlain(char *line);
+  virtual bool ParseLinePlain(const char *line);
 public:
   cSystemLinkCardClient(void);
   virtual bool CanHandle(unsigned short SysId);
@@ -259,7 +259,7 @@ cSystem *cSystemLinkCardClient::Create(void)
   return new cSystemCardClient();
 }
 
-bool cSystemLinkCardClient::ParseLinePlain(char *line)
+bool cSystemLinkCardClient::ParseLinePlain(const char *line)
 {
   char name[32];
   int num;
