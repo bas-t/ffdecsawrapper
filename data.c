@@ -169,7 +169,6 @@ bool cStructItem::Save(FILE *f)
 class cCommentItem : public cStructItem {
 public:
   cCommentItem(void);
-  virtual cString ToString(bool hide=false) { return ""; }
   };
 
 cCommentItem::cCommentItem(void)

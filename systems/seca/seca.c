@@ -174,7 +174,6 @@ public:
   unsigned char key[16];
   //
   bool Parse(const char *line);
-  virtual cString ToString(bool hide=false) { return ""; }
   int KeySize(void) { return len; }
   };
 

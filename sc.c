@@ -1006,12 +1006,11 @@ bool cScSetup::Ignore(unsigned short caid)
 bool cSoftCAM::Load(const char *cfgdir)
 {
   if(!Feature.KeyFile()) keys.Disable();
+  if(!Feature.SmartCard()) smartcards.Disable();
   cStructLoaders::Load(false);
   if(Feature.KeyFile() && keys.Count()<1)
     PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
-
   if(!cSystems::Init(cfgdir)) return false;
-  if(Feature.SmartCard()) smartcards.LoadData(cfgdir);
   return true;
 }
 

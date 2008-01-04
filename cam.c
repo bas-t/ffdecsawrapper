@@ -575,7 +575,7 @@ class cEcmData : public cEcmInfo {
 public:
   cEcmData(void):cEcmInfo() {}
   cEcmData(cEcmInfo *e):cEcmInfo(e) {}
-  virtual cString ToString(bool hide=false);
+  virtual cString ToString(bool hide);
   bool Parse(const char *buf);
   };
 

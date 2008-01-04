@@ -1107,6 +1107,7 @@ static const char *serModes[] = { 0,"8e2","8o2","8n2" };
 
 cSmartCards::cSmartCards(void)
 :cThread("SmartcardWatcher")
+,cStructList<cSmartCardData>("smartcard data",DATAFILE,SL_MISSINGOK|SL_WATCH)
 {
   for(int i=0 ; i<MAX_PORTS ; i++) ports[i].Serial=0;
   firstRun=true;
@@ -1138,8 +1139,8 @@ void cSmartCards::Shutdown(void)
       ports[i].Serial=0;
       }
     }
-  dataList.Clear();
   mutex.Unlock();
+  ListLock(true); Clear(); ListUnlock();
 }
 
 bool cSmartCards::AddPort(const char *devName, bool invCD, bool invRST, int clock)
@@ -1173,41 +1174,28 @@ bool cSmartCards::AddPort(const char *devName, bool invCD, bool invRST, int cloc
   return false;
 }
 
-void cSmartCards::LoadData(const char *cfgdir)
-{
-  mutex.Lock();
-  dataList.Clear();
-  ConfRead("smartcard data",AddDirectory(cfgdir,DATAFILE),true);
-  mutex.Unlock();
-}
-
-bool cSmartCards::ParseLine(const char *line, bool fromCache)
+cStructItem *cSmartCards::ParseLine(char *line)
 {
   char *r=index(line,':');
-  if(!r) return false;
-  for(cSmartCardLink *scl=first; scl; scl=scl->next) {
-    if(!strncasecmp(scl->name,line,r-line)) {
-      cSmartCardData *scd=scl->CreateData();
-      if(scd && scd->Parse(r+1)) {
-        dataList.Add(scd);
+  if(r)
+    for(cSmartCardLink *scl=first; scl; scl=scl->next)
+      if(!strncasecmp(scl->name,line,r-line)) {
+        cSmartCardData *scd=scl->CreateData();
+        if(scd && scd->Parse(r+1)) return scd;
+        delete scd;
         break;
         }
-      else {
-        delete scd;
-        return false;
-        }
-      }
-    }
-  return true;
+  return 0;
 }
 
 cSmartCardData *cSmartCards::FindCardData(cSmartCardData *param)
 {
-  cMutexLock lock(&mutex);
-  for(cSmartCardData *cd=dataList.First(); cd; cd=dataList.Next(cd))
-    if(cd->ident==param->ident && cd->Matches(param))
-      return cd;
-  return 0;
+  ListLock(false);
+  cSmartCardData *cd;
+  for(cd=First(); cd; cd=Next(cd))
+    if(cd->ident==param->ident && cd->Matches(param)) break;
+  ListUnlock();
+  return cd;
 }
 
 bool cSmartCards::HaveCard(int id)
