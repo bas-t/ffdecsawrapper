@@ -13,3 +13,4 @@ diff.exclude
 *.pot
 dump.txt
 .hg
+version.c
