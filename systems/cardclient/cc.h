@@ -50,7 +50,7 @@ class cSystemCardClient;
 
 #define MAX_CC_CAID 16
 
-class cCardClient : public cSimpleItem, protected cMutex {
+class cCardClient : public cStructItem, protected cMutex {
 friend class cSystemCardClient;
 protected:
   const char *name;
