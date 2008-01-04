@@ -111,7 +111,10 @@ cString cPlainKeyVia::PrintKeyNr(void)
   switch(keynr) {
     case MBC3('T','P','S'):
       kn="TPS"; break;
-    case MBC3('M','K',0) ... MBC3('M','K',9):
+    case MBC3('M','K',0): case MBC3('M','K',1): case MBC3('M','K',2):
+    case MBC3('M','K',3): case MBC3('M','K',4): case MBC3('M','K',5):
+    case MBC3('M','K',6): case MBC3('M','K',7): case MBC3('M','K',8):
+    case MBC3('M','K',9):
       snprintf(tmp,sizeof(tmp),"MK%d",C3(keynr)); break;
     default:
       snprintf(tmp,sizeof(tmp),"%02X",keynr); break;
