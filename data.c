@@ -229,20 +229,6 @@ void cStructLoader::DelItem(cStructItem *d, bool keep)
     }
 }
 
-void cStructLoader::AutoGenWarn(void)
-{
-  if(Count()==0) {
-    cStructItem *n=new cCommentItem;
-    n->SetComment("## This is a generated file. DO NOT EDIT!!");
-    cStructItem *n2=new cCommentItem;
-    n2->SetComment("## This file will be OVERWRITTEN WITHOUT WARNING!!");
-    ListLock(true);
-    Add(n);
-    Add(n2);
-    ListUnlock();
-    }
-}
-
 void cStructLoader::SetCfgDir(const char *cfgdir)
 {
   free(path);
@@ -260,19 +246,23 @@ time_t cStructLoader::MTime(void)
   return st.st_mtime;
 }
 
+void cStructLoader::CheckAccess(void)
+{
+  if(access(path,R_OK|W_OK)!=0) {
+    if(errno!=EACCES)
+      PRINTF(L_GEN_ERROR,"failed access %s: %s",path,strerror(errno));
+    PRINTF(L_GEN_WARN,"no write permission on %s. Changes will not be saved!",path);
+    SL_CLRFLAG(SL_READWRITE);
+    }
+}
+
 void cStructLoader::Load(bool reload)
 {
   if(SL_TSTFLAG(SL_DISABLED) || (reload && !SL_TSTFLAG(SL_WATCH))) return;
   FILE *f=fopen(path,"r");
   if(f) {
     int curr_mtime=MTime();
-    if(access(path,R_OK|W_OK)!=0) {
-      if(errno!=EACCES)
-        PRINTF(L_GEN_ERROR,"failed access %s: %s",path,strerror(errno));
-      PRINTF(L_GEN_WARN,"no write permission on %s. Changes will not be saved!",path);
-      SL_CLRFLAG(SL_READWRITE);
-      }
-
+    CheckAccess();
     SL_SETFLAG(SL_LOADED);
     ListLock(true);
     bool doload=false;
@@ -353,7 +343,7 @@ void cStructLoader::Load(bool reload)
 
 void cStructLoader::Purge(void)
 {
-  if(!SL_TSTFLAG(SL_DISABLED)) {
+  if(!SL_TSTFLAG(SL_DISABLED) && !SL_TSTFLAG(SL_NOPURGE)) {
     ListLock(true);
     for(cStructItem *it=First(); it;) {
       cStructItem *n=Next(it);
@@ -380,6 +370,82 @@ void cStructLoader::Save(void)
       }
     }
 }
+
+// -- cStructLoaderPlain -------------------------------------------------------
+
+cStructLoaderPlain::cStructLoaderPlain(const char *Type, const char *Filename, int Flags)
+:cStructLoader(Type,Filename,Flags)
+{}
+
+void cStructLoaderPlain::Load(bool reload)
+{
+  if(SL_TSTFLAG(SL_DISABLED) || reload) return;
+  FILE *f=fopen(path,"r");
+  if(f) {
+    CheckAccess();
+    SL_SETFLAG(SL_LOADED);
+    ListLock(true);
+    Clear(); Modified(false);
+    PRINTF(L_GEN_INFO,"loading %s from %s",type,path);
+    int lineNum=0;
+    char buff[4096];
+    while(fgets(buff,sizeof(buff),f)) {
+      lineNum++;
+      if(!index(buff,'\n') && !feof(f)) {
+        PRINTF(L_GEN_ERROR,"file %s readbuffer overflow line#%d",path,lineNum);
+        SL_CLRFLAG(SL_LOADED);
+        break;
+        }
+      bool hasContent=false;
+      char *ls;
+      for(ls=buff; *ls; ls++) {
+        if(*ls==';' || *ls=='#') break;
+        if(*ls>' ') hasContent=true;
+        }
+      if(hasContent) {
+        *ls=0;
+        if(!ParseLinePlain(buff))
+          PRINTF(L_GEN_ERROR,"file %s has error in line #%d",path,lineNum);
+        }
+      }
+    PostLoad();
+    ListUnlock();
+    fclose(f);
+    }
+  else {
+    if(SL_TSTFLAG(SL_VERBOSE))
+      PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
+    if(SL_TSTFLAG(SL_MISSINGOK)) SL_SETFLAG(SL_LOADED);
+    else SL_CLRFLAG(SL_LOADED);
+    }
+  if(!SL_TSTFLAG(SL_LOADED))
+    PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
+}
+
+void cStructLoaderPlain::Save(void)
+{
+  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED) && IsModified()) {
+    cSafeFile f(path);
+    if(f.Open()) {
+      ListLock(false);
+      PreSave(f);
+      for(cStructItem *it=First(); it; it=Next(it))
+        if(!it->Deleted() && !it->Save(f)) break;
+      PostSave(f);
+      f.Close();
+      Modified(false);
+      ListUnlock();
+      PRINTF(L_CORE_LOAD,"saved %s to %s",type,path);
+      }
+    }
+}
+
+void cStructLoaderPlain::PreSave(FILE *f)
+{
+  fprintf(f,"## This is a generated file. DO NOT EDIT!!\n"
+            "## This file will be OVERWRITTEN WITHOUT WARNING!!\n");
+}
+
 
 // -- cStructLoaders -----------------------------------------------------------
 

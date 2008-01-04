@@ -41,16 +41,17 @@ class cPrg;
 
 // ----------------------------------------------------------------
 
-class cEcmCache : public cStructList<cEcmData> {
+class cEcmCache : public cStructListPlain<cEcmData> {
 private:
   cEcmData *Exists(cEcmInfo *e);
+protected:
+  virtual bool ParseLinePlain(char *line);
 public:
   cEcmCache(void);
   void New(cEcmInfo *e);
   int GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int Transponder);
   void Delete(cEcmInfo *e);
   void Flush(void);
-  virtual cStructItem *ParseLine(char *line);
   };
 
 extern cEcmCache ecmcache;

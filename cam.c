@@ -618,7 +618,7 @@ cString cEcmData::ToString(bool hide)
 cEcmCache ecmcache;
 
 cEcmCache::cEcmCache(void)
-:cStructList<cEcmData>("ecm cache",ECMCACHE_FILE,SL_READWRITE|SL_MISSINGOK)
+:cStructListPlain<cEcmData>("ecm cache",ECMCACHE_FILE,SL_READWRITE|SL_MISSINGOK)
 {}
 
 void cEcmCache::New(cEcmInfo *e)
@@ -626,10 +626,9 @@ void cEcmCache::New(cEcmInfo *e)
   ListLock(true);
   cEcmData *dat;
   if(!(dat=Exists(e))) {
-    ListUnlock();
-    AutoGenWarn();
     dat=new cEcmData(e);
-    AddItem(dat,0,0);
+    Add(dat);
+    Modified();
     PRINTF(L_CORE_ECM,"cache add prgId=%d source=%x transponder=%x ecm=%x/%x",e->prgId,e->source,e->transponder,e->ecm_pid,e->ecm_table);
     }
   else {
@@ -639,8 +638,8 @@ void cEcmCache::New(cEcmInfo *e)
       }
     if(dat->Update(e))
       Modified();
-    ListUnlock();
     }
+  ListUnlock();
   e->SetCached();
 }
 
@@ -692,12 +691,12 @@ void cEcmCache::Flush(void)
   ListUnlock();
 }
 
-cStructItem *cEcmCache::ParseLine(char *line)
+bool cEcmCache::ParseLinePlain(char *line)
 {
   cEcmData *dat=new cEcmData;
-  if(dat && dat->Parse(line) && !Exists(dat)) return dat;
+  if(dat && dat->Parse(line) && !Exists(dat)) { Add(dat); return true; }
   delete dat;
-  return 0;
+  return false;
 }
 
 // -- cEcmSys ------------------------------------------------------------------
