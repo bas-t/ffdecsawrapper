@@ -82,7 +82,7 @@
 
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
-static char *cfgsub=0;
+static const char * const cfgsub="sc";
 
 static const struct LogModule lm_core = {
   (LMOD_ENABLE|L_CORE_ALL)&LOPT_MASK,
@@ -1294,9 +1294,7 @@ const char *cScPlugin::CommandLineHelp(void)
   static char *help_str=0;
   
   free(help_str);    //                                     for easier orientation, this is column 80|
-  asprintf(&help_str,"  -c DIR    --config=DIR   search config files in subdir DIR\n"
-                     "                           (default: %s)\n"
-                     "  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
+  asprintf(&help_str,"  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
                      "  -I        --inverse-cd   use inverse CD detection for the next serial device\n"
                      "  -R        --inverse-rst  use inverse RESET for the next serial device\n"
                      "  -C FREQ   --clock=FREQ   use FREQ as clock for the card reader on the next\n"
@@ -1307,7 +1305,7 @@ const char *cScPlugin::CommandLineHelp(void)
                      "                           (default: %s)\n"
                      "  -t SECS   --timeout=SECS shutdown timeout for dialup-network\n"
                      "                           (default: %d secs)\n",
-                     cfgsub?cfgsub:"none","none","none",netTimeout/1000
+                     "none","none",netTimeout/1000
                      );
   return help_str;
 }
@@ -1322,14 +1320,13 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       { "dialup",      required_argument, NULL, 'd' },
       { "external-au", required_argument, NULL, 'E' },
       { "budget",      required_argument, NULL, 'B' },
-      { "config",      required_argument, NULL, 'c' },
       { NULL }
     };
 
   int c, option_index=0;
   bool invCD=false, invRST=false;
   int clock=0;
-  while((c=getopt_long(argc,argv,"c:d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
+  while((c=getopt_long(argc,argv,"d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
     switch (c) {
       case 'I': invCD=true; break;
       case 'R': invRST=true; break;
@@ -1339,7 +1336,6 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       case 't': netTimeout=atoi(optarg)*1000; break;
       case 'E': externalAU=optarg; break;
       case 'B': cScDvbDevice::SetForceBudget(atoi(optarg)); break;
-      case 'c': cfgsub=optarg; break;
       default:  return false;
       }
     }
