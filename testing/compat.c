@@ -1,10 +1,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <dlfcn.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#define DEBUG
+
 #include "data.h"
 #include "sc.h"
 #include "scsetup.h"
@@ -13,7 +14,7 @@
 #include "system.h"
 #include "smartcard.h"
 #include "cam.h"
-#include "log.h"
+#include "log-core.h"
 #include "version.h"
 
 #define LIBSC_PREFIX  "libsc-"
@@ -50,10 +51,15 @@ void InitAll(const char *cfgdir)
   cSystems::ConfigParse("Cardclient.Immediate","0");
 
   filemaps.SetCfgDir(cfgdir);
-  if(!keys.Load(cfgdir)) printf("ERROR: no keys loaded for softcam!\n");
+  cStructLoaders::SetCfgDir(cfgdir);
+
+  if(!Feature.KeyFile()) keys.Disable();
+  if(!Feature.SmartCard()) smartcards.Disable();
+  cStructLoaders::Load(false);
+  if(Feature.KeyFile() && keys.Count()<1)
+    PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
   if(!cSystems::Init(cfgdir)) exit(2);
-  cLoaders::LoadCache(cfgdir);
-  smartcards.LoadData(cfgdir);
+
 #ifdef DEFAULT_PORT
   smartcards.AddPort(DEFAULT_PORT);
 #endif
@@ -116,11 +122,11 @@ extern const char *I18nTranslate(const char *s, const char *Plugin)
 
 static const struct LogModule lm_core = {
   (LMOD_ENABLE|L_CORE_ALL)&LOPT_MASK,
-  (LMOD_ENABLE|L_CORE_LOAD|L_CORE_ECM|L_CORE_PIDS|L_CORE_AU|L_CORE_AUSTATS|L_CORE_CAIDS|L_CORE_NET|L_CORE_CI|L_CORE_SC)&LOPT_MASK,
+  (LMOD_ENABLE|L_CORE_LOAD|L_CORE_ECM|L_CORE_PIDS|L_CORE_AU|L_CORE_AUSTATS|L_CORE_CAIDS|L_CORE_NET|L_CORE_CI|L_CORE_SC|L_CORE_HOOK)&LOPT_MASK,
   "core",
   { "load","action","ecm","ecmProc","pids","au","auStats","auExtra","auExtern",
     "caids","keys","dynamic","csa","ci","av7110","net","netData","msgcache",
-    "serial","smartcard" }
+    "serial","smartcard","hook","ciFull" }
   };
 ADD_MODULE(L_CORE,lm_core)
 
@@ -139,6 +145,7 @@ cScSetup::cScSetup(void)
   memset(CaIgnore,0,sizeof(CaIgnore));
   LocalPriority = 0;
   ForceTransfer = 1;
+  PrestartAU = 0;
 }
 
 void cScSetup::Check(void) {}
