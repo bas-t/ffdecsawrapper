@@ -54,7 +54,7 @@ testN1Emu.o: testN1Emu.c ../systems/nagra/nagra.c ../systems/nagra/nagra1.c ../s
 testN1Emu: testN1Emu.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
 
-testN2Emu.o: testN2Emu.c
+testN2Emu.o: testN2Emu.c compat.h
 testN2Emu: testN2Emu.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -L../systems/nagra -lsc-nagra -o $@
 

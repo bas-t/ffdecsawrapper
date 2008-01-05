@@ -90,7 +90,7 @@ bool cCardClientAroureos::ProcessEMM(int caSys, const unsigned char *source)
       const int length=SCT_LEN(source);
       int id=msEMM.Get(source,length,0);
       if(id>0) {
-        unsigned char buff[length+8];
+        unsigned char *buff=AUTOMEM(length+8);
         memcpy(buff,"EMM",3);
         memcpy(&buff[3],source,length);
         SendMsg(&so,buff,length+3);

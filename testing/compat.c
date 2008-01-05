@@ -88,6 +88,13 @@ int ReadRaw(const char *name, unsigned char *buff, int maxlen)
       if(strstr(line,"dump: n=")) continue;
       char *p=index(line,'#');
       if(p) *p=0;
+      p=index(line,'[');
+      if(p) {
+        p=index(p,']');
+        if(p) {
+          strcpy(line,p+1);
+          }
+        }
       p=index(line,':');
       if(p) p++; else p=line;
       while(1) {
