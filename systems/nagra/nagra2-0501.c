@@ -206,7 +206,7 @@ void cN2Prov0501::AddRomCallbacks(void)
 
 int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
 {
-  if(data[pos-1]!=0xBA) {
+  if(data[pos-1]!=0xBC) {
     PRINTF(L_SYS_EMU,"%04X: bad nano %02X for ROM 120",id,data[pos-1]);
     return -1;
     }
