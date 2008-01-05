@@ -206,6 +206,14 @@ void cN2Prov0501::AddRomCallbacks(void)
 
 int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
 {
+  if(data[pos-1]!=0xBA) {
+    PRINTF(L_SYS_EMU,"%04X: bad nano %02X for ROM 120",id,data[pos-1]);
+    return -1;
+    }
+  if(pos!=(0x93-0x80)) { // maybe exploitable
+    PRINTF(L_SYS_EMU,"%04X: refuse to execute from %04x",id,0x80+pos);
+    return -1;
+    }
   if(Init(id,120)) {
     SetMem(0x80,data,len);
     SetPc(0x80+pos);
