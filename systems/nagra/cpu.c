@@ -405,6 +405,10 @@ int c6805::Run(int max_count)
       PRINTF(L_SYS_EMU,"stack underflow (count=%d)",count);
       return 1;
       }
+    if(pc>0x0400 && mapMap[pc+PAGEOFF(pc,cr)]==0) {
+      PRINTF(L_SYS_EMU,"NX protection at %04x (count=%d)",pc,count);
+      return 1;
+      }
     count++;
 
     if(!LOG(L_SYS_DISASM) && LOG(L_SYS_DISASM80)) {
@@ -977,9 +981,11 @@ int c6805::Run(int max_count)
       case 0x31:
       case 0x32:
         PRINTF(L_SYS_EMU,"pre-byte %02x in command decoding (count=%d)",ins,count);
+        loglb->cLineBuff::Flush();
         return 3;
       default:
         PRINTF(L_SYS_EMU,"unsupported instruction 0x%02x (count=%d)",ins,count);
+        loglb->cLineBuff::Flush();
         return 3;
       }
 
