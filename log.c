@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h>
 #include <time.h>
 
 #include <vdr/tools.h>
