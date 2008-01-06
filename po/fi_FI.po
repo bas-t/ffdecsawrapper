@@ -155,25 +155,25 @@ msgid "undisclosed key"
 msgstr "tuntematon avain"
 
 msgid "Cardclient: connect immediately"
-msgstr "Korttiasiakas: yhdistä välittömästi"
+msgstr "Korttiasiakas: Yhdistä välittömästi"
 
 msgid "Nagra: min. ECM processing time"
 msgstr "Nagra: Min. ECM-prosessointiaika"
 
 msgid "Nagra2: drop EMM-S packets"
-msgstr ""
+msgstr "Nagra2: Hylkää EMM-S-paketit"
 
 msgid "Nagra2: Enable AUXserver"
-msgstr ""
+msgstr "Nagra2: Käytä AUX-palvelinta"
 
 msgid "Nagra2: AUXserver hostname"
-msgstr ""
+msgstr "Nagra2: AUX-palvelimen osoite"
 
 msgid "Nagra2: AUXserver port"
-msgstr ""
+msgstr "Nagra2: AUX-palvelimen portti"
 
 msgid "Nagra2: AUXserver password"
-msgstr ""
+msgstr "Nagra2: AUX-palvelimen salasana"
 
 msgid "don't touch"
 msgstr "älä koske"
