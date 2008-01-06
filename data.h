@@ -100,6 +100,8 @@ public:
 #define SL_LOADED    0x100
 #define SL_MODIFIED  0x200
 #define SL_DISABLED  0x400
+#define SL_SHUTUP    0x800
+#define SL_NOACCESS  0x1000
 
 #define SL_SETFLAG(x) flags|=(x)
 #define SL_CLRFLAG(x) flags&=~(x)
@@ -119,6 +121,9 @@ protected:
   //
   void CheckAccess(void);
   bool CheckUnmodified(void);
+  void LoadFinished(void);
+  void OpenFailed(void);
+  bool CheckDoSave(void)
   time_t MTime(bool log);
   //
   virtual cStructItem *ParseLine(char *line)=0;

@@ -258,8 +258,9 @@ void cStructLoader::CheckAccess(void)
     if(errno!=EACCES)
       PRINTF(L_GEN_ERROR,"failed access %s: %s",path,strerror(errno));
     PRINTF(L_GEN_WARN,"no write permission on %s. Changes will not be saved!",path);
-    SL_CLRFLAG(SL_READWRITE);
+    SL_SETFLAG(SL_NOACCESS);
     }
+  else SL_CLRFLAG(SL_NOACCESS);
 }
 
 bool cStructLoader::CheckUnmodified(void)
@@ -272,14 +273,29 @@ bool cStructLoader::CheckUnmodified(void)
   return true;
 }
 
+void cStructLoader::LoadFinished(void)
+{
+  SL_CLRFLAG(SL_SHUTUP);
+  if(!SL_TSTFLAG(SL_LOADED))
+    PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
+}
+
+void cStructLoader::OpenFailed(void)
+{
+  if(SL_TSTFLAG(SL_VERBOSE) && !SL_TSTFLAG(SL_SHUTUP)) {
+    PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
+    SL_SETFLAG(SL_SHUTUP);
+    }
+  if(SL_TSTFLAG(SL_MISSINGOK)) SL_SETFLAG(SL_LOADED);
+  else SL_CLRFLAG(SL_LOADED);
+}
+
 void cStructLoader::Load(bool reload)
 {
   if(SL_TSTFLAG(SL_DISABLED) || (reload && !SL_TSTFLAG(SL_WATCH))) return;
   FILE *f=fopen(path,"r");
   if(f) {
     int curr_mtime=MTime(true);
-    CheckAccess();
-    SL_SETFLAG(SL_LOADED);
     ListLock(true);
     bool doload=false;
     if(!reload) {
@@ -297,7 +313,9 @@ void cStructLoader::Load(bool reload)
       doload=true;
       }
     if(doload) {
+      SL_SETFLAG(SL_LOADED);
       PRINTF(L_GEN_INFO,"loading %s from %s",type,path);
+      CheckAccess();
       int lineNum=0, num=0;
       char buff[4096];
       while(fgets(buff,sizeof(buff),f)) {
@@ -347,15 +365,10 @@ void cStructLoader::Load(bool reload)
     else ListUnlock();
 
     fclose(f);
+    LoadFinished();
     }
-  else {
-    if(SL_TSTFLAG(SL_VERBOSE))
-      PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
-    if(SL_TSTFLAG(SL_MISSINGOK)) SL_SETFLAG(SL_LOADED);
-    else SL_CLRFLAG(SL_LOADED);
-    }
-  if(!SL_TSTFLAG(SL_LOADED))
-    PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
+  else
+    OpenFailed();
 }
 
 void cStructLoader::Purge(void)
@@ -371,10 +384,16 @@ void cStructLoader::Purge(void)
     }
 }
 
+bool cStructLoader::CheckDoSave(void)
+{
+  return !SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE)
+         && !SL_TSTFLAG(SL_NOACCESS) && SL_TSTFLAG(SL_LOADED)
+         && IsModified() && CheckUnmodified();
+}
+
 void cStructLoader::Save(void)
 {
-  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED)
-      && IsModified() && CheckUnmodified()) {
+  if(CheckDoSave()) {
     cSafeFile f(path);
     if(f.Open()) {
       ListLock(false);
@@ -407,11 +426,11 @@ void cStructLoaderPlain::Load(bool reload)
   if(SL_TSTFLAG(SL_DISABLED) || reload) return;
   FILE *f=fopen(path,"r");
   if(f) {
-    CheckAccess();
     PreLoad();
+    ListLock(true);
     SL_SETFLAG(SL_LOADED);
     PRINTF(L_GEN_INFO,"loading %s from %s",type,path);
-    ListLock(true);
+    CheckAccess();
     int lineNum=0;
     char buff[4096];
     while(fgets(buff,sizeof(buff),f)) {
@@ -436,15 +455,10 @@ void cStructLoaderPlain::Load(bool reload)
     ListUnlock();
     PostLoad();
     fclose(f);
+    LoadFinished();
     }
-  else {
-    if(SL_TSTFLAG(SL_VERBOSE))
-      PRINTF(L_GEN_ERROR,"failed open %s: %s",path,strerror(errno));
-    if(SL_TSTFLAG(SL_MISSINGOK)) SL_SETFLAG(SL_LOADED);
-    else SL_CLRFLAG(SL_LOADED);
-    }
-  if(!SL_TSTFLAG(SL_LOADED))
-    PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
+  else
+    OpenFailed();
 }
 
 void cStructLoaderPlain::PreSave(FILE *f)
@@ -455,8 +469,7 @@ void cStructLoaderPlain::PreSave(FILE *f)
 
 void cStructLoaderPlain::Save(void)
 {
-  if(!SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE) && SL_TSTFLAG(SL_LOADED)
-      && IsModified() && CheckUnmodified()) {
+  if(CheckDoSave()) {
     cSafeFile f(path);
     if(f.Open()) {
       ListLock(false);
