@@ -119,7 +119,7 @@ protected:
   //
   void CheckAccess(void);
   bool CheckUnmodified(void);
-  time_t MTime(void);
+  time_t MTime(bool log);
   //
   virtual cStructItem *ParseLine(char *line)=0;
   void Modified(bool mod=true) { if(mod) SL_SETFLAG(SL_MODIFIED); else SL_CLRFLAG(SL_MODIFIED); }
@@ -156,6 +156,7 @@ class cStructLoaderPlain : public cStructLoader {
 protected:
   virtual cStructItem *ParseLine(char *line) { return 0; }
   virtual bool ParseLinePlain(const char *line)=0;
+  virtual void PreLoad(void);
   virtual void PreSave(FILE *f);
   virtual void PostSave(FILE *f) {};
 public:

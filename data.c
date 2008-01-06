@@ -239,12 +239,14 @@ void cStructLoader::SetCfgDir(const char *cfgdir)
   path=strdup(AddDirectory(cfgdir,filename));
 }
 
-time_t cStructLoader::MTime(void)
+time_t cStructLoader::MTime(bool log)
 {
   struct stat64 st;
   if(stat64(path,&st)!=0) {
-    PRINTF(L_GEN_ERROR,"failed fstat %s: %s",path,strerror(errno));
-    PRINTF(L_GEN_WARN,"automatic reload of %s disabled",path);
+    if(log) {
+      PRINTF(L_GEN_ERROR,"failed fstat %s: %s",path,strerror(errno));
+      PRINTF(L_GEN_WARN,"automatic reload of %s disabled",path);
+      }
     st.st_mtime=0;
     }
   return st.st_mtime;
@@ -262,7 +264,7 @@ void cStructLoader::CheckAccess(void)
 
 bool cStructLoader::CheckUnmodified(void)
 {
-  time_t curr_mtime=MTime();
+  time_t curr_mtime=MTime(false);
   if(mtime && mtime<curr_mtime && SL_TSTFLAG(SL_WATCH)) {
      PRINTF(L_CORE_LOAD,"abort save as file %s has been changed externaly",path);
      return false;
@@ -275,7 +277,7 @@ void cStructLoader::Load(bool reload)
   if(SL_TSTFLAG(SL_DISABLED) || (reload && !SL_TSTFLAG(SL_WATCH))) return;
   FILE *f=fopen(path,"r");
   if(f) {
-    int curr_mtime=MTime();
+    int curr_mtime=MTime(true);
     CheckAccess();
     SL_SETFLAG(SL_LOADED);
     ListLock(true);
@@ -338,10 +340,11 @@ void cStructLoader::Load(bool reload)
           break;
           }
         }
+      ListUnlock();
       PRINTF(L_CORE_LOAD,"loaded %d %s from %s",num,type,path);
       PostLoad();
       }
-    ListUnlock();
+    else ListUnlock();
 
     fclose(f);
     }
@@ -378,7 +381,7 @@ void cStructLoader::Save(void)
       for(cStructItem *it=First(); it; it=Next(it))
         if(!it->Deleted() && !it->Save(f)) break;
       f.Close();
-      mtime=MTime();
+      mtime=MTime(true);
       Modified(false);
       ListUnlock();
       PRINTF(L_CORE_LOAD,"saved %s to %s",type,path);
@@ -392,16 +395,23 @@ cStructLoaderPlain::cStructLoaderPlain(const char *Type, const char *Filename, i
 :cStructLoader(Type,Filename,Flags)
 {}
 
+void cStructLoaderPlain::PreLoad(void)
+{
+  ListLock(true);
+  Clear(); Modified(false);
+  ListUnlock();
+}
+
 void cStructLoaderPlain::Load(bool reload)
 {
   if(SL_TSTFLAG(SL_DISABLED) || reload) return;
   FILE *f=fopen(path,"r");
   if(f) {
     CheckAccess();
+    PreLoad();
     SL_SETFLAG(SL_LOADED);
-    ListLock(true);
-    Clear(); Modified(false);
     PRINTF(L_GEN_INFO,"loading %s from %s",type,path);
+    ListLock(true);
     int lineNum=0;
     char buff[4096];
     while(fgets(buff,sizeof(buff),f)) {
@@ -423,8 +433,8 @@ void cStructLoaderPlain::Load(bool reload)
           PRINTF(L_GEN_ERROR,"file %s has error in line #%d",path,lineNum);
         }
       }
-    PostLoad();
     ListUnlock();
+    PostLoad();
     fclose(f);
     }
   else {
@@ -435,6 +445,12 @@ void cStructLoaderPlain::Load(bool reload)
     }
   if(!SL_TSTFLAG(SL_LOADED))
     PRINTF(L_CORE_LOAD,"loading %s terminated with error. Changes will not be saved!",path);
+}
+
+void cStructLoaderPlain::PreSave(FILE *f)
+{
+  fprintf(f,"## This is a generated file. DO NOT EDIT!!\n"
+            "## This file will be OVERWRITTEN WITHOUT WARNING!!\n");
 }
 
 void cStructLoaderPlain::Save(void)
@@ -456,17 +472,11 @@ void cStructLoaderPlain::Save(void)
     }
 }
 
-void cStructLoaderPlain::PreSave(FILE *f)
-{
-  fprintf(f,"## This is a generated file. DO NOT EDIT!!\n"
-            "## This file will be OVERWRITTEN WITHOUT WARNING!!\n");
-}
-
 // -- cStructLoaders -----------------------------------------------------------
 
-#define RELOAD_TIMEOUT  20000
-#define PURGE_TIMEOUT   60000
-#define SAVE_TIMEOUT     5000
+#define RELOAD_TIMEOUT  20300 // ms
+#define PURGE_TIMEOUT   60700 // ms
+#define SAVE_TIMEOUT     5000 // ms
 
 cStructLoader *cStructLoaders::first=0;
 cTimeMs cStructLoaders::lastReload;
@@ -913,9 +923,12 @@ cString cPlainKeys::KeyString(int Type, int Id, int Keynr)
 
 void cPlainKeys::PostLoad(void)
 {
-  if(Count() && LOG(L_CORE_KEYS))
+  ListLock(false);
+  if(Count() && LOG(L_CORE_KEYS)) {
     for(cPlainKey *dat=First(); dat; dat=Next(dat))
       PRINTF(L_CORE_KEYS,"keys %s",*dat->ToString(false));
+    }
+  ListUnlock();
 }
 
 void cPlainKeys::HouseKeeping(void)
