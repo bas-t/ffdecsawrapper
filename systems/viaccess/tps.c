@@ -569,16 +569,17 @@ public:
 cTpsKeys tpskeys;
 
 cTpsKeys::cTpsKeys(void)
-:cStructListPlain<cTpsKey>("TPS keys","tps.cache",SL_READWRITE|SL_MISSINGOK|SL_NOPURGE)
+:cStructListPlain<cTpsKey>("TPS keys","tps.cache",SL_READWRITE|SL_MISSINGOK|SL_WATCH|SL_NOPURGE)
 ,lastLoad(-LOADBIN_TIME)
 ,lastAu(-TPSAU_TIME)
 {
-  first=last=0; algomem=0;
+  first=last=0; algomem=0; loadlist=0;
 }
 
 cTpsKeys::~cTpsKeys()
 {
   free(algomem);
+  delete loadlist;
 }
 
 const cTpsKey *cTpsKeys::GetKey(time_t t)
@@ -891,6 +892,18 @@ void cTpsKeys::DecryptBin(const unsigned char *in, unsigned char *out)
 }
 */
 
+void cTpsKeys::PreLoad(void)
+{
+  delete loadlist;
+  loadlist=new cSimpleList<cTpsKey>;
+  if(!loadlist) PRINTF(L_SYS_TPS,"no memory for loadlist");
+}
+
+void cTpsKeys::PostLoad(void)
+{
+  if(loadlist) Join(loadlist);
+}
+
 bool cTpsKeys::ParseLinePlain(const char *line)
 {
   unsigned char tmp[60];
@@ -937,7 +950,7 @@ bool cTpsKeys::ParseLinePlain(const char *line)
       unsigned int crc=crc32_le(0,&tmp[4],sizeof(tmp)-4);
       if(*((unsigned int *)tmp)==crc) {
         cTpsKey *k=new cTpsKey;
-        if(k) { k->Set(&tmp[4]); Add(k); }
+        if(k) { k->Set(&tmp[4]); if(loadlist) loadlist->Add(k); }
         return true;
         }
       else PRINTF(L_SYS_TPS,"CRC failed during cache load");
