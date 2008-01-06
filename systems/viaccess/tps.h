@@ -110,6 +110,7 @@ class cTpsKeys : public cStructListPlain<cTpsKey>, private cTPSDecrypt {
 friend class cTpsAuHook;
 private:
   time_t first, last;
+  cSimpleList<cTpsKey> *loadlist;
   //
   cTimeMs lastCheck, lastLoad, lastAu;
   cMutex checkMutex;
@@ -126,6 +127,8 @@ private:
   bool ProcessAu(const cOpenTVModule *mod);
 protected:
   virtual bool ParseLinePlain(const char *line);
+  virtual void PreLoad(void);
+  virtual void PostLoad(void);
   virtual void PostSave(FILE *f);
 public:
   cTpsKeys(void);
