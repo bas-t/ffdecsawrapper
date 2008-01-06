@@ -109,7 +109,7 @@ bool cPlainKeyVia::Parse(const char *line)
 
 cString cPlainKeyVia::PrintKeyNr(void)
 {
-  char tmp[8];
+  char tmp[12];
   const char *kn=tmp;
   switch(keynr) {
     case MBC3('T','P','S'):
@@ -118,7 +118,7 @@ cString cPlainKeyVia::PrintKeyNr(void)
     case MBC3('M','K',3): case MBC3('M','K',4): case MBC3('M','K',5):
     case MBC3('M','K',6): case MBC3('M','K',7): case MBC3('M','K',8):
     case MBC3('M','K',9):
-      snprintf(tmp,sizeof(tmp),"MK%d",C3(keynr)); break;
+      snprintf(tmp,sizeof(tmp),"TPSMK%d",C3(keynr)); break;
     default:
       snprintf(tmp,sizeof(tmp),"%02X",keynr); break;
     }
