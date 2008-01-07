@@ -191,7 +191,7 @@ private:
 public:
   static void SetCfgDir(const char *cfgdir);
   static void Load(bool reload);
-  static void Save(void);
+  static void Save(bool force=false);
   static void Purge(void);
   };
 

@@ -518,9 +518,9 @@ void cStructLoaders::Load(bool reload)
     }
 }
 
-void cStructLoaders::Save(void)
+void cStructLoaders::Save(bool force)
 {
-  if(lastSave.TimedOut()) {
+  if(force || lastSave.TimedOut()) {
     for(cStructLoader *ld=first; ld; ld=ld->next) ld->Save();
     lastSave.Set(SAVE_TIMEOUT);
     }

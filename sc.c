@@ -1024,6 +1024,7 @@ void cSoftCAM::HouseKeeping(void)
 
 void cSoftCAM::Shutdown(void)
 {
+  cStructLoaders::Save(true);
   cSystems::Clean();
   smartcards.Shutdown();
   keys.Clear();
