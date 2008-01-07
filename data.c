@@ -29,6 +29,7 @@
 #include "misc.h"
 #include "scsetup.h"
 #include "log-core.h"
+#include "i18n.h"
 
 #define KEY_FILE     "SoftCam.Key"
 #define EXT_AU_INT   (15*60*1000) // ms interval for external AU
@@ -883,7 +884,9 @@ bool cPlainKeys::AddNewKey(cPlainKey *nk, const char *reason)
     if(k->Cmp(nk)) return false;
 
   cPlainKey *ref=0;
-  PRINTF(L_GEN_INFO,"key update for ID %s",*nk->ToString(true));
+  cString ks=nk->ToString(true);
+  PRINTF(L_GEN_INFO,"key update for ID %s",*ks);
+  ums.Queue("%s %s",tr("Key update"),*ks);
   for(k=0; (k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,nk->Size(),k)); ) {
     if(nk->CanSupersede()) {
       PRINTF(L_GEN_INFO,"supersedes key: %s",*k->ToString(true));
