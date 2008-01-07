@@ -123,7 +123,7 @@ protected:
   bool CheckUnmodified(void);
   void LoadFinished(void);
   void OpenFailed(void);
-  bool CheckDoSave(void)
+  bool CheckDoSave(void);
   time_t MTime(bool log);
   //
   virtual cStructItem *ParseLine(char *line)=0;
