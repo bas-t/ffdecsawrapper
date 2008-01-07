@@ -1192,6 +1192,7 @@ public:
   virtual bool Start(void);
   virtual void Stop(void);
   virtual void Housekeeping(void);
+  virtual void MainThreadHook(void);
   virtual cMenuSetupPage *SetupMenu(void);
   virtual bool SetupParse(const char *Name, const char *Value);
   virtual const char **SVDRPHelpPages(void);
@@ -1209,12 +1210,13 @@ cScPlugin::cScPlugin(void)
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
   ScOpts->Add(new cOptMInt ("CaIgnore"     ,trNOOP("Ignore CAID")          , ScSetup.CaIgnore,MAXCAIGN,2));
-  LogOpts=new cOpts(0,5);
+  LogOpts=new cOpts(0,6);
   LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));
   LogOpts->Add(new cOptBool ("LogFile"     ,trNOOP("Log to file")         ,&logcfg.logFile));
   LogOpts->Add(new cOptStr  ("LogFileName" ,trNOOP("Filename")            ,logcfg.logFilename,sizeof(logcfg.logFilename),FileNameChars));
   LogOpts->Add(new cOptInt  ("LogFileLimit",trNOOP("Filesize limit (KB)") ,&logcfg.maxFilesize,0,2000000));
   LogOpts->Add(new cOptBool ("LogSyslog"   ,trNOOP("Log to syslog")       ,&logcfg.logSys));
+  LogOpts->Add(new cOptBool ("LogUserMsg"  ,trNOOP("Show user messages")  ,&logcfg.logUser));
 #ifndef STATICBUILD
   dlls.Load();
 #endif
@@ -1364,6 +1366,16 @@ void cScPlugin::Housekeeping(void)
     if(dev && dev->Cam()) dev->Cam()->HouseKeeping();
     }
   cSoftCAM::HouseKeeping();
+}
+
+void cScPlugin::MainThreadHook(void)
+{
+  int n=0;
+  cUserMsg *um;
+  while(++n<=10 && (um=ums.GetQueuedMsg())) {
+    Skins.QueueMessage(mtInfo,um->Message());
+    delete um;
+    }
 }
 
 const char **cScPlugin::SVDRPHelpPages(void)

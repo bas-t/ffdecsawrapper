@@ -22,6 +22,8 @@
 
 #include "misc.h"
 
+class cMutex;
+
 // ----------------------------------------------------------------
 
 #define LOPT_NUM    24
@@ -68,7 +70,7 @@
 // ----------------------------------------------------------------
 
 struct LogConfig {
-  int logCon, logFile, logSys;
+  int logCon, logFile, logSys, logUser;
   int maxFilesize;
   char logFilename[128];
   };
@@ -109,6 +111,31 @@ public:
   static void ReopenLogfile(void);
   static int GetClassByName(const char *name);
   };
+
+// ----------------------------------------------------------------
+
+class cUserMsg : public cSimpleItem {
+private:
+  char *msg;
+public:
+  cUserMsg(const char *m);
+  ~cUserMsg();
+  const char *Message(void) { return msg; };
+  };
+
+// ----------------------------------------------------------------
+
+class cUserMsgs : public cSimpleList<cUserMsg> {
+private:
+  cMutex *mutex;
+public:
+  cUserMsgs(void);
+  ~cUserMsgs();
+  void Queue(const char *fmt, ...) __attribute__ ((format (printf,2,3)));
+  cUserMsg *GetQueuedMsg(void);
+  };
+
+extern cUserMsgs ums;
 
 // ----------------------------------------------------------------
 
