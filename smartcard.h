@@ -96,7 +96,7 @@ struct CardConfig {
 
 struct StatusMsg {
   unsigned char sb[SB_LEN];
-  char *message; 
+  const char *message; 
   bool retval;
   };
 

@@ -58,7 +58,7 @@ private:
   cLineBuff *loglb;
   //
   unsigned char *Addr(unsigned int off);
-  void LogOp(char *op);
+  void LogOp(const char *op);
   void LogOpOper(int op, int oper);
 public:
   cST20(void);

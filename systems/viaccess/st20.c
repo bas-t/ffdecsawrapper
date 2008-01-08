@@ -246,7 +246,7 @@ void cST20::LogOpOper(int op, int oper)
   else            loglb->Printf("%*s%-5s  %-8d ",max(OP_COL-n,1)," ",cmds[op],oper);
 }
 
-void cST20::LogOp(char *op)
+void cST20::LogOp(const char *op)
 {
   int n=loglb->Length();
   loglb->Printf("%*s%-15s ",max(OP_COL-n,1)," ",op);
