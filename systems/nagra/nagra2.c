@@ -37,7 +37,7 @@ cN2Timer::cN2Timer(void)
   cycles=0; ctrl=0; divisor=1; remainder=-1; latch=0xFF;
 }
 
-void cN2Timer::AddCycles(int count)
+void cN2Timer::AddCycles(unsigned int count)
 {
   if(Running()) {
     remainder+=count;
