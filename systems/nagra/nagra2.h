@@ -59,8 +59,8 @@ private:
   void Stop(void);
 public:
   cN2Timer(void);
-  void AddCycles(int count);
-  unsigned int Cycles(void) { return (unsigned int)cycles; }
+  void AddCycles(unsigned int count);
+  unsigned int Cycles(void) { return cycles; }
   unsigned char Ctrl(void) { return ctrl&tmMASK; }
   void Ctrl(unsigned char c);
   unsigned char Latch(void) { return latch&0xFF; }
