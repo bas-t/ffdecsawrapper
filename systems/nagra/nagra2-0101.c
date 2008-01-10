@@ -467,8 +467,10 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       break;
     case 0x57:
 #ifdef HAS_AUXSRV
-      cycles=aux.Map(0x57,data,0x60,0x40);
-      if(cycles>0) { cycles-=6; break; }
+      {
+      int c=aux.Map(0x57,data,0x60,0x40);
+      if(c>0) { cycles=c-6; break; }
+      }
 #endif
       {
       cBN a, b, x, y, scalar;
