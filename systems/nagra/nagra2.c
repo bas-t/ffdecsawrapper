@@ -268,7 +268,7 @@ void cMapCore::MakeJ0(BIGNUM *j, BIGNUM *d)
 
 void cMapCore::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j)
 {
-  int words=(BN_num_bytes(d)+7)>>3;
+  int words=(BN_num_bytes(a)+7)>>3;
   BN_zero(s);
   for(int i=0; i<words;) {
     BN_rshift(x,a,(i++)<<6);
