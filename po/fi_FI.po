@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Key update"
-msgstr ""
+msgstr "Avaimen päivitys"
 
 msgid "off"
 msgstr "pois"
@@ -152,7 +152,7 @@ msgid "Log to syslog"
 msgstr "Tulosta systeemilokiin"
 
 msgid "Show user messages"
-msgstr ""
+msgstr "Näytä käyttäjäviestit"
 
 msgid "A software emulated CAM"
 msgstr "Ohjelmistopohjainen salauksenpurku"
