@@ -1369,6 +1369,8 @@ void cScPlugin::Housekeeping(void)
   cSoftCAM::HouseKeeping();
 }
 
+#ifndef SASC
+
 void cScPlugin::MainThreadHook(void)
 {
   int n=0;
@@ -1378,6 +1380,8 @@ void cScPlugin::MainThreadHook(void)
     delete um;
     }
 }
+
+#endif //SASC
 
 const char **cScPlugin::SVDRPHelpPages(void)
 {
