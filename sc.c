@@ -82,7 +82,7 @@
 
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
-static char *cfgsub=0;
+static const char * const cfgsub="sc";
 
 static const struct LogModule lm_core = {
   (LMOD_ENABLE|L_CORE_ALL)&LOPT_MASK,
@@ -895,7 +895,6 @@ eOSState cMenuSetupSc::ProcessKey(eKeys Key)
       state=osContinue;
       if(Interface->Confirm(tr("Really flush ECM cache?"))) {
         ecmcache.Flush();
-        cLoaders::SaveCache();
         state=osEnd;
         }
       break;
@@ -911,7 +910,7 @@ eOSState cMenuSetupSc::ProcessKey(eKeys Key)
 
     case osUser9:
       state=osContinue;
-      if(!cSoftCAM::Active()) {
+      if(!cSoftCAM::Active(true)) {
         if(Interface->Confirm(tr("Really reload files?"))) {
           Store();
           cSoftCAM::Load(cfgdir);
@@ -1006,18 +1005,26 @@ bool cScSetup::Ignore(unsigned short caid)
 
 bool cSoftCAM::Load(const char *cfgdir)
 {
-  ecmcache.Load();
-  if(Feature.KeyFile() && !keys.Load(cfgdir)) 
+  if(!Feature.KeyFile()) keys.Disable();
+  if(!Feature.SmartCard()) smartcards.Disable();
+  cStructLoaders::Load(false);
+  if(Feature.KeyFile() && keys.Count()<1)
     PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
   if(!cSystems::Init(cfgdir)) return false;
-  if(Feature.SmartCard()) smartcards.LoadData(cfgdir);
-  cLoaders::LoadCache(cfgdir);
-  cLoaders::SaveCache();
   return true;
+}
+
+void cSoftCAM::HouseKeeping(void)
+{
+  if(Feature.KeyFile()) keys.HouseKeeping();
+  if(!Active(false)) cStructLoaders::Purge();
+  cStructLoaders::Load(true);
+  cStructLoaders::Save();
 }
 
 void cSoftCAM::Shutdown(void)
 {
+  cStructLoaders::Save(true);
   cSystems::Clean();
   smartcards.Shutdown();
   keys.Clear();
@@ -1034,11 +1041,11 @@ char *cSoftCAM::CurrKeyStr(int CardNum, int num)
   return str;
 }
 
-bool cSoftCAM::Active(void)
+bool cSoftCAM::Active(bool log)
 {
   for(int n=cDevice::NumDevices(); --n>=0;) {
     cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
-    if(dev && dev->Cam() && dev->Cam()->Active()) return true;
+    if(dev && dev->Cam() && dev->Cam()->Active(log)) return true;
     }
   return false;
 }
@@ -1186,6 +1193,7 @@ public:
   virtual bool Start(void);
   virtual void Stop(void);
   virtual void Housekeeping(void);
+  virtual void MainThreadHook(void);
   virtual cMenuSetupPage *SetupMenu(void);
   virtual bool SetupParse(const char *Name, const char *Value);
   virtual const char **SVDRPHelpPages(void);
@@ -1203,12 +1211,13 @@ cScPlugin::cScPlugin(void)
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
   ScOpts->Add(new cOptMInt ("CaIgnore"     ,trNOOP("Ignore CAID")          , ScSetup.CaIgnore,MAXCAIGN,2));
-  LogOpts=new cOpts(0,5);
+  LogOpts=new cOpts(0,6);
   LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));
   LogOpts->Add(new cOptBool ("LogFile"     ,trNOOP("Log to file")         ,&logcfg.logFile));
   LogOpts->Add(new cOptStr  ("LogFileName" ,trNOOP("Filename")            ,logcfg.logFilename,sizeof(logcfg.logFilename),FileNameChars));
   LogOpts->Add(new cOptInt  ("LogFileLimit",trNOOP("Filesize limit (KB)") ,&logcfg.maxFilesize,0,2000000));
   LogOpts->Add(new cOptBool ("LogSyslog"   ,trNOOP("Log to syslog")       ,&logcfg.logSys));
+  LogOpts->Add(new cOptBool ("LogUserMsg"  ,trNOOP("Show user messages")  ,&logcfg.logUser));
 #ifndef STATICBUILD
   dlls.Load();
 #endif
@@ -1247,9 +1256,11 @@ bool cScPlugin::Start(void)
 #if APIVERSNUM < 10507
   RegisterI18n(ScPhrases);
 #endif
-  filemaps.SetCfgDir(ConfigDirectory(cfgsub));
+  const char *cfgdir=ConfigDirectory(cfgsub);
+  filemaps.SetCfgDir(cfgdir);
+  cStructLoaders::SetCfgDir(cfgdir);
   ScSetup.Check();
-  if(!cSoftCAM::Load(ConfigDirectory(cfgsub))) return false;
+  if(!cSoftCAM::Load(cfgdir)) return false;
   if(Feature.SmartCard()) {
 #ifdef DEFAULT_PORT
     smartcards.AddPort(DEFAULT_PORT);
@@ -1286,9 +1297,7 @@ const char *cScPlugin::CommandLineHelp(void)
   static char *help_str=0;
   
   free(help_str);    //                                     for easier orientation, this is column 80|
-  asprintf(&help_str,"  -c DIR    --config=DIR   search config files in subdir DIR\n"
-                     "                           (default: %s)\n"
-                     "  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
+  asprintf(&help_str,"  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
                      "  -I        --inverse-cd   use inverse CD detection for the next serial device\n"
                      "  -R        --inverse-rst  use inverse RESET for the next serial device\n"
                      "  -C FREQ   --clock=FREQ   use FREQ as clock for the card reader on the next\n"
@@ -1299,7 +1308,7 @@ const char *cScPlugin::CommandLineHelp(void)
                      "                           (default: %s)\n"
                      "  -t SECS   --timeout=SECS shutdown timeout for dialup-network\n"
                      "                           (default: %d secs)\n",
-                     cfgsub?cfgsub:"none","none","none",netTimeout/1000
+                     "none","none",netTimeout/1000
                      );
   return help_str;
 }
@@ -1314,14 +1323,13 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       { "dialup",      required_argument, NULL, 'd' },
       { "external-au", required_argument, NULL, 'E' },
       { "budget",      required_argument, NULL, 'B' },
-      { "config",      required_argument, NULL, 'c' },
       { NULL }
     };
 
   int c, option_index=0;
   bool invCD=false, invRST=false;
   int clock=0;
-  while((c=getopt_long(argc,argv,"c:d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
+  while((c=getopt_long(argc,argv,"d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
     switch (c) {
       case 'I': invCD=true; break;
       case 'R': invRST=true; break;
@@ -1331,7 +1339,6 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       case 't': netTimeout=atoi(optarg)*1000; break;
       case 'E': externalAU=optarg; break;
       case 'B': cScDvbDevice::SetForceBudget(atoi(optarg)); break;
-      case 'c': cfgsub=optarg; break;
       default:  return false;
       }
     }
@@ -1359,8 +1366,22 @@ void cScPlugin::Housekeeping(void)
     cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
     if(dev && dev->Cam()) dev->Cam()->HouseKeeping();
     }
-  if(Feature.KeyFile()) keys.HouseKeeping();
+  cSoftCAM::HouseKeeping();
 }
+
+#ifndef SASC
+
+void cScPlugin::MainThreadHook(void)
+{
+  int n=0;
+  cUserMsg *um;
+  while(++n<=10 && (um=ums.GetQueuedMsg())) {
+    Skins.QueueMessage(mtInfo,um->Message());
+    delete um;
+    }
+}
+
+#endif //SASC
 
 const char **cScPlugin::SVDRPHelpPages(void)
 {
@@ -1383,7 +1404,7 @@ const char **cScPlugin::SVDRPHelpPages(void)
 cString cScPlugin::SVDRPCommand(const char *Command, const char *Option, int &ReplyCode)
 {
   if(!strcasecmp(Command,"RELOAD")) {
-    if(cSoftCAM::Active()) {
+    if(cSoftCAM::Active(true)) {
       ReplyCode=550;
       return "Softcam active. Can't reload files now";
       }
@@ -1398,7 +1419,7 @@ cString cScPlugin::SVDRPCommand(const char *Command, const char *Option, int &Re
     }
   else if(!strcasecmp(Command,"KEY")) {
     if(Option && *Option) {
-      if(keys.NewKeyParse(skipspace(Option)))
+      if(keys.NewKeyParse(skipspace(Option),"from SVDR"))
         return "Key update successfull";
       else {
         ReplyCode=901;

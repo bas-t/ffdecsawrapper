@@ -148,7 +148,7 @@ bool cSmartCardViaccess::Init(void)
 
   infoStr.Begin();
   infoStr.Strcat("Viaccess smartcard\n");
-  char *ver=0;
+  const char *ver=0;
   switch((atr->hist[3]<<8)|atr->hist[4]) {
     case 0x6268: ver="2.3"; break;
     case 0x6468:

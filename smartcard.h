@@ -96,7 +96,7 @@ struct CardConfig {
 
 struct StatusMsg {
   unsigned char sb[SB_LEN];
-  char *message; 
+  const char *message; 
   bool retval;
   };
 
@@ -155,7 +155,7 @@ public:
 
 // ----------------------------------------------------------------
 
-class cSmartCardData : public cSimpleItem {
+class cSmartCardData : public cStructItem {
 friend class cSmartCards;
 protected:
   int ident;
@@ -194,7 +194,7 @@ struct Port {
   struct Atr Atr;
   };
 
-class cSmartCards : private cThread, private cConfRead {
+class cSmartCards : private cThread, public cStructList<cSmartCardData> {
 friend class cSmartCardLink;
 private:
   static cSmartCardLink *first;
@@ -202,7 +202,6 @@ private:
   cCondVar cond;
   struct Port ports[MAX_PORTS];
   bool firstRun;
-  cSimpleList<cSmartCardData> dataList;
   //
   static void Register(cSmartCardLink *scl);
   bool CardInserted(cSerial *ser);
@@ -212,7 +211,7 @@ private:
   void SetPort(struct Port *port, cSmartCard *sc, int id, bool dead);
 protected:
   virtual void Action(void);
-  virtual bool ParseLine(const char *line, bool fromCache);
+  virtual cStructItem *ParseLine(char *line);
 public:
   cSmartCards(void);
   void Shutdown(void);
@@ -224,7 +223,6 @@ public:
   // to be called ONLY from frontend thread!
   bool AddPort(const char *devName, bool invCD, bool invRST, int clock);
   void LaunchWatcher(void);
-  void LoadData(const char *cfgdir);
   bool ListCard(int num, char *str, int len);
   bool CardInfo(int num, char *str, int len);
   void CardReset(int num);

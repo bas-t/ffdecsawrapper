@@ -17,7 +17,6 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -96,7 +95,6 @@ bool cPlainKeySeca::IsBNKey(void) const
 bool cPlainKeySeca::Parse(const char *line)
 {
   unsigned char sid[2];
-  const char *sline=line;
   int len;
   if(GetChar(line,&type,1) && (len=GetHex(line,sid,2,false))) {
     type=toupper(type); id=Bin2Int(sid,len);
@@ -129,8 +127,7 @@ bool cPlainKeySeca::Parse(const char *line)
       if(IsBNKey()) {
         if(C2(keynr)=='E' && len==PLAINLEN_SECA_E) {
           // support short exponent keys
-          memset(&skey[len],0,keylen-len);
-          len=keylen;
+          keylen=len;
           }
         }
       else {
@@ -145,7 +142,6 @@ bool cPlainKeySeca::Parse(const char *line)
         }
       }
     }
-  FormatError("seca",sline);
   return false;
 }
 
@@ -169,17 +165,13 @@ cString cPlainKeySeca::PrintKeyNr(void)
 
 // -- cSecaCardInfo ------------------------------------------------------------
 
-class cSecaCardInfo : public cProviderSeca {
+class cSecaCardInfo : public cStructItem, public cProviderSeca {
 private:
   int len;
 public:
   unsigned char key[16];
   //
   bool Parse(const char *line);
-  bool Save(FILE *f) { return true; }
-  bool IsUpdated(void) { return false; }
-  void Updated(void) {}
-  bool Cmp(cSecaCardInfo *ci) { return false; }
   int KeySize(void) { return len; }
   };
 
@@ -195,7 +187,7 @@ bool cSecaCardInfo::Parse(const char *line)
 
 class cSecaCardInfos : public cCardInfos<cSecaCardInfo> {
 public:
-  cSecaCardInfos(void):cCardInfos<cSecaCardInfo>(SYSTEM_NAME) {}
+  cSecaCardInfos(void):cCardInfos<cSecaCardInfo>("Seca cards","Seca.KID",0) {}
   };
 
 static cSecaCardInfos Scards;
@@ -1617,7 +1609,6 @@ void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
           if(keys.NewKey('S',provId,keyN[i],key[i],8)) NewKey();
          }
         LBEND();
-        cLoaders::SaveCache();
         break;
         }
       else if(!CheckNull(ci->sa,sizeof(ci->sa)))
@@ -1634,7 +1625,6 @@ public:
   cSystemLinkSeca(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual cSystem *Create(void) { return new cSystemSeca; }
-  virtual bool Init(const char *cfgdir);
   };
 
 static cSystemLinkSeca staticInit;
@@ -1649,10 +1639,4 @@ bool cSystemLinkSeca::CanHandle(unsigned short SysId)
 {
   SysId&=SYSTEM_MASK;
   return SYSTEM_CAN_HANDLE(SysId);
-}
-
-bool cSystemLinkSeca::Init(const char *cfgdir)
-{
-  Scards.Load(cfgdir,SYSTEM_NAME,"Seca.KID");
-  return true;
 }

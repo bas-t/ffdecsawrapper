@@ -88,6 +88,19 @@ public:
 
 // ----------------------------------------------------------------
 
+template<class T> class cCardInfos : public cStructList<T> {
+public:
+  cCardInfos(const char *Type, const char *Filename, int fl):cStructList<T>(Type,Filename,fl|SL_MISSINGOK|SL_WATCH) {}
+  virtual cStructItem *ParseLine(char *line)
+    {
+      T *k=new T;
+      if(k && !k->Parse(line)) { delete k; k=0; }
+      return k;
+    }
+  };
+
+// ----------------------------------------------------------------
+
 class cSystemScCore : public cSystem {
 private:
   int scId;

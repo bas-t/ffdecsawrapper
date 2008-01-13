@@ -17,9 +17,9 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <byteswap.h>
 
 #include "system-common.h"
@@ -359,7 +359,6 @@ bool cPlainKeyCryptoworks::IsBNKey(void) const
 
 bool cPlainKeyCryptoworks::Parse(const char *line)
 {
-  const char *sline=line;
   unsigned char sid[2], sprov;
   if(GetChar(line,&type,1) && GetHex(line,sid,2) && GetHex(line,&sprov,1)) {
     int keylen, prov;
@@ -386,7 +385,6 @@ bool cPlainKeyCryptoworks::Parse(const char *line)
         }
       }
     }
-  FormatError("cryptoworks",sline);
   return false;
 }
 

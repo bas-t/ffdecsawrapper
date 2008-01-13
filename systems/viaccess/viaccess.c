@@ -17,14 +17,17 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-#include "viaccess.h"
-#include "tps.h"
 #include "system-common.h"
 #include "misc.h"
 #include "parse.h"
+#include "log-core.h"
+
+#include "viaccess.h"
+#include "tps.h"
 #include "log-viaccess.h"
 
 #define SYSTEM_NAME          "Viaccess"
@@ -47,6 +50,7 @@ ADD_MODULE(L_SYS,lm_sys)
 
 class cPlainKeyVia : public cPlainKeyStd {
 protected:
+  virtual int IdSize(void) { return 6; }
   virtual cString PrintKeyNr(void);
 public:
   cPlainKeyVia(bool Super);
@@ -76,7 +80,6 @@ bool cPlainKeyVia::SetBinKey(unsigned char *Mem, int Keylen)
 bool cPlainKeyVia::Parse(const char *line)
 {
   unsigned char sid[3], skeynr, skey[VIA2_KEYLEN];
-  const char *sline=line;
   int len;
   if(GetChar(line,&type,1) && (len=GetHex(line,sid,3,false))) {
      type=toupper(type); id=Bin2Int(sid,len);
@@ -101,13 +104,13 @@ bool cPlainKeyVia::Parse(const char *line)
        return true;
        }
     }
-  FormatError("viaccess",sline);
   return false;
 }
 
 cString cPlainKeyVia::PrintKeyNr(void)
 {
-  char tmp[8], *kn=tmp;
+  char tmp[12];
+  const char *kn=tmp;
   switch(keynr) {
     case MBC3('T','P','S'):
       kn="TPS"; break;
@@ -115,7 +118,7 @@ cString cPlainKeyVia::PrintKeyNr(void)
     case MBC3('M','K',3): case MBC3('M','K',4): case MBC3('M','K',5):
     case MBC3('M','K',6): case MBC3('M','K',7): case MBC3('M','K',8):
     case MBC3('M','K',9):
-      snprintf(tmp,sizeof(tmp),"MK%d",C3(keynr)); break;
+      snprintf(tmp,sizeof(tmp),"TPSMK%d",C3(keynr)); break;
     default:
       snprintf(tmp,sizeof(tmp),"%02X",keynr); break;
     }
@@ -124,15 +127,11 @@ cString cPlainKeyVia::PrintKeyNr(void)
 
 // -- cViaccessCardInfo --------------------------------------------------------
 
-class cViaccessCardInfo : public cProviderViaccess, public cCardViaccess {
+class cViaccessCardInfo : public cStructItem, public cProviderViaccess, public cCardViaccess {
 public:
   unsigned char keyno, key[8];
   //
   bool Parse(const char *line);
-  bool Save(FILE *f) { return true; }
-  bool IsUpdated(void) { return false; }
-  void Updated(void) {}
-  bool Cmp(cViaccessCardInfo *ci) { return false; }
   };
 
 bool cViaccessCardInfo::Parse(const char *line)
@@ -148,7 +147,7 @@ bool cViaccessCardInfo::Parse(const char *line)
 
 class cViaccessCardInfos : public cCardInfos<cViaccessCardInfo> {
 public:
-  cViaccessCardInfos(void):cCardInfos<cViaccessCardInfo>(SYSTEM_NAME) {}
+  cViaccessCardInfos(void):cCardInfos<cViaccessCardInfo>("Viaccess cards","Viaccess.KID",0) {}
   };
 
 static cViaccessCardInfos Vcards;
@@ -476,7 +475,7 @@ void cSystemViaccess::ProcessEMM(int pid, int caid, unsigned char *data)
                   numKeys++;
                   }
                 else {
-                  PRINTF(L_SYS_EMM,"%d: key length mismatch %d!=%d",CardNum(),plen,sizeof(newKey[0]));
+                  PRINTF(L_SYS_EMM,"%d: key length mismatch %d!=%d",CardNum(),plen,(int)sizeof(newKey[0]));
                   cnt=scanlen;
                   }
                 break;
@@ -505,7 +504,6 @@ void cSystemViaccess::ProcessEMM(int pid, int caid, unsigned char *data)
                     FoundKey();
                     if(keys.NewKey('V',updPrv[numKeys],updKey[numKeys],newKey[numKeys],8)) NewKey();
                     }
-                  cLoaders::SaveCache();
                   }
                 else
                   PRINTF(L_SYS_EMM,"%02X%02X %02X %s %s - FAIL",mkey->ident[0],mkey->ident[1],mkey->keyno,addr,ptext[updtype]);
@@ -527,7 +525,6 @@ public:
   cSystemLinkViaccess(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual cSystem *Create(void) { return new cSystemViaccess; }
-  virtual bool Init(const char *cfgdir);
   };
 
 static cSystemLinkViaccess staticInit;
@@ -542,10 +539,4 @@ bool cSystemLinkViaccess::CanHandle(unsigned short SysId)
 {
   SysId&=SYSTEM_MASK;
   return SYSTEM_CAN_HANDLE(SysId);
-}
-
-bool cSystemLinkViaccess::Init(const char *cfgdir)
-{
-  Vcards.Load(cfgdir,SYSTEM_NAME,"Viaccess.KID");
-  return true;
 }
