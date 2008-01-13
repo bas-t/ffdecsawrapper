@@ -80,16 +80,24 @@ struct LogModule {
   const char *Name, *OptName[LOPT_NUM];
   };
 
-struct LogHeader;
+struct LogHeader {
+  int c;
+  char stamp[32];
+  char tag[64];
+  };
 
 class cLogging {
 private:
+  static void (*LogPrint)(const struct LogHeader *lh, const char *txt);
+  //
+  static void PrivateLogPrint(const struct LogHeader *lh, const char *txt);
   static bool GetHeader(int c, struct LogHeader *lh);
   static void LogLine(const struct LogHeader *lh, const char *txt, bool doCrc=true);
   static const struct LogModule *GetModule(int c);
   static void UpgradeOptions(int m);
 public:
   static bool AddModule(int m, const struct LogModule *dm);
+  static void SetLogPrint(void (*lp)(const struct LogHeader *lh, const char *txt));
   //
   static void Printf(int c, const char *format, ...) __attribute__ ((format (printf,2,3)));
   static void Puts(int c, const char *txt);
