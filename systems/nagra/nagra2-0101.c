@@ -436,8 +436,10 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       break;
       }
     case 0x3b:
-      MonInit(132); // or 66*wordsize ?
-      MonMul(B,A,B);
+      if(!l) l=wordsize;
+      MonInit(wordsize*60+4*l);
+      I.GetLE(data,l<<3);
+      MonMul(B,I,B);
       break;
     case 0x3e:
       {
@@ -748,6 +750,11 @@ bool cN2Prov0101::ProcessMap(int f)
     case 0x22:
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
       AddCycles(MapCycles());
+      break;
+    case 0x3b:
+      size=Get(0x48); if(!size) size=wordsize;
+      GetMem(HILO(0x44),tmp,size<<3,0);
+      DoMap(f,tmp,size);
       break;
     case 0x3e:
       GetMem(HILO(0x44),tmp,size,0);
