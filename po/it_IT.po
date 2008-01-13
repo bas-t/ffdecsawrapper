@@ -18,7 +18,7 @@ msgid "Key update"
 msgstr ""
 
 msgid "off"
-msgstr "spento"
+msgstr "disattivo"
 
 msgid "SoftCAM"
 msgstr "SoftCAM"
@@ -41,10 +41,10 @@ msgid "Smartcard"
 msgstr "Smartcard"
 
 msgid "Reset card"
-msgstr "Reimposta scheda"
+msgstr "Reimposta smartcard"
 
 msgid "Really reset card?"
-msgstr "Reimpostare la scheda?"
+msgstr "Reimpostare smartcard?"
 
 msgid "Module config"
 msgstr "Configurazione modulo"
@@ -59,7 +59,7 @@ msgid "Module"
 msgstr "Modulo"
 
 msgid "Message logging"
-msgstr "Messaggio di log"
+msgstr "Opzioni di log"
 
 msgid "Disable ALL modules"
 msgstr "Disabilita TUTTI i moduli"
@@ -74,13 +74,13 @@ msgid "Really reset ALL modules to default?"
 msgstr "Reimpostare TUTTI i moduli ai default?"
 
 msgid "Cryptsystem options"
-msgstr "Opzioni Cryptsystem"
+msgstr "Opzioni Sistemi"
 
 msgid "Cryptsystem options..."
-msgstr "Opzioni Cryptsystem..."
+msgstr "Opzioni Sistemi..."
 
 msgid "Message logging..."
-msgstr "Messaggio di log..."
+msgstr "Opzioni di log..."
 
 msgid "Smartcard interface"
 msgstr "Interfaccia Smartcard"
@@ -89,7 +89,7 @@ msgid "(empty)"
 msgstr "(vuota)"
 
 msgid "Status information..."
-msgstr "Informazioni stato..."
+msgstr "Informazioni SoftCam"
 
 msgid "Flush ECM cache"
 msgstr "Svuota cache ECM"
@@ -116,7 +116,7 @@ msgid "all CAIDs"
 msgstr "tutti i CAIDs"
 
 msgid "Update keys (AU)"
-msgstr "Aggiorna chiavi (AU)"
+msgstr "Aggiornamento chiavi (AU)"
 
 msgid "Start AU on EPG scan"
 msgstr "Avvia AU con la scansione EPG"
@@ -182,7 +182,7 @@ msgid "Nagra2: AUXserver password"
 msgstr "Nagra2: password AUXserver"
 
 msgid "don't touch"
-msgstr "non toccare"
+msgstr "lascia invariato"
 
 msgid "disable"
 msgstr "disabilita"
@@ -194,10 +194,10 @@ msgid "allow ALL"
 msgstr "permetti TUTTI"
 
 msgid "block UNIQUE"
-msgstr "blocco UNICO"
+msgstr "blocca al Seriale"
 
 msgid "block SHARED"
-msgstr "blocco CONDIVISO"
+msgstr "blocca al Gruppo"
 
 msgid "block ALL"
 msgstr "blocca TUTTO"
