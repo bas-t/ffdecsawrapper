@@ -31,12 +31,6 @@
 #define LMOD_SUP 32
 #define LMOD_CFG_VALID  0x80000000
 
-struct LogHeader {
-  int c;
-  char stamp[32];
-  char tag[64];
-  };
-
 struct LogConfig logcfg = {
   1,0,0,
   0,
@@ -64,6 +58,8 @@ static cMutex lastMutex;
 
 // -- cLogging -----------------------------------------------------------------
 
+void (*cLogging::LogPrint)(const struct LogHeader *lh, const char *txt)=cLogging::PrivateLogPrint;
+
 bool cLogging::AddModule(int m, const struct LogModule *lm)
 {
   if(m<LMOD_SUP) {
@@ -75,6 +71,11 @@ bool cLogging::AddModule(int m, const struct LogModule *lm)
     }
   else Printf(L_GEN_DEBUG,"failed to add logging module %d (%s)",m,lm->Name);
   return true;
+}
+
+void cLogging::SetLogPrint(void (*lp)(const struct LogHeader *lh, const char *txt))
+{
+  LogPrint=lp;
 }
 
 const struct LogModule *cLogging::GetModule(int c)
@@ -126,6 +127,11 @@ void cLogging::LogLine(const struct LogHeader *lh, const char *txt, bool doCrc)
       }
     }
 
+  LogPrint(lh,txt);
+}
+
+void cLogging::PrivateLogPrint(const struct LogHeader *lh, const char *txt)
+{
   if(logcfg.logFile) {
     logfileMutex.Lock();
     if(logfileReopen) {
