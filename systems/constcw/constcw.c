@@ -56,7 +56,9 @@ static cPlainKeyTypeReg<cPlainKeyConstCw,'X'> KeyReg;
 
 cPlainKeyConstCw::cPlainKeyConstCw(bool Super)
 :cHexKey(Super)
-{}
+{
+  freq=-1;
+}
 
 bool cPlainKeyConstCw::Matches(const cEcmInfo *ecm)
 {
@@ -89,7 +91,7 @@ bool cPlainKeyConstCw::Parse(const char *line)
 
 cString cPlainKeyConstCw::PrintKeyNr(void)
 {
-  return cString::sprintf("%d:%c:%s:%d",freq,pol,*cSource::ToString(source),prgId);
+  return freq<0 ? "" : cString::sprintf("%d:%c:%s:%d",freq,pol,*cSource::ToString(source),prgId);
 }
 
 // -- cSystemConstCw ------------------------------------------------------------------
