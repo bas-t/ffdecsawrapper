@@ -441,6 +441,7 @@ void cStructLoaderPlain::Load(bool reload)
         SL_CLRFLAG(SL_LOADED);
         break;
         }
+      strreplace(buff,'\n',0); strreplace(buff,'\r',0); // chomp
       bool hasContent=false;
       char *ls;
       for(ls=buff; *ls; ls++) {
