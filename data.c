@@ -931,11 +931,14 @@ cPlainKey *cPlainKeys::ParseLine(char *line)
 cString cPlainKeys::KeyString(int Type, int Id, int Keynr)
 {
   cPlainKey *pk=NewFromType(Type);
+  char *s;
   if(pk) {
     pk->type=Type; pk->id=Id; pk->keynr=Keynr;
-    return cString::sprintf("%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
+    asprintf(&s,"%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
+    delete pk;
     }
-  return "unknown";
+  else s=strdup("unknown");
+  return cString(s,true);
 }
 
 void cPlainKeys::PostLoad(void)
