@@ -165,10 +165,11 @@ protected:
   void MakeJ0(BIGNUM *j, BIGNUM *d);
   void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
   void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int words);
   // statefull
   void MonInit(int bits=0);
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b) { MonMul(o,a,b,C,D,J); }
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b) { MonMul(o,a,b,C,D,J,0); }
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int words) { MonMul(o,a,b,C,D,J,words); }
   void MonExpNeg(void);
   // ECC
   void DoubleP(int temp);

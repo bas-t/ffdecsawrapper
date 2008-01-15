@@ -439,7 +439,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       if(!l) l=wordsize;
       MonInit(wordsize*60+4*l);
       I.GetLE(data,l<<3);
-      MonMul(B,I,B);
+      MonMul(B,I,B,l);
       break;
     case 0x3e:
       {
