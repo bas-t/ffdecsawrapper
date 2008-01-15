@@ -542,7 +542,8 @@ protected:
   int mecmAddr[2];
   int mecmKeyId;
   //
-  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw);
+  virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw);
+  virtual void DynamicHD(unsigned char *hd, const unsigned char *ed);
   virtual bool RomInit(void);
   virtual void Stepper(void);
   virtual void TimerHandler(unsigned int num);
@@ -564,7 +565,16 @@ cN2Prov0101::cN2Prov0101(int Id, int Flags)
   desSize=16; hwMapper=0;
 }
 
-bool cN2Prov0101::Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw)
+void cN2Prov0101::DynamicHD(unsigned char *hd, const unsigned char *ed)
+{
+  hd[5]=ed[5];
+  hd[6]=(ed[7]&0xEF) | ((ed[6]&0x40)>>2);
+  hd[7]=ed[8];
+  hd[8]=(ed[9]&0x7F) | ((ed[6]&0x20)<<2);
+  hd[9]=ed[6]&0x80;
+}
+
+bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 {
   if(algo!=0x40 && algo!=0x60) {
     PRINTF(L_SYS_ECM,"%04X: unknown MECM algo %02x",id,algo);
@@ -603,12 +613,6 @@ bool cN2Prov0101::Algo(int algo, unsigned char *hd, const unsigned char *ed, uns
      return false;
     }
 
-  // dynamic expand
-  hd[5]=ed[5];
-  hd[6]=(ed[7]&0xEF) | ((ed[6]&0x40)>>2);
-  hd[7]=ed[8];
-  hd[8]=(ed[9]&0x7F) | ((ed[6]&0x20)<<2);
-  hd[9]=ed[6]&0x80;
   memcpy(hw,hd,seedSize);
   ExpandInput(hw);
 

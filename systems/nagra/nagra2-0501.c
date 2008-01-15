@@ -71,7 +71,7 @@ private:
   bool RomCallbacks(void);
   void AddRomCallbacks(void);
 protected:
-  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw);
+  virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw);
   virtual bool NeedsCwSwap(void) { return true; }
   virtual bool RomInit(void);
   virtual void TimerHandler(unsigned int num);
@@ -89,7 +89,7 @@ cN2Prov0501::cN2Prov0501(int Id, int Flags)
   hwMapper=0;
 }
 
-bool cN2Prov0501::Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw)
+bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 {
   if(algo==0x60) {
     hw[0]=hd[0];
