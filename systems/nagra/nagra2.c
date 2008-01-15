@@ -587,13 +587,14 @@ bool cN2Prov::MECM(unsigned char in15, int algo, const unsigned char *ed, unsign
   hd[2]=cw[15];
   hd[3]=cw[6];
   hd[4]=cw[7];
+  DynamicHD(hd,ed);
 
   if(keyValid && !memcmp(seed,hd,seedSize)) {	// key cached
     memcpy(buf,cwkey,8);
     }
   else {				// key not cached
     memset(hw,0,sizeof(hw));
-    if(!Algo(algo,hd,ed,hw)) return false;
+    if(!Algo(algo,hd,hw)) return false;
     memcpy(&hw[128],hw,64);
     RotateBytes(&hw[64],128);
     SHA1(&hw[64],128,buf);

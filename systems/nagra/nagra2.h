@@ -201,7 +201,8 @@ protected:
   int id, flags, seedSize;
   cIDEA idea;
   //
-  virtual bool Algo(int algo, unsigned char *hd, const unsigned char *ed, unsigned char *hw) { return false; }
+  virtual bool Algo(int algo, const unsigned char *hd, unsigned char *hw) { return false; }
+  virtual void DynamicHD(unsigned char *hd, const unsigned char *ed) {}
   virtual bool NeedsCwSwap(void) { return false; }
   void ExpandInput(unsigned char *hw);
 public:
