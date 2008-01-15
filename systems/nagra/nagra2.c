@@ -266,9 +266,9 @@ void cMapCore::MakeJ0(BIGNUM *j, BIGNUM *d)
   BN_mod_inverse(j,j,x,ctx);
 }
 
-void cMapCore::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j)
+void cMapCore::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int words)
 {
-  int words=(BN_num_bytes(a)+7)>>3;
+  if(!words) words=wordsize;
   BN_zero(s);
   for(int i=0; i<words;) {
     BN_rshift(x,a,(i++)<<6);
