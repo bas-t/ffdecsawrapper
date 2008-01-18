@@ -1,7 +1,7 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
-..2008: Version 0.8.7
+18.01.2008: Version 0.8.7
 - Several changes to the Nagra2 code including HW reg mapper, map cycle counts,
   0501 AU, 0101 auxed map57, tableless map3e and new build system.
 - Increased smartcard info buffer size.
@@ -10,6 +10,7 @@ VDR Plugin 'sc' Revision History
 - Fixed RotateBytes to be robust against bad input.
 - Updated Makefile for HG.
 - Updated italian, russian, finnish translations.
+- The 0.8.x branch is now frozen, only bugfixes will be applied.
 
 21.12.2007: Version 0.8.6
 - Added Nagra2 0501 dyn. AU execution fix.
