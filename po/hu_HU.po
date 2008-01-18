@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.11\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2008-01-07 22:10+0100\n"
+"POT-Creation-Date: 2008-01-18 18:31+0100\n"
 "PO-Revision-Date: 2007-11-01 16:45+0200\n"
 "Last-Translator: jv\n"
 "Language-Team: somebody\n"
@@ -115,10 +115,19 @@ msgstr "aktív CAIDok"
 msgid "all CAIDs"
 msgstr "minden CAID"
 
+msgid "comment out"
+msgstr ""
+
+msgid "remove"
+msgstr ""
+
 msgid "Update keys (AU)"
 msgstr "Kulcsok automatikus frissítése (AU)"
 
 msgid "Start AU on EPG scan"
+msgstr ""
+
+msgid "Superseded keys"
 msgstr ""
 
 msgid "Concurrent FF streams"

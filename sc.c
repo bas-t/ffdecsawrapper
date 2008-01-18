@@ -944,15 +944,16 @@ cScSetup ScSetup;
 
 cScSetup::cScSetup(void)
 {
-  AutoUpdate = 1;
+  AutoUpdate=1;
   memset(ScCaps,0,sizeof(ScCaps));
-  ScCaps[0] = 1;
-  ScCaps[1] = 2;
-  ConcurrentFF = 0;
+  ScCaps[0]=1;
+  ScCaps[1]=2;
+  ConcurrentFF=0;
   memset(CaIgnore,0,sizeof(CaIgnore));
-  LocalPriority = 0;
-  ForceTransfer = 1;
-  PrestartAU = 0;
+  LocalPriority=0;
+  ForceTransfer=1;
+  PrestartAU=0;
+  SuperKeys=0;
 }
 
 void cScSetup::Check(void)
@@ -1203,9 +1204,11 @@ public:
 cScPlugin::cScPlugin(void)
 {
   static const char *logg[] = { trNOOP("off"),trNOOP("active CAIDs"),trNOOP("all CAIDs") };
-  ScOpts=new cOpts(0,7);
+  static const char *skey[] = { trNOOP("comment out"),trNOOP("remove") };
+  ScOpts=new cOpts(0,8);
   ScOpts->Add(new cOptSel  ("AutoUpdate"   ,trNOOP("Update keys (AU)")     ,&ScSetup.AutoUpdate,3,logg));
   ScOpts->Add(new cOptBool ("PrestartAU"   ,trNOOP("Start AU on EPG scan") ,&ScSetup.PrestartAU));
+  ScOpts->Add(new cOptSel  ("SuperKeys"    ,trNOOP("Superseded keys")      ,&ScSetup.SuperKeys,2,skey));
   ScOpts->Add(new cOptBool ("ConcurrentFF" ,trNOOP("Concurrent FF streams"),&ScSetup.ConcurrentFF));
   ScOpts->Add(new cOptBool ("ForceTranfer" ,trNOOP("Force TransferMode")   ,&ScSetup.ForceTransfer));
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
