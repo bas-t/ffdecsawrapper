@@ -1015,14 +1015,6 @@ bool cSoftCAM::Load(const char *cfgdir)
   return true;
 }
 
-void cSoftCAM::HouseKeeping(void)
-{
-  if(Feature.KeyFile()) keys.HouseKeeping();
-  if(!Active(false)) cStructLoaders::Purge();
-  cStructLoaders::Load(true);
-  cStructLoaders::Save();
-}
-
 void cSoftCAM::Shutdown(void)
 {
   cStructLoaders::Save(true);
@@ -1067,6 +1059,48 @@ bool cSoftCAM::TriggerHook(int CardNum, int id)
 {
   cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
   return dev && dev->Cam() && dev->Cam()->TriggerHook(id);
+}
+
+// --- cScHousekeeper ----------------------------------------------------------
+
+class cScHousekeeper : public cThread {
+protected:
+  virtual void Action(void);
+public:
+  cScHousekeeper(void);
+  ~cScHousekeeper();
+  };
+
+cScHousekeeper::cScHousekeeper(void)
+:cThread("SC housekeeper")
+{
+  Start();
+}
+
+cScHousekeeper::~cScHousekeeper()
+{
+  Cancel(3);
+}
+
+void cScHousekeeper::Action(void)
+{
+  int c=0;
+  while(Running()) {
+    if(++c==20) {
+      c=0;
+      for(int n=cDevice::NumDevices(); --n>=0;) {
+        cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
+        if(dev && dev->Cam()) dev->Cam()->HouseKeeping();
+        }
+      }
+
+    if(Feature.KeyFile()) keys.HouseKeeping();
+    if(!cSoftCAM::Active(false)) cStructLoaders::Purge();
+    cStructLoaders::Load(true);
+    cStructLoaders::Save();
+
+    cCondWait::SleepMs(987);
+    }
 }
 
 #ifndef STATICBUILD
@@ -1183,6 +1217,7 @@ private:
 #ifndef STATICBUILD
   cScDlls dlls;
 #endif
+  cScHousekeeper *keeper;
 public:
   cScPlugin(void);
   virtual ~cScPlugin();
@@ -1193,7 +1228,6 @@ public:
   virtual bool Initialize(void);
   virtual bool Start(void);
   virtual void Stop(void);
-  virtual void Housekeeping(void);
   virtual void MainThreadHook(void);
   virtual cMenuSetupPage *SetupMenu(void);
   virtual bool SetupParse(const char *Name, const char *Value);
@@ -1225,10 +1259,12 @@ cScPlugin::cScPlugin(void)
   dlls.Load();
 #endif
   cScDvbDevice::Capture();
+  keeper=0;
 }
 
 cScPlugin::~cScPlugin()
 {
+  delete keeper;
   delete ScOpts;
   delete LogOpts;
 }
@@ -1271,11 +1307,13 @@ bool cScPlugin::Start(void)
     smartcards.LaunchWatcher();
     }
   cScDvbDevice::Startup();
+  keeper=new cScHousekeeper;
   return true;
 }
 
 void cScPlugin::Stop(void)
 {
+  delete keeper; keeper=0;
   cScDvbDevice::Shutdown();
   LogStatsDown();
   cSoftCAM::Shutdown();
@@ -1361,15 +1399,6 @@ bool cScPlugin::SetupParse(const char *Name, const char *Value)
   else if(!strcasecmp(Name,"LogConfig")) cLogging::ParseConfig(Value);
   else return false;
   return true;
-}
-
-void cScPlugin::Housekeeping(void)
-{
-  for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
-    if(dev && dev->Cam()) dev->Cam()->HouseKeeping();
-    }
-  cSoftCAM::HouseKeeping();
 }
 
 #ifndef SASC

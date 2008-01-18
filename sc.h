@@ -28,7 +28,6 @@ class cLogHook;
 class cSoftCAM {
 public:
   static bool Load(const char *cfgdir);
-  static void HouseKeeping(void);
   static void Shutdown(void);
   //
   static bool Active(bool log);
