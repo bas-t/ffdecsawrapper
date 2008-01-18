@@ -32,7 +32,7 @@
 #define LMOD_CFG_VALID  0x80000000
 
 struct LogConfig logcfg = {
-  1,0,0,
+  1,0,0,0,
   0,
   "/var/log/vdr-sc"
   };
@@ -400,6 +400,55 @@ int cLogging::GetClassByName(const char *name)
       }
     }
   return -1;  
+}
+
+// -- cUserMsg -----------------------------------------------------------------
+
+cUserMsg::cUserMsg(const char *m)
+{
+  msg=strdup(m);
+}
+
+cUserMsg::~cUserMsg()
+{
+  free(msg);
+}
+
+// -- cUserMsgs ----------------------------------------------------------------
+
+cUserMsgs ums;
+
+cUserMsgs::cUserMsgs(void)
+{
+  mutex=new cMutex;
+}
+
+cUserMsgs::~cUserMsgs()
+{
+  delete mutex;
+}
+
+void cUserMsgs::Queue(const char *fmt, ...)
+{
+  if(logcfg.logUser) {
+    char buff[1024];
+    va_list ap;
+    va_start(ap,fmt);
+    vsnprintf(buff,sizeof(buff),fmt,ap);
+    va_end(ap);
+    mutex->Lock();
+    Add(new cUserMsg(buff));
+    mutex->Unlock();
+    }
+}
+
+cUserMsg *cUserMsgs::GetQueuedMsg(void)
+{
+  mutex->Lock();
+  cUserMsg *um=First();
+  if(um) Del(um,false);
+  mutex->Unlock();
+  return um;
 }
 
 // -- cLogLineBuff -------------------------------------------------------------

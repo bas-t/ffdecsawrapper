@@ -17,7 +17,6 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -955,7 +954,6 @@ void cSystemNagra::ProcessEMM(int pid, int caid, unsigned char *buffer)
             FoundKey();
             if(keys.NewKey('N',pkKeyId,ADDC3(MBC('E','1'),KEYSET(0,i,0)),e1,64)) NewKey();
             }
-          cLoaders::SaveCache();
           }
         break; // don't process other nanos
         }
@@ -992,7 +990,6 @@ void cSystemNagra::ProcessEMM(int pid, int caid, unsigned char *buffer)
       if(keys.NewKey('N',keyId,00,key0,8)) NewKey();
       FoundKey();
       if(keys.NewKey('N',keyId,01,key1,8)) NewKey();
-      cLoaders::SaveCache();
       }
     }
 }

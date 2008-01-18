@@ -4,6 +4,7 @@
 
 #include "data.h"
 #include "system.h"
+#include "log.h"
 #include "compat.h"
 #include <vdr/sources.h>
 

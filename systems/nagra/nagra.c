@@ -17,9 +17,9 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "nagra.h"
 #include "nagra-def.h"
@@ -101,7 +101,6 @@ void cPlainKeyNagra::GetTagDef(int nr, int &romnr, int &pk, int &keytype)
 bool cPlainKeyNagra::Parse(const char *line)
 {
   unsigned char sid[2];
-  const char *sline=line;
   int len;
   if(GetChar(line,&type,1) && (len=GetHex(line,sid,2,false))) {
     type=toupper(type); id=Bin2Int(sid,len); 
@@ -172,7 +171,6 @@ bool cPlainKeyNagra::Parse(const char *line)
       return true;
       }
     }
-  FormatError("nagra",sline);
   return false;
 }
 

@@ -56,7 +56,9 @@ static cPlainKeyTypeReg<cPlainKeyConstCw,'X'> KeyReg;
 
 cPlainKeyConstCw::cPlainKeyConstCw(bool Super)
 :cHexKey(Super)
-{}
+{
+  freq=-1;
+}
 
 bool cPlainKeyConstCw::Matches(const cEcmInfo *ecm)
 {
@@ -66,7 +68,6 @@ bool cPlainKeyConstCw::Matches(const cEcmInfo *ecm)
 bool cPlainKeyConstCw::Parse(const char *line)
 {
   unsigned char caid[2], skey[PLAINLEN_CW];
-  const char *sline=line;
   if(GetChar(line,&type,1) && GetHex(line,caid,2)) {
     int num;
     char srcBuf[16];
@@ -85,13 +86,12 @@ bool cPlainKeyConstCw::Parse(const char *line)
         }
       }
     }
-  FormatError("constcw",sline);
   return false;
 }
 
 cString cPlainKeyConstCw::PrintKeyNr(void)
 {
-  return cString::sprintf("%d:%c:%s:%d",freq,pol,*cSource::ToString(source),prgId);
+  return freq<0 ? "" : cString::sprintf("%d:%c:%s:%d",freq,pol,*cSource::ToString(source),prgId);
 }
 
 // -- cSystemConstCw ------------------------------------------------------------------

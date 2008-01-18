@@ -30,7 +30,7 @@ public:
   static bool Load(const char *cfgdir);
   static void Shutdown(void);
   //
-  static bool Active(void);
+  static bool Active(bool log);
   static char *CurrKeyStr(int CardNum, int num);
   static void SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on);
   static void AddHook(int CardNum, cLogHook *hook);

@@ -17,11 +17,10 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
+#include <ctype.h>
 
-#include "system.h"
 #include "system-common.h"
 #include "crypto.h"
 #include "data.h"
@@ -151,14 +150,12 @@ cPlainKeyConax::cPlainKeyConax(bool Super)
 bool cPlainKeyConax::Parse(const char *line)
 {
   unsigned char sid, skey[PLAINLEN_CONAX];
-  const char *sline=line;
   if(GetChar(line,&type,1) && GetHex(line,&sid,1) &&
      GetChar(line,&keynr,1) && GetHex(line,skey,PLAINLEN_CONAX)) {
     type=toupper(type); keynr=toupper(keynr); id=sid;
     SetBinKey(skey,PLAINLEN_CONAX);
     return true;
     }
-  FormatError("conax",sline);
   return false;
 }
 

@@ -6,13 +6,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2007-12-19 18:52+0100\n"
+"POT-Creation-Date: 2008-01-18 18:31+0100\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-15\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Key update"
+msgstr ""
 
 msgid "off"
 msgstr "disattivo"
@@ -112,11 +115,20 @@ msgstr "CAIDs attivi"
 msgid "all CAIDs"
 msgstr "tutti i CAIDs"
 
+msgid "comment out"
+msgstr ""
+
+msgid "remove"
+msgstr ""
+
 msgid "Update keys (AU)"
 msgstr "Aggiornamento chiavi (AU)"
 
 msgid "Start AU on EPG scan"
 msgstr "Avvia AU con la scansione EPG"
+
+msgid "Superseded keys"
+msgstr ""
 
 msgid "Concurrent FF streams"
 msgstr "Flussi simultanei per scheda FF"
@@ -147,6 +159,9 @@ msgstr "Limite dimensione file (KB)"
 
 msgid "Log to syslog"
 msgstr "Log in Syslog"
+
+msgid "Show user messages"
+msgstr ""
 
 msgid "A software emulated CAM"
 msgstr "Un software di emulazione CAM"
@@ -200,4 +215,4 @@ msgid "SC-Seca: EMM updates"
 msgstr "SC-Seca: aggiornamenti EMM"
 
 msgid "SC-Seca: activate PPV"
-msgstr "SC-Seca: attiva PPV" 
+msgstr "SC-Seca: attiva PPV"

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2007-12-19 18:52+0100\n"
+"POT-Creation-Date: 2008-01-18 18:31+0100\n"
 "PO-Revision-Date: 2008-01-03 14:21+0100\n"
 "Last-Translator: somebody\n"
 "Language-Team: ru\n"
@@ -14,6 +14,9 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-5\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: KBabel 1.11.4\n"
+
+msgid "Key update"
+msgstr ""
 
 msgid "off"
 msgstr "выкл"
@@ -113,11 +116,20 @@ msgstr "активные CAID"
 msgid "all CAIDs"
 msgstr "все CAID"
 
+msgid "comment out"
+msgstr ""
+
+msgid "remove"
+msgstr ""
+
 msgid "Update keys (AU)"
 msgstr "Обновлять ключи (AU)"
 
 msgid "Start AU on EPG scan"
 msgstr "Старт автообновления при EPG сканировании"
+
+msgid "Superseded keys"
+msgstr ""
 
 msgid "Concurrent FF streams"
 msgstr "Параллельные потоки FF"
@@ -148,6 +160,9 @@ msgstr "Лимит файла (кБ)"
 
 msgid "Log to syslog"
 msgstr "Сообщения в Syslog"
+
+msgid "Show user messages"
+msgstr ""
 
 msgid "A software emulated CAM"
 msgstr "Програмный эмулятор CAM"

@@ -60,6 +60,8 @@
 #define MAX_ECM_HOLD    15000 // delay before an idle handler stops processing
 #define CAID_TIME      300000 // time between caid scans
 
+#define ECMCACHE_FILE "ecm.cache"
+
 #define L_HEX       2
 #define L_HEX_ECM   LCLASS(L_HEX,2)
 #define L_HEX_EMM   LCLASS(L_HEX,4)
@@ -569,28 +571,12 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
 // -- cEcmData -----------------------------------------------------------------
 
 class cEcmData : public cEcmInfo {
-private:
-  bool del;
 public:
-  cEcmData(void);
-  cEcmData(cEcmInfo *e);
-  bool Save(FILE *f);
+  cEcmData(void):cEcmInfo() {}
+  cEcmData(cEcmInfo *e):cEcmInfo(e) {}
+  virtual cString ToString(bool hide);
   bool Parse(const char *buf);
-  void Delete(void) { del=true; }
-  bool IsDeleted(void) const { return del; }
   };
-
-cEcmData::cEcmData(void)
-:cEcmInfo()
-{
-  del=false;
-}
-
-cEcmData::cEcmData(cEcmInfo *e)
-:cEcmInfo(e)
-{
-  del=false;
-}
 
 bool cEcmData::Parse(const char *buf)
 {
@@ -609,16 +595,21 @@ bool cEcmData::Parse(const char *buf)
   return false;
 }
 
-bool cEcmData::Save(FILE *f)
+cString cEcmData::ToString(bool hide)
 {
-  fprintf(f,"%d:%x:%x:%s:%x/%x:%x:%x/%x",prgId,source,transponder,name,caId,emmCaId,provId,ecm_pid,ecm_table);
+  char *str;
   if(data) {
-    char *str=AUTOARRAY(char,dataLen*2+2);
-    fprintf(f,":%d:%s\n",dataLen,HexStr(str,data,dataLen));
+    str=AUTOARRAY(char,dataLen*2+2);
+    sprintf(str,":%d:%s",dataLen,HexStr(str,data,dataLen));
     }
-  else
-    fprintf(f,":0\n");
-  return ferror(f)==0;
+  else {
+    str=AUTOARRAY(char,4);
+    strcpy(str,":0");
+    }
+  return cString::sprintf("%d:%x:%x:%s:%x/%x:%x:%x/%x%s",
+                            prgId,source,transponder,name,
+                            caId,emmCaId,provId,ecm_pid,ecm_table,
+                            str);
 }
 
 // -- cEcmCache ----------------------------------------------------------------
@@ -626,12 +617,12 @@ bool cEcmData::Save(FILE *f)
 cEcmCache ecmcache;
 
 cEcmCache::cEcmCache(void)
-:cLoader("ECM")
+:cStructListPlain<cEcmData>("ecm cache",ECMCACHE_FILE,SL_READWRITE|SL_MISSINGOK)
 {}
 
 void cEcmCache::New(cEcmInfo *e)
 {
-  Lock();
+  ListLock(true);
   cEcmData *dat;
   if(!(dat=Exists(e))) {
     dat=new cEcmData(e);
@@ -647,24 +638,25 @@ void cEcmCache::New(cEcmInfo *e)
     if(dat->Update(e))
       Modified();
     }
+  ListUnlock();
   e->SetCached();
-  Unlock();
 }
 
 cEcmData *cEcmCache::Exists(cEcmInfo *e)
 {
-  for(cEcmData *dat=First(); dat; dat=Next(dat))
-    if(!dat->IsDeleted() && dat->Compare(e)) return dat;
-  return 0;
+  cEcmData *dat;
+  for(dat=First(); dat; dat=Next(dat))
+    if(dat->Compare(e)) break;
+  return dat;
 }
 
 int cEcmCache::GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int Transponder)
 {
   int n=0;
   list->Clear();
-  Lock();
+  ListLock(false);
   for(cEcmData *dat=First(); dat; dat=Next(dat)) {
-    if(!dat->IsDeleted() && dat->prgId==sid && dat->source==Source && dat->transponder==Transponder) {
+    if(dat->prgId==sid && dat->source==Source && dat->transponder==Transponder) {
       cEcmInfo *e=new cEcmInfo(dat);
       if(e) {
         PRINTF(L_CORE_ECM,"from cache: system %s (%04x) id %04x with ecm %x/%x",e->name,e->caId,e->provId,e->ecm_pid,e->ecm_table);
@@ -674,68 +666,36 @@ int cEcmCache::GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int T
         }
       }
     }
-  Unlock();
+  ListUnlock();
   return n;
 }
 
 void cEcmCache::Delete(cEcmInfo *e)
 {
-  Lock();
+  ListLock(false);
   cEcmData *dat=Exists(e);
+  ListUnlock();
   if(dat) {
-    dat->Delete();
-    Modified();
+    DelItem(dat);
     PRINTF(L_CORE_ECM,"invalidated cached prgId=%d source=%x transponder=%x ecm=%x/%x",dat->prgId,dat->source,dat->transponder,dat->ecm_pid,dat->ecm_table);
     }
-  Unlock();
 }
 
 void cEcmCache::Flush(void)
 {
-  Lock();
+  ListLock(true);
   Clear();
   Modified();
   PRINTF(L_CORE_ECM,"cache flushed");
-  Unlock();    
+  ListUnlock();
 }
 
-void cEcmCache::Load(void)
+bool cEcmCache::ParseLinePlain(const char *line)
 {
-  Lock();
-  Clear();
-  Unlock();
-}
-
-bool cEcmCache::Save(FILE *f)
-{
-  bool res=true;
-  Lock();
-  for(cEcmData *dat=First(); dat;) {
-    if(!dat->IsDeleted()) {
-      if(!dat->Save(f)) { res=false; break; }
-      dat=Next(dat);
-      }
-    else {
-      cEcmData *n=Next(dat);
-      Del(dat);
-      dat=n;
-      }
-    }
-  Modified(!res);
-  Unlock();
-  return res;
-}
-
-bool cEcmCache::ParseLine(const char *line, bool fromCache)
-{
-  bool res=false;
   cEcmData *dat=new cEcmData;
-  if(dat && dat->Parse(line)) {
-    if(!Exists(dat)) { Add(dat); dat=0; }
-    res=true;
-    }
+  if(dat && dat->Parse(line) && !Exists(dat)) { Add(dat); return true; }
   delete dat;
-  return res;
+  return false;
 }
 
 // -- cEcmSys ------------------------------------------------------------------
@@ -1251,7 +1211,6 @@ void cEcmHandler::EcmOk(void)
     if(e->Cached() && e->Failed()) ecmcache.Delete(e);
     e=ecmList.Next(e);
     }
-  cLoaders::SaveCache();
 }
 
 void cEcmHandler::EcmFail(void)
@@ -1443,12 +1402,12 @@ char *cCam::CurrentKeyStr(int num)
   return 0;
 }
 
-bool cCam::Active(void)
+bool cCam::Active(bool log)
 {
   cMutexLock lock(this);
   for(cEcmHandler *handler=handlerList.First(); handler; handler=handlerList.Next(handler))
     if(!handler->IsIdle()) {
-      PRINTF(L_GEN_INFO,"handler %s on card %d is not idle",handler->Id(),cardNum);
+      if(log) PRINTF(L_GEN_INFO,"handler %s on card %d is not idle",handler->Id(),cardNum);
       return true;
       }
   return false;

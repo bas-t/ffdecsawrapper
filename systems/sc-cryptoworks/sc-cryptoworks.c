@@ -17,9 +17,9 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "system-common.h"
 #include "smartcard.h"
@@ -29,6 +29,7 @@
 #include "opts.h"
 #include "misc.h"
 #include "log-sc.h"
+#include "log-core.h"
 
 #define SYSTEM_NAME          "SC-Cryptoworks"
 #define SYSTEM_PRI           -5
@@ -295,7 +296,7 @@ bool cSmartCardCryptoworks::Init(void)
                  atr->hist[2],atr->hist[3],caid,HexStr(str,&buff[2],5));
   PRINTF(L_SC_INIT,"card v.%d (pindown=%d) caid %04x serial %s MF %04X",atr->hist[2],atr->hist[3],caid,HexStr(str,&buff[2],5),mfid);
   if(ReadRecord(buff,0x9F)>=3) {
-    char *n="(unknown)";
+    const char *n="(unknown)";
     if(ReadRecord(buff+10,0xC0)>=18) n=(char *)buff+10+2;
     infoStr.Printf("Issuer:     0x%02x (%.16s)\n",buff[2],n);
     PRINTF(L_SC_INIT,"card issuer: 0x%02x %.16s",buff[2],n);
@@ -347,7 +348,7 @@ bool cSmartCardCryptoworks::Init(void)
     }
   for(unsigned int i=0; i<count ; i++) {
     if(SelectFile(0x1F00+provId[i])) {
-      char *n="(unknown)";
+      const char *n="(unknown)";
       if(SelectFile(0x0E11) && ReadRecord(buff,0xD6)>=18) n=(char *)buff+2;
       infoStr.Printf("Provider %d: 0x%02x (%.16s)\n",i,provId[i],n);
       PRINTF(L_SC_INIT,"provider %d: 0x%02x %.16s",i,provId[i],n);

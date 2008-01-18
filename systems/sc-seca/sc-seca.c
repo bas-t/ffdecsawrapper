@@ -196,7 +196,7 @@ bool cSmartCardSeca::Init(void)
 
   infoStr.Begin();
   infoStr.Strcat("Seca smartcard\n");
-  char *type;
+  const char *type;
   switch(atr->hist[0]*256+atr->hist[1]) {
     case 0x5084: type="Generic"; break;
     case 0x5384: type="Philips"; break;
