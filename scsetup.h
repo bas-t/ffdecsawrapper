@@ -34,6 +34,7 @@ public:
   int LocalPriority;
   int ForceTransfer;
   int PrestartAU;
+  int SuperKeys;
 public:
   cScSetup(void);
   void Check(void);

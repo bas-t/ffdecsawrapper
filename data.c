@@ -274,6 +274,13 @@ bool cStructLoader::CheckUnmodified(void)
   return true;
 }
 
+bool cStructLoader::CheckDoSave(void)
+{
+  return !SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE)
+         && !SL_TSTFLAG(SL_NOACCESS) && SL_TSTFLAG(SL_LOADED)
+         && IsModified() && CheckUnmodified();
+}
+
 void cStructLoader::LoadFinished(void)
 {
   SL_CLRFLAG(SL_SHUTUP);
@@ -383,13 +390,6 @@ void cStructLoader::Purge(void)
       }
     ListUnlock();
     }
-}
-
-bool cStructLoader::CheckDoSave(void)
-{
-  return !SL_TSTFLAG(SL_DISABLED) && SL_TSTFLAG(SL_READWRITE)
-         && !SL_TSTFLAG(SL_NOACCESS) && SL_TSTFLAG(SL_LOADED)
-         && IsModified() && CheckUnmodified();
 }
 
 void cStructLoader::Save(void)
@@ -891,7 +891,7 @@ bool cPlainKeys::AddNewKey(cPlainKey *nk, const char *reason)
   for(k=0; (k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,nk->Size(),k)); ) {
     if(nk->CanSupersede()) {
       PRINTF(L_GEN_INFO,"supersedes key: %s",*k->ToString(true));
-      DelItem(k,true);
+      DelItem(k,ScSetup.SuperKeys==0);
       }
     if(!ref) ref=k;
     }
