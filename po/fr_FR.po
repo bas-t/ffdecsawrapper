@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Key update"
-msgstr ""
+msgstr "Mise à jour des clés"
 
 msgid "off"
 msgstr "off"
@@ -27,7 +27,7 @@ msgid "Current keys:"
 msgstr "Clé courante:"
 
 msgid "Key update status:"
-msgstr "Mise à jour des clés Statut:"
+msgstr "Staut mise à jour des clés:"
 
 #. TRANSLATORS: 2 leading spaces!
 msgid "  [Seen keys]"
@@ -47,40 +47,40 @@ msgid "Really reset card?"
 msgstr "Réinitialiser vraiment la carte?"
 
 msgid "Module config"
-msgstr ""
+msgstr "Config module"
 
 msgid "Reset module to default"
-msgstr ""
+msgstr "Réinitiliser module par défaut"
 
 msgid "Really reset module to default?"
-msgstr ""
+msgstr "Vraiment réinitialiser module par défaut?"
 
 msgid "Module"
-msgstr ""
+msgstr "Module"
 
 msgid "Message logging"
-msgstr ""
+msgstr "Message à loguer"
 
 msgid "Disable ALL modules"
-msgstr ""
+msgstr "Desactiver TOUS les modules"
 
 msgid "Reset ALL modules to default"
-msgstr ""
+msgstr "Réinitialiser TOUS les modules par défaut"
 
 msgid "Really disable ALL modules?"
-msgstr ""
+msgstr "Vraiment désactiver TOUS les modules par défaut?"
 
 msgid "Really reset ALL modules to default?"
-msgstr ""
+msgstr "Vraiment réinitialiser TOUS les modules par défaut?"
 
 msgid "Cryptsystem options"
-msgstr ""
+msgstr "Options Cryptsystem"
 
 msgid "Cryptsystem options..."
-msgstr ""
+msgstr "Options Cryptsystem..."
 
 msgid "Message logging..."
-msgstr ""
+msgstr "Message à loguer..."
 
 msgid "Smartcard interface"
 msgstr "Interface Smartcard"
@@ -92,13 +92,13 @@ msgid "Status information..."
 msgstr "Statut information..."
 
 msgid "Flush ECM cache"
-msgstr ""
+msgstr "Vider cache ECM"
 
 msgid "Reload files"
 msgstr "Recharger les fichiers"
 
 msgid "Really flush ECM cache?"
-msgstr ""
+msgstr "Vraiement vider le cache"
 
 msgid "Really reload files?"
 msgstr "Vraiment recharger les fichiers?"
@@ -119,49 +119,49 @@ msgid "comment out"
 msgstr ""
 
 msgid "remove"
-msgstr ""
+msgstr "Supprimer"
 
 msgid "Update keys (AU)"
 msgstr "Mise à jour des Clés (AU)"
 
 msgid "Start AU on EPG scan"
-msgstr ""
+msgstr "Démarrer AU lors du scan EPG"
 
 msgid "Superseded keys"
-msgstr ""
+msgstr "clés obsolètes"
 
 msgid "Concurrent FF streams"
-msgstr ""
+msgstr "Activer FF concurrent streams"
 
 msgid "Force TransferMode"
-msgstr ""
+msgstr "Force TransferMode"
 
 msgid "Prefer local systems"
-msgstr ""
+msgstr "Préférer systèmes local"
 
 msgid "Active on DVB card"
 msgstr "Actif sur la carte DVB"
 
 msgid "Ignore CAID"
-msgstr ""
+msgstr "Ignorer CAID"
 
 msgid "Log to console"
-msgstr ""
+msgstr "Log en console"
 
 msgid "Log to file"
-msgstr ""
+msgstr "Log dans fichier"
 
 msgid "Filename"
-msgstr ""
+msgstr "Nom du fichier"
 
 msgid "Filesize limit (KB)"
-msgstr ""
+msgstr "Taille limite (KB)"
 
 msgid "Log to syslog"
-msgstr ""
+msgstr "Log dans la syslog"
 
 msgid "Show user messages"
-msgstr ""
+msgstr "Afficher les messages utilisateur"
 
 msgid "A software emulated CAM"
 msgstr "Un logiciel emulateur de CAM"
@@ -176,19 +176,19 @@ msgid "Nagra: min. ECM processing time"
 msgstr "Nagra: min. durée du processus ECM"
 
 msgid "Nagra2: drop EMM-S packets"
-msgstr ""
+msgstr "Nagra2: drop EMM-S paquets"
 
 msgid "Nagra2: Enable AUXserver"
-msgstr ""
+msgstr "Nagra2: Activer AUXserver"
 
 msgid "Nagra2: AUXserver hostname"
-msgstr ""
+msgstr "Nagra2: Hostname AUXserver"
 
 msgid "Nagra2: AUXserver port"
-msgstr ""
+msgstr "Nagra2: Port AUXserver"
 
 msgid "Nagra2: AUXserver password"
-msgstr ""
+msgstr "Nagra2: Mot de passe AUXserver"
 
 msgid "don't touch"
 msgstr "Ne pas modifier"
