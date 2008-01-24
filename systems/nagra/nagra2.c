@@ -128,8 +128,6 @@ unsigned char cMapMemHW::Get(unsigned short ea)
   if(ea<offset || ea>=offset+size) return 0;
   ea-=offset;
   switch(ea) {
-    case HW_SECURITY:
-      return 0x0F;
     case HW_TIMER0_CONTROL:
     case HW_TIMER1_CONTROL:
     case HW_TIMER2_CONTROL:
@@ -155,6 +153,7 @@ unsigned char cMapMemHW::Get(unsigned short ea)
       CRCpos=!CRCpos;
       return r;
       }
+    case HW_SECURITY:
     default:
       return mem[ea];
     }
@@ -166,6 +165,7 @@ void cMapMemHW::Set(unsigned short ea, unsigned char val)
   ea-=offset;
   switch(ea) {
     case HW_SECURITY:
+      mem[ea]=(val&0x70)|0x0F;
       break;
     case HW_TIMER0_CONTROL:
     case HW_TIMER1_CONTROL:
