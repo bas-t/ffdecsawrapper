@@ -532,12 +532,12 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       BYTE4_LE(data+16,sctx.h0);
       break;
     case 0x45: // add wordsize bytes to SHA1 buffer and finalize SHA result
-      if(wordsize) {
-        if(wordsize>1) RotateBytes(data,wordsize);
-        SHA1_Update(&sctx,data,wordsize);
+      if(dl) {
+        if(dl>1) RotateBytes(data,dl);
+        SHA1_Update(&sctx,data,dl);
         }
-      memset(data,0,64);
-      SHA1_Final(data+64,&sctx);
+      SHA1_Final(data,&sctx);
+      RotateBytes(data,20);
       break;
     default:
       return false;

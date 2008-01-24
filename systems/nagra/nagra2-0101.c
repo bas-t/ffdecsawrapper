@@ -619,6 +619,7 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
   SetSp(0x0FFF,0x0EF8);
   ClearBreakpoints();
   SetMem(0x0100,mecmCode+8,0x100-8);
+  SetMem(0xa00,hd,seedSize);
   SetMem(0x0ba2,hw,0x80);
   AddBreakpoint(0x0000);
   AddRomCallbacks();
@@ -765,6 +766,19 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,tmp,Get(0x48));
       AddCycles(MapCycles());
       break;
+    case 0x43:
+      DoMap(f);
+      break;
+    case 0x44:
+      GetMem(0x400,tmp,64,0);
+      DoMap(f,tmp);
+      SetMem(0x440,tmp,20,0);
+      break;
+    case 0x45:
+      GetMem(0x400,tmp,64,0);
+      DoMap(f,tmp,Get(0x48));
+      SetMem(0x440,tmp,20,0);
+      break; 
     case 0x4d:
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
       SetMem(0x400,tmp,53,0);
