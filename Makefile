@@ -142,16 +142,6 @@ export SHAREDLIBS
 export CXX
 export CXXFLAGS
 
-# Dependencies:
-
-MAKEDEP = g++ -MM -MG
-DEPFILE = .dependencies
-DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c)))
-$(DEPFILE): $(DEPFILES) $(wildcard *.h)
-	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(DEPFILES) > $@
-
--include $(DEPFILE)
-
 ### Targets:
 
 ifdef STATIC
@@ -165,9 +155,20 @@ ifneq ($(strip $(HASLOCALE)),)
 BUILDTARGETS += i18n
 endif
 
-default-target: all
 all: $(BUILDTARGETS)
 .PHONY: i18n systems systems-pre clean clean-core clean-systems clean-pre dist srcdist
+
+# Dependencies:
+
+MAKEDEP = g++ -MM -MG
+DEPFILE = .dependencies
+DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c)))
+$(DEPFILE): $(DEPFILES) $(wildcard *.h)
+	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(DEPFILES) > $@
+
+-include $(DEPFILE)
+
+# Rules
 
 %.o: %.c
 	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $<
