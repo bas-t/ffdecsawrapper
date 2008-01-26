@@ -116,10 +116,10 @@ msgid "all CAIDs"
 msgstr "kaikki CAID:t"
 
 msgid "comment out"
-msgstr ""
+msgstr "kommentoi"
 
 msgid "remove"
-msgstr ""
+msgstr "poista"
 
 msgid "Update keys (AU)"
 msgstr "Tilausten päivitys (AU)"
@@ -128,7 +128,7 @@ msgid "Start AU on EPG scan"
 msgstr "Aloita AU EPG-päivityksessä"
 
 msgid "Superseded keys"
-msgstr ""
+msgstr "Vanhentuneet avaimet"
 
 msgid "Concurrent FF streams"
 msgstr "Yhtäaikainen salauksenpurku (FF)"
