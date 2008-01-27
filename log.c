@@ -32,7 +32,7 @@
 #define LMOD_CFG_VALID  0x80000000
 
 struct LogConfig logcfg = {
-  1,0,0,0,
+  1,0,0,0,0,
   0,
   "/var/log/vdr-sc"
   };
@@ -88,9 +88,12 @@ bool cLogging::GetHeader(int c, struct LogHeader *lh)
 {
   const struct LogModule *lm=GetModule(c);
   if(lm) {
-    time_t tt=time(0);
-    struct tm tm_r;
-    strftime(lh->stamp,sizeof(lh->stamp),"%b %e %T",localtime_r(&tt,&tm_r));
+    if(!logcfg.noTimestamp) {
+      time_t tt=time(0);
+      struct tm tm_r;
+      strftime(lh->stamp,sizeof(lh->stamp),"%b %e %T",localtime_r(&tt,&tm_r));
+      }
+    else lh->stamp[0]=0;
     int i, o=LOPT(c)&~LMOD_ENABLE;
     for(i=0; i<LOPT_NUM; i++,o>>=1) if(o&1) break;
     snprintf(lh->tag,sizeof(lh->tag),"%s.%s",lm->Name,(i>=1 && i<LOPT_NUM && lm->OptName[i-1])?lm->OptName[i-1]:"unknown");

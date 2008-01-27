@@ -48,6 +48,7 @@ bool DllsLoad(const char *libdir)
 void InitAll(const char *cfgdir)
 {
   logcfg.logCon=1;
+  logcfg.noTimestamp=1;
   cSystems::ConfigParse("Cardclient.Immediate","0");
 
   filemaps.SetCfgDir(cfgdir);
