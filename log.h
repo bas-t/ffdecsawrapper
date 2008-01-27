@@ -70,7 +70,7 @@ class cMutex;
 // ----------------------------------------------------------------
 
 struct LogConfig {
-  int logCon, logFile, logSys, logUser;
+  int logCon, logFile, logSys, logUser, noTimestamp;
   int maxFilesize;
   char logFilename[128];
   };
