@@ -89,8 +89,8 @@ public:
 // ----------------------------------------------------------------
 
 #define MAX_BREAKPOINTS 24
-#define MAX_MAPPER      8
-#define MAX_PAGES       4
+#define MAX_MAPPER      10
+#define MAX_PAGES       5
 #define PAGE_SIZE       32*1024
 
 #define bitset(d,bit) (((d)>>(bit))&1)

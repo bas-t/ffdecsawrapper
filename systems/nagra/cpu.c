@@ -202,6 +202,7 @@ void c6805::InitMapper(void)
   pageMap[1]=PAGE_SIZE*1;
   pageMap[2]=PAGE_SIZE*2;
   pageMap[0x80]=PAGE_SIZE*3;
+  pageMap[0x40]=PAGE_SIZE*4;
 }
 
 void c6805::ClearMapper(void)
