@@ -624,7 +624,7 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
   AddBreakpoint(0x0000);
   AddRomCallbacks();
   SetPc(0x0100);
-  while(!Run(10000)) {
+  while(!Run(100000)) {
     if(GetPc()==0x0000) {
       GetMem(0x0ba2,hw,0x80);
       return true;
