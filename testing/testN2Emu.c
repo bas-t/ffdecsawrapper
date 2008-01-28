@@ -136,7 +136,7 @@ bool Ecm(unsigned char *buff, int cmdLen, int id)
   if(ecmP) ecmP->PrintCaps(L_SYS_ECM);
 
   int l=0, mecmAlgo=0;
-  for(int i=16; i<cmdLen-10 && l!=3; ) {
+  for(int i=(buff[14]&0x10)?16:20; i<cmdLen-10 && l!=3; ) {
 printf("%02x: nano %02x\n",i,buff[i]);
     switch(buff[i]) {
       case 0x10:
