@@ -66,6 +66,7 @@ void cMap0501::DoMap(int f, unsigned char *data, int l)
 class cN2Prov0501 : public cN2Prov, private cMap0501, public cN2Emu {
 private:
   cMapMemHW *hwMapper;
+  bool hasMaprom;
   //
   bool ProcessMap(int f);
   bool RomCallbacks(void);
@@ -86,7 +87,7 @@ cN2Prov0501::cN2Prov0501(int Id, int Flags)
 :cN2Prov(Id,Flags)
 ,cMap0501(Id)
 {
-  hwMapper=0;
+  hwMapper=0; hasMaprom=false;
 }
 
 bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
@@ -121,6 +122,11 @@ bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 bool cN2Prov0501::RomInit(void)
 {
   if(!AddMapper(hwMapper=new cMapMemHW(),HW_OFFSET,HW_REGS,0x00)) return false;
+  if(   AddMapper(new cMapRom(0x3800,"Rom120_003800-003FFF.bin",0x00000),0x3800,0x0800,0x00)
+     && AddMapper(new cMapRom(0x8000,"Rom120_408000-40CFFF.bin",0x00000),0x8000,0x5000,0x40)) {
+    hasMaprom=true;
+    PRINTF(L_SYS_EMU,"%04x: using native MAP rom",id);
+    }
   return true;
 }
 
@@ -201,7 +207,8 @@ bool cN2Prov0501::RomCallbacks(void)
 
 void cN2Prov0501::AddRomCallbacks(void)
 {
-  AddBreakpoint(0x3840); // map handler
+  if(!hasMaprom)
+    AddBreakpoint(0x3840); // map handler
 }
 
 int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
@@ -225,7 +232,7 @@ int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
     AddBreakpoint(0x821f);
     AddBreakpoint(0x0000);
     AddRomCallbacks();
-    while(!Run(5000)) {
+    while(!Run(hasMaprom ? 20000:5000)) {
       if(GetPc()==0x821f) {
         GetMem(0x80,data,len);
         return a;
