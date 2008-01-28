@@ -57,10 +57,12 @@ testN1Emu: testN1Emu.o $(SHAREDOBJS) $(NOBJS)
 testN2Emu.o: testN2Emu.c compat.h
 testN2Emu: testN2Emu.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -L../systems/nagra -lsc-nagra -o $@
+	@echo "don't forget: export LD_LIBRARY_PATH=../systems/nagra"
 
 testN2RunEmu.o: testN2RunEmu.c
 testN2RunEmu: testN2RunEmu.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -L../systems/nagra -lsc-nagra -o $@
+	@echo "don't forget: export LD_LIBRARY_PATH=../systems/nagra"
 
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
