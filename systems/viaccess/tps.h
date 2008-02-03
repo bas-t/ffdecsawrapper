@@ -61,7 +61,7 @@ private:
   static bool DecryptAlgo3(const unsigned char *key, unsigned char *data);
 protected:
   void TpsDecrypt(unsigned char *data, short mode, const unsigned char *key);
-  static bool RegisterAlgo3(const unsigned char *data, int cb1, int cb2, int cb3, int kd);
+  static bool RegisterAlgo3(const unsigned char *data, int cb1, int cb2, int cb3, int len);
   static unsigned char *DumpAlgo3(int &len, int &cb1, int &cb2, int &cb3);
   static bool Handle80008003(const unsigned char *src, int len, unsigned char *dest);
   };
