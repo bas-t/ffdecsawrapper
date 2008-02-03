@@ -730,10 +730,18 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
   const unsigned char *d=datahdr->data;
   unsigned int kd=0, cb1=0, cb2=0, cb3=0;
   for(unsigned int i=0; i<codehdr->size; i++) {
-    if(c[i] == 0x81) { // PushEA DS:$xxxx
+    if(c[i]==0x81) { // PushEA DS:$xxxx
       unsigned int addr=(c[i+1]<<8)|c[i+2];
       if(addr<(datahdr->dlen-3)) {
-        if(d[addr+1]==0x00 && d[addr+3]==0x00 && d[addr+4]==3) kd=addr;
+        if(d[addr]==0x79 && d[addr+1]==0x00 && d[addr+2]==0x79 && d[addr+3]==0x00)
+          kd=addr;
+        else if(d[addr]==0x73 && d[addr+1]==0x25 && d[addr+2]==0xFA)
+          cb1=addr;
+        else if((d[addr]&0x60)==0x60 && (d[addr+1]&0xB0)==0xB0) {
+          if(d[addr+2]==0x24) cb2=addr;
+          else if(d[addr+2]==0x21) cb3=addr;
+          }
+/*
         else if(d[addr]==0x73 && d[addr+1]==0x25) {
           static const unsigned char scan1[] = { 0x28, 0x20, 0x20, 0xC0 };
           for(int j=2; j < 0xC; j++)
@@ -741,23 +749,6 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
           }
         else if(cb1 && !cb2) cb2=addr;
         else if(cb1 && cb2 && !cb3) cb3=addr;
-/*
-        else if((d[addr]&0xF0)==0x60 && (d[addr+1]&0xF0)==0xB0) {
-          int vajw = (int)(((~(d[addr]&0x0F))<<4)|(d[addr+1]&0x0F));
-          unsigned char hits=0;
-          for(int j=2; j < 0x30; j++) {
-            int vld = ((d[addr+j]&0x0F)<<4)|(d[addr+j+1]&0x0F);
-            if((d[addr+j]&0xF0)==0x20 && (d[addr+j+1]&0xF0)==0x70) {
-              int val=vajw+vld;
-              if(val==3 || val==4 || val==5) hits++;
-              }
-            }
-          if(hits==3) cb3=addr;
-          else if(hits==2) {
-            if(cb2==0) cb2=addr;
-            else if(cb3==0) cb3=addr;
-            }
-          }
 */
         }
       }
@@ -766,7 +757,8 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
     PRINTF(L_SYS_TPSAU,"couldn't locate all pointers in data section");
     return false;
     }
-  RegisterAlgo3(d,cb1,cb2,cb3,kd);
+  unsigned int len=(kd>cb1 && kd>cb2 && kd>cb3) ? kd : datahdr->dlen;
+  RegisterAlgo3(d,cb1,cb2,cb3,len);
 
   const unsigned char *data=&d[kd];
   int seclen, numkeys;
@@ -1079,13 +1071,13 @@ void cTPSDecrypt::TpsDecrypt(unsigned char *data, short mode, const unsigned cha
     }
 }
 
-bool cTPSDecrypt::RegisterAlgo3(const unsigned char *data, int cb1, int cb2, int cb3, int kd)
+bool cTPSDecrypt::RegisterAlgo3(const unsigned char *data, int cb1, int cb2, int cb3, int len)
 {
   cMutexLock lock(&st20Mutex);
   free(mem);
-  if(!(mem=MALLOC(unsigned char,kd))) return false;
-  memcpy(mem,data,kd);
-  memLen=kd; cb1off=cb1; cb2off=cb2; cb3off=cb3;
+  if(!(mem=MALLOC(unsigned char,len))) return false;
+  memcpy(mem,data,len);
+  memLen=len; cb1off=cb1; cb2off=cb2; cb3off=cb3;
   st20Inited=false;
   PRINTF(L_SYS_TPSAU,"registered callbacks for algo 3");
   return true;
