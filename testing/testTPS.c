@@ -59,8 +59,10 @@ void cTpsAuHook::Process(int pid, unsigned char *data)
 
 void cTpsAuHook::DummyProcess(unsigned char *data, int size)
 {
+  tpskeys.Load(false);
   cOpenTVModule mod(2,data,size);
   tpskeys.ProcessAu(&mod);
+  tpskeys.Save();
 }
 
 // ----------------------------------------------------------------

@@ -72,6 +72,6 @@ filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 clean:
 	@-rm -f *.o core* *~
-	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu
+	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS
 	@-rm -f filterhelper
 	@-rm -f dump.txt
