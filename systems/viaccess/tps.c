@@ -42,6 +42,10 @@
 //#define TRUST_BOXTIME // should we trust the local time on this machine?
 //#define DUMP_TPSAU "/var/tmp"
 
+#ifdef DUMP_TPSAU
+#include <unistd.h>
+#endif
+
 // -- cRC6 ---------------------------------------------------------------------
 
 /*
@@ -754,7 +758,7 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
       }
     }
   if(!kd || !cb1 || !cb2 || !cb3) {
-    PRINTF(L_SYS_TPSAU,"couldn't locate all pointers in data section");
+    PRINTF(L_SYS_TPSAU,"couldn't locate all pointers in data section (%d,%d,%d,%d)",kd,cb1,cb2,cb3);
     return false;
     }
   unsigned int len=(kd>cb1 && kd>cb2 && kd>cb3) ? kd : datahdr->dlen;
