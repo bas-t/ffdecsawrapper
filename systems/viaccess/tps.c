@@ -758,10 +758,10 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
           kd=addr;
         else if(d[addr]==0x73 && d[addr+1]==0x25 && d[addr+2]==0xFA)
           cb1=addr;
-        else if((d[addr]&0x60)==0x60 && (d[addr+1]&0xB0)==0xB0) {
-          if(d[addr+2]==0x24) cb2=addr;
-          else if(d[addr+2]==0x21) cb3=addr;
-          }
+        else if(d[addr]==0x64 && (d[addr+1]&0xB0)==0xB0 && d[addr+2]==0x24)
+          cb2=addr;
+        else if((d[addr]&0x60)==0x60 && (d[addr+1]&0xB0)==0xB0 && (d[addr+2]&0x20)==0x20)
+          cb3=addr;
 /*
         else if(d[addr]==0x73 && d[addr+1]==0x25) {
           static const unsigned char scan1[] = { 0x28, 0x20, 0x20, 0xC0 };
@@ -778,8 +778,11 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
     PRINTF(L_SYS_TPSAU,"couldn't locate all pointers in data section (%d,%d,%d,%d)",kd,cb1,cb2,cb3);
     return false;
     }
-  unsigned int len=(kd>cb1 && kd>cb2 && kd>cb3) ? kd : datahdr->dlen;
-  RegisterAlgo3(d,cb1,cb2,cb3,len);
+
+  unsigned int end=(kd>cb1 && kd>cb2 && kd>cb3) ? kd : datahdr->dlen;
+  unsigned int off=min(cb1,min(cb2,cb3));
+  PRINTF(L_SYS_TPSAU,"pointers in data section kd=%d cb1=%d cb2=%d cb3=%d - dlen=%d off=%d end=%d",kd,cb1,cb2,cb3,datahdr->dlen,off,end);
+  RegisterAlgo3(d+off,cb1-off,cb2-off,cb3-off,end-off);
 
   const unsigned char *data=&d[kd];
   int seclen, numkeys;

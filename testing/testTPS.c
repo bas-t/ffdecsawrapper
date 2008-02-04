@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
 
   InitAll(argv[1]);
   LogAll();
+  cLogging::SetModuleOption(LCLASS(L_SYS,L_SYS_DISASM),false);
   FILE *f=fopen(argv[2],"r");
   if(f) {
     fseek(f,0,SEEK_END);
