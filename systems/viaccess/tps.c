@@ -176,6 +176,8 @@ time_t cTransponderTime::Now(void)
 
 // -- cSatTimeHook -------------------------------------------------------------
 
+#ifndef TESTER
+
 class cSatTimeHook : public cLogHook {
 private:
   cTransponderTime *ttime;
@@ -213,6 +215,8 @@ void cSatTimeHook::Process(int pid, unsigned char *data)
       }
     }
 }
+
+#endif //TESTER
 
 // -- cSatTime -----------------------------------------------------------------
 
@@ -282,6 +286,7 @@ private:
   void Dump(void);
 public:
   cOpenTVModule(const unsigned char *data);
+  cOpenTVModule(int Id, const unsigned char *data, int len);
   ~cOpenTVModule();
   int AddPart(const unsigned char *data, int len);
   const info_header_t *InfoHdr(void) const { return &info; }
@@ -298,6 +303,14 @@ cOpenTVModule::cOpenTVModule(const unsigned char *data)
   id=Id(data); modlen=Length(data);
   received=0;
   mem=MALLOC(unsigned char,modlen);
+}
+
+cOpenTVModule::cOpenTVModule(int Id, const unsigned char *data, int len)
+{
+  id=Id; modlen=received=len;
+  mem=MALLOC(unsigned char,modlen);
+  memcpy(mem,data,len);
+  ParseSections();
 }
 
 cOpenTVModule::~cOpenTVModule()
@@ -556,6 +569,8 @@ cString cTpsKey::ToString(bool hide)
 
 // -- cTpsAuHook ---------------------------------------------------------------
 
+#ifndef TESTER
+
 #define BUFF_SIZE 20000
 
 class cTpsAuHook : public cLogHook {
@@ -567,6 +582,8 @@ public:
   ~cTpsAuHook();
   virtual void Process(int pid, unsigned char *data);
   };
+
+#endif //TESTER
 
 // -- cTpsKeys -----------------------------------------------------------------
 
@@ -972,6 +989,8 @@ void cTpsKeys::PostSave(FILE *f)
 
 // -- cTpsAuHook ---------------------------------------------------------------
 
+#ifndef TESTER
+
 #define AUSID 0x12C0
 
 cTpsAuHook::cTpsAuHook(void)
@@ -1047,6 +1066,8 @@ void cTpsAuHook::Process(int pid, unsigned char *data)
       }
     }
 }
+
+#endif //TESTER
 
 // -- cTPSDecrypt --------------------------------------------------------------
 
