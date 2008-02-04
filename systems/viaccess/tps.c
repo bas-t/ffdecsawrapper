@@ -780,8 +780,8 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
     }
 
   unsigned int end=(kd>cb1 && kd>cb2 && kd>cb3) ? kd : datahdr->dlen;
-  unsigned int off=min(cb1,min(cb2,cb3));
-  PRINTF(L_SYS_TPSAU,"pointers in data section kd=%d cb1=%d cb2=%d cb3=%d - dlen=%d off=%d end=%d",kd,cb1,cb2,cb3,datahdr->dlen,off,end);
+  unsigned int off=min(cb1,min(cb2,cb3))-2;
+  PRINTF(L_SYS_TPSAU,"pointers in data section kd=%d cb1=%d cb2=%d cb3=%d - dlen=%d off=%d end=%d - cb1=%d cb2=%d cb3=%d",kd,cb1,cb2,cb3,datahdr->dlen,off,end,cb1-off,cb2-off,cb3-off);
   RegisterAlgo3(d+off,cb1-off,cb2-off,cb3-off,end-off);
 
   const unsigned char *data=&d[kd];
@@ -917,7 +917,7 @@ void cTpsKeys::PreLoad(void)
 
 void cTpsKeys::PostLoad(void)
 {
-  if(loadlist) Join(loadlist);
+  if(loadlist) { Join(loadlist); loadlist=0; }
 }
 
 bool cTpsKeys::ParseLinePlain(const char *line)
