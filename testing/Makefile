@@ -64,6 +64,10 @@ testN2RunEmu: testN2RunEmu.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -L../systems/nagra -lsc-nagra -o $@
 	@echo "don't forget: export LD_LIBRARY_PATH=../systems/nagra"
 
+testTPS.o: testTPS.c ../systems/viaccess/tps.c ../systems/viaccess/st20.c ../systems/viaccess/viaccess.c
+testTPS: testTPS.o $(SHAREDOBJS) $(NOBJS)
+	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
+
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 clean:

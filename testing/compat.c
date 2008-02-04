@@ -163,6 +163,8 @@ bool cScSetup::Ignore(unsigned short caid) { return false; }
 //
 
 void cSoftCAM::SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on) {}
+void cSoftCAM::AddHook(int CardNum, cLogHook *hook) {}
+bool cSoftCAM::TriggerHook(int CardNum, int id) { return true; }
 
 //
 //
