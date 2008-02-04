@@ -13,6 +13,7 @@ po/*.pot
 version.c
 i18n.c
 dump.*
+core*
 
 syntax: regexp
 ^testing/test[^.]*$
