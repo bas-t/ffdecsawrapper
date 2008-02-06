@@ -500,22 +500,22 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case CLEAR_B:
     case CLEAR_C:
     case CLEAR_D:
-      cycles=467+5*l1-6;
+      cycles=465+(8*l1)-((8*l1-2)%5)-6;
       last=f-CLEAR_A+1; BN_zero(*regs[last]);
       break;
 
     case COPY_A_B:
-      last=2; BN_copy(B,A); cycles=467+5*l1-6; break;
+      last=2; BN_copy(B,A); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
     case COPY_B_A:
-      last=1; BN_copy(A,B); cycles=467+5*l1-6; break;
+      last=1; BN_copy(A,B); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
     case COPY_A_C:
-      last=3; BN_copy(C,A); cycles=467+5*l1-6; break;
+      last=3; BN_copy(C,A); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
     case COPY_C_A:
-      last=1; BN_copy(A,C); cycles=467+5*l1-6; break;
+      last=1; BN_copy(A,C); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
     case COPY_C_D:
-      last=4; BN_copy(D,C); cycles=467+5*l1-6; break;
+      last=4; BN_copy(D,C); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
     case COPY_D_C:
-      last=3; BN_copy(C,D); cycles=467+5*l1-6; break;
+      last=3; BN_copy(C,D); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
 
     case 0x43: // init SHA1
       SHA1_Init(&sctx);
