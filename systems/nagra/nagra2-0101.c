@@ -435,6 +435,16 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       else    cycles=931 +                                4*coef22[shift][0]   - 6;
       break;
       }
+    case 0x29:
+      {
+      BN_add(B,B,C);
+      if(l<=0) l=wordsize; 	// conditional seems pretty useless
+      bool b=BN_is_bit_set(B,l<<6);
+      data[0]=b;
+      if(b) BN_mask_bits(B,l<<6);
+      cycles=504+(8*l)-((8*l-2)%5)-6;
+      }
+      break; 
     case 0x3b:
       if(!l) l=wordsize;
       MonInit(wordsize*60+4*l);
@@ -760,6 +770,11 @@ bool cN2Prov0101::ProcessMap(int f)
       size=Get(0x48); if(!size) size=wordsize;
       GetMem(HILO(0x44),tmp,size<<3,0);
       DoMap(f,tmp,size);
+      break;
+    case 0x29:
+      DoMap(f,tmp,-Get(0x48));
+      Set(0x4b,tmp[0]);
+      AddCycles(MapCycles());
       break;
     case 0x3e:
       GetMem(HILO(0x44),tmp,size,0);
