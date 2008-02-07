@@ -12,13 +12,14 @@
 int main(int argc, char *argv[])
 {
   if(argc<4) {
-    printf("usage: %s <plugin-dir> <id> <cmd>\n",argv[0]);
+    printf("usage: %s <plugin-dir> <id> <cmd> [LOG]\n",argv[0]);
     return 1;
     }
 
   InitAll(argv[1]);
   LogAll();
-  cLogging::SetModuleOption(LCLASS(L_SYS,L_SYS_DISASM),false);
+  if(argc<=4 || strcasecmp(argv[4],"LOG"))
+    cLogging::SetModuleOption(LCLASS(L_SYS,L_SYS_DISASM),false);
   unsigned char data[1024];
   unsigned int len = 0;
   char *p = argv[3];
@@ -43,7 +44,7 @@ int main(int argc, char *argv[])
     }
   int id=strtol(argv[2],0,0);
   cN2Prov *emmP=cN2Providers::GetProv(id,N2FLAG_NONE);
-  HEXDUMP(0, data, len, "Input");
-  if(emmP->RunEmu(data, len, 0x90, 0x90, 0x00, 0x00, 0x300)>=0)
-    HEXDUMP(0, data, 0x300, "Output");
+  HEXDUMP(L_SYS_EMU,data,len,"Input");
+  if(emmP->RunEmu(data,len,0x90,0x90,0x00,0x00,0x300)>=0)
+    HEXDUMP(L_SYS_EMU,data,0x300,"Output");
 }
