@@ -45,7 +45,7 @@ void cMap0501::DoMap(int f, unsigned char *data, int l)
   cycles=0;
   switch(f) {
     case 0x37:
-      l=(l?l:wordsize)<<3;
+      l=GetOpSize(l)<<3;
       B.GetLE(data,l);
       MonMul(B,B,A);
       break;
@@ -134,42 +134,41 @@ bool cN2Prov0501::RomInit(void)
 bool cN2Prov0501::ProcessMap(int f)
 {
   unsigned short addr;
-  int size;
   unsigned char tmp[256];
+  int l=GetOpSize(Get(0x48));
 
   switch(f) {
-    case SETSIZE: // set map size 
+    case SETSIZE:
       DoMap(f,0,Get(0x48));
-      if((wordsize<<3)>256) {
-        PRINTF(L_SYS_EMU,"%04x: MAP word size too large: %d",id,wordsize);
-        return false;
-        }
+      AddCycles(MapCycles());
       break;
-    case IMPORT_J: //Import Ram at [44:45] to Map Registers A-E, E is 0x03 the rest in sequence
+    case IMPORT_J:
     case IMPORT_A:
     case IMPORT_B:
     case IMPORT_C:
     case IMPORT_D:
     case IMPORT_LAST:
-      addr=HILO(0x44); size=Get(0x48);
-      GetMem(addr,tmp,size<<3,0); DoMap(f,tmp,size);
+      addr=HILO(0x44);
+      GetMem(addr,tmp,l<<3,0); DoMap(f,tmp,l);
       AddCycles(MapCycles());
       break;
-    case EXPORT_J: //Export Registers A-E with 44:45: 0x09 is E
+    case EXPORT_J:
     case EXPORT_A:
     case EXPORT_B:
     case EXPORT_C:
     case EXPORT_D:
     case EXPORT_LAST:
-      addr=HILO(0x44); size=Get(0x48);
-      DoMap(f,tmp,size); SetMem(addr,tmp,size<<3,0);
+      addr=HILO(0x44);
+      DoMap(f,tmp,l); SetMem(addr,tmp,l<<3,0);
+      AddCycles(MapCycles());
       break;
-    case SWAP_A: //Swap Registers A-D with 44:45
+    case SWAP_A:
     case SWAP_B:
     case SWAP_C:
     case SWAP_D:
-      addr=HILO(0x44); size=Get(0x48);
-      GetMem(addr,tmp,size<<3,0); DoMap(f,tmp,size); SetMem(addr,tmp,size<<3,0);
+      addr=HILO(0x44);
+      GetMem(addr,tmp,l<<3,0); DoMap(f,tmp,l); SetMem(addr,tmp,l<<3,0);
+      AddCycles(MapCycles());
       break;
     case CLEAR_A:
     case CLEAR_B:
@@ -181,9 +180,10 @@ bool cN2Prov0501::ProcessMap(int f)
     case COPY_C_A:
     case COPY_C_D:
     case COPY_D_C:
-      DoMap(f); break;
+      DoMap(f);
+      AddCycles(MapCycles());
+      break;
     default:
-      PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
       return false;
     }
   return true;

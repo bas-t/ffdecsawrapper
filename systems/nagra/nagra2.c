@@ -446,9 +446,14 @@ void cMapCore::CurveInit(BIGNUM *a)
   MonMul(s160,B,a);
 }
 
+int cMapCore::GetOpSize(int l)
+{
+  return l!=0 ? l : wordsize;
+}
+
 bool cMapCore::DoMap(int f, unsigned char *data, int l)
 {
-  const int l1=l?l:wordsize;
+  const int l1=GetOpSize(l);
   const int dl=l1<<3;
   cycles=0;
   switch(f) {
