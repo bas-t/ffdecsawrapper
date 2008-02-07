@@ -79,6 +79,7 @@ protected:
 public:
   cN2Prov0501(int Id, int Flags);
   virtual int ProcessBx(unsigned char *data, int len, int pos);
+  virtual int RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len);
   };
 
 static cN2ProvLinkReg<cN2Prov0501,0x0501,(N2FLAG_MECM|N2FLAG_INV|N2FLAG_Bx)> staticPL0501;
@@ -238,6 +239,27 @@ int cN2Prov0501::ProcessBx(unsigned char *data, int len, int pos)
         return a;
         }
       else if(GetPc()==0x0000) break;
+      else if(!RomCallbacks()) break;
+      }
+    }
+  return -1;
+}
+
+int cN2Prov0501::RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len)
+{
+  if(Init(id,120)) {
+    SetSp(0x0FFF,0x0EF8);
+    SetMem(load,data,len);
+    SetPc(run);
+    ClearBreakpoints();
+    AddBreakpoint(stop);
+    if(stop!=0x0000) AddBreakpoint(0x0000);
+    AddRomCallbacks();
+    while(!Run(100000)) {
+      if(GetPc()==0x0000 || GetPc()==stop) {
+        GetMem(fetch,data,fetch_len);
+        return 1;
+        }
       else if(!RomCallbacks()) break;
       }
     }
