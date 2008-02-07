@@ -109,8 +109,8 @@ int ReadRaw(const char *name, unsigned char *buff, int maxlen)
         }
       }
     fclose(f);
-    printf("using raw from %s:\n",name);
-    HexDump(buff,len);
+//    printf("using raw from %s:\n",name);
+//    HexDump(buff,len);
     return len;
     }
   printf("failed to open raw file %s: %s\n",name,strerror(errno));
