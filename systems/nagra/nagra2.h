@@ -178,6 +178,7 @@ protected:
   void ToAffine(void);
   void CurveInit(BIGNUM *a);
   //
+  int GetOpSize(int l);
   bool DoMap(int f, unsigned char *data=0, int l=0);
   unsigned int MapCycles() { return cycles; }
 public:

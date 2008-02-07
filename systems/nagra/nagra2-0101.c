@@ -420,6 +420,7 @@ void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
 void cMap0101::DoMap(int f, unsigned char *data, int l)
 {
   PRINTF(L_SYS_MAP,"0101: calling function %02X",f);
+  l=GetOpSize(l);
   cycles=0;
   switch(f) {
     case 0x22:
@@ -446,14 +447,13 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       }
       break; 
     case 0x3b:
-      if(!l) l=wordsize;
       MonInit(wordsize*60+4*l);
       I.GetLE(data,l<<3);
       MonMul(B,I,B,l);
       break;
     case 0x3e:
       {
-      I.GetLE(data,(l?l:wordsize)<<3);
+      I.GetLE(data,l<<3);
       BN_mod_exp(B,A,I,D,ctx);
       BN_one(A);
       int end=BN_num_bits(I);
@@ -465,7 +465,6 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       }
     case 0x4d:
       if(-0x018000==l)
-        //for(int i=64; i<(wordsize<<6); i++) BN_clear_bit(B,i);
         BN_mask_bits(B,64);
       else {
         BN_set_bit(B,(wordsize<<6)-1);
@@ -715,41 +714,42 @@ bool cN2Prov0101::RomInit(void)
 bool cN2Prov0101::ProcessMap(int f)
 {
   unsigned short addr;
-  int size=wordsize<<3;
   unsigned char tmp[256];
+  int l=GetOpSize(Get(0x48));
+  int dl=l<<3;
 
   switch(f) {
-    case SETSIZE: // set map size 
+    case SETSIZE:
       DoMap(f,0,Get(0x48));
-      if((wordsize<<3)>256) {
-        PRINTF(L_SYS_EMU,"%04x: MAP word size too large: %d",id,wordsize);
-        return false;
-        }
+      AddCycles(MapCycles());
       break;
-    case IMPORT_J: //Import Ram at [44:45] to Map Registers A-E, E is 0x03 the rest in sequence
+    case IMPORT_J:
     case IMPORT_A:
     case IMPORT_B:
     case IMPORT_C:
     case IMPORT_D:
     case IMPORT_LAST:
       addr=HILO(0x44);
-      GetMem(addr,tmp,size,0); DoMap(f,tmp);
+      GetMem(addr,tmp,dl,0); DoMap(f,tmp,l);
+      AddCycles(MapCycles());
       break;
-    case EXPORT_J: //Export Registers A-E with 44:45: 0x09 is E
+    case EXPORT_J:
     case EXPORT_A:
     case EXPORT_B:
     case EXPORT_C:
     case EXPORT_D:
     case EXPORT_LAST:
       addr=HILO(0x44);
-      DoMap(f,tmp); SetMem(addr,tmp,size,0);
+      DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
+      AddCycles(MapCycles());
       break;
-    case SWAP_A: //Swap Registers A-D with 44:45
+    case SWAP_A:
     case SWAP_B:
     case SWAP_C:
     case SWAP_D:
       addr=HILO(0x44);
-      GetMem(addr,tmp,size,0); DoMap(f,tmp); SetMem(addr,tmp,size,0);
+      GetMem(addr,tmp,dl,0); DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
+      AddCycles(MapCycles());
       break;
     case CLEAR_A:
     case CLEAR_B:
@@ -761,15 +761,16 @@ bool cN2Prov0101::ProcessMap(int f)
     case COPY_C_A:
     case COPY_C_D:
     case COPY_D_C:
-      DoMap(f); break;
+      DoMap(f);
+      AddCycles(MapCycles());
+      break;
     case 0x22:
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
       AddCycles(MapCycles());
       break;
     case 0x3b:
-      size=Get(0x48); if(!size) size=wordsize;
-      GetMem(HILO(0x44),tmp,size<<3,0);
-      DoMap(f,tmp,size);
+      GetMem(HILO(0x44),tmp,dl,0);
+      DoMap(f,tmp,l);
       break;
     case 0x29:
       DoMap(f,tmp,-Get(0x48));
@@ -777,8 +778,8 @@ bool cN2Prov0101::ProcessMap(int f)
       AddCycles(MapCycles());
       break;
     case 0x3e:
-      GetMem(HILO(0x44),tmp,size,0);
-      DoMap(f,tmp,Get(0x48));
+      GetMem(HILO(0x44),tmp,dl,0);
+      DoMap(f,tmp,l);
       AddCycles(MapCycles());
       break;
     case 0x43:
@@ -791,7 +792,7 @@ bool cN2Prov0101::ProcessMap(int f)
       break;
     case 0x45:
       GetMem(0x400,tmp,64,0);
-      DoMap(f,tmp,Get(0x48));
+      DoMap(f,tmp,l);
       SetMem(0x440,tmp,20,0);
       break; 
     case 0x4d:
