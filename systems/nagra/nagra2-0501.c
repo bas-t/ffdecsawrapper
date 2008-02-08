@@ -42,12 +42,12 @@ cMap0501::cMap0501(int Id)
 void cMap0501::DoMap(int f, unsigned char *data, int l)
 {
   PRINTF(L_SYS_MAP,"%04x: calling function %02X",mId,f);
+  l=GetOpSize(l);
   cycles=0;
   switch(f) {
     case 0x37:
-      l=GetOpSize(l)<<3;
-      B.GetLE(data,l);
-      MonMul(B,B,A);
+      I.GetLE(data,l<<3);
+      MonMul(B,I,B);
       break;
     case 0x3a:
       MonInit();
@@ -103,9 +103,10 @@ bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     DoMap(SETSIZE,0,4);
     DoMap(IMPORT_J,hw+0x18);
     DoMap(IMPORT_D,hw+0x20);
-    DoMap(IMPORT_A,hw+0x60);
+    DoMap(IMPORT_B,hw+0x60);
     DoMap(0x37,hw+0x40);
     DoMap(EXPORT_C,hw);
+    DoMap(IMPORT_A,hw+0x60);
     DoMap(0x3a);
     DoMap(EXPORT_C,hw+0x20);
     DoMap(0x43);
@@ -136,6 +137,7 @@ bool cN2Prov0501::ProcessMap(int f)
   unsigned short addr;
   unsigned char tmp[256];
   int l=GetOpSize(Get(0x48));
+  int dl=l<<3;
 
   switch(f) {
     case SETSIZE:
@@ -149,7 +151,7 @@ bool cN2Prov0501::ProcessMap(int f)
     case IMPORT_D:
     case IMPORT_LAST:
       addr=HILO(0x44);
-      GetMem(addr,tmp,l<<3,0); DoMap(f,tmp,l);
+      GetMem(addr,tmp,dl,0); DoMap(f,tmp,l);
       AddCycles(MapCycles());
       break;
     case EXPORT_J:
@@ -159,7 +161,7 @@ bool cN2Prov0501::ProcessMap(int f)
     case EXPORT_D:
     case EXPORT_LAST:
       addr=HILO(0x44);
-      DoMap(f,tmp,l); SetMem(addr,tmp,l<<3,0);
+      DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
       AddCycles(MapCycles());
       break;
     case SWAP_A:
@@ -167,7 +169,7 @@ bool cN2Prov0501::ProcessMap(int f)
     case SWAP_C:
     case SWAP_D:
       addr=HILO(0x44);
-      GetMem(addr,tmp,l<<3,0); DoMap(f,tmp,l); SetMem(addr,tmp,l<<3,0);
+      GetMem(addr,tmp,dl,0); DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
       AddCycles(MapCycles());
       break;
     case CLEAR_A:
@@ -182,6 +184,10 @@ bool cN2Prov0501::ProcessMap(int f)
     case COPY_D_C:
       DoMap(f);
       AddCycles(MapCycles());
+      break;
+    case 0x37:
+      GetMem(HILO(0x44),tmp,dl,0);
+      DoMap(f,tmp,l);
       break;
     default:
       return false;
