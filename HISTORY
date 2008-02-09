@@ -1,6 +1,27 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+09.02.2008: Version 0.9.0
+- NOTE: the versioning scheme has been changed. All releases (regardless if even
+  or odd minor) are considered stable. Unstable development is in HG only.
+- Updated keys are now written back to the SoftCAM.Key file. If the keyfile is
+  modified externaly it will be re-read. Introduce new cache files ecm.cache &
+  tps.cache. ca.cache is obsolete now.
+- All config files are expected to be located in the "sc" subdir of the plugin
+  config directory now. Removed commandline option -c.
+- A bunch of changes to the Nagra2 code, including 0501 maprom, 0101 map 29, 97W
+  hack, fixed HW_SECURITY and map timings.
+- Fixed Viaccess TPS AU.
+- Added dedicated housekeeping thread.
+- Display (important) user messages on the OSD (if enabled in setup).
+- Various updates to testing code.
+- Fixed Makefile default target.
+- Fixed gcc 4.x warnings.
+- Added patch for DVB multiproto driver.
+- Updated finnish and french translations.
+
+------------------------------------------------------------
+
 18.01.2008: Version 0.8.7
 - Several changes to the Nagra2 code including HW reg mapper, map cycle counts,
   0501 AU, 0101 auxed map57, tableless map3e and new build system.
