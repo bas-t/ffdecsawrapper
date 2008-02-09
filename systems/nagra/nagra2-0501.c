@@ -189,7 +189,19 @@ bool cN2Prov0501::ProcessMap(int f)
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
       break;
+    case 0x3a:
+      DoMap(f,0,l);
+      break;
+    case 0x43:
+      DoMap(f);
+      break;
+    case 0x44:
+      GetMem(0x400,tmp,64,0);
+      DoMap(f,tmp);
+      SetMem(0x440,tmp,20,0);
+      break;
     default:
+      PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
       return false;
     }
   return true;
