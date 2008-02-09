@@ -229,22 +229,21 @@ bool cN2Emu::Init(int id, int romv)
   return initDone;
 }
 
-// -- cMapCore -----------------------------------------------------------------
+// -- cMapMath -----------------------------------------------------------------
 
-cMapCore::cMapCore(void)
+cMapMath::cMapMath(void)
 {
-  wordsize=4; last=1;
-  regs[0]=&J; regs[1]=&A; regs[2]=&B; regs[3]=&C; regs[4]=&D;
+  wordsize=DEF_WORDSIZE;
 }
 
-void cMapCore::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
+void cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
 {
   BN_add(r,a,b);
   if(BN_cmp(r,d)>=0) BN_sub(r,r,d);
   BN_mask_bits(r,wordsize<<6);
 }
 
-void cMapCore::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
+void cMapMath::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
 {
   cBN p;
   BN_set_bit(p,wordsize<<6);
@@ -252,7 +251,7 @@ void cMapCore::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
   BN_mask_bits(r,wordsize<<6);
 }
 
-void cMapCore::MakeJ0(BIGNUM *j, BIGNUM *d)
+void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d)
 {
 #if OPENSSL_VERSION_NUMBER < 0x0090700fL
 #error BN_mod_inverse is probably buggy in your openssl version
@@ -264,46 +263,81 @@ void cMapCore::MakeJ0(BIGNUM *j, BIGNUM *d)
   BN_mod_inverse(j,j,x,ctx);
 }
 
-void cMapCore::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int words)
+void cMapMath::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b)
 {
-  if(!words) words=wordsize;
-  BN_zero(s);
-  for(int i=0; i<words;) {
+  MonMul(o,a,b,C,D,J,0);
+}
+
+void cMapMath::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w)
+{
+  MonMul(o,a,b,C,D,J,w);
+}
+
+void cMapMath::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w)
+{
+  if(!w) w=wordsize;
+  MonStart(w);
+  int i=0;
+  while(words>0) {
     BN_rshift(x,a,(i++)<<6);
-    BN_mask_bits(x,64);
-    BN_mul(x,x,b,ctx);
-    BN_add(s,s,x);
-
-    BN_copy(x,s);
-    BN_mask_bits(x,64);
-    BN_mul(x,x,j,ctx);
-    if(i==words) {
-      BN_lshift(y,x,64);
-      BN_add(y,y,x);
-      // Low
-      BN_rshift(c,y,2);
-      BN_add(c,c,s);
-      BN_rshift(c,c,52);
-      BN_mask_bits(c,12);
-      }
-
-    BN_mask_bits(x,64);
-    BN_mul(x,x,d,ctx);
-    BN_add(s,s,x);
-    if(i==words) {
-      // High
-      BN_lshift(y,s,12);
-      BN_add(c,c,y);
-      BN_mask_bits(c,wordsize<<6);
-      }
-
-    BN_rshift(s,s,64);
-    if(BN_cmp(s,d)==1) {
-      BN_copy(x,s);
-      BN_sub(s,x,d);
-      }
+    MonLoop(o,x,b,c,d,j);
     }
-  BN_copy(o,s);
+}
+
+void cMapMath::MonStart(int w)
+{
+  if(words<=0) {
+    words=w;
+    BN_zero(s);
+    }
+}
+
+// modifies a, but pointing a to x is allowed !!
+void cMapMath::MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j)
+{
+  words--;
+  BN_mask_bits(a,64);
+  BN_mul(a,a,b,ctx);
+  BN_add(s,s,a);
+
+  BN_copy(x,s);
+  BN_mask_bits(x,64);
+  BN_mul(x,x,j,ctx);
+  if(!words) {
+    BN_lshift(y,x,64);
+    BN_add(y,y,x);
+    // Low
+    BN_rshift(c,y,2);
+    BN_add(c,c,s);
+    BN_rshift(c,c,52);
+    BN_mask_bits(c,12);
+    }
+
+  BN_mask_bits(x,64);
+  BN_mul(x,x,d,ctx);
+  BN_add(s,s,x);
+  if(!words) {
+    // High
+    BN_lshift(y,s,12);
+    BN_add(c,c,y);
+    BN_mask_bits(c,wordsize<<6);
+    }
+
+  BN_rshift(s,s,64);
+  if(BN_cmp(s,d)==1) {
+    BN_copy(x,s);
+    BN_sub(s,x,d);
+    }
+
+  if(!words) BN_copy(o,s);
+}
+
+// -- cMapCore -----------------------------------------------------------------
+
+cMapCore::cMapCore(void)
+{
+  last=1;
+  regs[0]=&J; regs[1]=&A; regs[2]=&B; regs[3]=&C; regs[4]=&D;
 }
 
 void cMapCore::MonInit(int bits)
@@ -319,7 +353,6 @@ void cMapCore::MonInit(int bits)
 void cMapCore::MonExpNeg(void)
 {
   if(BN_is_zero(D)) { BN_set_word(A,1); return; }
-  cBN e;
   BN_copy(e,D);
   BN_mask_bits(e,8);		// check LSB
   unsigned int n=BN_get_word(e);
@@ -471,7 +504,7 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       last=f-IMPORT_J;
       // fall through
     case IMPORT_LAST:
-      if(!cycles) cycles=656+160*l-6; // Even for 'J' cycles is dependent on 'l'
+      if(!cycles) cycles=656+160*l-6;
       regs[last]->GetLE(data,last>0?dl:8);
       break;
 
@@ -496,9 +529,9 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case SWAP_D:
       cycles=776+248*l1-6;
       last=f-SWAP_A+1;
-      x.GetLE(data,dl);
+      e.GetLE(data,dl);
       regs[last]->PutLE(data,dl);
-      BN_copy(*regs[last],x);
+      BN_copy(*regs[last],e);
       break;
 
     case CLEAR_A:

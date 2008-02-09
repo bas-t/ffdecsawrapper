@@ -50,6 +50,89 @@ extern char auxPassword[250];
 
 // ----------------------------------------------------------------
 
+#define DEF_WORDSIZE 4
+
+class cMapMath {
+private:
+  cBN x, y, s;
+  int words;
+protected:
+  int wordsize;
+  cBN A, B, C, D, J, I;
+  cBNctx ctx;
+  SHA_CTX sctx;
+  // stateless
+  void MakeJ0(BIGNUM *j, BIGNUM *d);
+  void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
+  void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
+  void MonStart(int w);
+  void MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
+  // statefull
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b);
+  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w);
+public:
+  cMapMath(void);
+  };
+
+// ----------------------------------------------------------------
+
+#define SETSIZE     0x02
+#define IMPORT_J    0x03
+#define IMPORT_A    0x04
+#define IMPORT_B    0x05
+#define IMPORT_C    0x06
+#define IMPORT_D    0x07
+#define IMPORT_LAST 0x08
+#define EXPORT_J    0x09
+#define EXPORT_A    0x0A
+#define EXPORT_B    0x0B
+#define EXPORT_C    0x0C
+#define EXPORT_D    0x0D
+#define EXPORT_LAST 0x0E
+#define SWAP_A      0x0F
+#define SWAP_B      0x10
+#define SWAP_C      0x11
+#define SWAP_D      0x12
+#define CLEAR_A     0x13
+#define CLEAR_B     0x14
+#define CLEAR_C     0x15
+#define CLEAR_D     0x16
+#define COPY_A_B    0x17
+#define COPY_B_A    0x18
+#define COPY_A_C    0x19
+#define COPY_C_A    0x1A
+#define COPY_C_D    0x1B
+#define COPY_D_C    0x1C
+
+class cMapCore : public cMapMath {
+private:
+  int last;
+  cBN e;
+  cBN *regs[5];
+protected:
+  unsigned int cycles;
+  cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180
+  cBN sA0, sC0, sE0, s100, s120, s140, s160;
+  // statefull
+  void MonInit(int bits=0);
+  void MonExpNeg(void);
+  // ECC
+  void DoubleP(int temp);
+  void AddP(int temp);
+  void ToProjective(int set, BIGNUM *x, BIGNUM *y);
+  void ToAffine(void);
+  void CurveInit(BIGNUM *a);
+  //
+  int GetOpSize(int l);
+  bool DoMap(int f, unsigned char *data=0, int l=0);
+  unsigned int MapCycles() { return cycles; }
+public:
+  cMapCore(void);
+  };
+
+// ----------------------------------------------------------------
+
 class cN2Timer {
 private:
   int ctrl, divisor, cycles, remainder, latch;
@@ -116,73 +199,6 @@ protected:
 public:
   cN2Emu(void);
   virtual ~cN2Emu() {}
-  };
-
-// ----------------------------------------------------------------
-
-#define SETSIZE     0x02
-#define IMPORT_J    0x03
-#define IMPORT_A    0x04
-#define IMPORT_B    0x05
-#define IMPORT_C    0x06
-#define IMPORT_D    0x07
-#define IMPORT_LAST 0x08
-#define EXPORT_J    0x09
-#define EXPORT_A    0x0A
-#define EXPORT_B    0x0B
-#define EXPORT_C    0x0C
-#define EXPORT_D    0x0D
-#define EXPORT_LAST 0x0E
-#define SWAP_A      0x0F
-#define SWAP_B      0x10
-#define SWAP_C      0x11
-#define SWAP_D      0x12
-#define CLEAR_A     0x13
-#define CLEAR_B     0x14
-#define CLEAR_C     0x15
-#define CLEAR_D     0x16
-#define COPY_A_B    0x17
-#define COPY_B_A    0x18
-#define COPY_A_C    0x19
-#define COPY_C_A    0x1A
-#define COPY_C_D    0x1B
-#define COPY_D_C    0x1C
-
-class cMapCore {
-private:
-  int last;
-  cBN *regs[5];
-  cBN x, y, s;
-protected:
-  unsigned int cycles;
-  int wordsize;
-  cBN A, B, C, D, J, I;
-  cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180
-  cBN sA0, sC0, sE0, s100, s120, s140, s160;
-  cBNctx ctx;
-  SHA_CTX sctx;
-  // stateless
-  void MakeJ0(BIGNUM *j, BIGNUM *d);
-  void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
-  void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int words);
-  // statefull
-  void MonInit(int bits=0);
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b) { MonMul(o,a,b,C,D,J,0); }
-  void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int words) { MonMul(o,a,b,C,D,J,words); }
-  void MonExpNeg(void);
-  // ECC
-  void DoubleP(int temp);
-  void AddP(int temp);
-  void ToProjective(int set, BIGNUM *x, BIGNUM *y);
-  void ToAffine(void);
-  void CurveInit(BIGNUM *a);
-  //
-  int GetOpSize(int l);
-  bool DoMap(int f, unsigned char *data=0, int l=0);
-  unsigned int MapCycles() { return cycles; }
-public:
-  cMapCore(void);
   };
 
 // ----------------------------------------------------------------
