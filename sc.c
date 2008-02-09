@@ -1228,7 +1228,9 @@ public:
   virtual bool Initialize(void);
   virtual bool Start(void);
   virtual void Stop(void);
+#ifndef SASC
   virtual void MainThreadHook(void);
+#endif
   virtual cMenuSetupPage *SetupMenu(void);
   virtual bool SetupParse(const char *Name, const char *Value);
   virtual const char **SVDRPHelpPages(void);
