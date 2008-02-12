@@ -1019,7 +1019,8 @@ int c6805::Run(int max_count)
           *ex=op; break;
         }
       }
-    PUTLB(disAsmLogClass,loglb);
+    if(doDisAsm) PUTLB(disAsmLogClass,loglb);
+    else loglb->cLineBuff::Flush();
 
     for(int i=numBp-1 ; i>=0 ; i--) {
       if(bp[i]==pc) {
