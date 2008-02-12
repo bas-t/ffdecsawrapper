@@ -172,14 +172,16 @@ private:
   cN2Timer timer[MAX_TIMERS];
   // CRC hardware
   enum { CRCCALC_DELAY=9, CRC_BUSY=1, CRC_DISABLED=2 };
-  unsigned short CRCvalue;
+  unsigned short CRCvalue, CRCinput;
   unsigned char CRCpos;
   unsigned int CRCstarttime;
   unsigned short crc16table[256];
+  bool CRCupdate;
   // counter
   unsigned int cycles;
   //
   void GenCRC16Table(void);
+  unsigned short CRC(unsigned short crc, unsigned char val, int bits);
 public:
   cMapMemHW(void);
   virtual unsigned char Get(unsigned short ea);

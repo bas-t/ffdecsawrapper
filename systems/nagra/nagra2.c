@@ -94,27 +94,32 @@ void cN2Timer::Stop(void)
 
 // -- cMapMemHW ----------------------------------------------------------------
 
+#define CRC_POLY 0x8408 // ccitt poly
+
 cMapMemHW::cMapMemHW(void)
 :cMapMem(HW_OFFSET,HW_REGS)
 {
   cycles=0;
-  CRCvalue=0; CRCpos=0; CRCstarttime=0;
+  CRCvalue=0xffff; CRCpos=0; CRCstarttime=0; CRCinput=0; CRCupdate=false;
   GenCRC16Table();
   PRINTF(L_SYS_EMU,"mapmemhw: new HW map off=%04x size=%04x",offset,size);
 }
 
 void cMapMemHW::GenCRC16Table(void)
 {
-  unsigned char hi[256];
-    for(int i=0; i<256; ++i) {
-      unsigned short c = i;
-      for(int j=0; j<8; ++j) c = (c>>1) ^ ((c&1) ? 0x8408 : 0); // ccitt poly
-      crc16table[0xff-i] = c & 0xff;
-      hi[i] = c>>8;
-      }
-    for(int i=0; i<32; ++i)
-      for(int j=0; j<8; ++j)
-        crc16table[i*8+j] |= hi[(0x87+(i*8)-j)&0xff]<<8;
+  for(int i=0; i<256; i++) {
+    unsigned short c=i;
+    for(int j=0; j<8; j++) c=(c>>1)^((c&1)?CRC_POLY:0);
+    crc16table[i]=c;
+    }
+}
+
+unsigned short cMapMemHW::CRC(unsigned short crc, unsigned char val, int bits)
+{
+  if(bits>=8) return (crc>>8)^crc16table[(crc^val)&0xff];
+  if(bits>0) crc^=(val&(0xff>>(8-bits)));
+  for(int i=0; i<bits; i++) crc=(crc>>1)^((crc&1)?CRC_POLY:0);
+  return crc;
 }
 
 void cMapMemHW::AddCycles(unsigned int num)
@@ -151,8 +156,16 @@ unsigned char cMapMemHW::Get(unsigned short ea)
       }
     case HW_CRC_DATA:
       {
-      unsigned char r=CRCvalue>>((CRCpos&1)<<3);
-      CRCpos=!CRCpos;
+      unsigned short crc;
+      if(CRCupdate) {
+        crc=CRC(CRCvalue,CRCinput,cycles-CRCstarttime-1);
+        if(cycles-CRCstarttime>=CRCCALC_DELAY) {
+          CRCvalue=crc; CRCupdate=false;
+          }
+        }
+      else crc=CRCvalue;
+      unsigned char r=(crc^0xffff)>>((CRCpos&1)<<3);
+      CRCpos^=1;
       return r;
       }
     default:
@@ -176,17 +189,23 @@ void cMapMemHW::Set(unsigned short ea, unsigned char val)
       timer[TIMER_NUM(ea)].Latch(val);
       break;
     case HW_CRC_CONTROL:
-      mem[ea]=val;
-      if(!(val&CRC_DISABLED)) {
-        CRCvalue=0; CRCpos=0;
+      if((mem[ea]&CRC_DISABLED) && !(val&CRC_DISABLED)) {
+        CRCvalue=0xffff; CRCinput=0; CRCpos=0; CRCupdate=false;
         CRCstarttime=cycles-CRCCALC_DELAY;
         }
+      mem[ea]=val;
       break;
     case HW_CRC_DATA:
-      if(!(mem[HW_CRC_CONTROL]&CRC_DISABLED) && cycles-CRCstarttime>=CRCCALC_DELAY) {
-        CRCvalue=(CRCvalue>>8)^crc16table[(CRCvalue^val)&0xFF];
-        CRCpos=0;
-        CRCstarttime=cycles;
+      if(cycles-CRCstarttime>=CRCCALC_DELAY) {
+        if(CRCupdate) {
+          CRCvalue=CRC(CRCvalue,CRCinput,8);
+          CRCupdate=false;
+          }
+        if(!(mem[HW_CRC_CONTROL]&CRC_DISABLED)) {
+          CRCinput=val;
+          CRCupdate=true;
+          CRCstarttime=cycles;
+          }
         }
       break;
     default:
