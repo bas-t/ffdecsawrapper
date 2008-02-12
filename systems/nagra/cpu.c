@@ -445,7 +445,7 @@ int c6805::Run(int max_count)
         switch(ins) {
           case 0x22: case 0x23: case 0x24: case 0x25:
           case 0x26: case 0x27:
-            vbra=true; PRINTF(L_SYS_EMU,"WARN: V-flag not yet calculated"); break;
+            vbra=true; break;
           case 0x75:
           case 0x8D:
           case 0xC0: case 0xC1: case 0xC2: case 0xC3:
@@ -470,7 +470,7 @@ int c6805::Run(int max_count)
         switch(ins) {
           case 0x22: case 0x23: case 0x24: case 0x25:
           case 0x26: case 0x27:
-            vbra=true; PRINTF(L_SYS_EMU,"WARN: V-flag not yet calculated"); indirect=true; break;
+            vbra=true; indirect=true; break;
           case 0xC3:
           case 0xCE: case 0xCF:
           case 0xD0: case 0xD1: case 0xD2: case 0xD3:
@@ -702,13 +702,13 @@ int c6805::Run(int max_count)
       case 0x5C:
       case 0x6C:
       case 0x7C:
-        op++; tst(op); break;
+        op++; cc.v=(op==0x80); tst(op); break;
       case 0x3A: // DEC
       case 0x4A:
       case 0x5A:
       case 0x6A:
       case 0x7A:
-        op--; tst(op); break;
+        op--; cc.v=(op==0x7f); tst(op); break;
       case 0x33: // COM
       case 0x43:
       case 0x53:
@@ -720,7 +720,7 @@ int c6805::Run(int max_count)
       case 0x50:
       case 0x60:
       case 0x70:
-        op=~op+1; cc.c=(op!=0); tst(op); break;
+        op=~op+1; cc.c=(op!=0); cc.v=(op==0x80); tst(op); break;
       case 0x42: // MUL
       case 0x52:
         {
@@ -1107,6 +1107,7 @@ unsigned char c6805::add(unsigned char op, unsigned char c)
   cc.h=res_half > 0x0f;
   cc.c=res > 0xff;
   res&=0xff;
+  cc.v=((op+c)&0x80) ? ((a&0x80) && !(res&0x80)) : (!(a&0x80) && (res&0x80));
   tst(res);
   return res;
 }
@@ -1116,6 +1117,7 @@ unsigned char c6805::sub(unsigned char op1, unsigned char op2, unsigned char c)
   short res=(short)op1 - (short)op2 - (short)c;
   cc.c=res < 0;
   res&=0xff;
+  cc.v=((op2+c)&0x80) ? (!(op1&0x80) && (res&0x80)) : ((op1&0x80) && !(res&0x80));
   tst(res);
   return res;
 }
