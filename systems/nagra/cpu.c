@@ -720,7 +720,7 @@ int c6805::Run(int max_count)
       case 0x50:
       case 0x60:
       case 0x70:
-        op=~op+1; if(!op) cc.c=0; tst(op); break;
+        op=~op+1; cc.c=(op!=0); tst(op); break;
       case 0x42: // MUL
       case 0x52:
         {
