@@ -151,6 +151,7 @@ class cScDvbDevice : public cDvbDevice {
 private:
   cDeCSA *decsa;
   cDeCsaTSBuffer *tsBuffer;
+  cMutex tsMutex;
 #if APIVERSNUM >= 10500
   cScCiAdapter *ciadapter;
   cCiAdapter *hwciadapter;
@@ -171,6 +172,7 @@ private:
   void LateInit(void);
   void EarlyShutdown(void);
   int FindLRUPrg(int source, int transponder, int prg);
+  bool ScActive(void);
 #endif //SASC
 protected:
 #ifndef SASC
