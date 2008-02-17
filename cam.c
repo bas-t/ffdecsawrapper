@@ -2419,17 +2419,19 @@ public:
   cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive);
   ~cDeCsaTSBuffer();
   uchar *Get(void);
+  void SetActive(bool ScActive);
   };
 
 cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive)
 {
   SetDescription("TS buffer on device %d", CardIndex);
-  f=File; cardIndex=CardIndex; decsa=DeCsa; scActive=ScActive;
+  f=File; cardIndex=CardIndex; decsa=DeCsa;
   delivered=false;
   lastP=0; lastCount=0;
   ringBuffer=new cRingBufferLinear(Size,TS_SIZE,true,"FFdecsa-TS");
   ringBuffer->SetTimeouts(100,100);
   if(decsa) decsa->SetActive(true);
+  SetActive(ScActive);
   Start();
 }
 
@@ -2438,6 +2440,11 @@ cDeCsaTSBuffer::~cDeCsaTSBuffer()
   Cancel(3);
   if(decsa) decsa->SetActive(false);
   delete ringBuffer;
+}
+
+void cDeCsaTSBuffer::SetActive(bool ScActive)
+{
+  scActive=ScActive;
 }
 
 void cDeCsaTSBuffer::Action(void)
@@ -2677,6 +2684,9 @@ bool cScDvbDevice::Ready(void)
 bool cScDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 {
   if(cam) cam->SetPid(Type,Handle->pid,On);
+  tsMutex.Lock();
+  if(tsBuffer) tsBuffer->SetActive(ScActive());
+  tsMutex.Unlock();
   return cDvbDevice::SetPid(Handle,Type,On);
 }
 
@@ -2765,24 +2775,32 @@ void cScDvbDevice::CiStartDecrypting(void)
 }
 #endif //APIVERSNUM < 10500
 
+bool cScDvbDevice::ScActive(void)
+{
+#if APIVERSNUM >= 10500
+  return dynamic_cast<cScCamSlot *>(CamSlot())!=0;
+#else
+  return cam && softcsa;
+#endif
+}
+
 bool cScDvbDevice::OpenDvr(void)
 {
   CloseDvr();
   fd_dvr=DvbOpen(DEV_DVB_DVR,CardIndex(),O_RDONLY|O_NONBLOCK,true);
   if(fd_dvr>=0) {
-#if APIVERSNUM >= 10500
-    bool active=dynamic_cast<cScCamSlot *>(CamSlot())!=0;
-#else
-    bool active=cam && softcsa;
-#endif
-    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(2),CardIndex()+1,decsa,active);
+    tsMutex.Lock();
+    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(2),CardIndex()+1,decsa,ScActive());
+    tsMutex.Unlock();
     }
   return fd_dvr>=0;
 }
 
 void cScDvbDevice::CloseDvr(void)
 {
+  tsMutex.Lock();
   delete tsBuffer; tsBuffer=0;
+  tsMutex.Unlock();
   if(fd_dvr>=0) { close(fd_dvr); fd_dvr=-1; }
 }
 
