@@ -311,7 +311,7 @@ void cStructLoader::Load(bool reload)
       mtime=curr_mtime;
       doload=true;
       }
-    else if(mtime && mtime<curr_mtime) {
+    else if(mtime<curr_mtime) {
       PRINTF(L_CORE_LOAD,"detected change of %s",path);
       if(IsModified())
         PRINTF(L_CORE_LOAD,"discarding in-memory changes");
