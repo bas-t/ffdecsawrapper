@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Key update"
-msgstr ""
+msgstr "Aggiornamento chiavi"
 
 msgid "off"
 msgstr "disattivo"
@@ -116,10 +116,10 @@ msgid "all CAIDs"
 msgstr "tutti i CAIDs"
 
 msgid "comment out"
-msgstr ""
+msgstr "commenta"
 
 msgid "remove"
-msgstr ""
+msgstr "rimuovi"
 
 msgid "Update keys (AU)"
 msgstr "Aggiornamento chiavi (AU)"
@@ -128,7 +128,7 @@ msgid "Start AU on EPG scan"
 msgstr "Avvia AU con la scansione EPG"
 
 msgid "Superseded keys"
-msgstr ""
+msgstr "Chiavi scadute"
 
 msgid "Concurrent FF streams"
 msgstr "Flussi simultanei per scheda FF"
@@ -161,7 +161,7 @@ msgid "Log to syslog"
 msgstr "Log in Syslog"
 
 msgid "Show user messages"
-msgstr ""
+msgstr "Mostra messaggi utente"
 
 msgid "A software emulated CAM"
 msgstr "Un software di emulazione CAM"
@@ -197,7 +197,7 @@ msgid "disable"
 msgstr "disabilita"
 
 msgid "SC-Cryptoworks: Parental rating"
-msgstr "SC-Cryptoworks: Controllo parentale"
+msgstr "SC-Cryptoworks: Filtro famiglia"
 
 msgid "allow ALL"
 msgstr "permetti TUTTI"
