@@ -821,6 +821,7 @@ bool cN2Prov0101::ProcessMap(int f)
       PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
       return false;
     }
+  c6805::a=0; c6805::x=0; c6805::y=0; 
   return true;
 }
 
