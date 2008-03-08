@@ -40,23 +40,6 @@
 
 // ----------------------------------------------------------------
 
-#define DEBUG_ISO // debug iso/smartcard functions
-#ifdef DEBUG_ISO
-#define di(x) { (x); }
-#else
-#define di(x) ;
-#endif
-
-#ifdef DEBUG_ISO
-#define DUMP(data,len) { const int l=(len); \
-                         for(int i=0 ; i<l ; i++) printf(" %02x",*((data)+i)); \
-                         printf("\n"); }
-#else
-#define DUMP(data,len) ;
-#endif
-
-// ----------------------------------------------------------------
-
 class cSerial;
 class cSmartCards;
 
