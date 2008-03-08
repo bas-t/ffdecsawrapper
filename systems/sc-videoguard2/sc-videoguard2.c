@@ -657,7 +657,7 @@ bool cSmartCardVideoGuard2::Decode(const cEcmInfo *ecm, const unsigned char *dat
 
 bool cSmartCardVideoGuard2::Update(int pid, int caid, const unsigned char *data)
 {
-  static unsigned char ins42[5] = { 0xD1,0x40,0x00,0x00,0xFF }; 
+  static unsigned char ins42[5] = { 0xD1,0x42,0x00,0x00,0xFF }; 
   if(MatchEMM(data)) {
     const unsigned char *payloaddata=cParseNDS::PayloadStart(data); //points to 02 xx yy
     int lenEMM;
