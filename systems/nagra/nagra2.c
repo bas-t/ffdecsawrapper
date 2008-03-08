@@ -752,7 +752,7 @@ void cNagra2::CreatePQ(const unsigned char *key, BIGNUM *p, BIGNUM *q)
   idata[48] |= 0x80;
   idata[95] |= 1;
   BN_bin2bn(idata+48,48,q);
-  BN_add_word(q,(key[22] &0xf << 9 ) | (key[23]<<1));
+  BN_add_word(q,((key[22]&0xf)<<9) | (key[23]<<1));
 }
 
 bool cNagra2::Signature(const unsigned char *vkey, const unsigned char *sig, const unsigned char *msg, int len)
