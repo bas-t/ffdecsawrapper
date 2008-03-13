@@ -773,19 +773,13 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
       AddCycles(MapCycles());
       break;
-    case 0x32:
-      GetMem(HILO(0x44),tmp,dl,0);
-      DoMap(f,tmp,l);
-      break;
-    case 0x3b:
-      GetMem(HILO(0x44),tmp,dl,0);
-      DoMap(f,tmp,l);
-      break;
     case 0x29:
       DoMap(f,tmp,-Get(0x48));
       Set(0x4b,tmp[0]);
       AddCycles(MapCycles());
       break;
+    case 0x32:
+    case 0x3b:
     case 0x3e:
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
@@ -795,10 +789,6 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f);
       break;
     case 0x44:
-      GetMem(0x400,tmp,64,0);
-      DoMap(f,tmp);
-      SetMem(0x440,tmp,20,0);
-      break;
     case 0x45:
       GetMem(0x400,tmp,64,0);
       DoMap(f,tmp,l);
