@@ -446,6 +446,11 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       cycles=504+(8*l)-((8*l-2)%5)-6;
       }
       break; 
+    case 0x32:
+      A.GetLE(data,l<<3);
+      BN_div(C,B,A,D,ctx);
+      BN_zero(A);
+      break;
     case 0x3b:
       MonInit(wordsize*60+4*l);
       I.GetLE(data,l<<3);
@@ -767,6 +772,10 @@ bool cN2Prov0101::ProcessMap(int f)
     case 0x22:
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
       AddCycles(MapCycles());
+      break;
+    case 0x32:
+      GetMem(HILO(0x44),tmp,dl,0);
+      DoMap(f,tmp,l);
       break;
     case 0x3b:
       GetMem(HILO(0x44),tmp,dl,0);
