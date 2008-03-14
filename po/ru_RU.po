@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
 "POT-Creation-Date: 2008-01-18 18:31+0100\n"
-"PO-Revision-Date: 2008-01-03 14:21+0100\n"
+"PO-Revision-Date: 2008-03-13 15:43+0100\n"
 "Last-Translator: somebody\n"
 "Language-Team: ru\n"
 "MIME-Version: 1.0\n"
@@ -16,7 +16,7 @@ msgstr ""
 "X-Generator: KBabel 1.11.4\n"
 
 msgid "Key update"
-msgstr ""
+msgstr "Обновление ключа"
 
 msgid "off"
 msgstr "выкл"
@@ -117,10 +117,10 @@ msgid "all CAIDs"
 msgstr "все CAID"
 
 msgid "comment out"
-msgstr ""
+msgstr "закоментировать"
 
 msgid "remove"
-msgstr ""
+msgstr "удалить"
 
 msgid "Update keys (AU)"
 msgstr "Обновлять ключи (AU)"
@@ -129,7 +129,7 @@ msgid "Start AU on EPG scan"
 msgstr "Старт автообновления при EPG сканировании"
 
 msgid "Superseded keys"
-msgstr ""
+msgstr "Устаревшие ключи"
 
 msgid "Concurrent FF streams"
 msgstr "Параллельные потоки FF"
@@ -162,10 +162,10 @@ msgid "Log to syslog"
 msgstr "Сообщения в Syslog"
 
 msgid "Show user messages"
-msgstr ""
+msgstr "Показать сообщения пользователя"
 
 msgid "A software emulated CAM"
-msgstr "Програмный эмулятор CAM"
+msgstr "Программный эмулятор CAM"
 
 msgid "undisclosed key"
 msgstr "неизвестный ключ"
@@ -180,7 +180,7 @@ msgid "Nagra2: drop EMM-S packets"
 msgstr "Награ2: запрет EMM-S пакетов"
 
 msgid "Nagra2: Enable AUXserver"
-msgstr "Nagra2: Разрешить AUXserver"
+msgstr "Nagra2: разрешить AUXserver"
 
 msgid "Nagra2: AUXserver hostname"
 msgstr "Nagra2: AUXserver имя хоста"
@@ -189,7 +189,7 @@ msgid "Nagra2: AUXserver port"
 msgstr "Nagra2: AUXserver порт"
 
 msgid "Nagra2: AUXserver password"
-msgstr "Nagra2: AUXserver пассворд"
+msgstr "Nagra2: AUXserver пароль"
 
 msgid "don't touch"
 msgstr "не изменять"
