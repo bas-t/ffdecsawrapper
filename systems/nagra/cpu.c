@@ -501,7 +501,7 @@ int c6805::Run(int max_count)
         break;
       }
     int postCycles=0;
-    if(ins<=0x1F) postCycles=2;  // btjt/btjf/bres/bset
+//XXX    if(ins<=0x1F) postCycles=2;  // btjt/btjf/bres/bset
     AddCycles(cycles+clock_cycles[ins]-postCycles);
 
     if(doDisAsm) {
