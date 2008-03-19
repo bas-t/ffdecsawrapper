@@ -52,6 +52,9 @@ extern char auxPassword[250];
 
 #define DEF_WORDSIZE 4
 
+#define TMPWS_START(x) { int __oldws=wordsize; wordsize=(x);
+#define TMPWS_END()    wordsize=__oldws; }
+
 class cMapMath {
 private:
   cBN x, y, s;
@@ -62,7 +65,7 @@ protected:
   cBNctx ctx;
   SHA_CTX sctx;
   // stateless
-  void MakeJ0(BIGNUM *j, BIGNUM *d);
+  void MakeJ0(BIGNUM *j, BIGNUM *d, int bits=64);
   void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
   void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
