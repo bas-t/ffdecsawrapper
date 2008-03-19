@@ -270,7 +270,7 @@ void cMapMath::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
   BN_mask_bits(r,wordsize<<6);
 }
 
-void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d)
+void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d, int bits)
 {
 #if OPENSSL_VERSION_NUMBER < 0x0090700fL
 #error BN_mod_inverse is probably buggy in your openssl version
@@ -278,7 +278,7 @@ void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d)
   BN_zero(x);
   BN_sub(j,x,d);
   BN_set_bit(j,0);
-  BN_set_bit(x,64);
+  BN_set_bit(x,bits);
   BN_mod_inverse(j,j,x,ctx);
 }
 
@@ -382,6 +382,14 @@ void cMapCore::MonExpNeg(void)
   for(int i=BN_num_bits(e)-2; i>-1; i--) {
     MonMul(B,B,B);
     if(BN_is_bit_set(e,i)) MonMul(B,A,B);
+    }
+  if(BN_is_bit_set(D,0)) {
+    int i;
+    for(i=BN_num_bits(D)-2; i>0; i--) if(BN_is_bit_set(D,i)) break;
+    if(i<=0) {
+      MonMul(B,B,B);
+      MonMul(B,A,B);
+      }
     }
   BN_set_word(A,1);
   MonMul(B,A,B);
@@ -493,6 +501,7 @@ void cMapCore::CurveInit(BIGNUM *a)
   BN_copy(A,B);
   BN_copy(I,D);
   BN_add_word(I,1);
+  BN_mask_bits(I,wordsize<<6);
   BN_rshift(I,I,1);
   MonMul(s140,I,B);
   MonMul(s160,B,a);
@@ -510,36 +519,52 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
   cycles=0;
   switch(f) {
     case SETSIZE:
-      wordsize=l; cycles=475-6; break;
+      cycles=(l>17 ? 459 : (l ? 475 : 454))-6;
+      if(l>=1 && l<=17) wordsize=l;
+      break;
 
     case IMPORT_J:
       cycles=890-6;
-      // fall through
+      last=0;
+      regs[0]->GetLE(data,8);
+      break;
     case IMPORT_A:
     case IMPORT_B:
     case IMPORT_C:
     case IMPORT_D:
-      if(!cycles) cycles=771+160*l1-6+(l==0?4:0);
+      if(l>17) { l=17; cycles+=5; }
+      else if(l<=0) { l=wordsize; cycles+=4; }
+      cycles+=771+160*l-6;
       last=f-IMPORT_J;
-      // fall through
+      regs[last]->GetLE(data,l<<3);
+      break;
     case IMPORT_LAST:
-      if(!cycles) cycles=656+160*l-6;
-      regs[last]->GetLE(data,last>0?dl:8);
+      if(l>16) { l=1; cycles+=5; }
+      else if(l<=0) l=1;
+      cycles=656+160*l-6;
+      regs[last]->GetLE(data,(last==0?1:l)<<3);
       break;
 
     case EXPORT_J:
       cycles=897-6;
-      // fall through
+      last=0;
+      regs[0]->PutLE(data,8);
+      break;
     case EXPORT_A:
     case EXPORT_B:
     case EXPORT_C:
     case EXPORT_D:
-      if(!cycles) cycles=778+160*l1-6+(l==0?4:0);
+      if(l>17) { l=17; cycles+=5; }
+      else if(l<=0) { l=wordsize; cycles+=4; }
+      cycles=778+160*l-6;
       last=f-EXPORT_J;
-      // fall through
+      regs[last]->PutLE(data,l<<3);
+      break;
     case EXPORT_LAST:
-      if(!cycles) cycles=668+160*l-6; // Even for 'J' cycles is dependent on 'l'
-      regs[last]->PutLE(data,last>0?dl:8);
+      if(l>16) { l=1; cycles+=5; }
+      else if(l<=0) l=1;
+      cycles=668+160*l-6;
+      regs[last]->PutLE(data,(last==0?1:l)<<3);
       break;
 
     case SWAP_A:
@@ -557,22 +582,22 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case CLEAR_B:
     case CLEAR_C:
     case CLEAR_D:
-      cycles=465+(8*l1)-((8*l1-2)%5)-6;
+      cycles=462+(8*l1+3)/5*5-6;
       last=f-CLEAR_A+1; BN_zero(*regs[last]);
       break;
 
     case COPY_A_B:
-      last=2; BN_copy(B,A); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
+      last=2; BN_copy(B,A); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_B_A:
-      last=1; BN_copy(A,B); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
+      last=1; BN_copy(A,B); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_A_C:
-      last=3; BN_copy(C,A); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
+      last=3; BN_copy(C,A); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_C_A:
-      last=1; BN_copy(A,C); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
+      last=1; BN_copy(A,C); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_C_D:
-      last=4; BN_copy(D,C); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
+      last=4; BN_copy(D,C); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_D_C:
-      last=3; BN_copy(C,D); cycles=465+(8*l1)-((8*l1-2)%5)-6; break;
+      last=3; BN_copy(C,D); cycles=462+(8*l1+3)/5*5-6; break;
 
     case 0x43: // init SHA1
       SHA1_Init(&sctx);

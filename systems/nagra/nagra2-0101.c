@@ -439,17 +439,19 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
     case 0x29:
       {
       BN_add(B,B,C);
-      if(l<=0) l=wordsize; 	// conditional seems pretty useless
-      bool b=BN_is_bit_set(B,l<<6);
-      data[0]=b;
-      if(b) BN_mask_bits(B,l<<6);
-      cycles=504+(8*l)-((8*l-2)%5)-6;
+      bool b=BN_is_bit_set(B,wordsize<<6);
+      if(data) data[0]=b;
+      if(b) BN_mask_bits(B,wordsize<<6);
+      cycles=501+(8*wordsize+3)/5*5-6;
       }
       break; 
     case 0x32:
+      l=min(34,l);
       A.GetLE(data,l<<3);
       BN_div(C,B,A,D,ctx);
-      BN_zero(A);
+      BN_rshift(A,C,17*64);
+      BN_mask_bits(C,17*64);
+      BN_zero(J);
       break;
     case 0x3b:
       MonInit(wordsize*60+4*l);
@@ -490,45 +492,74 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
 #endif
       {
       cBN a, b, x, y, scalar;
-      D.GetLE(data+0x00,16);
-      x.GetLE(data+0x10,16);
-      y.GetLE(data+0x20,16);
-      b.GetLE(data+0x30,16);
-      a.GetLE(data+0x40,16);
-      scalar.GetLE(data+0x50,16);
+      if(l<2 || l>4) l=4;
+      TMPWS_START(l);
+      l<<=3;
+      D.GetLE(data+0*l,l);
+      x.GetLE(data+1*l,l);
+      y.GetLE(data+2*l,l);
+      b.GetLE(data+3*l,l);
+      a.GetLE(data+4*l,l);
+      scalar.GetLE(data+5*l,l);
+      bool doz=false;
       int scalarbits=BN_num_bits(scalar);
-      if(scalarbits>=2 && !BN_is_zero(x) && !BN_is_zero(y) && !BN_is_zero(b)) {
-        CurveInit(a);
-        ToProjective(0,x,y);
-        BN_copy(Qx,Px);
-        BN_copy(Qy,Py);
-        for(int i=scalarbits-2; i>=0; i--) {
-          DoubleP(0);
-          if(BN_is_bit_set(scalar,i)) {
-            BN_copy(A,Pz);
-            if(BN_is_zero(Pz)) {
-              BN_copy(Px,Qx);
-              BN_copy(Py,Qy);
-              BN_copy(Pz,Qz);
-              AddP(1);
-              }
-            else {
-              BN_mask_bits(Px,32);
-              BN_lshift(b,Qz,32);
-              BN_add(Px,Px,b);
-              BN_mask_bits(Px,128);
-              AddP(0);
+      if(scalarbits>=2) {
+        if(BN_is_zero(x) && (BN_is_zero(y) || (BN_is_zero(b) && BN_num_bits(y)==1))) {
+          BN_zero(Px);
+          BN_copy(Py,y);
+          BN_zero(Qz);
+          }
+        else {
+          CurveInit(a);
+          ToProjective(0,x,y);
+          BN_copy(Qx,Px);
+          BN_copy(Qy,Py);
+          for(int i=scalarbits-2; i>=0; i--) {
+            DoubleP(0);
+            if(BN_is_bit_set(scalar,i)) {
+              BN_copy(A,Pz);
+              if(BN_is_zero(Pz) || BN_is_zero(D)) {
+                BN_copy(Px,Qx);
+                BN_copy(Py,Qy);
+                BN_copy(Pz,Qz);
+                AddP(1);
+                }
+              else {
+                doz=true;
+                if(wordsize==4) {
+                  BN_rshift(Py,Py,32);
+                  BN_lshift(Py,Py,32);
+                  BN_rshift(b,Qz,224);
+                  BN_add(Py,Py,b);
+                  }
+                BN_mask_bits(Px,32);
+                BN_lshift(b,Qz,32);
+                BN_add(Px,Px,b);
+                BN_mask_bits(Px,128);
+                AddP(0);
+                }
               }
             }
+          ToAffine();
           }
-        ToAffine();
         }
-      memset(data,0,0x60);
-      Px.PutLE(&data[0x00],16);
-      unsigned char tmp[16];
-      Qz.PutLE(tmp,16);
-      memcpy(&data[0x10],&tmp[0x0C],4);
-      Py.PutLE(&data[0x20],16);
+      else {
+        BN_copy(Px,x);
+        BN_copy(Py,y);
+        BN_zero(Qz);
+        }
+      memset(data,0,0x40);
+      Px.PutLE(&data[0x00],l);
+      if(l<0x20 && doz) {
+        unsigned char tmp[0x20];
+        Qz.PutLE(tmp,l);
+        memcpy(&data[l],&tmp[l-4],4);
+        }
+      Py.PutLE(&data[0x20],l);
+      TMPWS_END();
+      BN_zero(A);
+      BN_zero(B);
+      BN_zero(C);
       break;
       }
     default:
@@ -719,7 +750,7 @@ bool cN2Prov0101::RomInit(void)
 bool cN2Prov0101::ProcessMap(int f)
 {
   unsigned short addr;
-  unsigned char tmp[256];
+  unsigned char tmp[512];
   int l=GetOpSize(Get(0x48));
   int dl=l<<3;
 
@@ -774,13 +805,17 @@ bool cN2Prov0101::ProcessMap(int f)
       AddCycles(MapCycles());
       break;
     case 0x29:
-      DoMap(f,tmp,-Get(0x48));
+      GetMem(HILO(0x44),tmp,dl,0);
+      DoMap(f,tmp);
       Set(0x4b,tmp[0]);
       AddCycles(MapCycles());
       break;
+    case 0x3e:
+      if(l>wordsize) { l=wordsize; dl=l<<3; }
+      // fall through
     case 0x32:
     case 0x3b:
-    case 0x3e:
+      if(l>34) { l=34; dl=34<<3; }
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
       AddCycles(MapCycles());
@@ -806,14 +841,13 @@ bool cN2Prov0101::ProcessMap(int f)
       break;
     case 0x57:
       addr=HILO(0x46);
-      GetMem(HILO(addr   ),tmp,16,0);
-      GetMem(HILO(addr+2 ),tmp+0x10,16,0);
-      GetMem(HILO(addr+4 ),tmp+0x20,16,0);
-      GetMem(HILO(addr+6 ),tmp+0x30,16,0);
-      GetMem(HILO(addr+8 ),tmp+0x40,16,0);
-      GetMem(HILO(addr+10),tmp+0x50,16,0);
+      l=wordsize; if(l<2 || l>4) l=4;
+      dl=l<<3;
+      for(int i=0; i<6; i++) GetMem(HILO(addr+i*2),tmp+i*dl,dl,0);
       DoMap(f,tmp);
       SetMem(0x400,tmp,0x40,0);
+      memset(tmp,0,11*32);
+      SetMem(0x440,tmp,11*32,0);
       AddCycles(MapCycles());
       break;
     default:
