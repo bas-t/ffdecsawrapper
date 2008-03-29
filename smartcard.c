@@ -1267,7 +1267,7 @@ int cSmartCards::Reset(struct Port *port)
   cSerial *ser=port->Serial;
   PRINTF(L_CORE_SC,"%d: reseting card (sermode %s)",port->PortNum,serModes[ser->CurrentMode()]);
   ser->ToggleRTS();
-  cCondWait::SleepMs(20);
+  cCondWait::SleepMs(100);
   ser->ToggleRTS();
   int r=ser->Read(port->Atr.atr,-MAX_ATR_LEN,800,2000);
   port->Atr.atrLen=r;
