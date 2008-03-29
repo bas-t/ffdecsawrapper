@@ -445,6 +445,15 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       cycles=501+(8*wordsize+3)/5*5-6;
       }
       break; 
+    case 0x30:
+      BN_sqr(D,B,ctx);
+      BN_rshift(C,D,wordsize<<6);
+      BN_mask_bits(C,wordsize<<6);
+      BN_mask_bits(D,wordsize<<6);
+      BN_zero(J);
+      BN_set_bit(J,64);
+      BN_sub_word(J,1);
+      break;
     case 0x32:
       l=min(34,l);
       A.GetLE(data,l<<3);
@@ -820,6 +829,7 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,tmp,l);
       AddCycles(MapCycles());
       break;
+    case 0x30:
     case 0x43:
       DoMap(f);
       break;
