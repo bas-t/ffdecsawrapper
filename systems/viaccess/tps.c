@@ -756,6 +756,10 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
       if(addr<(datahdr->dlen-3)) {
         if(d[addr]==0x79 && d[addr+1]==0x00 && d[addr+2]==0x79 && d[addr+3]==0x00)
           kd=addr;
+//XXX this needs proper fix sometime...
+       else if(d[addr+1]==0x00 && d[addr+3]==0x00 && (d[addr+4]==3||d[addr+4]==2))
+          kd=addr;
+//XXX
         else if(d[addr]==0x73 && d[addr+1]==0x25 && d[addr+2]==0xFA)
           cb1=addr;
         else if(d[addr]==0x64 && (d[addr+1]&0xB0)==0xB0 && d[addr+2]==0x24)
