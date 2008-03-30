@@ -24,7 +24,7 @@ msgid "SoftCAM"
 msgstr "SoftCAM"
 
 msgid "Current keys:"
-msgstr "Chiave in uso:"
+msgstr "Chiavi in uso:"
 
 msgid "Key update status:"
 msgstr "Stato aggiornamento chiavi:"
@@ -50,34 +50,34 @@ msgid "Module config"
 msgstr "Configurazione modulo"
 
 msgid "Reset module to default"
-msgstr "Reimposta modulo ai default"
+msgstr "Reimposta modulo predefinito"
 
 msgid "Really reset module to default?"
-msgstr "Reimpostare modulo ai default?"
+msgstr "Reimpostare modulo predefinito?"
 
 msgid "Module"
 msgstr "Modulo"
 
 msgid "Message logging"
-msgstr "Opzioni di log"
+msgstr "Messaggi di log"
 
 msgid "Disable ALL modules"
 msgstr "Disabilita TUTTI i moduli"
 
 msgid "Reset ALL modules to default"
-msgstr "Reimposta TUTTI i moduli ai default"
+msgstr "Reimposta TUTTI i moduli predefiniti"
 
 msgid "Really disable ALL modules?"
 msgstr "Disabilitare TUTTI i moduli?"
 
 msgid "Really reset ALL modules to default?"
-msgstr "Reimpostare TUTTI i moduli ai default?"
+msgstr "Reimpostare TUTTI i moduli predefiniti?"
 
 msgid "Cryptsystem options"
-msgstr "Opzioni Sistemi"
+msgstr "Opzioni sistemi di codifica"
 
 msgid "Cryptsystem options..."
-msgstr "Opzioni Sistemi..."
+msgstr "Opzioni sistema codifica..."
 
 msgid "Message logging..."
 msgstr "Opzioni di log..."
@@ -131,7 +131,7 @@ msgid "Superseded keys"
 msgstr "Chiavi scadute"
 
 msgid "Concurrent FF streams"
-msgstr "Flussi simultanei per scheda FF"
+msgstr "Flussi simultanei schede FF"
 
 msgid "Force TransferMode"
 msgstr "Forza mod. trasferimento"
@@ -158,7 +158,7 @@ msgid "Filesize limit (KB)"
 msgstr "Limite dimensione file (KB)"
 
 msgid "Log to syslog"
-msgstr "Log in Syslog"
+msgstr "Log in registro di sistema"
 
 msgid "Show user messages"
 msgstr "Mostra messaggi utente"
@@ -170,10 +170,10 @@ msgid "undisclosed key"
 msgstr "chiave nascosta"
 
 msgid "Cardclient: connect immediately"
-msgstr "Cardclient: connetti immediatamente"
+msgstr "Cardclient: connetti subito"
 
 msgid "Nagra: min. ECM processing time"
-msgstr "Nagra: tempo min. elaborazione ECM"
+msgstr "Nagra: tempo min. esec. ECM"
 
 msgid "Nagra2: drop EMM-S packets"
 msgstr "Nagra2: elimina pacchetti EMM-S"
@@ -191,7 +191,7 @@ msgid "Nagra2: AUXserver password"
 msgstr "Nagra2: password AUXserver"
 
 msgid "don't touch"
-msgstr "lascia invariato"
+msgstr "non toccare"
 
 msgid "disable"
 msgstr "disabilita"
@@ -203,10 +203,10 @@ msgid "allow ALL"
 msgstr "permetti TUTTI"
 
 msgid "block UNIQUE"
-msgstr "blocca al Seriale"
+msgstr "blocca al SERIALE"
 
 msgid "block SHARED"
-msgstr "blocca al Gruppo"
+msgstr "blocca al GRUPPO"
 
 msgid "block ALL"
 msgstr "blocca TUTTO"
