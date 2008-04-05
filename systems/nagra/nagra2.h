@@ -66,8 +66,8 @@ protected:
   SHA_CTX sctx;
   // stateless
   void MakeJ0(BIGNUM *j, BIGNUM *d, int bits=64);
-  void ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
-  void ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
+  bool ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
+  bool ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
   void MonStart(int w);
   void MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);

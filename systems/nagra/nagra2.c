@@ -255,19 +255,26 @@ cMapMath::cMapMath(void)
   wordsize=DEF_WORDSIZE;
 }
 
-void cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
+bool cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
 {
   BN_add(r,a,b);
-  if(BN_cmp(r,d)>=0) BN_sub(r,r,d);
+  bool ret=false;
+  if(BN_cmp(r,d)>=0) {
+    BN_sub(r,r,d);
+    ret=true;
+    }
   BN_mask_bits(r,wordsize<<6);
+  return ret;
 }
 
-void cMapMath::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
+bool cMapMath::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
 {
   cBN p;
+  bool ret=BN_cmp(d,b)<0;
   BN_set_bit(p,wordsize<<6);
   BN_mod_sub(r,d,b,p,ctx);
   BN_mask_bits(r,wordsize<<6);
+  return ret;
 }
 
 void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d, int bits)
