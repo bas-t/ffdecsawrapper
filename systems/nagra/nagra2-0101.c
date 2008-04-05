@@ -443,8 +443,15 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       if(data) data[0]=b;
       if(b) BN_mask_bits(B,wordsize<<6);
       cycles=501+(8*wordsize+3)/5*5-6;
-      }
       break; 
+      }
+    case 0x2a:
+      {
+      bool b=ModSub(B,B,D);
+      if(data) data[0]=b;
+      BN_zero(C);
+      break;
+      }
     case 0x30:
       BN_sqr(D,B,ctx);
       BN_rshift(C,D,wordsize<<6);
@@ -814,7 +821,7 @@ bool cN2Prov0101::ProcessMap(int f)
       AddCycles(MapCycles());
       break;
     case 0x29:
-      GetMem(HILO(0x44),tmp,dl,0);
+    case 0x2a:
       DoMap(f,tmp);
       Set(0x4b,tmp[0]);
       AddCycles(MapCycles());
