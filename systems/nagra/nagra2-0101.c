@@ -453,13 +453,14 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       break;
       }
     case 0x30:
+    case 0x31:
       BN_sqr(D,B,ctx);
+      BN_rshift(J,B,((wordsize+1)/2)*128-64);
+      BN_mask_bits(J,64);
+      if((f&1)) BN_add(D,D,C);
       BN_rshift(C,D,wordsize<<6);
       BN_mask_bits(C,wordsize<<6);
       BN_mask_bits(D,wordsize<<6);
-      BN_zero(J);
-      BN_set_bit(J,64);
-      BN_sub_word(J,1);
       break;
     case 0x32:
       l=min(34,l);
@@ -837,6 +838,7 @@ bool cN2Prov0101::ProcessMap(int f)
       AddCycles(MapCycles());
       break;
     case 0x30:
+    case 0x31:
     case 0x43:
       DoMap(f);
       break;
