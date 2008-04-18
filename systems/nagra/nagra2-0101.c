@@ -777,6 +777,8 @@ bool cN2Prov0101::ProcessMap(int f)
       AddCycles(MapCycles());
       break;
     case IMPORT_J:
+      l=8; dl=8<<3;
+      // fall throught
     case IMPORT_A:
     case IMPORT_B:
     case IMPORT_C:
@@ -787,6 +789,8 @@ bool cN2Prov0101::ProcessMap(int f)
       AddCycles(MapCycles());
       break;
     case EXPORT_J:
+      l=8; dl=8<<3;
+      // fall throught
     case EXPORT_A:
     case EXPORT_B:
     case EXPORT_C:
