@@ -921,13 +921,13 @@ int c6805::Run(int max_count)
       case 0x9C: // RSP
         sp=spHi; break;
       case 0x96: // TSX
-        *ex=sp; break;
+        *ex=sp&0xFF; break;
       case 0x94: // TXS (ST7)
-        sp=*ex; break;
+        sp=(sp&0xFF00)|*ex; break;
       case 0x9E: // TSA
-        a=sp; break;
+        a=sp&0xFF; break;
       case 0x95: // TAS (ST7)
-        sp=a; break;
+        sp=(sp&0xFF00)|a; break;
       case 0x84: // POPA (ST7)
         a=pop(); break;
       case 0x85: // POPX (ST7)
