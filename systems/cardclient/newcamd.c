@@ -352,7 +352,7 @@ int cCardClientNewCamd::CmdReceive(cNetSocket *so, comm_type_t commType)
 
 bool cCardClientNewCamd::CanHandle(unsigned short SysId)
 {
-  return (caId>=0 && SysId==caId) || cCardClient::CanHandle(SysId);
+  return (caId>=0 && (SysId==caId || (caId==0x1234 && SysId==0x1801))) || cCardClient::CanHandle(SysId);
 }
 
 bool cCardClientNewCamd::Init(const char *config)
@@ -433,7 +433,8 @@ bool cCardClientNewCamd::Login(void)
         case 0x09: SetCard(new cCardNDS(&buffer[6+4])); break;
         case 0x05: SetCard(new cCardViaccess(&buffer[6+3])); break;
         case 0x0d: SetCard(new cCardCryptoworks(&buffer[6+3])); break;
-        case 0x18: if(caId==0x1801) {
+        case 0x12: 
+        case 0x18: if(caId==0x1801 || caId==0x1234) {
                      SetCard(new cCardNagra2(&buffer[6+4]));
                      break;
                      }
