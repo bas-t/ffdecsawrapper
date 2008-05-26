@@ -92,6 +92,7 @@ public:
 #define MAX_MAPPER      10
 #define MAX_PAGES       5
 #define PAGE_SIZE       32*1024
+#define EXPT_MAX        16
 
 #define bitset(d,bit) (((d)>>(bit))&1)
 
@@ -100,7 +101,7 @@ public:
 
 class c6805 {
 private:
-  unsigned short pc, sp, spHi, spLow;
+  unsigned short pc, sp, spHi, spLow, exptBase;
   unsigned short bp[MAX_BREAKPOINTS], numBp;
   unsigned char mapMap[(MAX_PAGES+1)*PAGE_SIZE];
   cMap *mapper[MAX_MAPPER];
@@ -108,6 +109,8 @@ private:
   int pageMap[256];
   bool indirect;
   unsigned int clockcycles;
+  bool exptPending, expt[EXPT_MAX];
+  int timerDisable;
   //
   void InitMapper(void);
   void ClearMapper(void);
@@ -149,6 +152,9 @@ protected:
   void ResetCycles(void);
   void AddCycles(unsigned int num);
   unsigned int Cycles(void) { return clockcycles; }
+  void RaiseException(int num);
+  void SetExptBase(unsigned short base);
+  void DisableTimers(int num);
   virtual void Stepper(void)=0;
   virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op) {}
   virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op) {}
