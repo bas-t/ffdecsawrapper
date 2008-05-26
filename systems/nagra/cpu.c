@@ -144,6 +144,8 @@ c6805::c6805(void) {
   cc.c=0; cc.z=0; cc.n=0; cc.i=0; cc.h=0; cc.v=1;
   pc=0; a=0; x=0; y=0; cr=dr=0; sp=spHi=0x100; spLow=0xC0;
   hasReadHandler=hasWriteHandler=false;
+  exptPending=false; timerDisable=0; exptBase=0x4000;
+  for(int i=0; i<EXPT_MAX; i++) expt[i]=false;
   ClearBreakpoints();
   InitMapper();
   ResetCycles();
@@ -297,13 +299,36 @@ void c6805::AddCycles(unsigned int num)
 {
   if(num>0) {
     clockcycles+=num;
-    TimerHandler(num);
+    if(timerDisable>0) {
+      timerDisable-=num;
+      if(timerDisable<0) timerDisable=0;
+      }
+    if(!timerDisable)
+      TimerHandler(num);
     }
 }
 
 void c6805::ResetCycles(void)
 {
   clockcycles=0;
+}
+
+void c6805::RaiseException(int num)
+{
+  if(num<EXPT_MAX) {
+    exptPending=true;
+    expt[num]=true;
+    }
+}
+
+void c6805::DisableTimers(int num)
+{
+  timerDisable=num;
+}
+
+void c6805::SetExptBase(unsigned short base)
+{
+  exptBase=base;
 }
 
 static const char * const ops[] = {
@@ -1033,6 +1058,18 @@ int c6805::Run(int max_count)
       return 2;
       }
     }
+
+    if(exptPending && !cc.i) {
+      exptPending=false;
+      for(int i=0; i<EXPT_MAX; ++i)
+       if(expt[i]) {
+          exptPending=true; // to force check for another interrupt in next Run pass
+          expt[i]=false;
+          pushpc(); push(x); push(a); pushc(); cc.i=1;
+          pc=exptBase+4*i;
+          break;
+          }
+      }
 }
 
 void c6805::branch(bool branch)
