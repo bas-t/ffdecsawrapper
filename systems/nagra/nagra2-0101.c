@@ -116,10 +116,14 @@ int cAuxSrv::Map(int map, unsigned char *data, int len, int outlen)
 
 // -- cMap0101 ----------------------------------------------------------------
 
+#define MAP_IRQ_BEGIN interruptable=true; try {
+#define MAP_IRQ_END   } catch(int) { interrupted=true; } interruptable=false;
+
 class cMap0101 : public cMapCore {
 private:
   static const unsigned char primes[];
   static const unsigned short coef22[][32];
+  bool interruptable, interrupted;
 #ifdef HAS_AUXSRV
   cAuxSrv aux;
 #endif
@@ -127,6 +131,10 @@ private:
   void MakePrime(BIGNUM *n, unsigned char *residues);
 protected:
   void DoMap(int f, unsigned char *data=0, int l=0);
+  bool Interruptable(void) { return interruptable; }
+  bool Interrupted(void) { return interrupted; }
+public:
+  cMap0101(void) { interruptable=false; }
   };
 
 const unsigned char cMap0101::primes[] = {
@@ -421,7 +429,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
 {
   PRINTF(L_SYS_MAP,"0101: calling function %02X",f);
   l=GetOpSize(l);
-  cycles=0;
+  cycles=0; interrupted=false;
   switch(f) {
     case 0x22:
       {
@@ -919,12 +927,14 @@ bool cN2Prov0101::ProcessDESMap(int f)
 
 bool cN2Prov0101::RomCallbacks(void)
 {
+  bool dopop=true;
   unsigned int ea=GetPc();
   if(ea&0x8000) ea|=(cr<<16);
   switch(ea) {
     case 0x3840: //MAP Handler
     case 0x00A822:
       if(!ProcessMap(a)) return false;
+      if(Interrupted()) dopop=false;
       break;
     case 0x3844: //DES Handler
       if(!ProcessDESMap(a)) return false;
@@ -973,8 +983,10 @@ bool cN2Prov0101::RomCallbacks(void)
       PRINTF(L_SYS_EMU,"%04X: unknown ROM breakpoint %04x",id,ea);
       return false;
     }
-  if(ea>=0x8000) PopCr();
-  PopPc();
+  if(dopop) {
+    if(ea>=0x8000) PopCr();
+    PopPc();
+    }
   return true;
 }
 
@@ -1066,7 +1078,17 @@ int cN2Prov0101::RunEmu(unsigned char *data, int len, unsigned short load, unsig
 
 void cN2Prov0101::TimerHandler(unsigned int num)
 {
-  if(hwMapper) hwMapper->AddCycles(num);
+  if(hwMapper) {
+    int mask=hwMapper->AddCycles(num);
+    for(int t=1; mask; mask>>=1,t++) {
+      DisableTimers(11);
+      if(t==2) {
+        PRINTF(L_SYS_EMU,"Timer interrupt %u @ %04x",t,GetPc());
+        RaiseException(9);
+        if(Interruptable()) throw(t);
+        }
+      }
+    }
 }
 
 void cN2Prov0101::Stepper(void)
