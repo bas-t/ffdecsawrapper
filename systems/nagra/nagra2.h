@@ -139,13 +139,13 @@ public:
 class cN2Timer {
 private:
   int ctrl, divisor, cycles, remainder, latch;
-  enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmMASK=0xFF, tmLATCHED=0x100 };
+  enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmINTERRUPT=0x04, tmMASK=0xFF, tmLATCHED=0x100 };
   //
   bool Running(void) { return ctrl&tmRUNNING; }
   void Stop(void);
 public:
   cN2Timer(void);
-  void AddCycles(unsigned int count);
+  bool AddCycles(unsigned int count);
   unsigned int Cycles(void) { return cycles; }
   unsigned char Ctrl(void) { return ctrl&tmMASK; }
   void Ctrl(unsigned char c);
@@ -160,6 +160,7 @@ public:
 
 #define MAX_TIMERS 3
 #define TIMER_NUM(x) (((x)>>2)&3) // timer order doesn't match HW order
+#define HW_NUM(x)    ((x+2)%3)
 
 class cMapMemHW : public cMapMem {
 private:
@@ -189,7 +190,7 @@ public:
   cMapMemHW(void);
   virtual unsigned char Get(unsigned short ea);
   virtual void Set(unsigned short ea, unsigned char val);
-  void AddCycles(unsigned int num);
+  int AddCycles(unsigned int num);
   };
 
 // ----------------------------------------------------------------

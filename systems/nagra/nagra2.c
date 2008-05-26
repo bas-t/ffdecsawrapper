@@ -37,22 +37,29 @@ cN2Timer::cN2Timer(void)
   cycles=0; ctrl=0; divisor=1; remainder=-1; latch=0xFF;
 }
 
-void cN2Timer::AddCycles(unsigned int count)
+bool cN2Timer::AddCycles(unsigned int count)
 {
+  bool irq=false;
   if(Running()) {
+    bool stop=false;
     remainder+=count;
     if(remainder>=divisor) {
       cycles-=remainder/divisor;
       remainder%=divisor;
       }
+    if(cycles<0 || (cycles==0 && remainder>=2))
+      stop=true;
     if(ctrl&tmCONTINUOUS) {
       while(cycles<0) cycles+=latch+1;
       }
-    else if(cycles<0 || (cycles==0 && remainder>=4)) {
+    else if(stop) {
       cycles=0;
       Stop();
       }
+    if((ctrl&tmINTERRUPT) && stop)
+      irq=true;
     }
+  return irq;
 }
 
 void cN2Timer::Latch(unsigned char val)
@@ -122,10 +129,13 @@ unsigned short cMapMemHW::CRC(unsigned short crc, unsigned char val, int bits)
   return crc;
 }
 
-void cMapMemHW::AddCycles(unsigned int num)
+int cMapMemHW::AddCycles(unsigned int num)
 {
+  int mask=0;
   cycles+=num;
-  for(int i=0; i<MAX_TIMERS; i++) timer[i].AddCycles(num);
+  for(int i=0; i<MAX_TIMERS; i++)
+    if(timer[i].AddCycles(num)) mask|=(1<<HW_NUM(i));
+  return mask;
 }
 
 unsigned char cMapMemHW::Get(unsigned short ea)
