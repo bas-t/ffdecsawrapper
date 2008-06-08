@@ -73,6 +73,12 @@ void LogAll(void)
     cLogging::SetModuleOptions(LCLASS(i,0xFFFFFFFF));
 }
 
+void LogNone(void)
+{
+  for(int i=0; i<32; i++)
+    cLogging::SetModuleOptions(LCLASS(i,0));
+}
+
 void SDump(const unsigned char *buffer, int n)
 {
   for(int l=0 ; l<n ; l++) printf("%02x ",buffer[l]);
