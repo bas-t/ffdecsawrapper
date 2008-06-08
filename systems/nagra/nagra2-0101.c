@@ -431,6 +431,17 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
   l=GetOpSize(l);
   cycles=0; interrupted=false;
   switch(f) {
+    case 0x21:
+      MAP_IRQ_BEGIN();
+      AddMapCycles(288);
+      WS_START(1);
+      MakeJ0(J,D);
+      AddMapCycles(282);
+      WClear(C);
+      AddMapCycles(898-282-288);
+      WS_END();
+      MAP_IRQ_END();
+      break;     
     case 0x22:
       {
       int shift=((-l)&0xFF00)>>8, exp=(-l)&0x1F;
@@ -847,6 +858,7 @@ bool cN2Prov0101::ProcessMap(int f)
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
       break;
+    case 0x21:
     case 0x30:
     case 0x31:
     case 0x43:

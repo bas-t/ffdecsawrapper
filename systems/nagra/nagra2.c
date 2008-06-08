@@ -265,6 +265,13 @@ cMapMath::cMapMath(void)
   wordsize=DEF_WORDSIZE;
 }
 
+void cMapMath::WClear(BIGNUM *r, int w)
+{
+  if(!w) w=wordsize;
+  BN_rshift(r,r,w<<6);
+  BN_lshift(r,r,w<<6);
+}
+
 bool cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
 {
   BN_add(r,a,b);
