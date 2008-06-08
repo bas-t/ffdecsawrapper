@@ -71,6 +71,7 @@ protected:
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
   void MonStart(int w);
   void MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
+  void WClear(BIGNUM *r, int w=0);
   // statefull
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w);
