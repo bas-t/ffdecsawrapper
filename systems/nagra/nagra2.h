@@ -52,8 +52,8 @@ extern char auxPassword[250];
 
 #define DEF_WORDSIZE 4
 
-#define TMPWS_START(x) { int __oldws=wordsize; wordsize=(x);
-#define TMPWS_END()    wordsize=__oldws; }
+#define WS_START(x) { int __oldws=wordsize; wordsize=(x);
+#define WS_END()    wordsize=__oldws; }
 
 class cMapMath {
 private:
@@ -130,8 +130,10 @@ protected:
   int GetOpSize(int l);
   bool DoMap(int f, unsigned char *data=0, int l=0);
   unsigned int MapCycles() { return cycles; }
+  virtual void AddMapCycles(unsigned int num) {}
 public:
   cMapCore(void);
+  virtual ~cMapCore() {}
   };
 
 // ----------------------------------------------------------------
