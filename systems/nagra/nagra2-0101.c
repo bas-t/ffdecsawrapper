@@ -855,6 +855,7 @@ bool cN2Prov0101::ProcessMap(int f)
       if(l>wordsize) { l=wordsize; dl=l<<3; }
       // fall through
     case 0x32:
+    case 0x39:
     case 0x3b:
       if(l>34) { l=34; dl=34<<3; }
       GetMem(HILO(0x44),tmp,dl,0);
@@ -863,6 +864,7 @@ bool cN2Prov0101::ProcessMap(int f)
     case 0x21:
     case 0x30:
     case 0x31:
+    case 0x3a:
     case 0x43:
       DoMap(f);
       break;

@@ -49,11 +49,6 @@ void cMap0501::DoMap(int f, unsigned char *data, int l)
       I.GetLE(data,l<<3);
       MonMul(B,I,B);
       break;
-    case 0x3a:
-      MonInit();
-      MonMul(B,A,B);
-      MonMul(B,A,B);
-      break;
     default:
       if(!cMapCore::DoMap(f,data,l))
         PRINTF(L_SYS_MAP,"%04x: unsupported call %02x",mId,f);
