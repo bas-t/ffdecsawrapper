@@ -451,6 +451,18 @@ void cMapCore::MonInit(int bits)
   for(int i=0; i<4; i++) MonMul(B,B,B);
 }
 
+void cMapCore::MonExp(BIGNUM *scalar)
+{
+  if(BN_is_zero(D)) { BN_one(A); return; }
+  BN_copy(A,B);
+  for(int i=BN_num_bits(scalar)-2; i>-1; i--) {
+    MonMul(B,B,B);
+    if(BN_is_bit_set(scalar,i)) MonMul(B,A,B);
+    }
+  BN_one(A);
+  MonMul(B,A,B);
+}
+
 void cMapCore::MonExpNeg(void)
 {
   if(BN_is_zero(D)) { BN_set_word(A,1); return; }

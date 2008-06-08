@@ -238,14 +238,25 @@ fprintf(stderr,"map %x l=%d\n",f,l);
       break;
     case 0x3e:
       {
-      I.GetLE(data,l<<3);
-      BN_mod_exp(B,A,I,D,ctx);
-      BN_one(A);
-      int end=BN_num_bits(I);
+      cBN scalar;
+      scalar.GetLE(data,l<<3);
+      if(BN_is_zero(scalar) || BN_num_bits(D)<=1) {
+        MakeJ0(J,D);
+        if(BN_num_bits(D)==1 || !BN_is_zero(scalar)) BN_zero(B);
+        else BN_one(B);
+        BN_one(A);
+        }
+      else {
+        MonInit();
+        MonMul(B,A,B);
+        MonExp(scalar);
+        }
+      BN_zero(C);
+      int end=BN_num_bits(scalar);
       int msb=data[(end-1)/8];
       cycles=3848 + ((end-1)/8)*650 - 11;
       for(int i=8; --i>=1;) if(msb&(1<<i)) { cycles+=(i*75)-15; break; }
-      for(int i=end; --i>=0;) if(BN_is_bit_set(I,i)) cycles+=88;
+      for(int i=end; --i>=0;) if(BN_is_bit_set(scalar,i)) cycles+=88;
       break;
       }
     case 0x4d:

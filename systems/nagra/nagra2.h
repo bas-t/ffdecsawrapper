@@ -143,6 +143,7 @@ protected:
   cBN sA0, sC0, sE0, s100, s120, s140, s160;
   // statefull
   void MonInit(int bits=0);
+  void MonExp(BIGNUM *scalar);
   void MonExpNeg(void);
   // ECC
   void DoubleP(int temp);
