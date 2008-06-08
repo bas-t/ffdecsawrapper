@@ -345,6 +345,7 @@ fprintf(stderr,"map %x l=%d\n",f,l);
         memcpy(&data[l],&tmp[l-4],4);
         }
       Py.PutLE(&data[0x20],l);
+      D.Restore();
       WS_END();
       BN_zero(A);
       BN_zero(B);
