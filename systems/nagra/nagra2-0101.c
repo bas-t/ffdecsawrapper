@@ -430,16 +430,17 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
   PRINTF(L_SYS_MAP,"0101: calling function %02X",f);
   l=GetOpSize(l);
   cycles=0; interrupted=false;
+#ifdef MR_DEBUG
+fprintf(stderr,"map %x l=%d\n",f,l);
+#endif
   switch(f) {
     case 0x21:
       MAP_IRQ_BEGIN();
       AddMapCycles(288);
-      WS_START(1);
       MakeJ0(J,D);
       AddMapCycles(282);
-      WClear(C);
+      WClear(C,1);
       AddMapCycles(898-282-288);
-      WS_END();
       MAP_IRQ_END();
       break;     
     case 0x22:
@@ -603,6 +604,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
         PRINTF(L_SYS_MAP,"0101: unsupported call %02x",f);
       break;
     }
+  Finalise();
 }
 
 // -- cN2Prov0101 --------------------------------------------------------------
