@@ -50,6 +50,27 @@ extern char auxPassword[250];
 
 // ----------------------------------------------------------------
 
+//#define MR_DEBUG
+
+class cMapReg {
+private:
+  cBN reg, save, tmp;
+  const int *ws;
+  bool touched;
+public:
+  cMapReg(const int *Ws);
+  operator BIGNUM* () { Save(); return reg.BN(); }
+  BIGNUM *operator->() { Save(); return reg.BN(); }
+  bool Get(const unsigned char *in, int n) { Save(); return reg.Get(in,n); }
+  bool GetLE(const unsigned char *in, int n) { Save(); return reg.GetLE(in,n); }
+  int Put(unsigned char *out, int n) const { return reg.Put(out,n); }
+  int PutLE(unsigned char *out, int n) const { return reg.PutLE(out,n); }
+  void Save(int size=0);
+  void Restore(int size=0);
+  };
+
+// ----------------------------------------------------------------
+
 #define DEF_WORDSIZE 4
 
 #define WS_START(x) { int __oldws=wordsize; wordsize=(x);
@@ -59,9 +80,10 @@ class cMapMath {
 private:
   cBN x, y, s;
   int words;
+  static const int ws1;
 protected:
   int wordsize;
-  cBN A, B, C, D, J, I;
+  cMapReg A, B, C, D, J, I;
   cBNctx ctx;
   SHA_CTX sctx;
   // stateless
@@ -75,6 +97,7 @@ protected:
   // statefull
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w);
+  void Finalise(void);
 public:
   cMapMath(void);
   };
@@ -113,7 +136,7 @@ class cMapCore : public cMapMath {
 private:
   int last;
   cBN e;
-  cBN *regs[5];
+  cMapReg *regs[5];
 protected:
   unsigned int cycles;
   cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180

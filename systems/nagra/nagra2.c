@@ -258,11 +258,69 @@ bool cN2Emu::Init(int id, int romv)
   return initDone;
 }
 
+// -- cMapReg ------------------------------------------------------------------
+
+cMapReg::cMapReg(const int *Ws)
+{
+  ws=Ws;
+}
+
+void cMapReg::Save(int size)
+{
+  if(!touched && ws) {
+    if(size<=0) size=*ws;
+    BN_copy(save,reg);
+    BN_mask_bits(reg,size<<6);
+    touched=true;
+#ifdef MR_DEBUG
+fprintf(stderr,"saved %p size=%d\n",this,size);
+BN_print_fp(stderr,reg); fprintf(stderr,"\n");
+BN_print_fp(stderr,save); fprintf(stderr,"\n");
+#endif
+    }
+}
+
+void cMapReg::Restore(int size)
+{
+  if(touched && ws) {
+    if(size<=0) size=*ws;
+#ifdef MR_DEBUG
+fprintf(stderr,"restore %p size=%d\n",this,size);
+BN_print_fp(stderr,reg); fprintf(stderr,"\n");
+BN_print_fp(stderr,save); fprintf(stderr,"\n");
+#endif
+    if(reg->neg) {
+      BN_zero(tmp);
+      BN_set_bit(tmp,size<<6);
+      BN_add(reg,tmp,reg);
+      }
+    BN_rshift(tmp,save,size<<6);
+    BN_lshift(tmp,tmp,size<<6);
+    BN_mask_bits(reg,size<<6);
+    BN_add(reg,reg,tmp);
+    touched=false;
+#ifdef MR_DEBUG
+BN_print_fp(stderr,reg); fprintf(stderr,"\n");
+#endif
+    }
+}
+
 // -- cMapMath -----------------------------------------------------------------
 
+const int cMapMath::ws1=1;
+
 cMapMath::cMapMath(void)
+:A(&wordsize),B(&wordsize),C(&wordsize),D(&wordsize),J(&ws1),I(0)
 {
   wordsize=DEF_WORDSIZE;
+}
+
+void cMapMath::Finalise(void)
+{
+#ifdef MR_DEBUG
+fprintf(stderr,"finalise\n");
+#endif
+  A.Restore(); B.Restore(); C.Restore(); D.Restore();
 }
 
 void cMapMath::WClear(BIGNUM *r, int w)
@@ -551,6 +609,7 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       cycles=890-6;
       last=0;
       regs[0]->GetLE(data,8);
+      regs[0]->Restore(1);
       break;
     case IMPORT_A:
     case IMPORT_B:
@@ -561,12 +620,14 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       cycles+=771+160*l-6;
       last=f-IMPORT_J;
       regs[last]->GetLE(data,l<<3);
+      regs[last]->Restore(l);
       break;
     case IMPORT_LAST:
       if(l>16) { l=1; cycles+=5; }
       else if(l<=0) l=1;
       cycles=656+160*l-6;
       regs[last]->GetLE(data,(last==0?1:l)<<3);
+      regs[last]->Restore((last==0?1:l));
       break;
 
     case EXPORT_J:
@@ -646,6 +707,7 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     default:
       return false;
     }
+  Finalise();
   return true;
 }
 
