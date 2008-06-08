@@ -116,8 +116,8 @@ int cAuxSrv::Map(int map, unsigned char *data, int len, int outlen)
 
 // -- cMap0101 ----------------------------------------------------------------
 
-#define MAP_IRQ_BEGIN interruptable=true; try {
-#define MAP_IRQ_END   } catch(int) { interrupted=true; } interruptable=false;
+#define MAP_IRQ_BEGIN() interruptable=true; try {
+#define MAP_IRQ_END()   } catch(int) { interrupted=true; } interruptable=false;
 
 class cMap0101 : public cMapCore {
 private:
@@ -518,7 +518,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       {
       cBN a, b, x, y, scalar;
       if(l<2 || l>4) l=4;
-      TMPWS_START(l);
+      WS_START(l);
       l<<=3;
       D.GetLE(data+0*l,l);
       x.GetLE(data+1*l,l);
@@ -581,7 +581,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
         memcpy(&data[l],&tmp[l-4],4);
         }
       Py.PutLE(&data[0x20],l);
-      TMPWS_END();
+      WS_END();
       BN_zero(A);
       BN_zero(B);
       BN_zero(C);
@@ -617,6 +617,7 @@ protected:
   virtual bool RomInit(void);
   virtual void Stepper(void);
   virtual void TimerHandler(unsigned int num);
+  virtual void AddMapCycles(unsigned int num);
 public:
   cN2Prov0101(int Id, int Flags);
   virtual bool PostProcAU(int id, unsigned char *data);
@@ -772,6 +773,11 @@ bool cN2Prov0101::RomInit(void)
   return false;
 }
 
+void cN2Prov0101::AddMapCycles(unsigned int num)
+{
+  AddCycles(num);
+}
+
 bool cN2Prov0101::ProcessMap(int f)
 {
   unsigned short addr;
@@ -782,7 +788,6 @@ bool cN2Prov0101::ProcessMap(int f)
   switch(f) {
     case SETSIZE:
       DoMap(f,0,Get(0x48));
-      AddCycles(MapCycles());
       break;
     case IMPORT_J:
       l=8; dl=8<<3;
@@ -794,7 +799,6 @@ bool cN2Prov0101::ProcessMap(int f)
     case IMPORT_LAST:
       addr=HILO(0x44);
       GetMem(addr,tmp,dl,0); DoMap(f,tmp,l);
-      AddCycles(MapCycles());
       break;
     case EXPORT_J:
       l=8; dl=8<<3;
@@ -806,7 +810,6 @@ bool cN2Prov0101::ProcessMap(int f)
     case EXPORT_LAST:
       addr=HILO(0x44);
       DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
-      AddCycles(MapCycles());
       break;
     case SWAP_A:
     case SWAP_B:
@@ -814,7 +817,6 @@ bool cN2Prov0101::ProcessMap(int f)
     case SWAP_D:
       addr=HILO(0x44);
       GetMem(addr,tmp,dl,0); DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
-      AddCycles(MapCycles());
       break;
     case CLEAR_A:
     case CLEAR_B:
@@ -827,17 +829,14 @@ bool cN2Prov0101::ProcessMap(int f)
     case COPY_C_D:
     case COPY_D_C:
       DoMap(f);
-      AddCycles(MapCycles());
       break;
     case 0x22:
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
-      AddCycles(MapCycles());
       break;
     case 0x29:
     case 0x2a:
       DoMap(f,tmp);
       Set(0x4b,tmp[0]);
-      AddCycles(MapCycles());
       break;
     case 0x3e:
       if(l>wordsize) { l=wordsize; dl=l<<3; }
@@ -847,7 +846,6 @@ bool cN2Prov0101::ProcessMap(int f)
       if(l>34) { l=34; dl=34<<3; }
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
-      AddCycles(MapCycles());
       break;
     case 0x30:
     case 0x31:
@@ -868,7 +866,6 @@ bool cN2Prov0101::ProcessMap(int f)
       GetMem(0x400,tmp,53,0);
       DoMap(f,tmp);
       SetMem(0x400,tmp,53,0);
-      AddCycles(MapCycles());
       break;
     case 0x57:
       addr=HILO(0x46);
@@ -879,13 +876,13 @@ bool cN2Prov0101::ProcessMap(int f)
       SetMem(0x400,tmp,0x40,0);
       memset(tmp,0,11*32);
       SetMem(0x440,tmp,11*32,0);
-      AddCycles(MapCycles());
       break;
     default:
       PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
       return false;
     }
   c6805::a=0; c6805::x=0; c6805::y=0; 
+  if(cycles>0) AddMapCycles(cycles);
   return true;
 }
 
