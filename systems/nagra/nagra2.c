@@ -684,6 +684,13 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case COPY_D_C:
       last=3; BN_copy(C,D); cycles=462+(8*l1+3)/5*5-6; break;
 
+    case 0x39:
+    case 0x3a:
+      MonInit();
+      if(f==0x39) I.GetLE(data,wordsize<<3);
+      MonMul(B,(f==0x39?I:A),B);
+      MonMul(B,A,B);
+      break;
     case 0x43: // init SHA1
       SHA1_Init(&sctx);
       break;
