@@ -178,9 +178,12 @@ fprintf(stderr,"map %x l=%d\n",f,l);
     case 0x21:
       MAP_IRQ_BEGIN();
       AddMapCycles(288);
+      D.Save(); C.Save();
+      WS_START(1);
       MakeJ0(J,D);
       AddMapCycles(282);
-      WClear(C,1);
+      WClear(C);
+      WS_END();
       AddMapCycles(898-282-288);
       MAP_IRQ_END();
       break;     
