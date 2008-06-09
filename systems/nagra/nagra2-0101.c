@@ -116,14 +116,14 @@ int cAuxSrv::Map(int map, unsigned char *data, int len, int outlen)
 
 // -- cMap0101 ----------------------------------------------------------------
 
-#define MAP_IRQ_BEGIN() interruptable=true; try {
-#define MAP_IRQ_END()   } catch(int) { interrupted=true; } interruptable=false;
+#define MAP_IRQ_BEGIN() interruptible=true; try {
+#define MAP_IRQ_END()   } catch(int) { interrupted=true; } interruptible=false;
 
 class cMap0101 : public cMapCore {
 private:
   static const unsigned char primes[];
   static const unsigned short coef22[][32];
-  bool interruptable, interrupted;
+  bool interruptible, interrupted;
 #ifdef HAS_AUXSRV
   cAuxSrv aux;
 #endif
@@ -131,10 +131,10 @@ private:
   void MakePrime(BIGNUM *n, unsigned char *residues);
 protected:
   void DoMap(int f, unsigned char *data=0, int l=0);
-  bool Interruptable(void) { return interruptable; }
+  bool Interruptible(void) { return interruptible; }
   bool Interrupted(void) { return interrupted; }
 public:
-  cMap0101(void) { interruptable=false; }
+  cMap0101(void) { interruptible=false; }
   };
 
 const unsigned char cMap0101::primes[] = {
@@ -854,7 +854,7 @@ void cN2Prov0101::TimerHandler(unsigned int num)
       if(t==2) {
         PRINTF(L_SYS_EMU,"Timer interrupt %u @ %04x",t,GetPc());
         RaiseException(9);
-        if(Interruptable()) throw(t);
+        if(Interruptible()) throw(t);
         }
       }
     }
