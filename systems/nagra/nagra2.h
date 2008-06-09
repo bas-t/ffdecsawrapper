@@ -50,7 +50,7 @@ extern char auxPassword[250];
 
 // ----------------------------------------------------------------
 
-#define MR_DEBUG
+//#define MR_DEBUG
 
 class cMapReg {
 private:
