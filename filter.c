@@ -247,7 +247,7 @@ void cAction::Action(void)
 
       // now poll for data
       int r=poll(pfd,num,60);
-      if(r<0) {
+      if(r<0 && errno!=EINTR) {
         PRINTF(L_GEN_ERROR,"action %s poll: %s",id,strerror(errno));
         break;
         }
