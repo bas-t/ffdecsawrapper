@@ -25,9 +25,10 @@ Note the patch makes a small change to vdr-sc so I can get the card number.
 
 4) Your cardclient.cfg file needs an entry like this...
 
-cccam:127.0.0.1:9000:0/0123/F000
+cccam:127.0.0.1:9000:0/0000/0000:/var/emu/chroot%d/tmp/camd.socket
 
-(note that CCcam interface will offer to serve any ECMs)
+Note: with that CCcam will offer to serve any ECMs.
+Note: socketpath might need to be adjusted to your system.
 
 5) Now it gets tricky, read some docs on the internet about chroot.
 

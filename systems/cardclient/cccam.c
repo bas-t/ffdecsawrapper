@@ -31,8 +31,6 @@
 
 #define LIST_ONLY 0x03   /* CA application should clear the list when an 'ONLY' CAPMT object is received, and start working with the object */
 
-static char *socketPath="/var/emu/chroot%d/tmp/camd.socket";
-
 // -- cCCcamCard ---------------------------------------------------------------
 
 class cCCcamCard : public cMutex {
@@ -169,6 +167,7 @@ private:
   cCCcamCard card[4];
   int pmtversion;
   int failedcw;
+  char *socketpath;
 protected:
   virtual bool Login(void);
   virtual void Action(void);
@@ -179,28 +178,33 @@ public:
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   };
 
-static cCardClientLinkReg<cCardClientCCcam> __ncd("CCcam");
+static cCardClientLinkReg<cCardClientCCcam> __ncd("cccam");
 
 cCardClientCCcam::cCardClientCCcam(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam listener")
 ,so(DEFAULT_CONNECT_TIMEOUT,2,3600,true)
 {
-  pmtversion=0;
-  for(int i=0; i<4; i++) card[i].Setup(i,socketPath);
+  pmtversion=0; socketpath=0;
 }
 
 cCardClientCCcam::~cCardClientCCcam()
 {
   Cancel(3);
+  free(socketpath);
 }
 
 bool cCardClientCCcam::Init(const char *config)
 {
   cMutexLock lock(this);
   int num=0;
-  if(!ParseStdConfig(config,&num)) return false;
-  return true;
+  char path[256];
+  if(!ParseStdConfig(config,&num)
+     || sscanf(&config[num],":%255[^:]",path)!=1) return false;
+  PRINTF(L_CC_CORE,"%s: socket=%s",name,path);
+  socketpath=strdup(path);
+  for(int i=0; i<4; i++) card[i].Setup(i,socketpath);
+  return Immediate() ? Login() : true;
 }
 
 bool cCardClientCCcam::Login(void)
