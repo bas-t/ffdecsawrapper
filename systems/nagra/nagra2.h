@@ -50,15 +50,16 @@ extern char auxPassword[250];
 
 // ----------------------------------------------------------------
 
-//#define MR_DEBUG
+#define MR_DEBUG
 
 class cMapReg {
 private:
   cBN reg, save, tmp;
   const int *ws;
+  const char *name;
   bool touched;
 public:
-  cMapReg(const int *Ws);
+  cMapReg(const int *Ws, const char *Name);
   operator BIGNUM* () { Save(); return reg.BN(); }
   BIGNUM *operator->() { Save(); return reg.BN(); }
   bool Get(const unsigned char *in, int n) { Save(); return reg.Get(in,n); }

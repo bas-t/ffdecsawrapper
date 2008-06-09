@@ -260,9 +260,9 @@ bool cN2Emu::Init(int id, int romv)
 
 // -- cMapReg ------------------------------------------------------------------
 
-cMapReg::cMapReg(const int *Ws)
+cMapReg::cMapReg(const int *Ws, const char *Name)
 {
-  ws=Ws;
+  ws=Ws; name=Name;
 }
 
 void cMapReg::Save(int size)
@@ -273,9 +273,9 @@ void cMapReg::Save(int size)
     BN_mask_bits(reg,size<<6);
     touched=true;
 #ifdef MR_DEBUG
-fprintf(stderr,"saved %p size=%d\n",this,size);
-BN_print_fp(stderr,reg); fprintf(stderr,"\n");
-BN_print_fp(stderr,save); fprintf(stderr,"\n");
+fprintf(stderr,"saved %s size=%d\n",name,size);
+fprintf(stderr,"reg : "); BN_print_fp(stderr,reg); fprintf(stderr,"\n");
+fprintf(stderr,"save: "); BN_print_fp(stderr,save); fprintf(stderr,"\n");
 #endif
     }
 }
@@ -285,9 +285,9 @@ void cMapReg::Restore(int size)
   if(touched && ws) {
     if(size<=0) size=*ws;
 #ifdef MR_DEBUG
-fprintf(stderr,"restore %p size=%d\n",this,size);
-BN_print_fp(stderr,reg); fprintf(stderr,"\n");
-BN_print_fp(stderr,save); fprintf(stderr,"\n");
+fprintf(stderr,"restore %s size=%d\n",name,size);
+fprintf(stderr,"reg : "); BN_print_fp(stderr,reg); fprintf(stderr,"\n");
+fprintf(stderr,"save: "); BN_print_fp(stderr,save); fprintf(stderr,"\n");
 #endif
     if(reg->neg) {
       BN_zero(tmp);
@@ -300,7 +300,7 @@ BN_print_fp(stderr,save); fprintf(stderr,"\n");
     BN_add(reg,reg,tmp);
     touched=false;
 #ifdef MR_DEBUG
-BN_print_fp(stderr,reg); fprintf(stderr,"\n");
+fprintf(stderr,"reg : "); BN_print_fp(stderr,reg); fprintf(stderr,"\n");
 #endif
     }
 }
@@ -310,7 +310,7 @@ BN_print_fp(stderr,reg); fprintf(stderr,"\n");
 const int cMapMath::ws1=1;
 
 cMapMath::cMapMath(void)
-:A(&wordsize),B(&wordsize),C(&wordsize),D(&wordsize),J(&ws1),I(0)
+:A(&wordsize,"A"),B(&wordsize,"B"),C(&wordsize,"C"),D(&wordsize,"D"),J(&ws1,"J"),I(0,"I")
 {
   wordsize=DEF_WORDSIZE;
 }
