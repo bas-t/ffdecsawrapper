@@ -193,7 +193,7 @@ public:
   // 
   virtual bool Init(const char *CfgDir);
   virtual bool CanHandle(unsigned short SysId);  
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
 
@@ -469,7 +469,7 @@ bool cCardClientNewCamd::Login(void)
   return true;
 }
 
-bool cCardClientNewCamd::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)
+bool cCardClientNewCamd::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)
 {
   cMutexLock lock(this);
   if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;

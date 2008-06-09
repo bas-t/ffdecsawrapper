@@ -53,7 +53,7 @@ public:
   cCardClientRadegast(const char *Name);
   virtual bool Init(const char *config);
   virtual bool CanHandle(unsigned short SysId);  
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
 
@@ -218,7 +218,7 @@ bool cCardClientRadegast::Login(void)
   return true; 
 }
 
-bool cCardClientRadegast::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw)
+bool cCardClientRadegast::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum)
 {
   cMutexLock lock(this);
   so.Flush();
