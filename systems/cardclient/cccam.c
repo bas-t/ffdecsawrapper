@@ -38,26 +38,146 @@
 
 #define LIST_ONLY 0x03   /* CA application should clear the list when an 'ONLY' CAPMT object is received, and start working with the object */
 
+static char *socketPath="/var/emu/chroot%d/tmp/camd.socket";
+
+// -- cCCcamCard ---------------------------------------------------------------
+
+class cCCcamCard : public cMutex {
+private:
+  int ccam_fd;
+  int cardnum, pid, pmtlen;
+  bool newcw;
+  cTimeMs timecw;
+  unsigned char *capmt, cw[16];
+  const char *path;
+  cCondVar cwwait;
+public:
+  cCCcamCard(void);
+  ~cCCcamCard();
+  void Setup(int num, const char *Path);
+  bool Connect(void);
+  void Disconnect(void);
+  bool Connected(void) { return ccam_fd>=0; }
+  void WriteCaPmt(void);
+  void NewCaPmt(int p, const unsigned char *pmt, int len);
+  int Pid(void) { return pid; }
+  bool GetCw(unsigned char *Cw, int timeout);
+  void NewCw(const unsigned char *Cw);
+  };
+
+cCCcamCard::cCCcamCard(void)
+{
+  cardnum=-1; path=0;
+  ccam_fd=-1; capmt=0; newcw=false; pid=-1;
+}
+
+cCCcamCard::~cCCcamCard()
+{
+  Disconnect();
+  free(capmt);
+}
+
+void cCCcamCard::Setup(int num, const char *Path)
+{
+  cardnum=num; path=Path;
+}
+
+void cCCcamCard::Disconnect(void)
+{
+  cMutexLock lock(this);
+  close(ccam_fd);
+  ccam_fd=-1; newcw=false;
+}
+
+bool cCCcamCard::Connect(void)
+{
+  cMutexLock lock(this);
+  Disconnect();
+  ccam_fd=socket(AF_LOCAL,SOCK_STREAM,0);
+  if(!ccam_fd) {
+    PRINTF(L_CC_CCCAM,"%d: socket failed: %s",cardnum,strerror(errno));
+    return false;
+    }
+  sockaddr_un serv_addr_un;
+  memset(&serv_addr_un,0,sizeof(serv_addr_un));
+  serv_addr_un.sun_family=AF_LOCAL;
+  snprintf(serv_addr_un.sun_path,sizeof(serv_addr_un.sun_path),path,cardnum);
+  if(connect(ccam_fd,(const sockaddr*)&serv_addr_un,sizeof(serv_addr_un))!=0) {
+    PRINTF(L_CC_CCCAM,"%d: connect failed: %s",cardnum,strerror(errno));
+    Disconnect();
+    return false;
+    }
+  PRINTF(L_CC_CCCAM,"%d: opened camd socket",cardnum);
+  return true;
+}
+
+void cCCcamCard::WriteCaPmt(void)
+{
+  cMutexLock lock(this);
+  if(capmt) {
+    for(int retry=2; retry>0; retry--) {
+      if(!Connected() && !Connect()) break;
+      int r=write(ccam_fd,capmt,pmtlen);
+      if(r==pmtlen) {
+        newcw=false;
+        break;
+        }
+      PRINTF(L_CC_CCCAM,"%d: write failed: %s",cardnum,strerror(errno));
+      Disconnect();
+      }
+    }
+}
+
+void cCCcamCard::NewCaPmt(int p, const unsigned char *pmt, int len)
+{
+  cMutexLock lock(this);
+  free(capmt); pid=0; newcw=false;
+  capmt=MALLOC(unsigned char,len);
+  if(capmt) {
+    memcpy(capmt,pmt,len);
+    pmtlen=len;
+    capmt[6]=LIST_ONLY;
+    pid=p;
+    WriteCaPmt();
+    }
+}
+
+void cCCcamCard::NewCw(const unsigned char *Cw)
+{
+  cMutexLock lock(this);
+  if(memcmp(cw,Cw,sizeof(cw))) {
+    memcpy(cw,Cw,sizeof(cw));
+    newcw=true;
+    timecw.Set();
+    cwwait.Broadcast();
+    }
+}
+
+bool cCCcamCard::GetCw(unsigned char *Cw, int timeout)
+{
+  cMutexLock lock(this);
+  if(newcw && timecw.Elapsed()>3000)
+    newcw=false; // too old
+  if(!newcw)
+    cwwait.TimedWait(*this,timeout);
+  if(newcw) {
+    memcpy(Cw,cw,sizeof(cw));
+    newcw=false;
+    return true;
+    }
+  return false;
+}
+
 // -- cCardClientCCcam ---------------------------------------------------------
 
 class cCardClientCCcam : public cCardClient , private cThread {
 private:
   cNetSocket so;
-  //
+  cCCcamCard card[4];
   int pmtversion;
-  unsigned char sacapmt[4][2048];
-  unsigned char savedcw[4][16];
-  int pids[4];
-  int newcw[4];
-  uint64_t timecw[4];
-  int ccam_fd[4];
-  int lastcard;
-  int lastpid;
   int failedcw;
-  //
-  void Writecapmt(int j);
 protected:
-  virtual bool lLogin(int cardnum);
+  virtual bool Login(void);
   virtual void Action(void);
 public:
   cCardClientCCcam(const char *Name);
@@ -74,14 +194,13 @@ cCardClientCCcam::cCardClientCCcam(const char *Name)
 ,so(DEFAULT_CONNECT_TIMEOUT,2,3600,true)
 {
   pmtversion=0;
-  ccam_fd[0]=-1; ccam_fd[1]=-1; ccam_fd[2]=-1; ccam_fd[3]=-1;
+  for(int i=0; i<4; i++) card[i].Setup(i,socketPath);
 }
 
 bool cCardClientCCcam::Init(const char *config)
 {
   cMutexLock lock(this);
   int num=0;
-  signal(SIGPIPE,SIG_IGN);
   if(!ParseStdConfig(config,&num)) return false;
   return true;
 }
@@ -92,27 +211,8 @@ bool cCardClientCCcam::CanHandle(unsigned short SysId)
   return false;
 }
 
-bool cCardClientCCcam::lLogin(int cardnum)
+bool cCardClientCCcam::Login(void)
 {
-  sockaddr_un serv_addr_un;
-  char camdsock[256];
-  int res;
-
-  close(ccam_fd[cardnum]);
-  sprintf(camdsock,"/var/emu/chroot%d/tmp/camd.socket",cardnum);
-  printf(" socket = %s\n",camdsock);
-  ccam_fd[cardnum]=socket(AF_LOCAL, SOCK_STREAM, 0);
-  bzero(&serv_addr_un, sizeof(serv_addr_un));
-  serv_addr_un.sun_family = AF_LOCAL;
-  strcpy(serv_addr_un.sun_path, camdsock);
-  res=connect(ccam_fd[cardnum], (const sockaddr*)&serv_addr_un, sizeof(serv_addr_un));
-  if (res !=0) {
-    PRINTF(L_CC_CCCAM,"Couldnt open camd.socket..... errno = %d Aggg",errno);
-    close(ccam_fd[cardnum]);
-    ccam_fd[cardnum] = -1;
-    }
-  PRINTF(L_CC_CCCAM,"Opened camd.socket..... ccamd_fd  = %d ",ccam_fd[cardnum]);
-
   if(!so.Connected()) {
     so.Disconnect();
     if(!so.Bind("127.0.0.1",port)) return false;
@@ -129,7 +229,6 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   //  cMutexLock lock(this);
   //newcw[cardnum] =0;
   unsigned char capmt[2048];
-  PRINTF(L_CC_CCCAM,"Processing ECM.... for card %d",cardnum);
   const int caid=ecm->caId;
   const int pid =ecm->ecm_pid;
   int lenpos=10;
@@ -186,88 +285,35 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   capmt[lenpos+1]=(len & 0xff);
   capmt[4]=((wp-6)>>8) & 0xff;
   capmt[5]=(wp-6) & 0xff;
-  if (newcw[cardnum]) {
-    if ((cTimeMs::Now() - timecw[cardnum]) > 3000)
-      // just too old lets bin em...
-      newcw[cardnum] = 0;
-    }
-  if ((pid != pids[cardnum]) || (ccam_fd[cardnum] == -1)) { // channel change
+
+  cCCcamCard *c=&card[cardnum];
+
+  int timeout=700;
+  if(pid!=c->Pid() || !c->Connected()) { // channel change
     PRINTF(L_CC_CCCAM,"sending capmts ");
-    pids[cardnum] = pid;
-    newcw[cardnum] =0;
-    memcpy(sacapmt[cardnum],capmt,2048);
-    lLogin(cardnum);
-    Writecapmt(cardnum);
-    usleep(300000);
+    c->NewCaPmt(pid,capmt,wp);
+    timeout=3000;
     }
-  lastcard = cardnum;
-  lastpid = pid;
-  failedcw=0;
-  int u=0;
-  while ((newcw[cardnum] == 0) && (u++<700))
-    usleep(1000);      // give the card a chance to decode it...
-  if (newcw[cardnum] == 0) {
+  if(!c->GetCw(cw,timeout)) {
     // somethings up, so we will send capmt again.
-    pids[cardnum] = pid;
-    //  memcpy(capmt,sacapmt[cardnum],2048);
-    Writecapmt(cardnum);
-    }
-  u=0;
-  while ((newcw[cardnum] == 0) && (u++<1000))
-    usleep(1000);
-  if (newcw[cardnum] == 0) {
-    PRINTF(L_CC_CCCAM,"FAILED ECM FOR CARD %d !!!!!!!!!!!!!!!!!!",cardnum);
-    sacapmt[cardnum][9]=pmtversion;     //reserved - version - current/next
-    pmtversion++;
-    pmtversion%=32;
-    failedcw++;
-    if (failedcw == 10) {
-      // CCcam is having problems lets mark it for a restart....
-      FILE *i = fopen("/tmp/killCCcam","w+");
-      fclose(i);
+    c->WriteCaPmt();
+    timeout=1000;
+    if(!c->GetCw(cw,timeout)) {
+      PRINTF(L_CC_CCCAM,"%d: FAILED ECM !",cardnum);
+      c->Disconnect();
+      failedcw++;
+      if(failedcw>=10) {
+        // CCcam is having problems lets mark it for a restart....
+        FILE *f=fopen("/tmp/killCCcam","w+");
+        fclose(f);
+        failedcw=0;
+        }
+      return false;
       }
-    return false;
     }
-  memcpy(cw,savedcw[cardnum],16);
-  newcw[cardnum] =0;
-  PRINTF(L_CC_CCCAM," GOT CW FOR CARD %d !!!!!!!!!!!!!!!!!!",cardnum);
-  sacapmt[cardnum][9]=pmtversion;     //reserved - version - current/next
-  pmtversion++;
-  pmtversion%=32;
+  PRINTF(L_CC_CCCAM,"%d: GOT CW !",cardnum);
   failedcw=0;
-  Writecapmt(cardnum);
   return true;
-}
-
-void cCardClientCCcam::Writecapmt(int n)
-{
-  int len;
-  int list_management ;
-  list_management = LIST_ONLY;
-  sacapmt[n][6] = list_management;
-  len = sacapmt[n][4] << 8;
-  len |= sacapmt[n][5];
-  len += 6;
-  int retry = 1;
-  while (retry) {
-    PRINTF(L_CC_CCCAM,"Writing capmt for card %d %d =================================================",n, sacapmt[n][6]);
-    if (ccam_fd[n]==-1)
-      lLogin(n);
-    if (ccam_fd[n]==-1)
-      return ;
-
-    int r = write(ccam_fd[n], &sacapmt[n],len );
-    if (r != len) {
-      PRINTF(L_CC_CCCAM,"CCcam probably has crashed or been killed...");
-      close(ccam_fd[n]);
-      ccam_fd[n]=-1;
-      retry++;
-      if (retry > 2)
-        retry =0;
-      }
-    else
-      retry =0;
-    }
 }
 
 void cCardClientCCcam::Action()
@@ -280,19 +326,8 @@ void cCardClientCCcam::Action()
         cw[2],cw[3],cw[4],cw[5],cw[6],cw[7],cw[8],cw[9],
         cw[10],cw[11],cw[12],cw[13],cw[14],cw[15],cw[16],cw[17]);
 
-      if (cw[1] == 0x0f) {
-        int n = cw[0];
-        if (memcmp(savedcw[n],cw+2,16)) {
-          if (newcw[n] == 1) {
-            close(ccam_fd[n]);
-            ccam_fd[n]=-1;
-            }
-          memcpy(savedcw[n],cw+2,16);
-          newcw[n] =1;
-          timecw[n]= cTimeMs::Now();
-          PRINTF(L_CC_CCCAM,"SAVING KEYS USING PID FROM CCCAM  %d !!!!!!!!!!!", n);
-          }
-        }
+      if(cw[1]==0x0f && cw[0]<4)
+        card[cw[0]].NewCw(cw+2);
       }
     }
 }
