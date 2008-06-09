@@ -20,21 +20,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <signal.h>
 
 #include <vdr/pat.h>
 
 #include "cc.h"
 #include "network.h"
-//#include "parse.h"
 
 #define LIST_ONLY 0x03   /* CA application should clear the list when an 'ONLY' CAPMT object is received, and start working with the object */
 
@@ -170,7 +163,7 @@ bool cCCcamCard::GetCw(unsigned char *Cw, int timeout)
 
 // -- cCardClientCCcam ---------------------------------------------------------
 
-class cCardClientCCcam : public cCardClient , private cThread {
+class cCardClientCCcam : public cCardClient, private cThread {
 private:
   cNetSocket so;
   cCCcamCard card[4];
@@ -181,9 +174,9 @@ protected:
   virtual void Action(void);
 public:
   cCardClientCCcam(const char *Name);
+  ~cCardClientCCcam();
   virtual bool Init(const char *CfgDir);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
-  virtual bool CanHandle(unsigned short SysId);
   };
 
 static cCardClientLinkReg<cCardClientCCcam> __ncd("CCcam");
@@ -197,6 +190,11 @@ cCardClientCCcam::cCardClientCCcam(const char *Name)
   for(int i=0; i<4; i++) card[i].Setup(i,socketPath);
 }
 
+cCardClientCCcam::~cCardClientCCcam()
+{
+  Cancel(3);
+}
+
 bool cCardClientCCcam::Init(const char *config)
 {
   cMutexLock lock(this);
@@ -205,32 +203,23 @@ bool cCardClientCCcam::Init(const char *config)
   return true;
 }
 
-bool cCardClientCCcam::CanHandle(unsigned short SysId)
-{
-  if((SysId & 0xf000) != 0x5000) return true;
-  return false;
-}
-
 bool cCardClientCCcam::Login(void)
 {
-  if(!so.Connected()) {
-    so.Disconnect();
-    if(!so.Bind("127.0.0.1",port)) return false;
-    PRINTF(L_CC_CCCAM,"Bound to port %d, starting UDP listener",port);
-    Start();
-    }
+  cMutexLock lock(this);
+  so.Disconnect();
+  if(!so.Bind("127.0.0.1",port)) return false;
+  PRINTF(L_CC_CCCAM,"Bound to port %d, starting UDP listener",port);
+  Start();
   return true;
 }
 
 bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)
 {
-  // if(((ccam_fd ==0) && !Login()) || !CanHandle(ecm->caId)) return false;
-  //so.Flush();
-  //  cMutexLock lock(this);
-  //newcw[cardnum] =0;
+  cMutexLock lock(this);
+  if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
 
   static const unsigned char pmt[] = {
-    0x9f,0x80,0x32,0x82,0x00,0x00,
+    0x9f,0x80,0x32,0x82,0xFF,0xFF,
     0x01,
 #define PRG_POS 7
     0xFF,0xFF,                                          // prg-nr
@@ -263,7 +252,7 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   capmt[DMX_POS+3]=cardnum ;
   capmt[PID_POS+2]=ecm->ecm_pid>>8;
   capmt[PID_POS+3]=ecm->ecm_pid&0xFF;
-  bool streamflag = 1;
+  bool streamflag=1;
 #if APIVERSNUM >= 10500
   int casys[2];
 #else
@@ -297,8 +286,7 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   if(!c->GetCw(cw,timeout)) {
     // somethings up, so we will send capmt again.
     c->WriteCaPmt();
-    timeout=1000;
-    if(!c->GetCw(cw,timeout)) {
+    if(!c->GetCw(cw,1000)) {
       PRINTF(L_CC_CCCAM,"%d: FAILED ECM !",cardnum);
       c->Disconnect();
       failedcw++;
@@ -316,16 +304,12 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   return true;
 }
 
-void cCardClientCCcam::Action()
+void cCardClientCCcam::Action(void)
 {
   unsigned char cw[18];
   while(Running()) {
     if(so.Read(cw,sizeof(cw))==sizeof(cw)) {
-      PRINTF(L_CC_CCCAM," Got: %02hhx%02hhx  %02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx  %02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-        cw[0],cw[1],
-        cw[2],cw[3],cw[4],cw[5],cw[6],cw[7],cw[8],cw[9],
-        cw[10],cw[11],cw[12],cw[13],cw[14],cw[15],cw[16],cw[17]);
-
+      LDUMP(L_CC_CCCAM,cw+2,16,"got: %02x%02x",cw[0],cw[1]);
       if(cw[1]==0x0f && cw[0]<4)
         card[cw[0]].NewCw(cw+2);
       }
