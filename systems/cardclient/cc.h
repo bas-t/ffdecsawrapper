@@ -36,8 +36,9 @@
 #define L_CC_RDGD     LCLASS(L_CC,0x100)
 #define L_CC_NEWCAMD  LCLASS(L_CC,0x200)
 #define L_CC_GBOX     LCLASS(L_CC,0x400)
+#define L_CC_CCCAM    LCLASS(L_CC,0x800)
 
-#define L_CC_ALL      LALL(L_CC_GBOX)
+#define L_CC_ALL      LALL(L_CC_CCCAM)
 
 // ----------------------------------------------------------------
 
@@ -69,7 +70,7 @@ public:
   cCardClient(const char *Name);
   virtual bool Init(const char *config)=0;
   virtual bool CanHandle(unsigned short SysId);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)=0;
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)=0;
   virtual bool ProcessEMM(int caSys, const unsigned char *data) { return false; }
   const char *Name(void) { return name; }
   };

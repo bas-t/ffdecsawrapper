@@ -38,10 +38,10 @@
 static const struct LogModule lm_cc = {
   (LMOD_ENABLE|L_CC_ALL)&LOPT_MASK,
   (LMOD_ENABLE|L_CC_CORE|L_CC_LOGIN|L_CC_ECM|L_CC_EMM|L_CC_CAMD|L_CC_CAMD35|
-   L_CC_RDGD|L_CC_NEWCAMD|L_CC_GBOX)&LOPT_MASK,
+   L_CC_RDGD|L_CC_NEWCAMD|L_CC_GBOX|L_CC_CCCAM)&LOPT_MASK,
   "cardclient",
   { "core","login","ecm","emm","camd","camd35","camd35extra","radegast",
-    "newcamd","gbox" }
+    "newcamd","gbox","cccam" }
   };
 ADD_MODULE(L_CC,lm_cc)
 
@@ -197,7 +197,7 @@ bool cSystemCardClient::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
     if(cc) {
       cTimeMs start;
       int id=cc->msECM.Get(data,SCT_LEN(data),cw);
-      if(id==0 || (id>0 && cc->ProcessECM(ecm,data,cw))) {
+      if(id==0 || (id>0 && cc->ProcessECM(ecm,data,cw,CardNum()))) {
         int dur=start.Elapsed();
         if(dur>2000) {
           char bb[32];
