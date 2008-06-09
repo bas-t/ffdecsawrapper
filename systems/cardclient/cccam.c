@@ -228,70 +228,70 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   //so.Flush();
   //  cMutexLock lock(this);
   //newcw[cardnum] =0;
-  unsigned char capmt[2048];
-  const int caid=ecm->caId;
-  const int pid =ecm->ecm_pid;
-  int lenpos=10;
-  int len=19;
-  int wp=31;
-  int casys[2];
-  casys[0]=caid;
-  casys[1]=0;
 
-  //PRINTF(L_CC_CCCAM,"Card num beign used... - %d, pid %d progid %d provid %d caid %d",cardnum, pid,ecm->prgId, ecm->provId, ecm->caId );
-  memcpy(capmt,"\x9f\x80\x32\x82\x00\x00", 6);
-  capmt[6]=0x01; //prg-nr
-  capmt[7]=(unsigned char)((ecm->prgId>>8) & 0xff); //prg-nr
-  capmt[8]=(unsigned char)(ecm->prgId & 0xff);
-  capmt[9]=pmtversion;     //reserved - version - current/next
-  pmtversion++;
-  pmtversion%=32; //0x00;  reserved - prg-info len
-  capmt[10]=(unsigned char)((ecm->prgId>>8) & 0xff); //0x00;  prg-info len
-  capmt[11]=(unsigned char)(ecm->prgId & 0xff);
-  // this is ASN.1 this is NOT the way you do BER...
-  capmt[12]=0x01;        //CMD_OK_DESCRAMBLING;   ca pmt command id
-  capmt[13]=0x81;        // private descr.. dvbnamespace
-  capmt[14]=0x08;
-  {
-  int dvb_namespace = cardnum<<8;
-  capmt[15]=dvb_namespace>>24;
-  capmt[16]=(dvb_namespace>>16)&0xFF;
-  capmt[17]=(dvb_namespace>>8)&0xFF;
-  capmt[18]=dvb_namespace&0xFF;
-  }
-  capmt[19]=ecm->transponder>>8;
-  capmt[20]=ecm->transponder&0xFF;
-  capmt[21]=ecm->provId>>8;
-  capmt[22]=ecm->provId&0xFF;
-  capmt[23]=0x82;        // demuxer kram..
-  capmt[24]=0x02;
-  capmt[25]= 1<<cardnum ;
-  capmt[26]= cardnum ;
-  capmt[27]=0x84;        // pmt pid
-  capmt[28]=0x02;
-  capmt[29]=pid>>8;
-  capmt[30]=pid&0xFF;
+  static const unsigned char pmt[] = {
+    0x9f,0x80,0x32,0x82,0x00,0x00,
+    0x01,
+#define PRG_POS 7
+    0xFF,0xFF,                                          // prg-nr
+#define VERS_POS 9
+    0xFF,                                               // version
+#define LEN_POS 10
+    0xFF,0xFF,                                          // prg-info-len
+    0x01,                                               // ca pmt command
+#define PRIV_POS 13
+    0x81,0x08,0x00,0x00,0xFF,0x00,0xFF,0xFF,0xFF,0xFF,  // private descr
+#define DMX_POS 23
+    0x82,0x02,0xFF,0xFF,                                // demuxer stuff
+#define PID_POS 27
+    0x84,0x02,0xFF,0xFF                                 // pmt pid
+    };
+  unsigned char capmt[2048];
+  memcpy(capmt,pmt,sizeof(pmt));
+  int wp=sizeof(pmt);
+  int len=wp-LEN_POS-2;
+  capmt[PRG_POS]=ecm->prgId>>8;
+  capmt[PRG_POS+1]=ecm->prgId&0xff;
+  capmt[VERS_POS]=pmtversion;
+  pmtversion=(pmtversion+1)&0x1f;
+  capmt[PRIV_POS+4]=cardnum;
+  capmt[PRIV_POS+6]=ecm->transponder>>8;
+  capmt[PRIV_POS+7]=ecm->transponder&0xFF;
+  capmt[PRIV_POS+8]=ecm->provId>>8;
+  capmt[PRIV_POS+9]=ecm->provId&0xFF;
+  capmt[DMX_POS+2]=1<<cardnum ;
+  capmt[DMX_POS+3]=cardnum ;
+  capmt[PID_POS+2]=ecm->ecm_pid>>8;
+  capmt[PID_POS+3]=ecm->ecm_pid&0xFF;
   bool streamflag = 1;
-  int n=GetCaDescriptors(ecm->source,ecm->transponder,ecm->prgId,casys,sizeof(capmt)-31,&capmt[31],streamflag);
-  len+=n;
-  wp+=n;
-  capmt[wp++] = 0x01;
-  capmt[wp++] = 0x0f;
-                 // cccam uses this one as PID to program ca0..
-  capmt[wp++] = cardnum&0xFF;
-  capmt[wp++] = 0x00;      //es_length
-  capmt[wp++] = 0x06;      //es ca_pmt_cmd_id
-  capmt[lenpos]=((len & 0xf00)>>8);
-  capmt[lenpos+1]=(len & 0xff);
-  capmt[4]=((wp-6)>>8) & 0xff;
-  capmt[5]=(wp-6) & 0xff;
+#if APIVERSNUM >= 10500
+  int casys[2];
+#else
+  unsigned short casys[2];
+#endif
+  casys[0]=ecm->caId;
+  casys[1]=0;
+  int n=GetCaDescriptors(ecm->source,ecm->transponder,ecm->prgId,casys,sizeof(capmt)-wp,&capmt[wp],streamflag);
+  if(n<=0) {
+    PRINTF(L_CC_CCCAM,"no CA descriptor for caid %04x sid %d prov %04x",ecm->caId,ecm->prgId,ecm->provId);
+    return false;
+    }
+  len+=n; wp+=n;
+  capmt[wp++]=0x01;
+  capmt[wp++]=0x0f;
+  capmt[wp++]=cardnum;   // cccam uses this one as PID to program ca0
+  capmt[wp++]=0x00;      //es_length
+  capmt[wp++]=0x06;      //es ca_pmt_cmd_id
+  capmt[LEN_POS]=((len&0xf00)>>8);
+  capmt[LEN_POS+1]=(len&0xff);
+  capmt[4]=(wp-6)>>8;
+  capmt[5]=(wp-6)&0xff;
 
   cCCcamCard *c=&card[cardnum];
-
   int timeout=700;
-  if(pid!=c->Pid() || !c->Connected()) { // channel change
+  if(ecm->ecm_pid!=c->Pid() || !c->Connected()) { // channel change
     PRINTF(L_CC_CCCAM,"sending capmts ");
-    c->NewCaPmt(pid,capmt,wp);
+    c->NewCaPmt(ecm->ecm_pid,capmt,wp);
     timeout=3000;
     }
   if(!c->GetCw(cw,timeout)) {
