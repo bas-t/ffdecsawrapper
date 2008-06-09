@@ -33,7 +33,7 @@
 #include <vdr/pat.h>
 
 #include "cc.h"
-//#include "network.h"
+#include "network.h"
 //#include "parse.h"
 
 #define LIST_ONLY 0x03   /* CA application should clear the list when an 'ONLY' CAPMT object is received, and start working with the object */
@@ -42,6 +42,8 @@
 
 class cCardClientCCcam : public cCardClient , private cThread {
 private:
+  cNetSocket so;
+  //
   int pmtversion;
   unsigned char sacapmt[4][2048];
   unsigned char savedcw[4][16];
@@ -49,14 +51,11 @@ private:
   int newcw[4];
   uint64_t timecw[4];
   int ccam_fd[4];
-  int cwccam_fd;
   int lastcard;
   int lastpid;
   int failedcw;
   //
   void Writecapmt(int j);
-  int CCSelect(int sd, bool forRead, int s);
-  bool GetCCamCw(unsigned char *cw, int s);
 protected:
   virtual bool lLogin(int cardnum);
   virtual void Action(void);
@@ -72,8 +71,8 @@ static cCardClientLinkReg<cCardClientCCcam> __ncd("CCcam");
 cCardClientCCcam::cCardClientCCcam(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam listener")
+,so(DEFAULT_CONNECT_TIMEOUT,2,3600,true)
 {
-  cwccam_fd=-1;
   pmtversion=0;
   ccam_fd[0]=-1; ccam_fd[1]=-1; ccam_fd[2]=-1; ccam_fd[3]=-1;
 }
@@ -95,14 +94,10 @@ bool cCardClientCCcam::CanHandle(unsigned short SysId)
 
 bool cCardClientCCcam::lLogin(int cardnum)
 {
-  int rc;
-  int so =0;
   sockaddr_un serv_addr_un;
   char camdsock[256];
   int res;
 
-  struct sockaddr_in servAddr;
-  fflush(NULL);
   close(ccam_fd[cardnum]);
   sprintf(camdsock,"/var/emu/chroot%d/tmp/camd.socket",cardnum);
   printf(" socket = %s\n",camdsock);
@@ -117,28 +112,13 @@ bool cCardClientCCcam::lLogin(int cardnum)
     ccam_fd[cardnum] = -1;
     }
   PRINTF(L_CC_CCCAM,"Opened camd.socket..... ccamd_fd  = %d ",ccam_fd[cardnum]);
-  if (cwccam_fd!=-1) return 1;
-  PRINTF(L_CC_CCCAM,"logging in");
-  so=socket(AF_INET, SOCK_DGRAM, 0);
-  if(so<0) {
-    close(so);
-    return false;
-    }
-  bzero(&servAddr, sizeof(servAddr));
-  servAddr.sin_family = AF_INET;
-  servAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-  servAddr.sin_port = htons(port);
-  rc = bind (so, (struct sockaddr *) &servAddr,sizeof(servAddr));
-  if(rc<0) {
-    close(so);
-    PRINTF(L_CC_CCCAM,"not logged in");
-    return false;
-    }
-  cwccam_fd =so;
-  PRINTF(L_CC_CCCAM,"logged in");
 
-  PRINTF(L_CC_CCCAM,"starting UDP listener");
-  Start();
+  if(!so.Connected()) {
+    so.Disconnect();
+    if(!so.Bind("127.0.0.1",port)) return false;
+    PRINTF(L_CC_CCCAM,"Bound to port %d, starting UDP listener",port);
+    Start();
+    }
   return true;
 }
 
@@ -294,7 +274,7 @@ void cCardClientCCcam::Action()
 {
   unsigned char cw[18];
   while(Running()) {
-    if (GetCCamCw(cw,0)) {
+    if(so.Read(cw,sizeof(cw))==sizeof(cw)) {
       PRINTF(L_CC_CCCAM," Got: %02hhx%02hhx  %02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx  %02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
         cw[0],cw[1],
         cw[2],cw[3],cw[4],cw[5],cw[6],cw[7],cw[8],cw[9],
@@ -315,36 +295,4 @@ void cCardClientCCcam::Action()
         }
       }
     }
-}
-
-bool cCardClientCCcam::GetCCamCw(unsigned char *cw, int s)
-{
-  unsigned char msg[18];
-  int n;
-  struct sockaddr cliAddr;
-  socklen_t cliLen;
-  cliLen = sizeof(cliAddr);
-  if (CCSelect(cwccam_fd, true,100))
-    n = ::recvfrom(cwccam_fd, msg, 18, 0, (struct sockaddr *) &cliAddr, &cliLen);
-  else
-    return false;
-  if(n<0)
-    return false;
-  memcpy(cw, msg, 18);
-  return(true);
-}
-
-int cCardClientCCcam::CCSelect(int sd, bool forRead, int s)
-{
-  if(sd>=0) {
-    fd_set fds;
-    FD_ZERO(&fds); FD_SET(sd,&fds);
-    struct timeval tv;
-    tv.tv_sec=4; tv.tv_usec=000;
-    int r=::select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
-    if(r>0) return 1;
-    else if(r<0) return 0;
-    else return 0;
-    }
-  return 0;
 }
