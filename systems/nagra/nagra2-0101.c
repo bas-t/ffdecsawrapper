@@ -849,14 +849,15 @@ void cN2Prov0101::TimerHandler(unsigned int num)
 {
   if(hwMapper) {
     int mask=hwMapper->AddCycles(num);
-    for(int t=1; mask; mask>>=1,t++) {
-      DisableTimers(11);
-      if(t==2) {
-        PRINTF(L_SYS_EMU,"Timer interrupt %u @ %04x",t,GetPc());
-        RaiseException(9);
-        if(Interruptible()) throw(t);
+    for(int t=0; mask; mask>>=1,t++)
+      if(mask&1) {
+        DisableTimers(11);
+        if(t==2) {
+          PRINTF(L_SYS_EMU,"Timer interrupt %u @ %04x",t,GetPc());
+          RaiseException(9);
+          if(Interruptible()) throw(t);
+          }
         }
-      }
     }
 }
 
