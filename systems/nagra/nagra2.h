@@ -188,7 +188,7 @@ public:
 
 #define MAX_TIMERS 3
 #define TIMER_NUM(x) (((x)>>2)&3) // timer order doesn't match HW order
-#define HW_NUM(x)    ((x+2)%3)
+#define HW_NUM(x)    ((x+1)%3)
 
 class cMapMemHW : public cMapMem {
 private:
