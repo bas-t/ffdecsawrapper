@@ -137,7 +137,6 @@ bool cN2Prov0501::ProcessMap(int f)
   switch(f) {
     case SETSIZE:
       DoMap(f,0,Get(0x48));
-      AddCycles(MapCycles());
       break;
     case IMPORT_J:
     case IMPORT_A:
@@ -147,7 +146,6 @@ bool cN2Prov0501::ProcessMap(int f)
     case IMPORT_LAST:
       addr=HILO(0x44);
       GetMem(addr,tmp,dl,0); DoMap(f,tmp,l);
-      AddCycles(MapCycles());
       break;
     case EXPORT_J:
     case EXPORT_A:
@@ -157,7 +155,6 @@ bool cN2Prov0501::ProcessMap(int f)
     case EXPORT_LAST:
       addr=HILO(0x44);
       DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
-      AddCycles(MapCycles());
       break;
     case SWAP_A:
     case SWAP_B:
@@ -165,7 +162,6 @@ bool cN2Prov0501::ProcessMap(int f)
     case SWAP_D:
       addr=HILO(0x44);
       GetMem(addr,tmp,dl,0); DoMap(f,tmp,l); SetMem(addr,tmp,dl,0);
-      AddCycles(MapCycles());
       break;
     case CLEAR_A:
     case CLEAR_B:
@@ -178,7 +174,6 @@ bool cN2Prov0501::ProcessMap(int f)
     case COPY_C_D:
     case COPY_D_C:
       DoMap(f);
-      AddCycles(MapCycles());
       break;
     case 0x37:
       GetMem(HILO(0x44),tmp,dl,0);
@@ -199,6 +194,7 @@ bool cN2Prov0501::ProcessMap(int f)
       PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
       return false;
     }
+  if(cycles>0) AddMapCycles(cycles);
   return true;
 }
 
