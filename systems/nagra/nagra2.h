@@ -160,8 +160,8 @@ protected:
   //
   int GetOpSize(int l);
   bool DoMap(int f, unsigned char *data=0, int l=0);
-  unsigned int MapCycles() { return cycles; }
   virtual void AddMapCycles(unsigned int num) {}
+  virtual unsigned int MapCycles(void) { return 0; }
 public:
   cMapCore(void);
   virtual ~cMapCore() {}

@@ -171,6 +171,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
   PRINTF(L_SYS_MAP,"0101: calling function %02X",f);
   l=GetOpSize(l);
   cycles=0; interrupted=false;
+  unsigned int startcycles=MapCycles();
   switch(f) {
     case 0x21:
       MAP_IRQ_BEGIN();
@@ -180,7 +181,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       AddMapCycles(282);
       BN_clear(C);
       WS_END();
-      AddMapCycles(898-282-288);
+      cycles=898;
       MAP_IRQ_END();
       break;     
     case 0x22:
@@ -355,6 +356,8 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
         PRINTF(L_SYS_MAP,"0101: unsupported call %02x",f);
       break;
     }
+  if(!interrupted && cycles)
+    cycles-=MapCycles()-startcycles;
 }
 
 // -- cN2Prov0101 --------------------------------------------------------------
@@ -381,6 +384,7 @@ protected:
   virtual void Stepper(void);
   virtual void TimerHandler(unsigned int num);
   virtual void AddMapCycles(unsigned int num);
+  virtual unsigned int MapCycles(void) { return Cycles(); }
 public:
   cN2Prov0101(int Id, int Flags);
   virtual bool PostProcAU(int id, unsigned char *data);
