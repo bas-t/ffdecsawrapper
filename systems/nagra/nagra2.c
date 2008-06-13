@@ -392,16 +392,23 @@ bool cMapMath::ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b)
   return ret;
 }
 
-void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d, int bits)
+void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d, BIGNUM *c, int bits)
 {
 #if OPENSSL_VERSION_NUMBER < 0x0090700fL
 #error BN_mod_inverse is probably buggy in your openssl version
 #endif
   BN_zero(x);
-  BN_sub(j,x,d);
+  BN_sub(j,x,d); j->neg=1;
   BN_set_bit(j,0);
   BN_set_bit(x,bits);
   BN_mod_inverse(j,j,x,ctx);
+  if(c) {
+    BN_copy(c,d);
+    BN_mask_bits(c,bits);
+    BN_mul(c,j,c,ctx);
+    BN_rshift(c,c,bits);
+    BN_mask_bits(c,bits);
+    }
 }
 
 void cMapMath::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b)

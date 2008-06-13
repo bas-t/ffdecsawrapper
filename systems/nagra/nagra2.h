@@ -95,7 +95,7 @@ protected:
   cBNctx ctx;
   SHA_CTX sctx;
   // stateless
-  void MakeJ0(BIGNUM *j, BIGNUM *d, int bits=64);
+  void MakeJ0(BIGNUM *j, BIGNUM *d, BIGNUM *c=0, int bits=64);
   bool ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
   bool ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);

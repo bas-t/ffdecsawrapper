@@ -176,7 +176,7 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       MAP_IRQ_BEGIN();
       AddMapCycles(288);
       WS_START(1);
-      MakeJ0(J,D);
+      MakeJ0(J,D,C);
       AddMapCycles(282);
       BN_clear(C);
       WS_END();
