@@ -260,74 +260,114 @@ bool cN2Emu::Init(int id, int romv)
 
 // -- cMapReg ------------------------------------------------------------------
 
-cMapReg::cMapReg(const int *Ws, const char *Name)
+cMapReg::cMapReg(int *_defwordsize, int _maxwordsize)
 {
-  ws=Ws; name=Name;
+  SetDefWordSize(_defwordsize);
+  SetMaxWordSize(_maxwordsize);
+  wordsize=DEF_WORDSIZE;
 }
 
-void cMapReg::Save(int size)
+BIGNUM *cMapReg::Value(int wsize, bool mask)
 {
-  if(!touched && ws) {
-    if(size<=0) size=*ws;
-    BN_copy(save,reg);
-    BN_mask_bits(reg,size<<6);
-    touched=true;
-#ifdef MR_DEBUG
-fprintf(stderr,"saved %s size=%d\n",name,size);
-fprintf(stderr,"reg : "); BN_print_fp(stderr,reg); fprintf(stderr,"\n");
-fprintf(stderr,"save: "); BN_print_fp(stderr,save); fprintf(stderr,"\n");
-#endif
+  wsize=OpWordSize(wsize);
+  if(wordsize!=wsize) {
+    Commit();
+    Reload();
+    }
+  else if(mask)
+    BN_mask_bits(reg,wsize*64);
+  return reg;
+}
+
+void cMapReg::ClearReg(int wsize)
+{
+  BN_rshift(reg,reg,wsize*64);
+  BN_lshift(reg,reg,wsize*64);
+}
+
+void cMapReg::ClearFullReg(int wsize)
+{
+  BN_rshift(fullreg,fullreg,wsize*64);
+  BN_lshift(fullreg,fullreg,wsize*64);
+}
+
+void cMapReg::PrepTmp(BIGNUM *val, int wsize)
+{
+  if(val->neg) {
+    BN_clear(tmp);
+    BN_set_bit(tmp,wsize*64);
+    BN_add(tmp,tmp,val);
+    }
+  else
+    BN_copy(tmp,val);
+  BN_mask_bits(tmp,wsize*64);
+}
+
+void cMapReg::Commit(int wsize, int resync)
+{
+  if(resync<0 && wsize<0) resync=1;
+  wsize=OpWordSize(wsize>=0?wsize:wordsize);
+  ClearFullReg(wsize);
+  PrepTmp(reg,wsize);
+  BN_add(fullreg,fullreg,tmp);
+  if(resync) {
+    if(wordsize==wsize) BN_mask_bits(reg,wsize*64);
+    else wordsize=wsize;
     }
 }
 
-void cMapReg::Restore(int size)
+void cMapReg::Reload(int wsize)
 {
-  if(touched && ws) {
-    if(size<=0) size=*ws;
-#ifdef MR_DEBUG
-fprintf(stderr,"restore %s size=%d\n",name,size);
-fprintf(stderr,"reg : "); BN_print_fp(stderr,reg); fprintf(stderr,"\n");
-fprintf(stderr,"save: "); BN_print_fp(stderr,save); fprintf(stderr,"\n");
-#endif
-    if(reg->neg) {
-      BN_zero(tmp);
-      BN_set_bit(tmp,size<<6);
-      BN_add(reg,tmp,reg);
-      }
-    BN_rshift(tmp,save,size<<6);
-    BN_lshift(tmp,tmp,size<<6);
-    BN_mask_bits(reg,size<<6);
-    BN_add(reg,reg,tmp);
-    touched=false;
-#ifdef MR_DEBUG
-fprintf(stderr,"reg : "); BN_print_fp(stderr,reg); fprintf(stderr,"\n");
-#endif
+  wsize=OpWordSize(wsize>=0?wsize:wordsize);
+  wordsize=wsize;
+  BN_copy(reg,fullreg);
+  BN_mask_bits(reg,64*wsize);
+}
+
+void cMapReg::GetLE(const unsigned char *in, int n)
+{
+  int wsize=OpWordSize(n<=0?n:(n+7)/8);
+  if(wordsize>wsize) Commit();
+  reg.GetLE(in,wsize*8);
+  Commit(wsize);
+}
+
+void cMapReg::PutLE(unsigned char *out, int n)
+{
+  int wsize=OpWordSize(n<=0?n:(n+7)/8);
+  Commit();
+  fullreg.PutLE(out,wsize*8);
+}
+
+void cMapReg::Set(BIGNUM *val, int wsize)
+{
+  wsize=OpWordSize(wsize);
+  if(wordsize!=wsize) Commit();
+  ClearReg(wsize);
+  PrepTmp(val,wsize);
+  if(wordsize!=wsize) {
+    ClearFullReg(wsize);
+    BN_add(fullreg,fullreg,tmp);
     }
+  BN_add(reg,reg,tmp);
+}
+
+void cMapReg::Clear(int wsize)
+{
+  wsize=OpWordSize(wsize);
+  if(wordsize!=wsize) {
+    Commit();
+    ClearFullReg(wsize);
+    }
+  ClearReg(wsize);
 }
 
 // -- cMapMath -----------------------------------------------------------------
 
-const int cMapMath::ws1=1;
-
 cMapMath::cMapMath(void)
-:A(&wordsize,"A"),B(&wordsize,"B"),C(&wordsize,"C"),D(&wordsize,"D"),J(&ws1,"J"),I(0,"I")
+:A(&wordsize),B(&wordsize),C(&wordsize),D(&wordsize),J(0,1),I(&wordsize)
 {
   wordsize=DEF_WORDSIZE;
-}
-
-void cMapMath::Finalise(void)
-{
-#ifdef MR_DEBUG
-fprintf(stderr,"finalise\n");
-#endif
-  A.Restore(); B.Restore(); C.Restore(); D.Restore();
-}
-
-void cMapMath::WClear(BIGNUM *r, int w)
-{
-  if(!w) w=wordsize;
-  BN_rshift(r,r,w<<6);
-  BN_lshift(r,r,w<<6);
 }
 
 bool cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
@@ -621,7 +661,6 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       cycles=890-6;
       last=0;
       regs[0]->GetLE(data,8);
-      regs[0]->Restore(1);
       break;
     case IMPORT_A:
     case IMPORT_B:
@@ -632,14 +671,12 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       cycles+=771+160*l-6;
       last=f-IMPORT_J;
       regs[last]->GetLE(data,l<<3);
-      regs[last]->Restore(l);
       break;
     case IMPORT_LAST:
       if(l>16) { l=1; cycles+=5; }
       else if(l<=0) l=1;
       cycles=656+160*l-6;
       regs[last]->GetLE(data,(last==0?1:l)<<3);
-      regs[last]->Restore((last==0?1:l));
       break;
 
     case EXPORT_J:
@@ -672,7 +709,7 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
       last=f-SWAP_A+1;
       e.GetLE(data,dl);
       regs[last]->PutLE(data,dl);
-      BN_copy(*regs[last],e);
+      regs[last]->Set(e,l1);
       break;
 
     case CLEAR_A:
@@ -680,21 +717,22 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     case CLEAR_C:
     case CLEAR_D:
       cycles=462+(8*l1+3)/5*5-6;
-      last=f-CLEAR_A+1; BN_zero(*regs[last]);
+      last=f-CLEAR_A+1;
+      regs[last]->Clear(l1);
       break;
 
     case COPY_A_B:
-      last=2; BN_copy(B,A); cycles=462+(8*l1+3)/5*5-6; break;
+      last=2; B.Set(A,l1); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_B_A:
-      last=1; BN_copy(A,B); cycles=462+(8*l1+3)/5*5-6; break;
+      last=1; A.Set(B,l1); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_A_C:
-      last=3; BN_copy(C,A); cycles=462+(8*l1+3)/5*5-6; break;
+      last=3; C.Set(A,l1); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_C_A:
-      last=1; BN_copy(A,C); cycles=462+(8*l1+3)/5*5-6; break;
+      last=1; A.Set(C,l1); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_C_D:
-      last=4; BN_copy(D,C); cycles=462+(8*l1+3)/5*5-6; break;
+      last=4; D.Set(C,l1); cycles=462+(8*l1+3)/5*5-6; break;
     case COPY_D_C:
-      last=3; BN_copy(C,D); cycles=462+(8*l1+3)/5*5-6; break;
+      last=3; C.Set(D,l1); cycles=462+(8*l1+3)/5*5-6; break;
 
     case 0x39:
     case 0x3a:
@@ -726,7 +764,6 @@ bool cMapCore::DoMap(int f, unsigned char *data, int l)
     default:
       return false;
     }
-  Finalise();
   return true;
 }
 

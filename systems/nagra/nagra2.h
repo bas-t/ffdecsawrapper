@@ -50,29 +50,37 @@ extern char auxPassword[250];
 
 // ----------------------------------------------------------------
 
-//#define MR_DEBUG
+#define DEF_WORDSIZE 4
+#define DEF_MAXWORDSIZE 17
 
 class cMapReg {
 private:
-  cBN reg, save, tmp;
-  const int *ws;
-  const char *name;
-  bool touched;
+  cBN fullreg, reg, tmp;
+  int wordsize, maxwordsize, *defwordsize;
+  //
+  int DefWordSize() const { return defwordsize ? *defwordsize:DEF_WORDSIZE; }
+  int OpWordSize(int wsize) const { int sz=wsize>0 ? wsize:DefWordSize(); return sz>maxwordsize ? maxwordsize:sz; }
+//  int OpWordSize() const { return wordsize; }
+  void ClearReg(int wsize);
+  void ClearFullReg(int wsize);
+  void PrepTmp(BIGNUM *val, int wsize);
+protected:
+  void SetMaxWordSize(int max) { maxwordsize=max; }
+  void SetDefWordSize(int *_defwordsize) { defwordsize=_defwordsize; }
 public:
-  cMapReg(const int *Ws, const char *Name);
-  operator BIGNUM* () { Save(); return reg.BN(); }
-  BIGNUM *operator->() { Save(); return reg.BN(); }
-  bool Get(const unsigned char *in, int n) { Save(); return reg.Get(in,n); }
-  bool GetLE(const unsigned char *in, int n) { Save(); return reg.GetLE(in,n); }
-  int Put(unsigned char *out, int n) const { return reg.Put(out,n); }
-  int PutLE(unsigned char *out, int n) const { return reg.PutLE(out,n); }
-  void Save(int size=0);
-  void Restore(int size=0);
+  cMapReg(int *_defwordsize=0, int _maxwordsize=DEF_MAXWORDSIZE);
+  operator BIGNUM* () { return Value(); }
+  BIGNUM *operator->() { return Value(); }
+  BIGNUM *Value(int wsize=0, bool mask=false);
+  void Commit(int wsize=-1, int resync=-1);
+  void Reload(int wsize=0);
+  void GetLE(const unsigned char *in, int n=0);
+  void PutLE(unsigned char *out, int n=0);
+  void Set(BIGNUM *val, int wsize);
+  void Clear(int wsize);
   };
 
 // ----------------------------------------------------------------
-
-#define DEF_WORDSIZE 4
 
 #define WS_START(x) { int __oldws=wordsize; wordsize=(x);
 #define WS_END()    wordsize=__oldws; }
@@ -81,7 +89,6 @@ class cMapMath {
 private:
   cBN x, y, s;
   int words;
-  static const int ws1;
 protected:
   int wordsize;
   cMapReg A, B, C, D, J, I;
@@ -94,11 +101,9 @@ protected:
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
   void MonStart(int w);
   void MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
-  void WClear(BIGNUM *r, int w=0);
   // statefull
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w);
-  void Finalise(void);
 public:
   cMapMath(void);
   };
