@@ -171,18 +171,14 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
   PRINTF(L_SYS_MAP,"0101: calling function %02X",f);
   l=GetOpSize(l);
   cycles=0; interrupted=false;
-#ifdef MR_DEBUG
-fprintf(stderr,"map %x l=%d\n",f,l);
-#endif
   switch(f) {
     case 0x21:
       MAP_IRQ_BEGIN();
       AddMapCycles(288);
-      D.Save(); C.Save();
       WS_START(1);
       MakeJ0(J,D);
       AddMapCycles(282);
-      WClear(C);
+      BN_clear(C);
       WS_END();
       AddMapCycles(898-282-288);
       MAP_IRQ_END();
@@ -348,11 +344,10 @@ fprintf(stderr,"map %x l=%d\n",f,l);
         memcpy(&data[l],&tmp[l-4],4);
         }
       Py.PutLE(&data[0x20],l);
-      D.Restore();
-      WS_END();
       BN_zero(A);
       BN_zero(B);
       BN_zero(C);
+      WS_END();
       break;
       }
     default:
@@ -360,7 +355,6 @@ fprintf(stderr,"map %x l=%d\n",f,l);
         PRINTF(L_SYS_MAP,"0101: unsupported call %02x",f);
       break;
     }
-  Finalise();
 }
 
 // -- cN2Prov0101 --------------------------------------------------------------
