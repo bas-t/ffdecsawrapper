@@ -222,6 +222,12 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         }
       BN_zero(J);
       break;
+    case 0x38:
+      AddMapCycles(232);
+      MonMul0(B,B,B,C,D,J,wordsize);
+      AddMapCycles(90);
+      MonFin(B,D);
+      break;
     case 0x3b:
       MonInit(wordsize*60+4*l);
       I.GetLE(data,l<<3);
@@ -607,6 +613,7 @@ bool cN2Prov0101::ProcessMap(int f)
     case 0x21:
     case 0x30:
     case 0x31:
+    case 0x38:
     case 0x3a:
     case 0x43:
       DoMap(f);
