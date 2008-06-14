@@ -144,8 +144,8 @@ c6805::c6805(void) {
   cc.c=0; cc.z=0; cc.n=0; cc.i=0; cc.h=0; cc.v=1;
   pc=0; a=0; x=0; y=0; cr=dr=0; sp=spHi=0x100; spLow=0xC0;
   hasReadHandler=hasWriteHandler=false;
-  exptPending=false; timerDisable=0; exptBase=0x4000;
-  for(int i=0; i<EXPT_MAX; i++) expt[i]=false;
+  exptBase=0x4000;
+  ClearExceptions();
   ClearBreakpoints();
   InitMapper();
   ResetCycles();
@@ -263,6 +263,7 @@ void c6805::SetPc(unsigned short addr, unsigned char seg)
 {
   pc=addr; cr=seg;
   ResetCycles();
+  ClearExceptions();
 }
 
 void c6805::PopPc(void)
@@ -319,6 +320,12 @@ void c6805::RaiseException(int num)
     exptPending=true;
     expt[num]=true;
     }
+}
+
+void c6805::ClearExceptions(void)
+{
+  exptPending=false; timerDisable=0;
+  for(int i=0; i<EXPT_MAX; i++) expt[i]=false;
 }
 
 void c6805::DisableTimers(int num)
