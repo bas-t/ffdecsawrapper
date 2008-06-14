@@ -26,34 +26,22 @@
 // -- cMap0501 -----------------------------------------------------------------
 
 class cMap0501 : public cMapCore {
-private:
-  int mId;
 protected:
-  void DoMap(int f, unsigned char *data=0, int l=0);
-public:
-  cMap0501(int Id);
+  bool Map(int f, unsigned char *data, int l);
   };
 
-cMap0501::cMap0501(int Id)
+bool cMap0501::Map(int f, unsigned char *data, int l)
 {
-  mId=Id|0x100;
-}
-
-void cMap0501::DoMap(int f, unsigned char *data, int l)
-{
-  PRINTF(L_SYS_MAP,"%04x: calling function %02X",mId,f);
   l=GetOpSize(l);
-  cycles=0;
   switch(f) {
     case 0x37:
       I.GetLE(data,l<<3);
       MonMul(B,I,B);
       break;
     default:
-      if(!cMapCore::DoMap(f,data,l))
-        PRINTF(L_SYS_MAP,"%04x: unsupported call %02x",mId,f);
-      break;
+      return false;
     }
+  return true;
 }
 
 // -- cN2Prov0501 --------------------------------------------------------------
@@ -81,9 +69,9 @@ static cN2ProvLinkReg<cN2Prov0501,0x0501,(N2FLAG_MECM|N2FLAG_INV|N2FLAG_Bx)> sta
 
 cN2Prov0501::cN2Prov0501(int Id, int Flags)
 :cN2Prov(Id,Flags)
-,cMap0501(Id)
 {
   hwMapper=0; hasMaprom=false;
+  SetMapIdent(Id);
 }
 
 bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
@@ -194,7 +182,6 @@ bool cN2Prov0501::ProcessMap(int f)
       PRINTF(L_SYS_EMU,"%04x: map call %02x not emulated",id,f);
       return false;
     }
-  if(cycles>0) AddMapCycles(cycles);
   return true;
 }
 

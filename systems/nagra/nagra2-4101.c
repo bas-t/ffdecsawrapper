@@ -26,22 +26,12 @@
 // -- cMap4101 -----------------------------------------------------------------
 
 class cMap4101 : public cMapCore {
-private:
-  int mId;
 protected:
-  void DoMap(int f, unsigned char *data=0, int l=0);
-public:
-  cMap4101(int Id);
+  bool Map(int f, unsigned char *data, int l);
   };
 
-cMap4101::cMap4101(int Id)
+bool cMap4101::Map(int f, unsigned char *data, int l)
 {
-  mId=Id|0x100;
-}
-
-void cMap4101::DoMap(int f, unsigned char *data, int l)
-{
-  PRINTF(L_SYS_MAP,"%04x: calling function %02X",mId,f);
   switch(f) {
     case 0x58:
       {
@@ -78,10 +68,9 @@ void cMap4101::DoMap(int f, unsigned char *data, int l)
       cMapCore::DoMap(0x44,data);
       break;
     default:
-      if(!cMapCore::DoMap(f,data,l))
-        PRINTF(L_SYS_MAP,"%04x: unsupported call %02x",mId,f);
-      break;
+      return false;
     }
+  return true;
 }
 
 // -- cN2Prov4101 ----------------------------------------------------------------
@@ -99,9 +88,9 @@ static cN2ProvLinkReg<cN2Prov4101,0x4101,(N2FLAG_POSTAU|N2FLAG_Bx)> staticPL4101
 
 cN2Prov4101::cN2Prov4101(int Id, int Flags)
 :cN2Prov(Id,Flags)
-,cMap4101(Id)
 {
   hasWriteHandler=true;
+  SetMapIdent(Id);
 }
 
 bool cN2Prov4101::PostProcAU(int id, unsigned char *data)

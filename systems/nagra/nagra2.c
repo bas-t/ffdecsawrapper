@@ -484,8 +484,9 @@ void cMapMath::MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BI
 
 cMapCore::cMapCore(void)
 {
-  last=1;
+  last=1; mapid=0;
   regs[0]=&J; regs[1]=&A; regs[2]=&B; regs[3]=&C; regs[4]=&D;
+  interruptible=false;
 }
 
 void cMapCore::MonInit(int bits)
@@ -653,11 +654,25 @@ int cMapCore::GetOpSize(int l)
   return l!=0 ? l : wordsize;
 }
 
-bool cMapCore::DoMap(int f, unsigned char *data, int l)
+void cMapCore::DoMap(int f, unsigned char *data, int l)
+{
+  PRINTF(L_SYS_MAP,"%04x: calling function %02X",mapid,f);
+  cycles=0;
+  unsigned int startcycles=MapCycles();
+  interrupted=false; interruptible=true;
+  try {
+    if(!Map(f,data,l) && !MapGeneric(f,data,l))
+      PRINTF(L_SYS_MAP,"%04x: unsupported call %02x",mapid,f);
+    } catch(int) { interrupted=true; }
+  interruptible=false;
+  if(!interrupted && cycles)
+    AddMapCycles(MapCycles()-startcycles);
+}
+
+bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
 {
   const int l1=GetOpSize(l);
   const int dl=l1<<3;
-  cycles=0;
   switch(f) {
     case SETSIZE:
       cycles=(l>17 ? 459 : (l ? 475 : 454))-6;
