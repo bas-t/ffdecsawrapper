@@ -99,8 +99,10 @@ protected:
   bool ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d);
   bool ModSub(BIGNUM *r, BIGNUM *d, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
+  void MonMul0(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w);
   void MonStart(int w);
   void MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j);
+  void MonFin(BIGNUM *s, BIGNUM *d);
   // statefull
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b);
   void MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w);

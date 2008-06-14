@@ -423,6 +423,12 @@ void cMapMath::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, int w)
 
 void cMapMath::MonMul(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w)
 {
+  MonMul0(o,a,b,c,d,j,w);
+  MonFin(o,d);
+}
+
+void cMapMath::MonMul0(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BIGNUM *j, int w)
+{
   if(!w) w=wordsize;
   MonStart(w);
   int i=0;
@@ -472,12 +478,14 @@ void cMapMath::MonLoop(BIGNUM *o, BIGNUM *a, BIGNUM *b, BIGNUM *c, BIGNUM *d, BI
     }
 
   BN_rshift(s,s,64);
-  if(BN_cmp(s,d)==1) {
-    BN_copy(x,s);
-    BN_sub(s,x,d);
-    }
-
+  if(words) MonFin(s,d);
   if(!words) BN_copy(o,s);
+}
+
+void cMapMath::MonFin(BIGNUM *s, BIGNUM *d)
+{
+  if(BN_cmp(s,d)>=0)
+    BN_sub(s,s,d);
 }
 
 // -- cMapCore -----------------------------------------------------------------
