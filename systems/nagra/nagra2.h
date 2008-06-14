@@ -180,7 +180,7 @@ public:
 
 class cN2Timer {
 private:
-  int ctrl, divisor, cycles, remainder, latch;
+  int ctrl, divisor, cycles, remainder, latch, nr;
   enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmINTERRUPT=0x04, tmMASK=0xFF, tmLATCHED=0x100 };
   //
   bool Running(void) { return ctrl&tmRUNNING; }
@@ -193,6 +193,8 @@ public:
   void Ctrl(unsigned char c);
   unsigned char Latch(void) { return latch&0xFF; }
   void Latch(unsigned char val);
+  void SetNumber(int Nr) { nr=Nr; }
+  int Number(void) { return nr; }
   };
 
 // ----------------------------------------------------------------

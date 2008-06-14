@@ -56,8 +56,10 @@ bool cN2Timer::AddCycles(unsigned int count)
       cycles=0;
       Stop();
       }
-    if((ctrl&tmINTERRUPT) && stop)
+    if((ctrl&tmINTERRUPT) && stop) {
+      PRINTF(L_SYS_EMU,"n2timer %d: IRQ triggered",nr);
       irq=true;
+      }
     }
   return irq;
 }
@@ -77,7 +79,7 @@ void cN2Timer::Ctrl(unsigned char val)
     ctrl=(ctrl&~tmRUNNING) | (val&tmRUNNING);
     if(!Running()) {
       Stop();
-      PRINTF(L_SYS_EMU,"n2timer: stopped cycles=%x ctrl=%x",cycles,ctrl);
+      PRINTF(L_SYS_EMU,"n2timer %d: stopped cycles=%x ctrl=%x",nr,cycles,ctrl);
       }
     }
   else {
@@ -87,7 +89,7 @@ void cN2Timer::Ctrl(unsigned char val)
       else divisor=4; // This is wrong, but we haven't figured the right value out yet
       if(divisor<=0) divisor=1; // sanity
       if(!(ctrl&tmLATCHED)) cycles=(unsigned int)(cycles-1)&0xFF;
-      PRINTF(L_SYS_EMU,"n2timer: started latch=%x div=%d cycles=%x ctrl=%x",latch,divisor,cycles,ctrl);
+      PRINTF(L_SYS_EMU,"n2timer %d: started latch=%x div=%d cycles=%x ctrl=%x",nr,latch,divisor,cycles,ctrl);
       remainder=-1;
       if(!(ctrl&tmCONTINUOUS) && cycles==0) ctrl&=~tmRUNNING;
       }
@@ -109,6 +111,7 @@ cMapMemHW::cMapMemHW(void)
   cycles=0;
   CRCvalue=0xffff; CRCpos=0; CRCstarttime=0; CRCinput=0; CRCupdate=false;
   GenCRC16Table();
+  for(int i=0; i<MAX_TIMERS; i++) timer[i].SetNumber(HW_NUM(i));
   PRINTF(L_SYS_EMU,"mapmemhw: new HW map off=%04x size=%04x",offset,size);
 }
 
@@ -134,7 +137,7 @@ int cMapMemHW::AddCycles(unsigned int num)
   int mask=0;
   cycles+=num;
   for(int i=0; i<MAX_TIMERS; i++)
-    if(timer[i].AddCycles(num)) mask|=(1<<HW_NUM(i));
+    if(timer[i].AddCycles(num)) mask|=1<<timer[i].Number();
   return mask;
 }
 
