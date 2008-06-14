@@ -140,9 +140,12 @@ public:
 
 class cMapCore : public cMapMath {
 private:
-  int last;
+  int mapid, last;
   cBN e;
   cMapReg *regs[5];
+  bool interruptible, interrupted;
+  //
+  bool MapGeneric(int f, unsigned char *data, int l);
 protected:
   unsigned int cycles;
   cBN Px, Py, Pz,Qx, Qy, Qz; // 0x00,0x20,0x40,0x60,0x80,0x180
@@ -159,7 +162,11 @@ protected:
   void CurveInit(BIGNUM *a);
   //
   int GetOpSize(int l);
-  bool DoMap(int f, unsigned char *data=0, int l=0);
+  void DoMap(int f, unsigned char *data=0, int l=0);
+  virtual bool Map(int f, unsigned char *data, int l) { return false; }
+  void SetMapIdent(int Mapid) { mapid=Mapid; }
+  bool Interruptible(void) { return interruptible; }
+  bool Interrupted(void) { return interrupted; }
   virtual void AddMapCycles(unsigned int num) {}
   virtual unsigned int MapCycles(void) { return 0; }
 public:

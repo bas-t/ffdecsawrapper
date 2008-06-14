@@ -116,25 +116,17 @@ int cAuxSrv::Map(int map, unsigned char *data, int len, int outlen)
 
 // -- cMap0101 ----------------------------------------------------------------
 
-#define MAP_IRQ_BEGIN() interruptible=true; try {
-#define MAP_IRQ_END()   } catch(int) { interrupted=true; } interruptible=false;
-
 class cMap0101 : public cMapCore {
 private:
   static const unsigned char primes[];
   static const unsigned short coef22[][32];
-  bool interruptible, interrupted;
 #ifdef HAS_AUXSRV
   cAuxSrv aux;
 #endif
   //
   void MakePrime(BIGNUM *n, unsigned char *residues);
 protected:
-  void DoMap(int f, unsigned char *data=0, int l=0);
-  bool Interruptible(void) { return interruptible; }
-  bool Interrupted(void) { return interrupted; }
-public:
-  cMap0101(void) { interruptible=false; }
+  bool Map(int f, unsigned char *data, int l);
   };
 
 const unsigned char cMap0101::primes[] = {
@@ -166,15 +158,11 @@ void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
     } while(!isPrime);
 }
 
-void cMap0101::DoMap(int f, unsigned char *data, int l)
+bool cMap0101::Map(int f, unsigned char *data, int l)
 {
-  PRINTF(L_SYS_MAP,"0101: calling function %02X",f);
   l=GetOpSize(l);
-  cycles=0; interrupted=false;
-  unsigned int startcycles=MapCycles();
   switch(f) {
     case 0x21:
-      MAP_IRQ_BEGIN();
       AddMapCycles(288);
       WS_START(1);
       MakeJ0(J,D,C);
@@ -182,7 +170,6 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       BN_clear(C);
       WS_END();
       cycles=898;
-      MAP_IRQ_END();
       break;     
     case 0x22:
       if(BN_is_zero(D)) { cycles=639-6; break; }
@@ -352,12 +339,9 @@ void cMap0101::DoMap(int f, unsigned char *data, int l)
       break;
       }
     default:
-      if(!cMapCore::DoMap(f,data,l))
-        PRINTF(L_SYS_MAP,"0101: unsupported call %02x",f);
-      break;
+      return false;
     }
-  if(!interrupted && cycles)
-    cycles-=MapCycles()-startcycles;
+  return true;
 }
 
 // -- cN2Prov0101 --------------------------------------------------------------
@@ -401,6 +385,7 @@ cN2Prov0101::cN2Prov0101(int Id, int Flags)
   mecmAddr[0]=0x91d7; mecmAddr[1]=0x92d7; mecmKeyId=0x106;
   seedSize=10;
   desSize=16; hwMapper=0;
+  SetMapIdent(Id);
 }
 
 void cN2Prov0101::DynamicHD(unsigned char *hd, const unsigned char *ed)
@@ -652,7 +637,6 @@ bool cN2Prov0101::ProcessMap(int f)
       return false;
     }
   c6805::a=0; c6805::x=0; c6805::y=0; 
-  if(cycles>0) AddMapCycles(cycles);
   return true;
 }
 
