@@ -212,10 +212,14 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       break;
     case 0x32:
       l=min(34,l);
-      A.GetLE(data,l<<3);
-      BN_div(C,B,A,D,ctx);
-      BN_rshift(A,C,17*64);
-      BN_mask_bits(C,17*64);
+      if(!BN_is_zero(D)) {
+        A.GetLE(data,l<<3);
+        BN_div(C,B,A,D,ctx);
+        BN_rshift(A,C,17*64);
+        BN_mask_bits(C,17*64);
+        A.Commit(17);
+        C.Commit(17);
+        }
       BN_zero(J);
       break;
     case 0x3b:
