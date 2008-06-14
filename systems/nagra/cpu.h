@@ -153,6 +153,7 @@ protected:
   void AddCycles(unsigned int num);
   unsigned int Cycles(void) { return clockcycles; }
   void RaiseException(int num);
+  void ClearExceptions(void);
   void SetExptBase(unsigned short base);
   void DisableTimers(int num);
   virtual void Stepper(void)=0;
