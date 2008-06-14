@@ -758,7 +758,20 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
 
     case 0x39:
     case 0x3a:
-      MonInit();
+      AddMapCycles(512);
+      WS_START(1);
+      MakeJ0(J,D);
+      AddMapCycles(256);
+      WS_END();
+      AddMapCycles(340);
+      if(!BN_is_zero(D)) {
+        BN_zero(I);
+        BN_set_bit(I,68*wordsize);
+        BN_mod(B,I,D,ctx);
+        }
+      AddMapCycles(320);
+      for(int i=0; i<4; i++) MonMul(B,B,B);
+
       if(f==0x39) I.GetLE(data,wordsize<<3);
       MonMul(B,(f==0x39?I:A),B);
       MonMul(B,A,B);
