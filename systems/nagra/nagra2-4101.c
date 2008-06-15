@@ -27,7 +27,7 @@
 
 class cMap4101 : public cMapCore {
 protected:
-  bool Map(int f, unsigned char *data, int l);
+  virtual bool Map(int f, unsigned char *data, int l);
   };
 
 bool cMap4101::Map(int f, unsigned char *data, int l)

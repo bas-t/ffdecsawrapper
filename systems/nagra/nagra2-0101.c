@@ -126,7 +126,7 @@ private:
   //
   void MakePrime(BIGNUM *n, unsigned char *residues);
 protected:
-  bool Map(int f, unsigned char *data, int l);
+  virtual bool Map(int f, unsigned char *data, int l);
   };
 
 const unsigned char cMap0101::primes[] = {
@@ -378,7 +378,7 @@ protected:
   virtual void Stepper(void);
   virtual void TimerHandler(unsigned int num);
   virtual void AddMapCycles(unsigned int num);
-  virtual unsigned int MapCycles(void) { return Cycles(); }
+  virtual unsigned int CpuCycles(void) { return Cycles(); }
 public:
   cN2Prov0101(int Id, int Flags);
   virtual bool PostProcAU(int id, unsigned char *data);
