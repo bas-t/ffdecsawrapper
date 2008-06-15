@@ -669,15 +669,18 @@ void cMapCore::DoMap(int f, unsigned char *data, int l)
 {
   PRINTF(L_SYS_MAP,"%04x: calling function %02X",mapid,f);
   cycles=0;
-  unsigned int startcycles=MapCycles();
+  unsigned int startcycles=CpuCycles();
   interrupted=false; interruptible=true;
   try {
     if(!Map(f,data,l) && !MapGeneric(f,data,l))
       PRINTF(L_SYS_MAP,"%04x: unsupported call %02x",mapid,f);
+    if(cycles) {
+      unsigned int elapsed=CpuCycles()-startcycles;
+      if(cycles>elapsed) AddMapCycles(cycles-elapsed);
+      }
     } catch(int) { interrupted=true; }
   interruptible=false;
-  if(!interrupted && cycles)
-    AddMapCycles(MapCycles()-startcycles);
+  cycles=CpuCycles()-startcycles;
 }
 
 bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
