@@ -59,6 +59,8 @@ protected:
   virtual bool NeedsCwSwap(void) { return true; }
   virtual bool RomInit(void);
   virtual void TimerHandler(unsigned int num);
+  virtual void AddMapCycles(unsigned int num) { AddCycles(num); }
+  virtual unsigned int CpuCycles(void) { return Cycles(); }
 public:
   cN2Prov0501(int Id, int Flags);
   virtual int ProcessBx(unsigned char *data, int len, int pos);

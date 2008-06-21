@@ -377,7 +377,7 @@ protected:
   virtual bool RomInit(void);
   virtual void Stepper(void);
   virtual void TimerHandler(unsigned int num);
-  virtual void AddMapCycles(unsigned int num);
+  virtual void AddMapCycles(unsigned int num) { AddCycles(num); }
   virtual unsigned int CpuCycles(void) { return Cycles(); }
 public:
   cN2Prov0101(int Id, int Flags);
@@ -533,11 +533,6 @@ bool cN2Prov0101::RomInit(void)
       }
     }
   return false;
-}
-
-void cN2Prov0101::AddMapCycles(unsigned int num)
-{
-  AddCycles(num);
 }
 
 bool cN2Prov0101::ProcessMap(int f)
