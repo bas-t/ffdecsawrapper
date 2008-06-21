@@ -53,6 +53,7 @@ bool cN2Timer::AddCycles(unsigned int count)
       while(cycles<0) cycles+=latch+1;
       }
     else if(stop) {
+      PRINTF(L_SYS_EMU,"n2timer %d: timer stop (cycles=%d remainder=%d)",nr,cycles,remainder);
       cycles=0;
       Stop();
       }
@@ -678,7 +679,11 @@ void cMapCore::DoMap(int f, unsigned char *data, int l)
       unsigned int elapsed=CpuCycles()-startcycles;
       if(cycles>elapsed) AddMapCycles(cycles-elapsed);
       }
-    } catch(int) { interrupted=true; }
+    }
+  catch(int) {
+    interrupted=true;
+    PRINTF(L_SYS_MAP,"%04x: call %02x interrupted (%d cycles)",mapid,f,CpuCycles()-startcycles);
+    }
   interruptible=false;
   cycles=CpuCycles()-startcycles;
 }
@@ -771,23 +776,34 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
       last=3; C.Set(D,l1); cycles=462+(8*l1+3)/5*5-6; break;
 
     case 0x39:
-    case 0x3a:
-      AddMapCycles(512);
       WS_START(1);
-      MakeJ0(J,D);
-      AddMapCycles(256);
+      MakeJ0(J,D,C);
+      AddMapCycles(860);
+      BN_zero(C);
       WS_END();
-      AddMapCycles(340);
       if(!BN_is_zero(D)) {
         BN_zero(I);
         BN_set_bit(I,68*wordsize);
         BN_mod(B,I,D,ctx);
         }
-      AddMapCycles(320);
+      AddMapCycles(940);
       for(int i=0; i<4; i++) MonMul(B,B,B);
-
-      if(f==0x39) I.GetLE(data,wordsize<<3);
-      MonMul(B,(f==0x39?I:A),B);
+//        MonInit();
+      I.GetLE(data,wordsize<<3);
+      MonMul(B,I,B);
+      MonMul(B,A,B);
+      break;
+    case 0x3a:
+      MakeJ0(J,D);
+      if(!BN_is_zero(D)) {
+        BN_zero(I);
+        BN_set_bit(I,68*wordsize);
+        BN_mod(B,I,D,ctx);
+        }
+      AddMapCycles(2000);
+      for(int i=0; i<4; i++) MonMul(B,B,B);
+//        MonInit();
+      MonMul(B,A,B);
       MonMul(B,A,B);
       break;
     case 0x43: // init SHA1

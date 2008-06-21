@@ -170,7 +170,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       BN_clear(C);
       WS_END();
       cycles=898;
-      break;     
+      break;
     case 0x22:
       if(BN_is_zero(D)) { cycles=639-6; break; }
       l&=0x1fff;
@@ -244,7 +244,17 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         BN_one(A);
         }
       else {
-        MonInit();
+        MakeJ0(J,D);
+        if(!BN_is_zero(D)) {
+          BN_zero(I);
+          BN_set_bit(I,68*wordsize);
+          BN_mod(B,I,D,ctx);
+          }
+        MonMul0(B,B,B,C,D,J,wordsize);
+        AddMapCycles(2350);
+        MonFin(B,D);
+        for(int i=1; i<4; i++) MonMul(B,B,B);
+//        MonInit();
         MonMul(B,A,B);
         MonExp(scalar);
         }
@@ -841,7 +851,7 @@ void cN2Prov0101::TimerHandler(unsigned int num)
       if(mask&1) {
         DisableTimers(11);
         if(t==2) {
-          PRINTF(L_SYS_EMU,"Timer interrupt %u @ %04x",t,GetPc());
+          PRINTF(L_SYS_EMU,"0101: Timer interrupt %u @ %04x",t,GetPc());
           RaiseException(9);
           if(Interruptible()) throw(t);
           }
