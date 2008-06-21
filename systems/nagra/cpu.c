@@ -430,6 +430,18 @@ int c6805::Run(int max_count)
 
   int count=0;
   while (1) {
+    if(exptPending && !cc.i) {
+      exptPending=false;
+      for(int i=0; i<EXPT_MAX; ++i)
+        if(expt[i]) {
+          exptPending=true; // to force check for another interrupt in next Run pass
+          expt[i]=false;
+          pushpc(); push(x); push(a); pushc(); cc.i=1;
+          pc=exptBase+4*i;
+          break;
+          }
+      }
+    Stepper();
     if(sp<spLow) {
       PRINTF(L_SYS_EMU,"stack overflow (count=%d)",count);
       return 1;
@@ -460,7 +472,6 @@ int c6805::Run(int max_count)
                Get(pc),Get(pc+1),Get(pc+2),Get(pc+3),Get(sp+1),Get(sp+2),Get(sp+3),Get(sp+4),
                clockcycles);
 
-    Stepper();
     unsigned char *ex=&x;
     unsigned short idx=*ex;
     indirect=false;
@@ -1065,18 +1076,6 @@ int c6805::Run(int max_count)
       return 2;
       }
     }
-
-    if(exptPending && !cc.i) {
-      exptPending=false;
-      for(int i=0; i<EXPT_MAX; ++i)
-       if(expt[i]) {
-          exptPending=true; // to force check for another interrupt in next Run pass
-          expt[i]=false;
-          pushpc(); push(x); push(a); pushc(); cc.i=1;
-          pc=exptBase+4*i;
-          break;
-          }
-      }
 }
 
 void c6805::branch(bool branch)
