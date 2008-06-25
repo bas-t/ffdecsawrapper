@@ -433,7 +433,7 @@ CmdTable::CmdTable(const unsigned char *mem, int size)
 
 CmdTable::~CmdTable()
 {
-  delete tab;
+  delete[] tab;
 }
 
 bool CmdTable::GetInfo(const unsigned char *cmd, unsigned char &rlen, unsigned char & rmode)

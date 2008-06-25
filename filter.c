@@ -230,7 +230,7 @@ void cAction::Action(void)
     else {
       // first build pfd data
       Lock();
-      delete pfd; pfd=new struct pollfd[filters.Count()];
+      delete[] pfd; pfd=new struct pollfd[filters.Count()];
       if(!pfd) {
         PRINTF(L_GEN_ERROR,"action %s: pollfd: out of memory",id);
         break;
@@ -293,5 +293,5 @@ void cAction::Action(void)
       Unlock();
       }
     }
-  delete pfd;
+  delete[] pfd;
 }
