@@ -786,7 +786,7 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
         BN_set_bit(I,68*wordsize);
         BN_mod(B,I,D,ctx);
         }
-      AddMapCycles(940);
+      AddMapCycles(1370);
       for(int i=0; i<4; i++) MonMul(B,B,B);
 //        MonInit();
       I.GetLE(data,wordsize<<3);
