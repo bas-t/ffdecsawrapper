@@ -371,7 +371,7 @@ void cMapReg::Clear(int wsize)
 cMapMath::cMapMath(void)
 :A(&wordsize),B(&wordsize),C(&wordsize),D(&wordsize),J(0,1),I(&wordsize)
 {
-  wordsize=DEF_WORDSIZE;
+  wordsize=DEF_WORDSIZE; words=-1;
 }
 
 bool cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
