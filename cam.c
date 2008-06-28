@@ -1049,7 +1049,7 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
           sync=true;
           filter->SetIdleTime(IDLE_SYNC);
           PRINTF(L_CORE_ECM,"%s: correct key found",id);
-          if(!cam->IsSoftCSA())
+          if(!cam->IsSoftCSA(filterCwIndex==0))
             resendTime.Set(CW_REPEAT_TIME);
           }
         else if(!resend)
@@ -1118,7 +1118,7 @@ cEcmInfo *cEcmHandler::NewEcm(void)
 void cEcmHandler::AddEcmPri(cEcmInfo *n)
 {
   int ident, pri=0;
-  while((ident=cSystems::FindIdentBySysId(n->caId,!cam->IsSoftCSA(),pri))>0) {
+  while((ident=cSystems::FindIdentBySysId(n->caId,!cam->IsSoftCSA(filterCwIndex==0),pri))>0) {
     cEcmPri *ep=new cEcmPri;
     if(ep) {
       ep->ecm=n; 
@@ -1243,7 +1243,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
         int sysId=WORD(buff,index+2,0xFFFF);
         int sysPri=0;
         cSystem *sys;
-        while((sys=cSystems::FindBySysId(sysId,!cam->IsSoftCSA(),sysPri))) {
+        while((sys=cSystems::FindBySysId(sysId,!cam->IsSoftCSA(filterCwIndex==0),sysPri))) {
           sysPri=sys->Pri();
           cSimpleList<cEcmInfo> ecms;
           sys->ParseCADescriptor(&ecms,sysId,&buff[index+2],buff[index+1]);
@@ -1313,9 +1313,9 @@ cCam::~cCam()
   delete logger;
 }
 
-bool cCam::IsSoftCSA(void)
+bool cCam::IsSoftCSA(bool live)
 {
-  return device->SoftCSA();
+  return device->SoftCSA(live);
 }
 
 void cCam::Tune(const cChannel *channel)
@@ -1367,8 +1367,8 @@ void cCam::AddPrg(cPrg *prg)
       islive=true;
       break;
       }
-  bool needZero=!IsSoftCSA() && (islive || !ScSetup.ConcurrentFF);
-  bool noshift=IsSoftCSA() || (prg->IsUpdate() && prg->pids.Count()==0);
+  bool needZero=!IsSoftCSA(islive) && (islive || !ScSetup.ConcurrentFF);
+  bool noshift=IsSoftCSA(true) || (prg->IsUpdate() && prg->pids.Count()==0);
   PRINTF(L_CORE_PIDS,"%d: %s SID %d (zero=%d noshift=%d)",cardNum,prg->IsUpdate()?"update":"add",prg->Prg(),needZero,noshift);
   if(prg->pids.Count()>0) {
     LBSTART(L_CORE_PIDS);
@@ -1436,7 +1436,7 @@ void cCam::LogStartup(void)
 {
   cMutexLock lock(this);
   if(!logger && ScSetup.AutoUpdate) {
-    logger=new cLogger(cardNum,IsSoftCSA());
+    logger=new cLogger(cardNum,IsSoftCSA(false));
     LogStatsUp();
     }
 }
@@ -2083,7 +2083,7 @@ void cScCiAdapter::CamAddPrg(cPrg *prg)
 
 bool cScCiAdapter::CamSoftCSA(void)
 {
-  return cam && cam->IsSoftCSA();
+  return cam && cam->IsSoftCSA(false);
 }
 
 int cScCiAdapter::GetCaids(int slot, unsigned short *Caids, int max)
@@ -2509,7 +2509,7 @@ int cScDvbDevice::budget=0;
 cScDvbDevice::cScDvbDevice(int n, int cafd)
 :cDvbDevice(n)
 {
-  decsa=0; tsBuffer=0; cam=0;
+  decsa=0; tsBuffer=0; cam=0; fullts=false;
 #if APIVERSNUM >= 10500
   ciadapter=0; hwciadapter=0;
 #endif
@@ -2566,8 +2566,12 @@ void cScDvbDevice::LateInit(void)
   cam=ScSetup.CapCheck(n) ? new cCam(this,n):0;
 #endif
   if(softcsa) {
-    PRINTF(L_GEN_INFO,"Using software decryption on card %d",n);
     decsa=new cDeCSA(n);
+    if(IsPrimaryDevice() && HasDecoder()) {
+      PRINTF(L_GEN_INFO,"Enabling hybrid full-ts mode on card %d",n);
+      fullts=true;
+      }
+    else PRINTF(L_GEN_INFO,"Using software decryption on card %d",n);
     }
 }
 
@@ -2810,9 +2814,14 @@ bool cScDvbDevice::GetTSPacket(uchar *&Data)
   return false;
 }
 
+bool cScDvbDevice::SoftCSA(bool live)
+{
+  return softcsa && (!fullts || !live);
+}
+
 bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
-  if(!softcsa) {
+  if(!softcsa || (fullts && ca_descr->index==0)) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
     }
@@ -2822,7 +2831,7 @@ bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 
 bool cScDvbDevice::SetCaPid(ca_pid_t *ca_pid)
 {
-  if(!softcsa) {
+  if(!softcsa || (fullts && ca_pid->index==0)) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_PID,ca_pid)>=0;
     }
