@@ -136,7 +136,7 @@ public:
   bool HasPrg(int prg);
   char *CurrentKeyStr(int num);
   //
-  bool IsSoftCSA(void);
+  bool IsSoftCSA(bool live);
   int Source(void) { return source; }
   int Transponder(void) { return transponder; }
   };
@@ -158,7 +158,7 @@ private:
 #endif
   cCam *cam;
   int fd_dvr, fd_ca, fd_ca2;
-  bool softcsa;
+  bool softcsa, fullts;
   cMutex cafdMutex;
   cTimeMs lastDump;
   struct LruCaid {
@@ -209,7 +209,7 @@ public:
   virtual bool SetCaPid(ca_pid_t *ca_pid);
   void DumpAV7110(void);
   cCam *Cam(void) { return cam; }
-  bool SoftCSA(void) { return softcsa; }
+  bool SoftCSA(bool live);
   virtual bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
   };
 
