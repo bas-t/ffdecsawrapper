@@ -543,9 +543,9 @@ int c6805::Run(int max_count)
         ins=Get(pc++);
         break;
       }
-    int postCycles=0;
-//XXX    if(ins<=0x1F) postCycles=2;  // btjt/btjf/bres/bset
-    AddCycles(cycles+clock_cycles[ins]-postCycles);
+    cycles+=clock_cycles[ins];
+    int readCycles=clock_cycles[ins]>=2 ? 2:0;
+    AddCycles(readCycles);
 
     if(doDisAsm) {
       char str[8];
@@ -691,7 +691,7 @@ int c6805::Run(int max_count)
         }
       }
 
-    if(postCycles) AddCycles(postCycles);
+    AddCycles(cycles-readCycles);
 
     // command decoding
     stats[ins]++;
