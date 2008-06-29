@@ -102,41 +102,95 @@ void cN2Timer::Stop(void)
   ctrl&=~(tmRUNNING|tmLATCHED);
 }
 
-// -- cMapMemHW ----------------------------------------------------------------
+// -- cN2CRC -------------------------------------------------------------------
 
 #define CRC_POLY 0x8408 // ccitt poly
 
-cMapMemHW::cMapMemHW(void)
-:cMapMem(HW_OFFSET,HW_REGS)
+cN2CRC::cN2CRC(void)
 {
-  cycles=0;
-  CRCvalue=0xffff; CRCpos=0; CRCstarttime=0; CRCinput=0; CRCupdate=false;
-  GenCRC16Table();
-  for(int i=0; i<MAX_TIMERS; i++) timer[i].SetNumber(HW_NUM(i));
-  PRINTF(L_SYS_EMU,"mapmemhw: new HW map off=%04x size=%04x",offset,size);
+  cycles=0; CRCpos=0; CRCtime=0; CRCin=0;
+  CRCvalue=0xffff; CRCit=CRCCALC_DELAY+1; ctrl=CRC_DISABLED;
+  GenTable();
 }
 
-void cMapMemHW::GenCRC16Table(void)
+void cN2CRC::AddCycles(unsigned int num)
+{
+  cycles+=num;
+}
+
+void cN2CRC::GenTable(void)
 {
   for(int i=0; i<256; i++) {
     unsigned short c=i;
     for(int j=0; j<8; j++) c=(c>>1)^((c&1)?CRC_POLY:0);
-    crc16table[i]=c;
+    table[i]=c;
     }
 }
 
-unsigned short cMapMemHW::CRC(unsigned short crc, unsigned char val, int bits)
+void cN2CRC::Update(void)
 {
-  if(bits>=8) return (crc>>8)^crc16table[(crc^val)&0xff];
-  if(bits>0) crc^=(val&(0xff>>(8-bits)));
-  for(int i=0; i<bits; i++) crc=(crc>>1)^((crc&1)?CRC_POLY:0);
-  return crc;
+  if(!(ctrl&CRC_DISABLED) && CRCit<=CRCCALC_DELAY) {
+    unsigned int it=CRCit;
+    CRCit+=cycles-CRCtime;
+    if(CRCit>CRCCALC_DELAY)  // > instead of >= because of CRC_BUSY lockout
+      CRCit=CRCCALC_DELAY+1;
+    if(it==0 && CRCit>=CRCCALC_DELAY)
+      CRCvalue=(CRCvalue>>8)^table[(CRCvalue^CRCin)&0xff];
+    else
+      for(; it<CRCit && it<CRCCALC_DELAY; it++)
+        CRCvalue=(CRCvalue>>1) ^ (((CRCvalue^(CRCin>>it))&1) ? CRC_POLY : 0);
+    CRCtime=cycles;
+    }
+}
+
+unsigned char cN2CRC::Ctrl(void)
+{
+  Update();
+  unsigned char r=ctrl;
+  if(CRCit<CRCCALC_DELAY) r|=CRC_BUSY; else r&=~CRC_BUSY;
+  return r|0x80;
+}
+
+void cN2CRC::Ctrl(unsigned char c)
+{
+  if(ctrl&CRC_DISABLED) {
+    if(!(c&CRC_DISABLED)) {
+      CRCvalue=0xffff; CRCpos=0; CRCtime=cycles;
+      if(CRCit<=CRCCALC_DELAY) { CRCtime++; CRCit++; }
+      }
+    }
+  else if(c&CRC_DISABLED) Update();
+  ctrl=c;
+}
+
+unsigned char cN2CRC::Data(void)
+{
+  Update();
+  return (CRCvalue^0xffff)>>((CRCpos++&1)<<3);
+}
+
+void cN2CRC::Data(unsigned char d)
+{
+  Update();
+  if(CRCit>CRCCALC_DELAY && !(ctrl&CRC_DISABLED)) {
+    CRCin=d;
+    CRCit=0; CRCtime=cycles;
+    }
+}
+
+// -- cMapMemHW ----------------------------------------------------------------
+
+cMapMemHW::cMapMemHW(void)
+:cMapMem(HW_OFFSET,HW_REGS)
+{
+  for(int i=0; i<MAX_TIMERS; i++) timer[i].SetNumber(HW_NUM(i));
+  PRINTF(L_SYS_EMU,"mapmemhw: new HW map off=%04x size=%04x",offset,size);
 }
 
 int cMapMemHW::AddCycles(unsigned int num)
 {
+  crc.AddCycles(num);
   int mask=0;
-  cycles+=num;
   for(int i=0; i<MAX_TIMERS; i++)
     if(timer[i].AddCycles(num)) mask|=1<<timer[i].Number();
   return mask;
@@ -162,26 +216,9 @@ unsigned char cMapMemHW::Get(unsigned short ea)
     case HW_TIMER2_LATCH:
       return timer[TIMER_NUM(ea)].Latch();
     case HW_CRC_CONTROL:
-      {
-      unsigned char r=mem[ea];
-      if(!(r&CRC_DISABLED) && cycles-CRCstarttime<CRCCALC_DELAY) r|=CRC_BUSY; // busy
-      else r&=~CRC_BUSY; // not busy
-      return r;
-      }
+      return crc.Ctrl();
     case HW_CRC_DATA:
-      {
-      unsigned short crc;
-      if(CRCupdate) {
-        crc=CRC(CRCvalue,CRCinput,cycles-CRCstarttime-1);
-        if(cycles-CRCstarttime>=CRCCALC_DELAY) {
-          CRCvalue=crc; CRCupdate=false;
-          }
-        }
-      else crc=CRCvalue;
-      unsigned char r=(crc^0xffff)>>((CRCpos&1)<<3);
-      CRCpos^=1;
-      return r;
-      }
+      return crc.Data();
     default:
       return mem[ea];
     }
@@ -203,24 +240,10 @@ void cMapMemHW::Set(unsigned short ea, unsigned char val)
       timer[TIMER_NUM(ea)].Latch(val);
       break;
     case HW_CRC_CONTROL:
-      if((mem[ea]&CRC_DISABLED) && !(val&CRC_DISABLED)) {
-        CRCvalue=0xffff; CRCinput=0; CRCpos=0; CRCupdate=false;
-        CRCstarttime=cycles-CRCCALC_DELAY;
-        }
-      mem[ea]=val;
+      crc.Ctrl(val);
       break;
     case HW_CRC_DATA:
-      if(cycles-CRCstarttime>=CRCCALC_DELAY) {
-        if(CRCupdate) {
-          CRCvalue=CRC(CRCvalue,CRCinput,8);
-          CRCupdate=false;
-          }
-        if(!(mem[HW_CRC_CONTROL]&CRC_DISABLED)) {
-          CRCinput=val;
-          CRCupdate=true;
-          CRCstarttime=cycles;
-          }
-        }
+      crc.Data(val);
       break;
     default:
       mem[ea]=val;

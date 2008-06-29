@@ -200,6 +200,27 @@ public:
 
 // ----------------------------------------------------------------
 
+class cN2CRC {
+private:
+  enum { CRCCALC_DELAY=8, CRC_BUSY=1, CRC_DISABLED=2 };
+  unsigned short CRCvalue;
+  unsigned char ctrl, CRCpos, CRCin;
+  unsigned int cycles, CRCtime, CRCit;
+  unsigned short table[256];
+  //
+  void GenTable(void);
+  void Update(void);
+public:
+  cN2CRC(void);
+  void AddCycles(unsigned int num);
+  unsigned char Ctrl(void);
+  void Ctrl(unsigned char c);
+  unsigned char Data(void);
+  void Data(unsigned char d);
+  };
+
+// ----------------------------------------------------------------
+
 #define HW_REGS   0x20
 #define HW_OFFSET 0x0000
 
@@ -220,17 +241,7 @@ private:
   // timer hardware
   cN2Timer timer[MAX_TIMERS];
   // CRC hardware
-  enum { CRCCALC_DELAY=9, CRC_BUSY=1, CRC_DISABLED=2 };
-  unsigned short CRCvalue, CRCinput;
-  unsigned char CRCpos;
-  unsigned int CRCstarttime;
-  unsigned short crc16table[256];
-  bool CRCupdate;
-  // counter
-  unsigned int cycles;
-  //
-  void GenCRC16Table(void);
-  unsigned short CRC(unsigned short crc, unsigned char val, int bits);
+  cN2CRC crc;
 public:
   cMapMemHW(void);
   virtual unsigned char Get(unsigned short ea);
