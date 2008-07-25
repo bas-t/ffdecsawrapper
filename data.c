@@ -706,11 +706,6 @@ int cMutableKey::Size(void)
   return real->Size();
 }
 
-bool cMutableKey::Cmp(void *Key, int Keylen)
-{
-  return real->Cmp(Key,Keylen);
-}
-
 bool cMutableKey::Cmp(cPlainKey *k)
 {
   cMutableKey *mk=dynamic_cast<cMutableKey *>(k); // high magic ;)
@@ -740,7 +735,6 @@ public:
   cPlainKeyDummy(void);
   ~cPlainKeyDummy();
   virtual bool Parse(const char *line);
-  virtual bool Cmp(void *Key, int Keylen) { return false; }
   virtual bool Cmp(cPlainKey *k) { return false; }
   virtual void Get(void *mem) {}
   virtual int Size(void) { return len; }

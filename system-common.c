@@ -55,15 +55,10 @@ bool cHexKey::SetBinKey(unsigned char *Mem, int Keylen)
   return SetKey(Mem,Keylen);
 }
 
-bool cHexKey::Cmp(void *Key, int Keylen)
-{
-  return keylen==Keylen && memcmp(key,Key,keylen)==0;
-}
-
 bool cHexKey::Cmp(cPlainKey *k)
 {
   cHexKey *hk=dynamic_cast<cHexKey *>(k); // downcast
-  return hk && Cmp(hk->key,hk->keylen);
+  return hk && keylen==hk->keylen && memcmp(key,hk->key,keylen)==0;
 }
 
 void cHexKey::Get(void *mem)
@@ -101,11 +96,6 @@ bool cBNKey::SetBinKey(unsigned char *Mem, int Keylen)
 {
   keylen=Keylen;
   return rotate ? key->GetLE(Mem,Keylen) : key->Get(Mem,Keylen);
-}
-
-bool cBNKey::Cmp(void *Key, int Keylen)
-{
-  return BN_cmp(*key,(BIGNUM *)Key)==0;
 }
 
 bool cBNKey::Cmp(cPlainKey *k)
