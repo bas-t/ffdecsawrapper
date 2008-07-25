@@ -33,7 +33,6 @@ protected:
   virtual bool SetKey(void *Key, int Keylen);
   virtual bool SetBinKey(unsigned char *Mem, int Keylen);
   virtual cString Print(void);
-  virtual bool Cmp(void *Key, int Keylen);
   virtual bool Cmp(cPlainKey *k);
   virtual void Get(void *mem);
   virtual int Size(void) { return keylen; }
@@ -56,7 +55,6 @@ protected:
   virtual bool SetKey(void *Key, int Keylen);
   virtual bool SetBinKey(unsigned char *Mem, int Keylen);
   virtual cString Print(void);
-  virtual bool Cmp(void *Key, int Keylen);
   virtual bool Cmp(cPlainKey *k);
   virtual void Get(void *mem);
   virtual int Size(void) { return keylen; }
