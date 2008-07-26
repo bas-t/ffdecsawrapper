@@ -333,6 +333,7 @@ protected:
   struct Map { unsigned char A[64], B[64], C[64], D[4], opSize; } map;
   //
   virtual void Stepper(void);
+  virtual void WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op);
   virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op);
   bool DoMaps(bool hasExt, int romSize);
   bool CoreInitSetup(void);
@@ -343,11 +344,19 @@ public:
 
 cEmuRom10Core::cEmuRom10Core(void)
 {
-  hasReadHandler=true;
+  hasReadHandler=hasWriteHandler=true;
 }
 
 void cEmuRom10Core::Stepper(void)
 {}
+
+void cEmuRom10Core::WriteHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+  if(ea==0x02) {
+    unsigned char old=Get(0x02);
+    if(!(old&0x80)) op=(op&0xFE) | (old&0x01);
+    }
+}
 
 void cEmuRom10Core::ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op)
 {
