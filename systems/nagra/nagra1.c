@@ -200,6 +200,7 @@ public:
 
 cEmuRom3Core::cEmuRom3Core(void)
 {
+  hasReadHandler=hasWriteHandler=true;
   special05=false;
 }
 
@@ -332,20 +333,32 @@ protected:
   struct Map { unsigned char A[64], B[64], C[64], D[4], opSize; } map;
   //
   virtual void Stepper(void);
+  virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op);
   bool DoMaps(bool hasExt, int romSize);
   bool CoreInitSetup(void);
   bool CoreUpdateSetup(const unsigned char *emm);
+public:
+  cEmuRom10Core(void);
   };
 
-void cEmuRom10Core::Stepper(void)
+cEmuRom10Core::cEmuRom10Core(void)
 {
-  int rnd=random();
-  unsigned char mem7=Get(0x07);
-  if(cc.i) mem7&=0xFD; else mem7|=0x02;
-  Set(0x07,mem7);
-  if(bitset(mem7,1) && bitset(mem7,7)) {
-    Set(0x05,(rnd&0xFF00)>>8);
-    Set(0x06,rnd&0xFF);
+  hasReadHandler=true;
+}
+
+void cEmuRom10Core::Stepper(void)
+{}
+
+void cEmuRom10Core::ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+  switch(ea) {
+    case 0x05:
+    case 0x06:
+      if(cc.i && (Get(0x07)&0x80)) op=random()&0xFF;
+      break;
+    case 0x07:
+      if(cc.i) op&=0xFD; else op|=0x02;
+      break;
     }
 }
 
