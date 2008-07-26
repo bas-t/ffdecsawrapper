@@ -120,6 +120,7 @@ class cMap0101 : public cMapCore {
 private:
   static const unsigned char primes[];
   static const int tim3b[][17];
+  static const unsigned short msb3e[];
 #ifdef HAS_AUXSRV
   cAuxSrv aux;
 #endif
@@ -155,6 +156,26 @@ const int cMap0101::tim3b[][17] = {
   { 13671,14069,14477,14880,15283,15686,16084,16492,16890,17298,17696,18099,18507,18905,19313,19711,20114 },
   { 14668,15091,15519,15947,16370,16798,17221,17654,18082,18505,18933,19356,19784,20212,20640,21068,21491 },
   };
+
+const unsigned short cMap0101::msb3e[] = {
+//      0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f
+/*0*/   0,  88, 148, 236, 224, 312, 312, 400, 302, 390, 390, 476, 390, 476, 476, 566,
+/*1*/ 378, 466, 466, 554, 466, 554, 554, 642, 466, 554, 554, 642, 554, 642, 642, 730,
+/*2*/ 448, 536, 536, 624, 536, 624, 624, 712, 536, 624, 624, 712, 624, 712, 712, 796,
+/*3*/ 536, 624, 624, 712, 624, 712, 712, 796, 624, 712, 712, 796, 712, 796, 796, 884,
+/*4*/ 524, 612, 612, 700, 612, 700, 700, 790, 612, 700, 700, 790, 700, 790, 790, 878,
+/*5*/ 612, 700, 700, 790, 700, 790, 790, 878, 700, 790, 790, 878, 790, 878, 878, 966,
+/*6*/ 612, 700, 700, 790, 700, 790, 790, 878, 700, 790, 790, 878, 790, 878, 878, 966,
+/*7*/ 700, 790, 790, 878, 790, 878, 878, 966, 790, 878, 878, 966, 878, 966, 966,1054,
+/*8*/ 602, 690, 690, 778, 690, 778, 778, 862, 690, 778, 778, 862, 778, 862, 862, 950,
+/*9*/ 690, 778, 778, 862, 778, 862, 862, 950, 778, 862, 862, 950, 862, 950, 950,1038,
+/*a*/ 690, 778, 778, 862, 778, 862, 862, 950, 778, 862, 862, 950, 862, 950, 950,1038,
+/*b*/ 778, 862, 862, 950, 862, 950, 950,1038, 862, 950, 950,1038, 950,1038,1038,1126,
+/*c*/ 690, 778, 778, 862, 778, 862, 862, 950, 778, 862, 862, 950, 862, 950, 950,1038,
+/*d*/ 778, 862, 862, 950, 862, 950, 950,1038, 862, 950, 950,1038, 950,1038,1038,1126,
+/*e*/ 778, 862, 862, 950, 862, 950, 950,1038, 862, 950, 950,1038, 950,1038,1038,1126,
+/*f*/ 862, 950, 950,1038, 950,1038,1038,1126, 950,1038,1038,1126,1038,1126,1126,1214,
+    };
 
 void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
 {
@@ -256,6 +277,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       break;
     case 0x3e:
       {
+      if(l>wordsize) l=wordsize;
       cBN scalar;
       scalar.GetLE(data,l<<3);
       if(BN_is_zero(scalar) || BN_num_bits(D)<=1) {
@@ -265,14 +287,19 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         BN_one(A);
         }
       else {
-        MakeJ0(J,D);
+        WS_START(1);
+        MakeJ0(J,D,C);
+        AddMapCycles(860);
+        BN_zero(C);
+        WS_END();
         if(!BN_is_zero(D)) {
           BN_zero(I);
           BN_set_bit(I,68*wordsize);
           BN_mod(B,I,D,ctx);
           }
+        AddMapCycles(1390);
         MonMul0(B,B,B,C,D,J,wordsize);
-        AddMapCycles(2350);
+        AddMapCycles(100);
         MonFin(B,D);
         for(int i=1; i<4; i++) MonMul(B,B,B);
 //        MonInit();
@@ -280,11 +307,9 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         MonExp(scalar);
         }
       BN_zero(C);
-      int end=BN_num_bits(scalar);
-      int msb=data[(end-1)/8];
-      cycles=3848 + ((end-1)/8)*650 - 11;
-      for(int i=8; --i>=1;) if(msb&(1<<i)) { cycles+=(i*75)-15; break; }
-      for(int i=end; --i>=0;) if(BN_is_bit_set(scalar,i)) cycles+=88;
+      int sbits=BN_num_bits(scalar);
+      cycles=3848+((sbits-1)/8) * 650 + msb3e[data[(sbits-1)/8]] - 13;
+      for(int i=0; i<(sbits-1)/8*8; ++i) if(BN_is_bit_set(scalar,i)) cycles+=88;
       break;
       }
     case 0x4d:
