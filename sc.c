@@ -1012,6 +1012,7 @@ bool cSoftCAM::Load(const char *cfgdir)
   if(Feature.KeyFile() && keys.Count()<1)
     PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
   if(!cSystems::Init(cfgdir)) return false;
+  srand(time(0));
   return true;
 }
 

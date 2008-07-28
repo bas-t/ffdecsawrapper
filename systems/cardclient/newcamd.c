@@ -95,7 +95,6 @@ int cTripleDes::PadMessage(unsigned char *data, int len)
     return -1;
     }
 
-  srand(time(NULL)); // make sure the random generator is initialized
   DES_random_key((DES_cblock *)padBytes);
   memcpy(data+len,padBytes,noPadBytes); len+=noPadBytes;
   data[len]=XorSum(data+2,len-2);
