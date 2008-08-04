@@ -382,7 +382,7 @@ bool cEmuRom10Core::DoMaps(bool hasExt, int romSize)
 bool cEmuRom10Core::CoreInitSetup(void)
 {
   ForceSet(0x01,0x13,true);
-  Set(0x02,0x3);
+  Set(0x02,0x82); Set(0x02,0x3); // beware of the WriteHandler!
   Set(0x07,0xFF);
   return true;
 }
