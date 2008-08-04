@@ -419,6 +419,8 @@ private:
   unsigned char desblock[8];
   IdeaKS ks;
   cMapMemHW *hwMapper;
+  // Randomiser
+  unsigned int rnd, rndtime;
   //
   void AddRomCallbacks(void);
   bool RomCallbacks(void);
@@ -432,6 +434,7 @@ protected:
   virtual void DynamicHD(unsigned char *hd, const unsigned char *ed);
   virtual bool RomInit(void);
   virtual void Stepper(void);
+  virtual void ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op);
   virtual void TimerHandler(unsigned int num);
   virtual void AddMapCycles(unsigned int num) { AddCycles(num); }
   virtual unsigned int CpuCycles(void) { return Cycles(); }
@@ -452,6 +455,7 @@ cN2Prov0101::cN2Prov0101(int Id, int Flags)
   seedSize=10;
   desSize=16; hwMapper=0;
   SetMapIdent(Id);
+  hasReadHandler=true;
 }
 
 void cN2Prov0101::DynamicHD(unsigned char *hd, const unsigned char *ed)
@@ -578,7 +582,7 @@ bool cN2Prov0101::RomInit(void)
   AddBreakpoint(0x537d);
   AddBreakpoint(0x8992);
   AddBreakpoint(0xA822);
-  while(!Run(5000)) {
+  while(!Run(7000)) {
     switch(GetPc()) {
       case 0x537d:
         PRINTF(L_SYS_EMU,"%04x: ROM init successfull",id);
@@ -887,6 +891,20 @@ int cN2Prov0101::RunEmu(unsigned char *data, int len, unsigned short load, unsig
       }
     }
   return -1;
+}
+
+void cN2Prov0101::ReadHandler(unsigned char seg, unsigned short ea, unsigned char &op)
+{
+   if(ea==0x2f70) op=random()&0xFF;
+   else if(ea==0x2f71) {
+     unsigned int n=random()&0xFF;
+     unsigned int cy=Cycles();
+     if(cy>rndtime && cy<=rndtime+4) {
+       unsigned int o=sn8(rnd);
+       n=(n&0xE3) | (o&4) | ((o>>1)&16) | ((o^(o>>1))&8);
+       }
+     op=rnd=n; rndtime=cy;
+     }
 }
 
 void cN2Prov0101::TimerHandler(unsigned int num)
