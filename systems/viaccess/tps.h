@@ -139,5 +139,6 @@ public:
   };
 
 extern cTpsKeys tpskeys;
+extern int tpsAuMode;
 
 #endif

@@ -589,6 +589,10 @@ public:
 
 cTpsKeys tpskeys;
 
+#define AU_STREAM 0
+#define AU_TPSBIN 1
+int tpsAuMode=AU_STREAM;
+
 cTpsKeys::cTpsKeys(void)
 :cStructListPlain<cTpsKey>("TPS keys","tps.cache",SL_READWRITE|SL_MISSINGOK|SL_WATCH|SL_NOPURGE)
 ,lastLoad(-LOADBIN_TIME)
@@ -649,7 +653,7 @@ void cTpsKeys::Check(time_t now, int cardnum)
     lastLoad.Set();
     }
 */
-  if(lastAu.Elapsed()>(nokey ? TPSAU_TIME/60 : TPSAU_TIME)) {
+  if(tpsAuMode==AU_STREAM && lastAu.Elapsed()>(nokey ? TPSAU_TIME/60 : TPSAU_TIME)) {
     if(ScSetup.AutoUpdate>0) {
       PRINTF(L_SYS_TPSAU,"TPS AU triggered");
       if(!cSoftCAM::TriggerHook(cardnum,HOOK_TPSAU)) {
