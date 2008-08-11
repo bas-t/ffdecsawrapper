@@ -19,9 +19,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
 #include <ctype.h>
-#include <typeinfo>
 
 #include <vdr/channels.h>
 #include <vdr/sources.h>
@@ -120,7 +118,8 @@ bool cSystemConstCw::ProcessECM(const cEcmInfo *ecm, unsigned char *source)
   cKeySnoop ks(this,'X',ecm->caId,0);
   cPlainKey *pk=0;
   while((pk=keys.FindKey('X',ecm->caId,0,16,pk))) {
-    if(typeid(*pk)==typeid(cPlainKeyConstCw) && ((cPlainKeyConstCw *)pk)->Matches(ecm)) {
+    cPlainKeyConstCw *ck=dynamic_cast<cPlainKeyConstCw *>(pk); // downcast
+    if(ck && ck->Matches(ecm)) {
       pk->Get(cw);
       ks.OK(pk);
       return true;
