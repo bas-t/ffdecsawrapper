@@ -40,7 +40,7 @@ $(VDRDIR)/%.o: $(VDRDIR)/%.c
 
 ### Targets:
 
-all: testECM testEMM testN1Emu testN2Emu testN2RunEmu
+all: testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU
 
 testECM.o: testECM.c compat.h
 testECM: testECM.o $(SHAREDOBJS) $(NOBJS)
@@ -67,6 +67,10 @@ testN2RunEmu: testN2RunEmu.o $(SHAREDOBJS) $(NOBJS)
 testTPS.o: testTPS.c ../systems/viaccess/tps.c ../systems/viaccess/st20.c ../systems/viaccess/viaccess.c
 testTPS: testTPS.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
+
+testExtAU.o: testExtAU.c compat.h
+testExtAU: testExtAU.o $(SHAREDOBJS) $(NOBJS)
+	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) -o $@
 
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
