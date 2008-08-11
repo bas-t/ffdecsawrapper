@@ -263,6 +263,7 @@ protected:
   virtual int IdSize(void);
   virtual cString Print(void)=0;
   virtual cString PrintKeyNr(void);
+  virtual bool CmpExtId(cPlainKey *k) { return true; }
 public:
   int type, id, keynr;
   //
