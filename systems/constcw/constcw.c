@@ -44,9 +44,9 @@ private:
   int freq;
   char pol;
 protected:
-  virtual bool Cmp(cPlainKey *k);
   virtual int IdSize(void) { return 4; }
   virtual cString PrintKeyNr(void);
+  virtual bool CmpExtId(cPlainKey *k);
 public:
   cPlainKeyConstCw(bool Super);
   virtual bool Parse(const char *line);
@@ -61,10 +61,10 @@ cPlainKeyConstCw::cPlainKeyConstCw(bool Super)
   freq=-1;
 }
 
-bool cPlainKeyConstCw::Cmp(cPlainKey *k)
+bool cPlainKeyConstCw::CmpExtId(cPlainKey *k)
 {
   cPlainKeyConstCw *ck=dynamic_cast<cPlainKeyConstCw *>(k); // downcast
-  return ck && prgId==ck->prgId && source==ck->source && freq==ck->freq && pol==ck->pol && cHexKey::Cmp(k);
+  return ck && prgId==ck->prgId && source==ck->source && freq==ck->freq && pol==ck->pol;
 }
 
 bool cPlainKeyConstCw::Matches(const cEcmInfo *ecm)

@@ -876,13 +876,14 @@ bool cPlainKeys::AddNewKey(cPlainKey *nk, const char *reason)
 {
   cPlainKey *k;
   for(k=0; (k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,-1,k)); )
-    if(k->Cmp(nk)) return false;
+    if(k->CmpExtId(nk) && k->Cmp(nk)) return false;
 
   cPlainKey *ref=0;
   cString ks=nk->ToString(true);
   PRINTF(L_GEN_INFO,"key update for ID %s",*ks);
   ums.Queue("%s %s",tr("Key update"),*ks);
   for(k=0; (k=FindKeyNoTrig(nk->type,nk->id,nk->keynr,nk->Size(),k)); ) {
+    if(!k->CmpExtId(nk)) continue;
     if(nk->CanSupersede()) {
       PRINTF(L_GEN_INFO,"supersedes key: %s",*k->ToString(true));
       DelItem(k,ScSetup.SuperKeys==0);
