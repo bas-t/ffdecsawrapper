@@ -354,6 +354,9 @@ public:
   bool NewKey(int Type, int Id, int Keynr, void *Key, int Keylen);
   bool NewKeyParse(char *line, const char *reason);
   void HouseKeeping(void);
+#ifdef TESTER
+  void TestExternalUpdate(void);
+#endif
   };
 
 extern cPlainKeys keys;
