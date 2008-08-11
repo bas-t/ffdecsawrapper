@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2008-01-18 18:31+0100\n"
+"POT-Creation-Date: 2008-08-11 19:27-0400\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -216,3 +216,12 @@ msgstr "SC-Seca: EMM updates"
 
 msgid "SC-Seca: activate PPV"
 msgstr "SC-Seca: activeer PPV"
+
+msgid "stream"
+msgstr ""
+
+msgid "tps.bin"
+msgstr ""
+
+msgid "Viaccess: TPS updates from"
+msgstr ""

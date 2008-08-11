@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 #include "system-common.h"
+#include "opts.h"
 #include "misc.h"
 #include "parse.h"
 #include "log-core.h"
@@ -520,6 +521,11 @@ void cSystemViaccess::ProcessEMM(int pid, int caid, unsigned char *data)
 
 // -- cSystemLinkViaccess ------------------------------------------------------
 
+static const char *tpsau[] = {
+  trNOOP("stream"),
+  trNOOP("tps.bin"),
+  };
+
 class cSystemLinkViaccess : public cSystemLink {
 public:
   cSystemLinkViaccess(void);
@@ -532,6 +538,8 @@ static cSystemLinkViaccess staticInit;
 cSystemLinkViaccess::cSystemLinkViaccess(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
+  opts=new cOpts(SYSTEM_NAME,1);
+  opts->Add(new cOptSel("TpsAU",trNOOP("Viaccess: TPS updates from"),&tpsAuMode,sizeof(tpsau)/sizeof(char *),tpsau));
   Feature.NeedsKeyFile();
 }
 
