@@ -645,14 +645,12 @@ void cTpsKeys::Check(time_t now, int cardnum)
     lastCheck.Set();
     }
   bool nokey=now+2*3600>last;
-/*
-  if(lastLoad.Elapsed()>(nokey ? LOADBIN_TIME/60 : LOADBIN_TIME)) {
+  if(tpsAuMode==AU_TPSBIN && lastLoad.Elapsed()>(nokey ? LOADBIN_TIME/60 : LOADBIN_TIME)) {
     PRINTF(L_SYS_TPSAU,"loading "TPSBIN" triggered");
     LoadBin();
     if(now>0) Purge(now);
     lastLoad.Set();
     }
-*/
   if(tpsAuMode==AU_STREAM && lastAu.Elapsed()>(nokey ? TPSAU_TIME/60 : TPSAU_TIME)) {
     if(ScSetup.AutoUpdate>0) {
       PRINTF(L_SYS_TPSAU,"TPS AU triggered");
@@ -867,7 +865,6 @@ bool cTpsKeys::ProcessAu(const cOpenTVModule *mod)
   return res;
 }
 
-/*
 bool cTpsKeys::LoadBin(void)
 {
   static const unsigned char mark[] = { 'T','P','S',0 };
@@ -914,7 +911,6 @@ void cTpsKeys::DecryptBin(const unsigned char *in, unsigned char *out)
     *((unsigned int *)out)=(var1<<(i+2)) | (var1>>(32-(i+2)));
     }
 }
-*/
 
 void cTpsKeys::PreLoad(void)
 {

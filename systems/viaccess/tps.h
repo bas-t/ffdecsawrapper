@@ -121,8 +121,8 @@ private:
   void Join(cSimpleList<cTpsKey> *nlist);
   void Purge(time_t now);
   void GetFirstLast(void);
-//  bool LoadBin(void);
-//  void DecryptBin(const unsigned char *in, unsigned char *out);
+  bool LoadBin(void);
+  void DecryptBin(const unsigned char *in, unsigned char *out);
   cString Time(time_t t);
   bool ProcessAu(const cOpenTVModule *mod);
 protected:
