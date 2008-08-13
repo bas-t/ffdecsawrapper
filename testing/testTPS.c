@@ -60,8 +60,13 @@ void cTpsAuHook::Process(int pid, unsigned char *data)
 void cTpsAuHook::DummyProcess(unsigned char *data, int size)
 {
   tpskeys.Load(false);
-  cOpenTVModule mod(2,data,size);
-  tpskeys.ProcessAu(&mod);
+  if(data && size) {
+    cOpenTVModule mod(2,data,size);
+    tpskeys.ProcessAu(&mod);
+    }
+  else {
+    tpskeys.LoadBin();
+    }
   tpskeys.Save();
 }
 
@@ -70,25 +75,31 @@ void cTpsAuHook::DummyProcess(unsigned char *data, int size)
 int main(int argc, char *argv[])
 {
   if(argc<3) {
-    printf("usage: %s <plugin-dir> <decomp-bin>\n",argv[0]);
+    printf("usage: %s <plugin-dir> <TPSBIN|OTV> <decomp-bin>\n",argv[0]);
     return 1;
     }
 
   InitAll(argv[1]);
   LogAll();
   cLogging::SetModuleOption(LCLASS(L_SYS,L_SYS_DISASM),false);
-  FILE *f=fopen(argv[2],"r");
-  if(f) {
-    fseek(f,0,SEEK_END);
-    int size=ftell(f);
-    fseek(f,0,SEEK_SET);
-    unsigned char *data=(unsigned char *)malloc(size);
-    fread(data,1,size,f);
-    fclose(f);
-    printf("read %d bytes from %s\n",size,argv[2]);
+  if(!strcasecmp(argv[2],"OTV")) {
+    FILE *f=fopen(argv[3],"r");
+    if(f) {
+      fseek(f,0,SEEK_END);
+      int size=ftell(f);
+      fseek(f,0,SEEK_SET);
+      unsigned char *data=(unsigned char *)malloc(size);
+      fread(data,1,size,f);
+      fclose(f);
+      printf("read %d bytes from %s\n",size,argv[3]);
 
+      cTpsAuHook hook;
+      hook.DummyProcess(data,size);
+      }
+    }
+  else if(!strcasecmp(argv[2],"TPSBIN")) {
     cTpsAuHook hook;
-    hook.DummyProcess(data,size);
+    hook.DummyProcess(0,0);
     }
   return 0;
 }
