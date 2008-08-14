@@ -6,6 +6,9 @@
 #include "system.h"
 #include "compat.h"
 
+#include <libsi/section.h>
+SI::TOT __dummy;
+
 int main(int argc, char *argv[])
 {
   if(argc<4) {

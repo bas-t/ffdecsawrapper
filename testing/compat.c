@@ -50,6 +50,7 @@ void InitAll(const char *cfgdir)
   logcfg.logCon=1;
   logcfg.noTimestamp=1;
   cSystems::ConfigParse("Cardclient.Immediate","0");
+  cSystems::ConfigParse("Viaccess.TpsAU","1");
 
   filemaps.SetCfgDir(cfgdir);
   cStructLoaders::SetCfgDir(cfgdir);
@@ -481,4 +482,12 @@ int cChannel::Transponder(int Frequency, char Polarization)
     case 'r': Frequency += 400000; break;
     }
   return Frequency;
+}
+
+//
+//
+
+int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag)
+{
+  return 0;
 }

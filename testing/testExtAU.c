@@ -7,6 +7,9 @@
 #include "scsetup.h"
 #include "compat.h"
 
+#include <libsi/section.h>
+SI::TOT __dummy;
+
 void cPlainKeys::TestExternalUpdate(void)
 {
   Lock();

@@ -23,7 +23,8 @@ DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -DSCAPIVERS
 
 OBJS = misc.o log.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
 SHAREDOBJS = compat.o $(VDRDIR)/tools.o $(VDRDIR)/thread.o
-LIBS = -lpthread -ljpeg -ldl -lcrypto
+LIBS = -lpthread -ljpeg -lcrypto
+DYNLIBS = -ldl $(VDRDIR)/libsi/libsi.a
 
 NOBJS  = $(patsubst %.o,../%.o,$(OBJS))
 
@@ -44,11 +45,11 @@ all: testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU
 
 testECM.o: testECM.c compat.h
 testECM: testECM.o $(SHAREDOBJS) $(NOBJS)
-	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) -o $@
+	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) $(DYNLIBS) -o $@
 
 testEMM.o: testEMM.c compat.h
 testEMM: testEMM.o $(SHAREDOBJS) $(NOBJS)
-	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) -o $@
+	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) $(DYNLIBS) -o $@
 
 testN1Emu.o: testN1Emu.c ../systems/nagra/nagra.c ../systems/nagra/nagra1.c ../systems/nagra/cpu.c ../systems/nagra/log-nagra.h
 testN1Emu: testN1Emu.o $(SHAREDOBJS) $(NOBJS)
@@ -70,12 +71,12 @@ testTPS: testTPS.o $(SHAREDOBJS) $(NOBJS)
 
 testExtAU.o: testExtAU.c compat.h
 testExtAU: testExtAU.o $(SHAREDOBJS) $(NOBJS)
-	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) -o $@
+	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) $(DYNLIBS) -o $@
 
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 clean:
 	@-rm -f *.o core* *~
-	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS
+	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU
 	@-rm -f filterhelper
 	@-rm -f dump.txt

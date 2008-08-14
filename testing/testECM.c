@@ -8,6 +8,9 @@
 #include "compat.h"
 #include <vdr/sources.h>
 
+#include <libsi/section.h>
+SI::TOT __dummy;
+
 int main(int argc, char *argv[])
 {
   if(argc<6) {
