@@ -877,16 +877,24 @@ bool cTpsKeys::LoadBin(void)
     PRINTF(L_SYS_TPS,"mapping failed for "TPSBIN);
     return false;
     }
-  else if(tpsbin->Size()<65536 || memcmp(mark,tpsbin->Addr()+32,sizeof(mark)) || memcmp(mark,tpsbin->Addr()+48,sizeof(mark))) {
+  const unsigned char *a=tpsbin->Addr();
+  int len=tpsbin->Size();
+  if(len<(68+56) || memcmp(mark,a+32,sizeof(mark)) || memcmp(mark,a+48,sizeof(mark))) {
     PRINTF(L_SYS_TPS,TPSBIN" format not recognised");
     tpsbin->Unmap();
     return false;
     }
 
-  int size=tpsbin->Size()-56;
+  int size=*((const unsigned int *)(a+64));
+  a+=68; len-=68;
+  if(len<size) {
+    PRINTF(L_SYS_TPS,TPSBIN" key data length mismatch");
+    tpsbin->Unmap();
+    return false;
+    }
+
   cSimpleList<cTpsKey> *nlist=new cSimpleList<cTpsKey>;
-  for(int i=68; i<size; i+=56) {
-    const unsigned char *a=tpsbin->Addr()+i;
+  for(int i=0; i<size; i+=56,a+=56,len-=56) {
     if(*((const unsigned int *)a)==0x00000000L || *((const unsigned int *)a)==0xFFFFFFFFL)
       break;
     unsigned char tmp[56];
@@ -894,9 +902,29 @@ bool cTpsKeys::LoadBin(void)
     cTpsKey *k=new cTpsKey;
     if(k) { k->Set(tmp); nlist->Add(k); }
     }
-  tpsbin->Unmap();
   PRINTF(L_SYS_TPSAU,"loaded %d keys from "TPSBIN" file",nlist->Count());
   Join(nlist);
+
+  static const unsigned char alg_mark[] = { 'A','L','G','3' };
+  while(len>64) {
+    if(!memcmp(alg_mark,a,sizeof(alg_mark)) && *(a+11)==0x02) {
+      size=*((const unsigned short *)(a+6));
+      if(len<size) {
+        PRINTF(L_SYS_TPS,TPSBIN" algo data length mismatch");
+        break;
+        }
+      int off=a-tpsbin->Addr()+64;
+      int cb1=*((const unsigned short *)(a+18))-off;
+      int cb2=*((const unsigned short *)(a+30))-off;
+      int cb3=*((const unsigned short *)(a+42))-off;
+      PRINTF(L_SYS_TPSAU,"algo pointers in "TPSBIN" off=%04x cb1=%04x cb2=%04x cb3=%04x size=%04x",off,cb1,cb2,cb3,size);
+      RegisterAlgo3(a+64,cb1,cb2,cb3,size);
+      break;
+      }
+    a+=4; len-=4;
+    }
+
+  tpsbin->Unmap();
   return true;
 }
 
@@ -1234,8 +1262,8 @@ int cTPS::Decrypt(int cardNum, int Source, int Transponder, unsigned char *data,
         break;
       case 0xEA:
         if(doPre) TpsDecrypt(&data[i+2],k->Mode(0),k->Key(0));
-        if(doTPS) TpsDecrypt(&data[i+2],(hasDF)?k->Mode(2):1,k->Key(2));
-        if(doPost) { postMode=k->Mode(1); memcpy(postKey,k->Key(1),sizeof(postKey)); }
+        if(doTPS) TpsDecrypt(&data[i+2],(hasDF)?k->Mode(1):1,k->Key(1));
+        if(doPost) { postMode=k->Mode(2); memcpy(postKey,k->Key(2),sizeof(postKey)); }
         break;
       }
     }
