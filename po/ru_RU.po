@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
 "POT-Creation-Date: 2008-08-11 19:27-0400\n"
-"PO-Revision-Date: 2008-03-13 15:43+0100\n"
+"PO-Revision-Date: 2008-08-18 22:46+0100\n"
 "Last-Translator: somebody\n"
 "Language-Team: ru\n"
 "MIME-Version: 1.0\n"
@@ -219,10 +219,11 @@ msgid "SC-Seca: activate PPV"
 msgstr "SC-Seca: активировать PPV"
 
 msgid "stream"
-msgstr ""
+msgstr "потока"
 
 msgid "tps.bin"
-msgstr ""
+msgstr "tps.bin"
 
 msgid "Viaccess: TPS updates from"
-msgstr ""
+msgstr "Viaccess: TPS обновления из"
+
