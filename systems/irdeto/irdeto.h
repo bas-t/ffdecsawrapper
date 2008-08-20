@@ -26,5 +26,15 @@
 #define SYSTEM_NAME          "Irdeto"
 #define SYSTEM_PRI           -10
 
+#define TYPE_I1   0
+#define TYPE_OP   1
+#define TYPE_IV   2
+#define TYPE_SEED 3
+#define TYPE_PMK  4
+
+#define PROV(keynr)         (((keynr)>>16)&0xFF)
+#define TYPE(keynr)         (((keynr)>> 8)&0xFF)
+#define ID(keynr)           (((keynr)   )&0xFF)
+#define KEYSET(prov,typ,id) ((((prov)&0xFF)<<16)|(((typ)&0xFF)<<8)|((id)&0xFF))
 
 #endif
