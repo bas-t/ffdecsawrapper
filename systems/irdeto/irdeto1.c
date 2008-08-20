@@ -260,10 +260,10 @@ bool cSystemIrd::ProcessECM(const cEcmInfo *ecm, unsigned char *source)
     return false;
     }
 
-  cKeySnoop ks(this,'I',source[2],keynr);
+  cKeySnoop ks(this,'I',source[2],KEYSET(0,TYPE_I1,keynr));
   cPlainKey *pk=0;
   unsigned char key[8];
-  while((pk=keys.FindKey('I',source[2],keynr,sizeof(key),pk))) {
+  while((pk=keys.FindKey('I',source[2],KEYSET(0,TYPE_I1,keynr),sizeof(key),pk))) {
     unsigned char save[16];
     memcpy(save,data,16); // save the encrypted data
     pk->Get(key);
