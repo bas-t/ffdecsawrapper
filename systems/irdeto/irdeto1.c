@@ -28,8 +28,6 @@
 #include "irdeto.h"
 #include "log-irdeto.h"
 
-#define SYSTEM_CAN_HANDLE(x) ((x)==SYSTEM_IRDETO || (x)==SYSTEM_BETA)
-
 // -- cIrdCardInfo -------------------------------------------------------------
 
 class cIrdCardInfo : public cStructItem, public cProviderIrdeto, public cCardIrdeto {
@@ -464,6 +462,5 @@ cSystemLinkIrd::cSystemLinkIrd(void)
 
 bool cSystemLinkIrd::CanHandle(unsigned short SysId)
 {
-  SysId&=SYSTEM_MASK;
-  return SYSTEM_CAN_HANDLE(SysId);
+  return SysId==SYSTEM_IRDETO || (SysId&SYSTEM_MASK)==SYSTEM_BETA;
 }

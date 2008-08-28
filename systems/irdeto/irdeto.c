@@ -30,7 +30,7 @@ static const struct LogModule lm_sys = {
   (LMOD_ENABLE|L_SYS_ALL)&LOPT_MASK,
   (LMOD_ENABLE|L_SYS_DEFDEF)&LOPT_MASK,
   "irdeto",
-  { L_SYS_DEFNAMES }
+  { L_SYS_DEFNAMES,"rawemm","rawecm" }
   };
 ADD_MODULE(L_SYS,lm_sys)
 
