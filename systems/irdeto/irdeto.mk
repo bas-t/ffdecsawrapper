@@ -2,4 +2,4 @@
 # Irdeto
 #
 TARGET = irdeto
-OBJS   = irdeto.o irdeto1.o
+OBJS   = irdeto.o irdeto1.o irdeto2.o

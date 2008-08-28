@@ -23,6 +23,8 @@
 #include "log-sys.h"
 
 #define L_SYS        5
-#define L_SYS_ALL    LALL(L_SYS_LASTDEF)
+#define L_SYS_RAWEMM   LCLASS(L_SYS,L_SYS_LASTDEF<<1)
+#define L_SYS_RAWECM   LCLASS(L_SYS,L_SYS_LASTDEF<<2)
+#define L_SYS_ALL    LALL(L_SYS_RAWECM)
 
 #endif
