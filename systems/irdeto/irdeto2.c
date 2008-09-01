@@ -57,9 +57,9 @@ void cIrdeto2::DES3(unsigned char *data, int mode)
   int m1, m2;
   if(mode) { m1=DES_DECRYPT; m2=DES_ENCRYPT; }
   else     { m1=DES_ENCRYPT; m2=DES_DECRYPT; }
-  DES_ecb_encrypt(DES_CAST(data),DES_CAST(data),&ks1,m1);
-  DES_ecb_encrypt(DES_CAST(data),DES_CAST(data),&ks2,m2);
-  DES_ecb_encrypt(DES_CAST(data),DES_CAST(data),&ks1,m1);
+  DES_ecb_encrypt((DES_cblock *)data,(DES_cblock *)data,&ks1,m1);
+  DES_ecb_encrypt((DES_cblock *)data,(DES_cblock *)data,&ks2,m2);
+  DES_ecb_encrypt((DES_cblock *)data,(DES_cblock *)data,&ks1,m1);
 }
 
 void cIrdeto2::Encrypt(unsigned char *data, const unsigned char *seed, const unsigned char *key, int len)
