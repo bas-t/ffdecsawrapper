@@ -43,7 +43,7 @@ private:
 protected:
   void Encrypt(unsigned char *data, const unsigned char *seed, const unsigned char *key, int len);
   void Decrypt(unsigned char *data, const unsigned char *seed, const unsigned char *key, int len);
-  bool CalculateHash(const unsigned char *Key, const unsigned char *IV_PAD, const unsigned char *Data2Sign, int DataLen);
+  bool CalculateHash(const unsigned char *key, const unsigned char *iv, const unsigned char *data, int len);
   };
 
 void cIrdeto2::ScheduleKey(const unsigned char *key)
@@ -87,32 +87,34 @@ void cIrdeto2::Decrypt(unsigned char *data, const unsigned char *seed, const uns
     }
 }
 
-bool cIrdeto2::CalculateHash(const unsigned char *Key, const unsigned char *IV_PAD, const unsigned char *Data2Sign, int DataLen)
+bool cIrdeto2::CalculateHash(const unsigned char *key, const unsigned char *iv, const unsigned char *data, int len)
 {
-  ScheduleKey(Key);
-  unsigned char CryptBuffer[8];
-  memset(CryptBuffer,0,sizeof(CryptBuffer));
-  DataLen-=8;
-  for(int y=0; y<DataLen; y+=8) {
-    if(y<DataLen-8) {
-      xxor(CryptBuffer,8,CryptBuffer,&Data2Sign[y]);
-      LDUMP(L_SYS_VERBOSE,CryptBuffer,8,"3DES XOR in:");
+  ScheduleKey(key);
+  unsigned char cbuff[8];
+  memset(cbuff,0,sizeof(cbuff));
+  len-=8;
+  for(int y=0; y<len; y+=8) {
+    if(y<len-8) {
+      xxor(cbuff,8,cbuff,&data[y]);
+      LDUMP(L_SYS_VERBOSE,cbuff,8,"3DES XOR in:");
       }
     else {
-      int l=DataLen-y;
-      xxor(CryptBuffer,l,CryptBuffer,&Data2Sign[y]);
-      xxor(CryptBuffer+l,8-l,CryptBuffer+l,IV_PAD+8);
-      LDUMP(L_SYS_VERBOSE,CryptBuffer,8,"3DES XOR(%d) in:",8-l);
+      int l=len-y;
+      xxor(cbuff,l,cbuff,&data[y]);
+      xxor(cbuff+l,8-l,cbuff+l,iv+8);
+      LDUMP(L_SYS_VERBOSE,cbuff,8,"3DES XOR(%d) in:",8-l);
       }
-    DES3(CryptBuffer,0);
-    LDUMP(L_SYS_VERBOSE,CryptBuffer,8,"3DES out:");
+    DES3(cbuff,0);
+    LDUMP(L_SYS_VERBOSE,cbuff,8,"3DES out:");
     }
-  LDUMP(L_SYS_VERBOSE,CryptBuffer,8,"CryptBuffer:");
-  LDUMP(L_SYS_VERBOSE,&Data2Sign[DataLen],8,"MACBuffer:");
-  return memcmp(CryptBuffer,&Data2Sign[DataLen],8)==0;
+  LDUMP(L_SYS_VERBOSE,cbuff,8,"CryptBuffer:");
+  LDUMP(L_SYS_VERBOSE,&data[len],8,"MACBuffer:");
+  return memcmp(cbuff,&data[len],8)==0;
 }
 
 // -- cSystemIrd2 --------------------------------------------------------------
+
+#define NANOLEN(_a) ((_a) ? ((_a)&0x3F)+2 : 1)
 
 class cSystemIrd2 : public cSystem, private cIrdeto2 {
 private:
@@ -140,7 +142,7 @@ void cSystemIrd2::PrepareSeed(unsigned char *seed, const unsigned char *key)
 void cSystemIrd2::NanoDecrypt(unsigned char *data, int i, int len, const unsigned char *key, const unsigned char *iv)
 {
   while(i<len) {
-    int l=data[i+1] ? (data[i+1]&0x3F)+2 : 1;
+    int l=NANOLEN(data[i+1]);
     switch(data[i]) {
       case 0x10:
       case 0x50: if(l==0x13 && i<=len-l) Decrypt(&data[i+3],iv,key,16); break;
@@ -186,7 +188,7 @@ bool cSystemIrd2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   if(CalculateHash(ECM_Seed,ECM_IV,data-6,len+6)) {
     HEXDUMP(L_SYS_RAWECM,data-12,len+12,"Irdeto2 RAWECM");
     while(i<len-8) {
-      int l=data[i+1] ? (data[i+1]&0x3F)+2 : 1;
+      int l=NANOLEN(data[i+1]);
       switch(data[i]) {
         case 0x78:
           memcpy(cw,&data[i+4],16);
@@ -236,11 +238,11 @@ void cSystemIrd2::ProcessEMM(int pid, int caid, unsigned char *data)
     memcpy(emm,data,len);
     Decrypt(&emm[10],EMM_IV,EMM_Seed,len-10);
     NanoDecrypt(emm,16,len-8,PMK,EMM_IV);
-    memcpy(emm+6,emm+7,len-7); // removing padding byte
+    memmove(emm+6,emm+7,len-7); // removing padding byte
     if(CalculateHash(EMM_Seed,EMM_IV,emm+3,len-4)) {
       HEXDUMP(L_SYS_RAWEMM,emm,len,"Irdeto2 RAWEMM");
       for(int i=15; i<len-9;) {
-        int l=emm[i+1] ? (emm[i+1]&0x3F)+2 : 1;
+        int l=NANOLEN(emm[i+1]);
         switch(emm[i]) {
           case 0x10:
           case 0x50:
