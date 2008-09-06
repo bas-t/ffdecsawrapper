@@ -127,7 +127,7 @@ public:
   };
 
 cSystemIrd2::cSystemIrd2(void)
-:cSystem(SYSTEM_NAME2,SYSTEM_PRI)
+:cSystem(SYSTEM_NAME2,SYSTEM_PRI2)
 {
   hasLogger=true;
 }
@@ -273,7 +273,7 @@ public:
 static cSystemLinkIrd2 staticInit2;
 
 cSystemLinkIrd2::cSystemLinkIrd2(void)
-:cSystemLink(SYSTEM_NAME2,SYSTEM_PRI)
+:cSystemLink(SYSTEM_NAME2,SYSTEM_PRI2)
 {
   Feature.NeedsKeyFile();
 }
