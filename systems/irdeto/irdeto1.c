@@ -254,7 +254,7 @@ bool cSystemIrd::ProcessECM(const cEcmInfo *ecm, unsigned char *source)
     index+=len;
     }
   if(data==0 || date==-1) {
-    PRINTF(L_SYS_ECM,"incomplete ECM structure");
+    if(doLog) PRINTF(L_SYS_ECM,"incomplete ECM structure");
     return false;
     }
 
@@ -462,5 +462,5 @@ cSystemLinkIrd::cSystemLinkIrd(void)
 
 bool cSystemLinkIrd::CanHandle(unsigned short SysId)
 {
-  return SysId==SYSTEM_IRDETO || (SysId&SYSTEM_MASK)==SYSTEM_BETA;
+  return (SysId&SYSTEM_MASK)==SYSTEM_IRDETO || (SysId&SYSTEM_MASK)==SYSTEM_BETA;
 }

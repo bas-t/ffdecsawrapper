@@ -24,8 +24,9 @@
 #define SYSTEM_BETA          0x1700
 
 #define SYSTEM_NAME          "Irdeto"
-#define SYSTEM_NAME2         "Irdeto2"
 #define SYSTEM_PRI           -10
+#define SYSTEM_NAME2         "Irdeto2"
+#define SYSTEM_PRI2          -8
 
 #define TYPE_I1   0
 #define TYPE_OP   1
