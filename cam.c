@@ -2957,6 +2957,11 @@ bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
   return false;
 }
 
+bool cScDvbDevice::SoftCSA(bool live)
+{
+  return softcsa && !live;
+}
+
 bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   return false;
