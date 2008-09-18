@@ -716,6 +716,9 @@ bool cN2Prov0101::ProcessDESMap(int f)
     case 0x06:  // 3DES decrypt
       DES_ecb2_encrypt(DES_CAST(desblock),DES_CAST(desblock),&desks1,&desks2,DES_DECRYPT);
       break;
+    case 0x07:
+      Set(0x2d,0x02); //XXX quick-hack or the real thing??
+      break;
     case 0x0b:  // load DES data block from memory
       GetMem(HILO(0x25),desblock,8,Get(0x24));
       break;
@@ -754,6 +757,7 @@ bool cN2Prov0101::RomCallbacks(void)
       if(Interrupted()) dopop=false;
       break;
     case 0x3844: //DES Handler
+    case 0x008992:
       if(!ProcessDESMap(a)) return false;
       break;
     case 0x5F23: //Erase_RAM_and_Hang
