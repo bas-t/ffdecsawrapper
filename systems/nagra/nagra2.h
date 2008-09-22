@@ -156,6 +156,10 @@ protected:
   void MonInit(int bits=0);
   void MonExp(BIGNUM *scalar);
   void MonExpNeg(void);
+  // statefull, interruptible
+  void IMakeJ(void);
+  void IMonInit0(void);
+  void IMonInit(void);
   // ECC
   void DoubleP(int temp);
   void AddP(int temp);

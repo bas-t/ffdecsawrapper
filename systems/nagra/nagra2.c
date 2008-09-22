@@ -524,6 +524,48 @@ cMapCore::cMapCore(void)
   interruptible=false;
 }
 
+void cMapCore::IMakeJ(void)
+{
+  AddMapCycles(19);
+  WS_START(1);
+  AddMapCycles(102);
+  MakeJ0(J,D,C);
+  AddMapCycles(303);
+  BN_zero(C);
+  AddMapCycles(34);
+  WS_END();
+  AddMapCycles(10);
+}
+
+void cMapCore::IMonInit0(void)
+{
+  AddMapCycles(132+(wordsize*8+3)/5*5);
+  if(BN_num_bits(D)>1) AddMapCycles(54);
+  if(!BN_is_zero(D)) {
+    AddMapCycles(54);
+    BN_zero(I);
+    BN_set_bit(I,68*wordsize);
+    BN_zero(B);
+    AddMapCycles(141+(wordsize*8+3)/5*5);
+    BN_set_bit(B,64*(wordsize-1));
+    AddMapCycles(92+72*wordsize);
+    BN_mod(B,I,D,ctx);
+    AddMapCycles(639);
+    }
+  AddMapCycles(52);
+  for(int i=0; i<4; i++) {
+    MonMul0(B,B,B,C,D,J,0);
+    AddMapCycles(96+6*(i>0));
+    MonFin(B,D);
+    }
+}
+
+void cMapCore::IMonInit(void)
+{
+  IMakeJ();
+  IMonInit0();
+}
+
 void cMapCore::MonInit(int bits)
 {
   // Calculate J0 & H montgomery elements in J and B
@@ -799,34 +841,15 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
       last=3; C.Set(D,l1); cycles=462+(8*l1+3)/5*5-6; break;
 
     case 0x39:
-      WS_START(1);
-      MakeJ0(J,D,C);
-      AddMapCycles(860);
-      BN_zero(C);
-      WS_END();
-      if(!BN_is_zero(D)) {
-        BN_zero(I);
-        BN_set_bit(I,68*wordsize);
-        BN_mod(B,I,D,ctx);
-        }
-      AddMapCycles(1370);
-      for(int i=0; i<4; i++) MonMul(B,B,B);
-//        MonInit();
-      I.GetLE(data,wordsize<<3);
-      MonMul(B,I,B);
-      MonMul(B,A,B);
-      break;
     case 0x3a:
-      MakeJ0(J,D);
-      if(!BN_is_zero(D)) {
-        BN_zero(I);
-        BN_set_bit(I,68*wordsize);
-        BN_mod(B,I,D,ctx);
+      AddMapCycles(f==0x39?433:192);
+      IMonInit();
+      if(f==0x39) {
+        I.GetLE(data,wordsize<<3);
+        MonMul(B,I,B);
         }
-      AddMapCycles(2000);
-      for(int i=0; i<4; i++) MonMul(B,B,B);
-//        MonInit();
-      MonMul(B,A,B);
+      else
+        MonMul(B,A,B);
       MonMul(B,A,B);
       break;
     case 0x43: // init SHA1
