@@ -204,12 +204,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
   l=GetOpSize(l);
   switch(f) {
     case 0x21:
-      AddMapCycles(288);
-      WS_START(1);
-      MakeJ0(J,D,C);
-      AddMapCycles(282);
-      BN_clear(C);
-      WS_END();
+      AddMapCycles(169-6);
+      IMakeJ();
       cycles=898;
       break;
     case 0x22:
@@ -224,6 +220,18 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         int j=16*((val.rem+1)/2) + (val.rem>4?val.rem-7:val.rem-12)/4;
         cycles=1086 + j - ((j-2)%5) + 16923*val.quot - ((4*val.quot-2)%5);
         }
+      break;
+    case 0x23:
+      AddMapCycles(169);
+      IMonInit0();
+      break;
+    case 0x25:
+      AddMapCycles(254);
+      MakeJ0(B,D,C,wordsize<<6);
+      // valid for wordsize 1 and 2
+      AddMapCycles(795*wordsize-492);
+      BN_zero(C);
+      cycles=49+800*wordsize;
       break;
     case 0x29:
       {
@@ -263,10 +271,11 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         }
       BN_zero(J);
       break;
+    case 0x36:
     case 0x38:
-      AddMapCycles(232);
-      MonMul0(B,B,B,C,D,J,wordsize);
-      AddMapCycles(90);
+      AddMapCycles(230);
+      MonMul0(B,f==0x36?A:B,B,C,D,J,wordsize);
+      AddMapCycles(102);
       MonFin(B,D);
       break;
     case 0x3b:
@@ -280,29 +289,15 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       if(l>wordsize) l=wordsize;
       cBN scalar;
       scalar.GetLE(data,l<<3);
+      AddMapCycles(441);
       if(BN_is_zero(scalar) || BN_num_bits(D)<=1) {
-        MakeJ0(J,D);
+        IMakeJ();
         if(BN_num_bits(D)==1 || !BN_is_zero(scalar)) BN_zero(B);
         else BN_one(B);
         BN_one(A);
         }
       else {
-        WS_START(1);
-        MakeJ0(J,D,C);
-        AddMapCycles(860);
-        BN_zero(C);
-        WS_END();
-        if(!BN_is_zero(D)) {
-          BN_zero(I);
-          BN_set_bit(I,68*wordsize);
-          BN_mod(B,I,D,ctx);
-          }
-        AddMapCycles(1390);
-        MonMul0(B,B,B,C,D,J,wordsize);
-        AddMapCycles(100);
-        MonFin(B,D);
-        for(int i=1; i<4; i++) MonMul(B,B,B);
-//        MonInit();
+        IMonInit();
         MonMul(B,A,B);
         MonExp(scalar);
         }
@@ -666,8 +661,11 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,tmp,l);
       break;
     case 0x21:
+    case 0x23:
+    case 0x25:
     case 0x30:
     case 0x31:
+    case 0x36:
     case 0x38:
     case 0x3a:
     case 0x43:
