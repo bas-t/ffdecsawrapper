@@ -50,7 +50,7 @@ bool cIrdCardInfo::Parse(const char *line)
 
 cString cIrdCardInfo::ToString(bool hide)
 {
-  char s1[20], s2[20], s3[20], s4[20];
+  char s1[20], s2[24], s3[20], s4[20];
   return cString::sprintf("%s %s %02x %s %s",
      HexStr(s1,hexSer,sizeof(hexSer)),HexStr(s2,HMK,sizeof(HMK)),provBase,
      HexStr(s3,provId,sizeof(provId)),HexStr(s4,PMK,sizeof(PMK)));
