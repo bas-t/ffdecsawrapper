@@ -2357,6 +2357,7 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
   for(int l=0; l<len; l+=TS_SIZE) {
     if(data[l]!=TS_SYNC_BYTE) {       // let higher level cope with that
       PRINTF(L_CORE_CSA,"%d: garbage in TS buffer",cardindex);
+      if(ccs) force=true;             // prevent buffer stall
       break;
       }
     unsigned int ev_od=data[l+3]&0xC0;
@@ -2474,7 +2475,8 @@ uchar *cDeCsaTSBuffer::Get(void)
   if(p && Count>=TS_SIZE) {
     if(*p!=TS_SYNC_BYTE) {
       for(int i=1; i<Count; i++)
-        if(p[i]==TS_SYNC_BYTE) { Count=i; break; }
+        if(p[i]==TS_SYNC_BYTE &&
+           (i+TS_SIZE==Count || (i+TS_SIZE>Count && p[i+TS_SIZE]==TS_SYNC_BYTE)) ) { Count=i; break; }
       ringBuffer->Del(Count);
       esyslog("ERROR: skipped %d bytes to sync on TS packet on device %d",Count,cardIndex);
       return NULL;
