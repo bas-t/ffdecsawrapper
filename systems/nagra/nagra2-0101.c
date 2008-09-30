@@ -284,6 +284,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       MonMul(B,I,B,l);
       cycles=tim3b[wordsize-1][l-1]-6;
       break;
+    case 0x3c:
     case 0x3e:
       {
       if(l>wordsize) l=wordsize;
@@ -650,6 +651,7 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,tmp);
       Set(0x4b,tmp[0]);
       break;
+    case 0x3c:
     case 0x3e:
       if(l>wordsize) { l=wordsize; dl=l<<3; }
       // fall through
