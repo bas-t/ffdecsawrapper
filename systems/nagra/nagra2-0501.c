@@ -164,6 +164,7 @@ bool cN2Prov0501::ProcessMap(int f)
     case COPY_C_D:
     case COPY_D_C:
       DoMap(f);
+      if(f>=COPY_A_B) AddMapCycles(64); // quick timing fix. Is there an AUXed ROM120 to check???
       break;
     case 0x37:
       GetMem(HILO(0x44),tmp,dl,0);
