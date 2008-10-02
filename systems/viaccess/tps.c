@@ -611,7 +611,12 @@ const cTpsKey *cTpsKeys::GetKey(time_t t)
 {
   ListLock(false);
   cTpsKey *k;
-  for(k=First(); k; k=Next(k)) if(t<k->Timestamp()) break;
+  for(k=First(); k;) {
+    if(t<k->Timestamp()) break;
+    cTpsKey *n=Next(k);
+    if(!n) break; // if all keys are expired, use last one
+    k=n;
+    }
   ListUnlock();
   return k;
 }
@@ -672,7 +677,7 @@ void cTpsKeys::Purge(time_t now)
   ListLock(true);
   for(cTpsKey *k=First(); k;) {
     cTpsKey *n=Next(k);
-    if(k->Timestamp()<now-3600) { Del(k); del=true; }
+    if(k->Timestamp()<now-3600 && n) { Del(k); del=true; }
     k=n;
     }
   ListUnlock();
