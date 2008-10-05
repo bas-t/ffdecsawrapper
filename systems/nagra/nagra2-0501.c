@@ -65,6 +65,7 @@ public:
   cN2Prov0501(int Id, int Flags);
   virtual int ProcessBx(unsigned char *data, int len, int pos);
   virtual int RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len);
+  virtual void PostDecrypt(bool ecm) { PostDecryptSetup(ecm); }
   };
 
 static cN2ProvLinkReg<cN2Prov0501,0x0501,(N2FLAG_MECM|N2FLAG_INV|N2FLAG_Bx)> staticPL0501;
@@ -164,7 +165,6 @@ bool cN2Prov0501::ProcessMap(int f)
     case COPY_C_D:
     case COPY_D_C:
       DoMap(f);
-      if(f>=COPY_A_B) AddMapCycles(64); // quick timing fix. Is there an AUXed ROM120 to check???
       break;
     case 0x37:
       GetMem(HILO(0x44),tmp,dl,0);

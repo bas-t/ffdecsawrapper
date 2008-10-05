@@ -440,6 +440,7 @@ public:
   virtual int ProcessBx(unsigned char *data, int len, int pos);
   virtual int ProcessEx(unsigned char *data, int len, int pos);
   virtual int RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len);
+  virtual void PostDecrypt(bool ecm) { PostDecryptSetup(ecm); }
   };
 
 static cN2ProvLinkReg<cN2Prov0101,0x0101,(N2FLAG_MECM|N2FLAG_POSTAU|N2FLAG_Bx|N2FLAG_Ex)> staticPL0101;
