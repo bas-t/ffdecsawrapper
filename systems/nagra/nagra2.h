@@ -176,6 +176,7 @@ protected:
   virtual void AddMapCycles(unsigned int num) {}
   unsigned int MapCycles(void) { return cycles; }
   virtual unsigned int CpuCycles(void) { return 0; }
+  virtual void PostDecryptSetup(bool ecm);
 public:
   cMapCore(void);
   virtual ~cMapCore() {}
@@ -297,6 +298,7 @@ public:
   virtual int ProcessEx(unsigned char *data, int len, int pos) { return -1; }
   virtual bool PostProcAU(int id, unsigned char *data) { return true; }
   virtual int RunEmu(unsigned char *data, int len, unsigned short load, unsigned short run, unsigned short stop, unsigned short fetch, int fetch_len) { return -1; }
+  virtual void PostDecrypt(bool ecm) {}
   bool CanHandle(int Id) { return MATCH_ID(Id,id); }
   bool HasFlags(int Flags) { return (flags&Flags)==Flags; }
   void PrintCaps(int c);

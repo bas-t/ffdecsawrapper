@@ -20,6 +20,7 @@ void Emm(unsigned char *emmdata, int cmdLen, int id)
     emmP=cN2Providers::GetProv(id,N2FLAG_NONE);
     if(emmP) emmP->PrintCaps(L_SYS_EMM);
     }
+  if(emmP) emmP->PostDecrypt(false);
 
   HEXDUMP(L_SYS_RAWEMM,emmdata,cmdLen,"Nagra2 RAWEMM");
   id=(emmdata[8]<<8)+emmdata[9];
@@ -134,6 +135,7 @@ bool Ecm(unsigned char *buff, int cmdLen, int id)
 
   cN2Prov *ecmP=cN2Providers::GetProv(id,N2FLAG_NONE);
   if(ecmP) ecmP->PrintCaps(L_SYS_ECM);
+  if(ecmP) ecmP->PostDecrypt(true);
 
   int l=0, mecmAlgo=0;
   for(int i=(buff[14]&0x10)?16:20; i<cmdLen-10 && l!=3; ) {

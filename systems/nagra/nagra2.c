@@ -726,6 +726,12 @@ void cMapCore::CurveInit(BIGNUM *a)
   MonMul(s160,B,a);
 }
 
+void cMapCore::PostDecryptSetup(bool ecm)
+{
+  if(ecm) wordsize=0x8;
+  else    wordsize=0xC;
+}
+
 int cMapCore::GetOpSize(int l)
 {
   return l!=0 ? l : wordsize;
@@ -1202,6 +1208,7 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
     if(ecmP) ecmP->PrintCaps(L_SYS_ECM);
     }
   lastEcmId=id;
+  if(ecmP) ecmP->PostDecrypt(true);
 
   HEXDUMP(L_SYS_RAWECM,buff,cmdLen,"Nagra2 RAWECM");
   int l=0, mecmAlgo=0;
@@ -1308,6 +1315,7 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
     if(emmP) emmP->PrintCaps(L_SYS_EMM);
     }
   lastEmmId=id;
+  if(emmP) emmP->PostDecrypt(false);
 
   HEXDUMP(L_SYS_RAWEMM,emmdata,cmdLen,"Nagra2 RAWEMM");
   id=(emmdata[8]<<8)+emmdata[9];
