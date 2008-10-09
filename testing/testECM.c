@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
   LogAll();
   cLogging::SetModuleOption(LCLASS(7,0x20<<2),false); // Nagra L_SYS_DISASM
   cLogging::SetModuleOption(LCLASS(7,0x20<<4),false); // Nagra L_SYS_CPUSTATS
+  cLogging::SetModuleOption(LCLASS(16,0x20<<5),false); // Viacsess L_SYS_DISASM
   unsigned char ecm[4096];
   ReadRaw(argv[6],ecm,sizeof(ecm));
     
