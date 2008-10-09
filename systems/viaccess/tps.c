@@ -540,6 +540,7 @@ void cTpsKey::Set(const cTpsKey *k)
 void cTpsKey::Set(const unsigned char *mem)
 {
   timestamp=*((unsigned int *)mem);
+  if((unsigned int)timestamp>0x7FFFFFFFUL) timestamp=0x7FFFFFFFL;
   opmode=mem[52+3];
   for(int i=0; i<3; i++) {
     memcpy(step[i].key,&mem[4+i*16],16);
@@ -611,12 +612,7 @@ const cTpsKey *cTpsKeys::GetKey(time_t t)
 {
   ListLock(false);
   cTpsKey *k;
-  for(k=First(); k;) {
-    if(t<k->Timestamp()) break;
-    cTpsKey *n=Next(k);
-    if(!n) break; // if all keys are expired, use last one
-    k=n;
-    }
+  for(k=First(); k; k=Next(k)) if(t<k->Timestamp()) break;
   ListUnlock();
   return k;
 }
@@ -677,7 +673,7 @@ void cTpsKeys::Purge(time_t now)
   ListLock(true);
   for(cTpsKey *k=First(); k;) {
     cTpsKey *n=Next(k);
-    if(k->Timestamp()<now-3600 && n) { Del(k); del=true; }
+    if(k->Timestamp()<now-3600) { Del(k); del=true; }
     k=n;
     }
   ListUnlock();
@@ -724,7 +720,7 @@ cString cTpsKeys::Time(time_t t)
 {
   char str[32];
   struct tm tm_r;
-  strftime(str,sizeof(str),"%b %e %T",localtime_r(&t,&tm_r));
+  strftime(str,sizeof(str),"%b %e %Y %T",localtime_r(&t,&tm_r));
   return str;
 }
 
@@ -900,8 +896,7 @@ bool cTpsKeys::LoadBin(void)
 
   cSimpleList<cTpsKey> *nlist=new cSimpleList<cTpsKey>;
   for(int i=0; i<size; i+=56,a+=56,len-=56) {
-    if(*((const unsigned int *)a)==0x00000000L || *((const unsigned int *)a)==0xFFFFFFFFL)
-      break;
+    if(*((const unsigned int *)a)==0x00000000L) break;
     unsigned char tmp[56];
     DecryptBin(a,tmp);
     cTpsKey *k=new cTpsKey;
