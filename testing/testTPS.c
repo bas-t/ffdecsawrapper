@@ -67,6 +67,7 @@ void cTpsAuHook::DummyProcess(unsigned char *data, int size)
   else {
     tpskeys.LoadBin();
     }
+  tpskeys.Purge(time(0));
   tpskeys.Save();
 }
 
