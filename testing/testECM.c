@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
   cLogging::SetModuleOption(LCLASS(7,0x20<<4),false); // Nagra L_SYS_CPUSTATS
   cLogging::SetModuleOption(LCLASS(16,0x20<<5),false); // Viacsess L_SYS_DISASM
   unsigned char ecm[4096];
-  ReadRaw(argv[6],ecm,sizeof(ecm));
+  int len=ReadRaw(argv[6],ecm,sizeof(ecm));
     
   int caid=strtol(argv[3],0,0);
   int provid=strtol(argv[4],0,0);
@@ -36,10 +36,15 @@ int main(int argc, char *argv[])
   while((sys=cSystems::FindBySysId(caid,false,lastPri))) {
     lastPri=sys->Pri();
     printf("processing with module '%s'\n",sys->Name());
-    bool res=sys->ProcessECM(&ecmD,ecm);
-    if(res) {
-      printf("resulting CW: ");
-      SDump(sys->CW(),16);
+    bool res=false;
+    for(int i=0; i<len;) {
+      int s=SCT_LEN(&ecm[i]);
+      if(sys->ProcessECM(&ecmD,&ecm[i])) {
+        printf("resulting CW: ");
+        SDump(sys->CW(),16);
+        res=true;
+        }
+      i+=s;
       }
     delete sys;
     if(res) break;
