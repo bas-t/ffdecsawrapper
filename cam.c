@@ -2406,7 +2406,7 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
 class cDeCsaTSBuffer : public cThread {
 private:
   int f;
-  int cardIndex;
+  int cardIndex, size;
   bool delivered;
   cRingBufferLinear *ringBuffer;
   //
@@ -2426,7 +2426,7 @@ public:
 cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive)
 {
   SetDescription("TS buffer on device %d", CardIndex);
-  f=File; cardIndex=CardIndex; decsa=DeCsa;
+  f=File; size=Size; cardIndex=CardIndex; decsa=DeCsa;
   delivered=false;
   lastP=0; lastCount=0;
   ringBuffer=new cRingBufferLinear(Size,TS_SIZE,true,"FFdecsa-TS");
@@ -2484,7 +2484,7 @@ uchar *cDeCsaTSBuffer::Get(void)
 
     if(scActive && (p[3]&0xC0)) {
       if(decsa) {
-        if(!decsa->Decrypt(p,Count,(lastP==p && lastCount==Count))) {
+        if(!decsa->Decrypt(p,Count,(lastP==p && (lastCount==Count || Count>size/5)))) {
           lastP=p; lastCount=Count;
           cCondWait::SleepMs(20);
           return NULL;
