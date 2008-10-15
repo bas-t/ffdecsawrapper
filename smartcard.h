@@ -74,7 +74,7 @@ public:
 
 struct CardConfig {
   int SerMode;
-  int workTO, serTO; // values in ms
+  int workTO, serTO, serDL; // values in ms
   };
 
 struct StatusMsg {
@@ -117,6 +117,7 @@ protected:
   bool IsoWrite(const unsigned char *cmd, const unsigned char *data);
   bool Status(void);
   bool Test(bool res);
+  void NewCardConfig(const struct CardConfig *Cfg);
   int CheckSctLen(const unsigned char *data, int off);
   void TriggerReset(void) { needsReset=true; }
   static void Invert(unsigned char *data, int n);
