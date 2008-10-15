@@ -498,6 +498,10 @@ static const struct CardConfig cardCfg = {
   SM_8O2,2000,1400
   };
 
+static const struct CardConfig cardCfgDelay = {
+  SM_8O2,2000,1400,20
+  };
+
 cSmartCardVideoGuard2::cSmartCardVideoGuard2(void)
 :cSmartCard(&cardCfg,msgs)
 {
@@ -531,7 +535,11 @@ bool cSmartCardVideoGuard2::Init(void)
 
   static unsigned char ins7401[] = { 0xD0,0x74,0x01,0x00,0x00 };
   int l;
-  if((l=ReadCmdLen(ins7401))<0) return false;
+  if((l=ReadCmdLen(ins7401))<0) {
+    PRINTF(L_SC_ERROR,"bogus answer. Now try delayed mode");
+    NewCardConfig(&cardCfgDelay);
+    if((l=ReadCmdLen(ins7401))<0) return false;
+    }
   ins7401[4]=l;
   unsigned char buff[256];
   if(!IsoRead(ins7401,buff) || !Status()) {

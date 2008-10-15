@@ -161,7 +161,7 @@ bool cSerial::SetMode(int mode, int baud)
     LBPUT("%s: set serial options: %d,",devName,baud);
     tio.c_cflag = (CS8 | CREAD | HUPCL | CLOCAL);
     if(!(mode&SM_1SB)) tio.c_cflag |= CSTOPB;
-    tio.c_iflag = (INPCK | BRKINT);
+    tio.c_iflag = (INPCK | IGNBRK);
     tio.c_cc[VMIN] = 1;
     cfsetispeed(&tio,bconst);
     cfsetospeed(&tio,bconst);
@@ -761,8 +761,14 @@ static const float Dtable[16] = {
   
 cSmartCard::cSmartCard(const struct CardConfig *Cfg, const struct StatusMsg *Msg)
 {
-  cfg=Cfg; msg=Msg;
+  msg=Msg;
   ser=0; atr=0; idStr[0]=0; cardUp=false; needsReset=true;
+  NewCardConfig(Cfg);
+}
+
+void cSmartCard::NewCardConfig(const struct CardConfig *Cfg)
+{
+  cfg=Cfg;
 }
 
 bool cSmartCard::GetCardIdStr(char *str, int len)
@@ -965,7 +971,7 @@ int cSmartCard::Write(const unsigned char *data, int len)
     Invert(tmp,len);
     data=tmp;
     }
-  int r=ser->Write(data,len);
+  int r=ser->Write(data,len,cfg->serDL);
   if(r>0) {
     unsigned char *buff=AUTOMEM(r);
     int rr=ser->Read(buff,r,cfg->serTO);
