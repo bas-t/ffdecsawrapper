@@ -1157,9 +1157,12 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   memcpy(odata,data,sizeof(odata));
   if(ecm->source>=NA_SOURCE_START && ecm->source<=NA_SOURCE_END) {
     if(ecm->caId==0x1234) data[5]=0x09;		// NA rev 248 morph
-    else if(ecm->caId==0x1801 && ecm->source==0x83ca) data[5]=0xC1; // 97W
-    else data[5]=0x01;				// I _HATE_ this provider
-    data[6]&=0x1F;				// specific stuff :(
+    else {
+      if(ecm->source==0x83ca) data[5]=0xC1;     // 97W
+      else if(ecm->source==0x8334 || ecm->source==0x838e) data[5]=0x09; // 82W 91W
+      else data[5]=0x01;
+      }
+    data[6]&=0x1F;
     data[7]=data[7]&0x10|0x86;
     data[8]=0;
     data[9]=data[9]&0x80|0x08;
