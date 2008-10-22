@@ -53,7 +53,7 @@ ADD_MODULE(L_SC,lm_sc)
 class cSystemScViaccess : public cSystemScCore { //, private cTPS {
 public:
   cSystemScViaccess(void);
-  virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, const unsigned char *data, int len);
+  virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len);
   };
 
 cSystemScViaccess::cSystemScViaccess(void)
@@ -62,14 +62,14 @@ cSystemScViaccess::cSystemScViaccess(void)
   hasLogger=true;
 }
 
-void cSystemScViaccess::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, const unsigned char *data, int len)
+void cSystemScViaccess::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len)
 {
   const int pid=WORD(data,2,0x1FFF);
   if(pid>=0xAA && pid<=0xCF) {
     PRINTF(L_CORE_ECMPROC,"sc-viaccess: dropped \"fake\" ecm pid 0x%04xn",pid);
     return;
     }
-  cSystem::ParseCADescriptor(ecms,sysId,data,len);
+  cSystem::ParseCADescriptor(ecms,sysId,source,data,len);
 }
 
 // -- cSystemLinkScViaccess --------------------------------------------------------------

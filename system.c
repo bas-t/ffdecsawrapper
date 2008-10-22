@@ -126,7 +126,7 @@ void cSystem::StartLog(const cEcmInfo *ecm, int caid)
     }
 }
 
-void cSystem::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, const unsigned char *data, int len)
+void cSystem::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len)
 {
   const int pid=WORD(data,2,0x1FFF);
   switch(sysId>>8) {
@@ -145,7 +145,7 @@ void cSystem::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysI
     default:   // default style
       {
       cEcmInfo *n=new cEcmInfo(name,pid,sysId,0);
-      if(sysId==0x1234) { // BEV
+      if(sysId==0x1234 || (sysId==0x1801 && (source==0x8334 || source==0x838e))) { // BEV
         n->ecm_table=0x8e;
         n->emmCaId=0x1801;
         }

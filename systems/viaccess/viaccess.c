@@ -354,7 +354,7 @@ public:
   cSystemViaccess(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
   virtual void ProcessEMM(int pid, int caid, unsigned char *data);
-  virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, const unsigned char *data, int len);
+  virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len);
   };
 
 cSystemViaccess::cSystemViaccess(void)
@@ -363,14 +363,14 @@ cSystemViaccess::cSystemViaccess(void)
   hasLogger=true;
 }
 
-void cSystemViaccess::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, const unsigned char *data, int len)
+void cSystemViaccess::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len)
 {
   const int pid=WORD(data,2,0x1FFF);
   if(pid>=0xAA && pid<=0xCF) {
     PRINTF(L_CORE_ECMPROC,"viaccess: dropped \"fake\" ecm pid 0x%04x",pid);
     return;
     }
-  cSystem::ParseCADescriptor(ecms,sysId,data,len);
+  cSystem::ParseCADescriptor(ecms,sysId,source,data,len);
 }
 
 bool cSystemViaccess::ProcessECM(const cEcmInfo *ecm, unsigned char *data)

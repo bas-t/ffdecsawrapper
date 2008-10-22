@@ -1246,7 +1246,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
         while((sys=cSystems::FindBySysId(sysId,!cam->IsSoftCSA(filterCwIndex==0),sysPri))) {
           sysPri=sys->Pri();
           cSimpleList<cEcmInfo> ecms;
-          sys->ParseCADescriptor(&ecms,sysId,&buff[index+2],buff[index+1]);
+          sys->ParseCADescriptor(&ecms,sysId,filterSource,&buff[index+2],buff[index+1]);
           delete sys;
           if(ecms.Count()) {
             cEcmInfo *n;
