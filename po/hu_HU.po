@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.11\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2008-08-11 19:27-0400\n"
+"POT-Creation-Date: 2008-10-25 23:02-0400\n"
 "PO-Revision-Date: 2007-11-01 16:45+0200\n"
 "Last-Translator: jv\n"
 "Language-Team: somebody\n"
@@ -121,6 +121,12 @@ msgstr ""
 msgid "remove"
 msgstr ""
 
+msgid "enabled"
+msgstr ""
+
+msgid "read-only"
+msgstr ""
+
 msgid "Update keys (AU)"
 msgstr "Kulcsok automatikus frissítése (AU)"
 
@@ -144,6 +150,9 @@ msgstr "Aktív a következő DVB kártyán"
 
 msgid "Ignore CAID"
 msgstr "CAID mellőzése"
+
+msgid "ECM cache"
+msgstr ""
 
 msgid "Log to console"
 msgstr "Naplózás a konzolon"
