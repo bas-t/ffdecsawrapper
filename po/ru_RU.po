@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2008-08-11 19:27-0400\n"
+"POT-Creation-Date: 2008-10-25 23:02-0400\n"
 "PO-Revision-Date: 2008-08-18 22:46+0100\n"
 "Last-Translator: somebody\n"
 "Language-Team: ru\n"
@@ -122,6 +122,12 @@ msgstr "закоментировать"
 msgid "remove"
 msgstr "удалить"
 
+msgid "enabled"
+msgstr ""
+
+msgid "read-only"
+msgstr ""
+
 msgid "Update keys (AU)"
 msgstr "Обновлять ключи (AU)"
 
@@ -145,6 +151,9 @@ msgstr "Активный на плате DVB"
 
 msgid "Ignore CAID"
 msgstr "Игнорировать CAID"
+
+msgid "ECM cache"
+msgstr ""
 
 msgid "Log to console"
 msgstr "Сообщения в консоле"
@@ -226,4 +235,3 @@ msgstr "tps.bin"
 
 msgid "Viaccess: TPS updates from"
 msgstr "Viaccess: TPS обновления из"
-

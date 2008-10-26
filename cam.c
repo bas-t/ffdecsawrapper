@@ -622,6 +622,7 @@ cEcmCache::cEcmCache(void)
 
 void cEcmCache::New(cEcmInfo *e)
 {
+  if(ScSetup.EcmCache>0) return;
   ListLock(true);
   cEcmData *dat;
   if(!(dat=Exists(e))) {
@@ -654,6 +655,7 @@ int cEcmCache::GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int T
 {
   int n=0;
   list->Clear();
+  if(ScSetup.EcmCache>1) return 0;
   ListLock(false);
   for(cEcmData *dat=First(); dat; dat=Next(dat)) {
     if(dat->prgId==sid && dat->source==Source && dat->transponder==Transponder) {
@@ -672,6 +674,7 @@ int cEcmCache::GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int T
 
 void cEcmCache::Delete(cEcmInfo *e)
 {
+  if(ScSetup.EcmCache>0) return;
   ListLock(false);
   cEcmData *dat=Exists(e);
   ListUnlock();

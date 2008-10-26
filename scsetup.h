@@ -35,6 +35,7 @@ public:
   int ForceTransfer;
   int PrestartAU;
   int SuperKeys;
+  int EcmCache;
 public:
   cScSetup(void);
   void Check(void);

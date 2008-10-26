@@ -954,6 +954,7 @@ cScSetup::cScSetup(void)
   ForceTransfer=1;
   PrestartAU=0;
   SuperKeys=0;
+  EcmCache=0;
 }
 
 void cScSetup::Check(void)
@@ -1242,7 +1243,8 @@ cScPlugin::cScPlugin(void)
 {
   static const char *logg[] = { trNOOP("off"),trNOOP("active CAIDs"),trNOOP("all CAIDs") };
   static const char *skey[] = { trNOOP("comment out"),trNOOP("remove") };
-  ScOpts=new cOpts(0,8);
+  static const char *ecache[] = { trNOOP("enabled"),trNOOP("read-only"),trNOOP("off") };
+  ScOpts=new cOpts(0,9);
   ScOpts->Add(new cOptSel  ("AutoUpdate"   ,trNOOP("Update keys (AU)")     ,&ScSetup.AutoUpdate,3,logg));
   ScOpts->Add(new cOptBool ("PrestartAU"   ,trNOOP("Start AU on EPG scan") ,&ScSetup.PrestartAU));
   ScOpts->Add(new cOptSel  ("SuperKeys"    ,trNOOP("Superseded keys")      ,&ScSetup.SuperKeys,2,skey));
@@ -1251,6 +1253,7 @@ cScPlugin::cScPlugin(void)
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
   ScOpts->Add(new cOptMInt ("CaIgnore"     ,trNOOP("Ignore CAID")          , ScSetup.CaIgnore,MAXCAIGN,2));
+  ScOpts->Add(new cOptSel  ("EcmCache"     ,trNOOP("ECM cache")            ,&ScSetup.EcmCache,3,ecache));
   LogOpts=new cOpts(0,6);
   LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));
   LogOpts->Add(new cOptBool ("LogFile"     ,trNOOP("Log to file")         ,&logcfg.logFile));
