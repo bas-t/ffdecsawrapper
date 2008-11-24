@@ -157,26 +157,6 @@ const int cMap0101::tim3b[][17] = {
   { 14668,15091,15519,15947,16370,16798,17221,17654,18082,18505,18933,19356,19784,20212,20640,21068,21491 },
   };
 
-const unsigned short cMap0101::msb3e[] = {
-//      0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f
-/*0*/   0,  88, 148, 236, 224, 312, 312, 400, 302, 390, 390, 476, 390, 476, 476, 566,
-/*1*/ 378, 466, 466, 554, 466, 554, 554, 642, 466, 554, 554, 642, 554, 642, 642, 730,
-/*2*/ 448, 536, 536, 624, 536, 624, 624, 712, 536, 624, 624, 712, 624, 712, 712, 796,
-/*3*/ 536, 624, 624, 712, 624, 712, 712, 796, 624, 712, 712, 796, 712, 796, 796, 884,
-/*4*/ 524, 612, 612, 700, 612, 700, 700, 790, 612, 700, 700, 790, 700, 790, 790, 878,
-/*5*/ 612, 700, 700, 790, 700, 790, 790, 878, 700, 790, 790, 878, 790, 878, 878, 966,
-/*6*/ 612, 700, 700, 790, 700, 790, 790, 878, 700, 790, 790, 878, 790, 878, 878, 966,
-/*7*/ 700, 790, 790, 878, 790, 878, 878, 966, 790, 878, 878, 966, 878, 966, 966,1054,
-/*8*/ 602, 690, 690, 778, 690, 778, 778, 862, 690, 778, 778, 862, 778, 862, 862, 950,
-/*9*/ 690, 778, 778, 862, 778, 862, 862, 950, 778, 862, 862, 950, 862, 950, 950,1038,
-/*a*/ 690, 778, 778, 862, 778, 862, 862, 950, 778, 862, 862, 950, 862, 950, 950,1038,
-/*b*/ 778, 862, 862, 950, 862, 950, 950,1038, 862, 950, 950,1038, 950,1038,1038,1126,
-/*c*/ 690, 778, 778, 862, 778, 862, 862, 950, 778, 862, 862, 950, 862, 950, 950,1038,
-/*d*/ 778, 862, 862, 950, 862, 950, 950,1038, 862, 950, 950,1038, 950,1038,1038,1126,
-/*e*/ 778, 862, 862, 950, 862, 950, 950,1038, 862, 950, 950,1038, 950,1038,1038,1126,
-/*f*/ 862, 950, 950,1038, 950,1038,1038,1126, 950,1038,1038,1126,1038,1126,1126,1214,
-    };
-
 void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
 {
   bool isPrime;
@@ -201,6 +181,7 @@ void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
 
 bool cMap0101::Map(int f, unsigned char *data, int l)
 {
+  int sl=l;
   l=GetOpSize(l);
   switch(f) {
     case 0x21:
@@ -279,7 +260,10 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       MonFin(B,D);
       break;
     case 0x3b:
-      MonInit(wordsize*60+4*l);
+      AddMapCycles(441);
+      IMakeJ();
+      AddMapCycles(46);
+      IMonInit0(wordsize*60+4*l);
       I.GetLE(data,l<<3);
       MonMul(B,I,B,l);
       cycles=tim3b[wordsize-1][l-1]-6;
@@ -287,7 +271,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
     case 0x3c:
     case 0x3e:
       {
-      if(l>wordsize) l=wordsize;
+      if(sl==0) cycles+=4;
+      if(l>wordsize) { l=wordsize; cycles+=l>17 ? 9:4; }
       cBN scalar;
       scalar.GetLE(data,l<<3);
       AddMapCycles(441);
@@ -299,13 +284,17 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         }
       else {
         IMonInit();
-        MonMul(B,A,B);
+        MonMul0(B,A,B,C,D,J,0);
+        if(f==0x3c) AddMapCycles(2200+(rand()%(wordsize*2000)));
+        MonFin(B,D);
         MonExp(scalar);
         }
       BN_zero(C);
       int sbits=BN_num_bits(scalar);
-      cycles=3848+((sbits-1)/8) * 650 + msb3e[data[(sbits-1)/8]] - 13;
-      for(int i=0; i<(sbits-1)/8*8; ++i) if(BN_is_bit_set(scalar,i)) cycles+=88;
+      cycles+=3848+((sbits-1)/8)*650 - 11;
+      int msb=data[(sbits-1)/8];
+      for(int i=7; i>=1; --i) if(msb&(1<<i)) { cycles+=i*75-15; break; }
+      for(int i=0; i<sbits; ++i) if(BN_is_bit_set(scalar,i)) cycles+=88;
       break;
       }
     case 0x4d:
@@ -654,12 +643,12 @@ bool cN2Prov0101::ProcessMap(int f)
       break;
     case 0x3c:
     case 0x3e:
-      if(l>wordsize) { l=wordsize; dl=l<<3; }
-      // fall through
+      GetMem(HILO(0x44),tmp,dl,0);
+      DoMap(f,tmp,Get(0x48));
+      break;
     case 0x32:
     case 0x39:
     case 0x3b:
-      if(l>34) { l=34; dl=34<<3; }
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
       break;
