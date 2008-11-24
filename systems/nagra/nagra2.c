@@ -537,14 +537,14 @@ void cMapCore::IMakeJ(void)
   AddMapCycles(10);
 }
 
-void cMapCore::IMonInit0(void)
+void cMapCore::IMonInit0(int bits)
 {
   AddMapCycles(132+(wordsize*8+3)/5*5);
   if(BN_num_bits(D)>1) AddMapCycles(54);
   if(!BN_is_zero(D)) {
     AddMapCycles(54);
     BN_zero(I);
-    BN_set_bit(I,68*wordsize);
+    BN_set_bit(I,bits ? bits : 68*wordsize);
     BN_zero(B);
     AddMapCycles(141+(wordsize*8+3)/5*5);
     BN_set_bit(B,64*(wordsize-1));
@@ -560,10 +560,10 @@ void cMapCore::IMonInit0(void)
     }
 }
 
-void cMapCore::IMonInit(void)
+void cMapCore::IMonInit(int bits)
 {
   IMakeJ();
-  IMonInit0();
+  IMonInit0(bits);
 }
 
 void cMapCore::MonInit(int bits)

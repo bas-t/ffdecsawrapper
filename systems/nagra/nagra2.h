@@ -158,8 +158,8 @@ protected:
   void MonExpNeg(void);
   // statefull, interruptible
   void IMakeJ(void);
-  void IMonInit0(void);
-  void IMonInit(void);
+  void IMonInit0(int bits=0);
+  void IMonInit(int bits=0);
   // ECC
   void DoubleP(int temp);
   void AddP(int temp);
