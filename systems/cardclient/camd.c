@@ -698,7 +698,8 @@ bool cCardClientCamd35::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
         while((n=RecvBlock(cb,sizeof(buff),0))>0) {
           if(cb->udp_header.cmd==0x01) {
             if(cb->udp_header.len>=16 && cb->service.pinID==pid && !res) {
-              memcpy(cw,cb->data,16);
+              if(!CheckNull(&cb->data[0],8)) memcpy(&cw[0],&cb->data[0],8);
+              if(!CheckNull(&cb->data[8],8)) memcpy(&cw[8],&cb->data[8],8);
               res=true;
               }
             else PRINTF(L_CC_CAMD35,"unexpected/bad CW packet");
