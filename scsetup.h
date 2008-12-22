@@ -21,7 +21,7 @@
 #define ___SC_SETUP_H
 
 #define MAXSCCAPS 10
-#define MAXCAIGN  16
+#define MAXCAIGN  64
 
 // ----------------------------------------------------------------
 
