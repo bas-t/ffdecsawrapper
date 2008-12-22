@@ -1,6 +1,16 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+22.12.2008: Version 0.9.1
+- Added support for Irdeto2.
+- Added support for IRD based NDS decryption (FakeNDS).
+- Added CCcam cardclient.
+- Added support for Full-TS modded cards.
+- Update Viaccess for modified tps.bin format.
+- Countless changes to Nagra code.
+- Various bugfixes and translation updates.
+- For a detailed list of changes, refer to the HG changelog.
+
 09.02.2008: Version 0.9.0
 - NOTE: the versioning scheme has been changed. All releases (regardless if even
   or odd minor) are considered stable. Unstable development is in HG only.
