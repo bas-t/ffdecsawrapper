@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2008-10-25 23:02-0400\n"
+"POT-Creation-Date: 2008-12-22 18:52+0100\n"
 "PO-Revision-Date: 2008-11-19 12:23+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -145,14 +145,14 @@ msgstr "Forza mod. trasferimento"
 msgid "Prefer local systems"
 msgstr "Preferisci sistemi locali"
 
+msgid "ECM cache"
+msgstr "cache ECM"
+
 msgid "Active on DVB card"
 msgstr "Attiva sulla scheda DVB"
 
 msgid "Ignore CAID"
 msgstr "Ignora CAID"
-
-msgid "ECM cache"
-msgstr "cache ECM"
 
 msgid "Log to console"
 msgstr "Log in console"
