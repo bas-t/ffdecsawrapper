@@ -100,6 +100,12 @@ ifeq ($(strip $(HASLOCALE)),)
   OBJS += i18n.o
 endif
 
+### VDR version dependant
+
+ifneq ($(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi),)
+  SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+endif
+
 #
 # generic stuff
 #
