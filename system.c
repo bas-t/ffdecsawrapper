@@ -380,9 +380,12 @@ cSystem *cSystems::FindBySysIdent(int ident)
 
 bool cSystems::Init(const char *cfgdir)
 {
+  int num=0;
   PRINTF(L_CORE_LOAD,"** registered systems:");
-  for(cSystemLink *sl=first; sl; sl=sl->next)
+  for(cSystemLink *sl=first; sl; sl=sl->next, num++)
     PRINTF(L_CORE_LOAD,"** %-16s  (pri %3d)",sl->name,sl->pri);
+  if(num<1)
+    PRINTF(L_GEN_WARN,"No registered systems! Won't decode anything! Where are your libs?");
   for(cSystemLink *sl=first; sl; sl=sl->next)
     if(!sl->Init(cfgdir)) return false;
   return true;
