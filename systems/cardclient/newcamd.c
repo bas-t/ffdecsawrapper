@@ -398,10 +398,11 @@ bool cCardClientNewCamd::Login(void)
   cTripleDes::ScheduleKey();
 
   // set NewCS client identification
-  struct CustomData cd;
-  InitCustomData(&cd,0x5644,0);
+  // this seems to conflict with other cardservers e.g. rqcs !!
+  //struct CustomData cd;
+  //InitCustomData(&cd,0x5644,0);
 
-  if(!SendMessage(&so,buffer,buffer[2]+3,true,&cd) || CmdReceive(&so)!=MSG_CLIENT_2_SERVER_LOGIN_ACK) {
+  if(!SendMessage(&so,buffer,buffer[2]+3,true) || CmdReceive(&so)!=MSG_CLIENT_2_SERVER_LOGIN_ACK) {
     PRINTF(L_CC_NEWCAMD,"failed to login to cardserver for username %s (proto %d)",username,protoVers);
     if(NextProto()) return Login();
     return false;
