@@ -227,9 +227,12 @@ bool cCardClientRadegast::ProcessECM(const cEcmInfo *ecm, const unsigned char *s
   int keynr=-1;
   switch(ecm->caId>>8) {
     case 0x01: // Seca
-      keynr=source[7]&0x0F; break;
+      keynr=cParseSeca::KeyNr(source)&0x0F; break;
     case 0x05: // Viaccess
-      keynr=source[4]&0x0F; break;
+      keynr=cParseViaccess::KeyNr(source); break;
+    case 0x18: // Nagra2
+      if(ecm->caId>=0x1801) keynr=(source[7]&0x10) | 0x86;
+      break;
     }
   unsigned char buff[512], tmp[10];
   StartMsg(buff,1);			// CMD_ECM_KEY_ASK
