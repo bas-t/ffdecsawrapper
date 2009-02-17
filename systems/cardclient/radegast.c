@@ -221,6 +221,7 @@ bool cCardClientRadegast::Login(void)
 bool cCardClientRadegast::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum)
 {
   cMutexLock lock(this);
+  if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
   so.Flush();
   int len=SCT_LEN(source);
   int keynr=-1;
