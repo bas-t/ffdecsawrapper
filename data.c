@@ -409,6 +409,11 @@ void cStructLoader::Save(void)
     }
 }
 
+void cStructLoader::SafeClear(void)
+{
+  ListLock(true); Clear(); ListUnlock();
+}
+
 // -- cStructLoaderPlain -------------------------------------------------------
 
 cStructLoaderPlain::cStructLoaderPlain(const char *Type, const char *Filename, int Flags)

@@ -1022,7 +1022,7 @@ void cSoftCAM::Shutdown(void)
   cStructLoaders::Save(true);
   cSystems::Clean();
   smartcards.Shutdown();
-  keys.Clear();
+  keys.SafeClear();
 }
 
 char *cSoftCAM::CurrKeyStr(int CardNum, int num)

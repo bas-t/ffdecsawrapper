@@ -143,6 +143,7 @@ public:
   virtual void Load(bool reload);
   virtual void Save(void);
   void Purge(void);
+  void SafeClear(void);
   void Disable(void) { SL_SETFLAG(SL_DISABLED); }
   };
 
