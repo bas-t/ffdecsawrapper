@@ -462,10 +462,10 @@ bool cSmartCardIrdeto::Init(void)
   cSmartCardDataIrdeto *entry=0;
   if(!doPlain) {
     cSmartCardDataIrdeto cd(ACS,caId);
-    if(!(entry=(cSmartCardDataIrdeto *)smartcards.FindCardData(&cd))) {
+    if(!(entry=(cSmartCardDataIrdeto *)carddatas.Find(&cd))) {
       PRINTF(L_GEN_WARN,"didn't find Irdeto card specific certificate, falling back to default");
       cSmartCardDataIrdeto cd(-1,-1);
-      if(!(entry=(cSmartCardDataIrdeto *)smartcards.FindCardData(&cd))) {
+      if(!(entry=(cSmartCardDataIrdeto *)carddatas.Find(&cd))) {
         PRINTF(L_GEN_WARN,"didn't find default Irdeto certificate, please add one");
         if(ACS!=0x0384) return false;
         PRINTF(L_GEN_WARN,"trying pre-coded ACS 384 challenge. This mode is DEPRECATED. There ARE valid certificates for these cards available!");

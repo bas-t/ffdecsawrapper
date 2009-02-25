@@ -140,7 +140,6 @@ public:
 // ----------------------------------------------------------------
 
 class cSmartCardData : public cStructItem {
-friend class cSmartCards;
 protected:
   int ident;
 public:
@@ -148,13 +147,25 @@ public:
   virtual ~cSmartCardData() {}
   virtual bool Parse(const char *line)=0;
   virtual bool Matches(cSmartCardData *cmp)=0;
+  int Ident(void) const { return ident; }
   };
 
 // ----------------------------------------------------------------
 
+class cSmartCardDatas : public cStructList<cSmartCardData> {
+protected:
+  virtual cStructItem *ParseLine(char *line);
+public:
+  cSmartCardDatas(void);
+  cSmartCardData *Find(cSmartCardData *param);
+  };
+
+extern cSmartCardDatas carddatas;
+
+// ----------------------------------------------------------------
+
 class cSmartCardLink {
-friend class cSmartCards;
-private:
+public:
   cSmartCardLink *next;
   const char *name;
   int id;
@@ -163,7 +174,6 @@ public:
   virtual ~cSmartCardLink() {}
   virtual cSmartCard *Create(void)=0;
   virtual cSmartCardData *CreateData(void) { return 0; }
-  int ID(void) { return id; }
   };
 
 // ----------------------------------------------------------------
@@ -178,8 +188,9 @@ struct Port {
   struct Atr Atr;
   };
 
-class cSmartCards : private cThread, public cStructList<cSmartCardData> {
+class cSmartCards : private cThread {
 friend class cSmartCardLink;
+friend class cSmartCardDatas;
 private:
   static cSmartCardLink *first;
   cMutex mutex;
@@ -195,7 +206,6 @@ private:
   void SetPort(struct Port *port, cSmartCard *sc, int id, bool dead);
 protected:
   virtual void Action(void);
-  virtual cStructItem *ParseLine(char *line);
 public:
   cSmartCards(void);
   void Shutdown(void);
@@ -203,7 +213,6 @@ public:
   bool HaveCard(int id);
   cSmartCard *LockCard(int id);
   void ReleaseCard(cSmartCard *sc);
-  cSmartCardData *FindCardData(cSmartCardData *param);
   // to be called ONLY from frontend thread!
   bool AddPort(const char *devName, bool invCD, bool invRST, int clock);
   void LaunchWatcher(void);

@@ -1093,6 +1093,38 @@ cSmartCardData::cSmartCardData(int Ident)
   ident=Ident;
 }
 
+// -- cSmartCardDatas ----------------------------------------------------------
+
+cSmartCardDatas carddatas;
+
+cSmartCardDatas::cSmartCardDatas(void)
+:cStructList<cSmartCardData>("smartcard data",DATAFILE,SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
+{}
+
+cSmartCardData *cSmartCardDatas::Find(cSmartCardData *param)
+{
+  ListLock(false);
+  cSmartCardData *cd;
+  for(cd=First(); cd; cd=Next(cd))
+    if(cd->Ident()==param->Ident() && cd->Matches(param)) break;
+  ListUnlock();
+  return cd;
+}
+
+cStructItem *cSmartCardDatas::ParseLine(char *line)
+{
+  char *r=index(line,':');
+  if(r)
+    for(cSmartCardLink *scl=cSmartCards::first; scl; scl=scl->next)
+      if(!strncasecmp(scl->name,line,r-line)) {
+        cSmartCardData *scd=scl->CreateData();
+        if(scd && scd->Parse(r+1)) return scd;
+        delete scd;
+        break;
+        }
+  return 0;
+}
+
 // -- cSmartCardLink -----------------------------------------------------------
 
 cSmartCardLink::cSmartCardLink(const char *Name, int Id)
@@ -1111,7 +1143,6 @@ static const char *serModes[] = { 0,"8e2","8o2","8n2" };
 
 cSmartCards::cSmartCards(void)
 :cThread("SmartcardWatcher")
-,cStructList<cSmartCardData>("smartcard data",DATAFILE,SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
 {
   for(int i=0 ; i<MAX_PORTS ; i++) ports[i].Serial=0;
   firstRun=true;
@@ -1144,7 +1175,6 @@ void cSmartCards::Shutdown(void)
       }
     }
   mutex.Unlock();
-  ListLock(true); Clear(); ListUnlock();
 }
 
 bool cSmartCards::AddPort(const char *devName, bool invCD, bool invRST, int clock)
@@ -1176,30 +1206,6 @@ bool cSmartCards::AddPort(const char *devName, bool invCD, bool invRST, int cloc
     }
   PRINTF(L_GEN_ERROR,"only %d serial ports supported",MAX_PORTS);
   return false;
-}
-
-cStructItem *cSmartCards::ParseLine(char *line)
-{
-  char *r=index(line,':');
-  if(r)
-    for(cSmartCardLink *scl=first; scl; scl=scl->next)
-      if(!strncasecmp(scl->name,line,r-line)) {
-        cSmartCardData *scd=scl->CreateData();
-        if(scd && scd->Parse(r+1)) return scd;
-        delete scd;
-        break;
-        }
-  return 0;
-}
-
-cSmartCardData *cSmartCards::FindCardData(cSmartCardData *param)
-{
-  ListLock(false);
-  cSmartCardData *cd;
-  for(cd=First(); cd; cd=Next(cd))
-    if(cd->ident==param->ident && cd->Matches(param)) break;
-  ListUnlock();
-  return cd;
 }
 
 bool cSmartCards::HaveCard(int id)
