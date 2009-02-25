@@ -287,5 +287,5 @@ bool cSystemLinkCardClient::ParseLinePlain(const char *line)
 
 void cSystemLinkCardClient::Clean(void)
 {
-  ListLock(true); Clear(); ListUnlock();
+  SafeClear();
 }
