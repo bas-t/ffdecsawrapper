@@ -78,7 +78,7 @@
 #endif
 
 // SC API version number for loading shared libraries
-#define SCAPIVERS 20
+#define SCAPIVERS 21
 
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
