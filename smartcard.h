@@ -61,6 +61,31 @@ public:
 
 // ----------------------------------------------------------------
 
+class cSmartCardData : public cStructItem {
+protected:
+  int ident;
+public:
+  cSmartCardData(int Ident);
+  virtual ~cSmartCardData() {}
+  virtual bool Parse(const char *line)=0;
+  virtual bool Matches(cSmartCardData *cmp)=0;
+  int Ident(void) const { return ident; }
+  };
+
+// ----------------------------------------------------------------
+
+class cSmartCardDatas : public cStructList<cSmartCardData> {
+protected:
+  virtual cStructItem *ParseLine(char *line);
+public:
+  cSmartCardDatas(void);
+  cSmartCardData *Find(cSmartCardData *param);
+  };
+
+extern cSmartCardDatas carddatas;
+
+// ----------------------------------------------------------------
+
 #define SM_NONE 0
 #define SM_8E2  1
 #define SM_8O2  2
@@ -139,28 +164,17 @@ public:
 
 // ----------------------------------------------------------------
 
-class cSmartCardData : public cStructItem {
-protected:
-  int ident;
+class cSmartCardSlot : public cStructItem {
 public:
-  cSmartCardData(int Ident);
-  virtual ~cSmartCardData() {}
-  virtual bool Parse(const char *line)=0;
-  virtual bool Matches(cSmartCardData *cmp)=0;
-  int Ident(void) const { return ident; }
+  cSmartCardSlot(int num);
+  ~cSmartCardSlot();
+  //
+  cSerial *Serial;
+  bool Dead;
+  cSmartCard *Card;
+  int CardId, UseCount, SlotNum, Clock;
+  struct Atr Atr;
   };
-
-// ----------------------------------------------------------------
-
-class cSmartCardDatas : public cStructList<cSmartCardData> {
-protected:
-  virtual cStructItem *ParseLine(char *line);
-public:
-  cSmartCardDatas(void);
-  cSmartCardData *Find(cSmartCardData *param);
-  };
-
-extern cSmartCardDatas carddatas;
 
 // ----------------------------------------------------------------
 
@@ -178,34 +192,26 @@ public:
 
 // ----------------------------------------------------------------
 
-#define MAX_PORTS 4
-
-struct Port {
-  cSerial *Serial;
-  bool Dead;
-  cSmartCard *Card;
-  int CardId, UseCount, PortNum, Clock;
-  struct Atr Atr;
-  };
-
-class cSmartCards : private cThread {
+class cSmartCards : private cThread, public cStructListPlain<cSmartCardSlot> {
 friend class cSmartCardLink;
 friend class cSmartCardDatas;
 private:
   static cSmartCardLink *first;
   cMutex mutex;
   cCondVar cond;
-  struct Port ports[MAX_PORTS];
   bool firstRun;
   //
   static void Register(cSmartCardLink *scl);
   bool CardInserted(cSerial *ser);
-  bool CardReset(struct Port *port);
-  int Reset(struct Port *port);
-  bool DoPTS(struct Port *port);
-  void SetPort(struct Port *port, cSmartCard *sc, int id, bool dead);
+  bool CardReset(cSmartCardSlot *port);
+  int Reset(cSmartCardSlot *port);
+  bool DoPTS(cSmartCardSlot *port);
+  void SetPort(cSmartCardSlot *port, cSmartCard *sc, int id, bool dead);
+  cSmartCardSlot *GetSlot(int num);
 protected:
   virtual void Action(void);
+  virtual void PreLoad(void);
+  virtual bool ParseLinePlain(const char *line);
 public:
   cSmartCards(void);
   void Shutdown(void);
@@ -214,7 +220,6 @@ public:
   cSmartCard *LockCard(int id);
   void ReleaseCard(cSmartCard *sc);
   // to be called ONLY from frontend thread!
-  bool AddPort(const char *devName, bool invCD, bool invRST, int clock);
   void LaunchWatcher(void);
   bool ListCard(int num, char *str, int len);
   bool CardInfo(int num, char *str, int len);

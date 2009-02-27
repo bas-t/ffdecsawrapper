@@ -243,29 +243,11 @@ Smartcard support
 -----------------
 
 For most encrpytion systems this plugin supports original subscription
-smartcards on a Phoenix/Smartmouse ISO interface connected to a serial port.
+smartcards (e.g. from a Phoenix/Smartmouse ISO interface connected to a serial
+port).
 
-To enable smartcard support you have to copy one or more of the smartcard
-systems to the VDR plugin lib directory. To actually activate the smartcard
-interface, you should use the commandline option "-s" to specify one or more
-serial devices to which the Phoenix interface are connected e.g. use "-s
-/dev/ttyS0 -s /dev/ttyS1" to use two intefaces at COM1/COM2. If you want to add
-a default smartcard interface at compile time use the make option DEFAULT_PORT,
-e.g. DEFAULT_PORT='"/dev/ttyS0",0,0,0'. Note the quotes and double quotes. The
-three numeric values are identical to the -I and -R options (set to 1 to enable)
-and -C option (set to 0 for default clock) below.
-
-Appearently there are "broken" card readers which swap the meaning of the CD
-line (used for card detection). For these readers use the option "-I". This
-enables inverse CD detection for the next interface e.g. "-I -s /dev/ttyS0 -s
-/dev/ttyS1" will use inverse CD on COM1 and normal CD on COM2 while "-I -s
-/dev/ttyS0 -I -s /dev/ttyS1" will use inverse CD on both.
-Some other card readers have a reversed logic with the reset line (card won't
-reset with default settings). You can use the option "-R" for these readers.
-In some cases it's mandatory to know the exact clock frequency at which your
-cardreader runs (e.g. for baudrate calculations). With the option "-C" you can
-give a clock frequency (in Hz) which will be used instead of the default
-(3571200 Hz) for the next interface e.g. "-C 3579545 -s /dev/ttyS1".
+The configuartion of the smartcard slots if done in the "cardslot.conf" file
+(see example file for format).
 
 Some smartcards need additional information to establish communication with the
 card (e.g. certificate or box key for camcrypt). These information must be
