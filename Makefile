@@ -110,14 +110,9 @@ endif
 # generic stuff
 #
 
-# smartcard default port
+# smartcard default port (dropped)
 ifdef DEFAULT_PORT
-  TEST := $(shell echo '$(DEFAULT_PORT)' | sed -ne '/".*",.*,.*,.*/p')
-  ifneq ($(strip $(TEST)),)
-    DEFINES += -DDEFAULT_PORT='$(DEFAULT_PORT)'
-  else
-    $(error DEFAULT_PORT has bad format)
-  endif 
+  $(error DEFAULT_PORT support was removed, use cardslot.conf)
 endif
 
 # max number of CAIDs per slot

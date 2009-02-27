@@ -35,7 +35,6 @@
 #include "misc.h"
 #include "log-core.h"
 
-#define DATAFILE "smartcard.conf"
 #define ISO_FREQ 3571200 // Hz
 
 //#define SER_EMU   // use serial emulation (select one of the following)
@@ -748,6 +747,61 @@ void cInfoStr::Finish()
   current=Grab();
 }
 
+// -- cSmartCardData -----------------------------------------------------------
+
+cSmartCardData::cSmartCardData(int Ident)
+{
+  ident=Ident;
+}
+
+// -- cSmartCardDatas ----------------------------------------------------------
+
+cSmartCardDatas carddatas;
+
+cSmartCardDatas::cSmartCardDatas(void)
+:cStructList<cSmartCardData>("smartcard data","smartcard.conf",SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
+{}
+
+cSmartCardData *cSmartCardDatas::Find(cSmartCardData *param)
+{
+  ListLock(false);
+  cSmartCardData *cd;
+  for(cd=First(); cd; cd=Next(cd))
+    if(cd->Ident()==param->Ident() && cd->Matches(param)) break;
+  ListUnlock();
+  return cd;
+}
+
+cStructItem *cSmartCardDatas::ParseLine(char *line)
+{
+  char *r=index(line,':');
+  if(r)
+    for(cSmartCardLink *scl=cSmartCards::first; scl; scl=scl->next)
+      if(!strncasecmp(scl->name,line,r-line)) {
+        cSmartCardData *scd=scl->CreateData();
+        if(scd && scd->Parse(r+1)) return scd;
+        delete scd;
+        break;
+        }
+  return 0;
+}
+
+// -- cSmartCardSlot -----------------------------------------------------------
+
+cSmartCardSlot::cSmartCardSlot(int num)
+{
+  Serial=0; Card=0;
+  CardId=0; UseCount=0; Dead=false;
+  SlotNum=num;
+  Clock=ISO_FREQ;
+}
+
+cSmartCardSlot::~cSmartCardSlot()
+{
+  delete Card;
+  delete Serial;
+}
+
 // -- cSmartCard ---------------------------------------------------------------
 
 static const int Ftable[16] = {
@@ -1086,45 +1140,6 @@ int cSmartCard::CheckSctLen(const unsigned char *data, int off)
   return l;
 }
 
-// -- cSmartCardData -----------------------------------------------------------
-
-cSmartCardData::cSmartCardData(int Ident)
-{
-  ident=Ident;
-}
-
-// -- cSmartCardDatas ----------------------------------------------------------
-
-cSmartCardDatas carddatas;
-
-cSmartCardDatas::cSmartCardDatas(void)
-:cStructList<cSmartCardData>("smartcard data",DATAFILE,SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
-{}
-
-cSmartCardData *cSmartCardDatas::Find(cSmartCardData *param)
-{
-  ListLock(false);
-  cSmartCardData *cd;
-  for(cd=First(); cd; cd=Next(cd))
-    if(cd->Ident()==param->Ident() && cd->Matches(param)) break;
-  ListUnlock();
-  return cd;
-}
-
-cStructItem *cSmartCardDatas::ParseLine(char *line)
-{
-  char *r=index(line,':');
-  if(r)
-    for(cSmartCardLink *scl=cSmartCards::first; scl; scl=scl->next)
-      if(!strncasecmp(scl->name,line,r-line)) {
-        cSmartCardData *scd=scl->CreateData();
-        if(scd && scd->Parse(r+1)) return scd;
-        delete scd;
-        break;
-        }
-  return 0;
-}
-
 // -- cSmartCardLink -----------------------------------------------------------
 
 cSmartCardLink::cSmartCardLink(const char *Name, int Id)
@@ -1143,8 +1158,8 @@ static const char *serModes[] = { 0,"8e2","8o2","8n2" };
 
 cSmartCards::cSmartCards(void)
 :cThread("SmartcardWatcher")
+,cStructListPlain<cSmartCardSlot>("cardslot config","cardslot.conf",SL_MISSINGOK|SL_VERBOSE|SL_NOPURGE)
 {
-  for(int i=0 ; i<MAX_PORTS ; i++) ports[i].Serial=0;
   firstRun=true;
 }
 
@@ -1157,63 +1172,67 @@ void cSmartCards::Register(cSmartCardLink *scl)
 
 void cSmartCards::LaunchWatcher(void)
 {
-  for(int i=0 ; i<MAX_PORTS ; i++)
-    if(ports[i].Serial) { Start(); return; }
-  firstRun=false;
-  PRINTF(L_GEN_WARN,"no smartcard interface defined!");
+  firstRun=true;
+  if(Count()>0) Start();
+  else {
+    firstRun=false;
+    PRINTF(L_GEN_WARN,"no smartcard slot defined!");
+    }
 }
 
 void cSmartCards::Shutdown(void)
 {
+  PreLoad();
+}
+
+void cSmartCards::PreLoad(void)
+{
   Cancel(3);
   mutex.Lock();
-  for(int i=0 ; i<MAX_PORTS ; i++) {
-    if(ports[i].Serial) {
-      delete ports[i].Card;
-      delete ports[i].Serial;
-      ports[i].Serial=0;
-      }
-    }
+  Clear(); Modified(false);
   mutex.Unlock();
 }
 
-bool cSmartCards::AddPort(const char *devName, bool invCD, bool invRST, int clock)
+bool cSmartCards::ParseLinePlain(const char *line)
 {
-  cMutexLock lock(&mutex);
-  for(int i=0 ; i<MAX_PORTS ; i++) {
-    if(!ports[i].Serial) {
-      cSerial *ser=new cSerial(devName,invCD,invRST);
-      if(ser && ser->Open()) {
-        ports[i].Card=0;
-        ports[i].CardId=0;
-        ports[i].UseCount=0;
-        ports[i].Dead=false;
-        ports[i].PortNum=i;
-        ports[i].Serial=ser;
-        ports[i].Clock=clock ? clock : ISO_FREQ;
-        PRINTF(L_CORE_LOAD,"smartcards: added serial port %s as port %d (%s CD, %s RESET, CLOCK %d)",
-                  devName,i,invCD?"inverse":"normal",invRST?"inverse":"normal",ports[i].Clock);
-        return true;
+  char type[32];
+  int num;
+  if(sscanf(line,"%31[^:]:%n",type,&num)==1) {
+    if(!strcasecmp(type,"serial")) {
+      int invCD=0, invRST=0, clock=0;
+      char devName[64];
+      if(sscanf(&line[num],"%63[^:]:%d:%d:%d",devName,&invCD,&invRST,&clock)>=3) {
+        cSmartCardSlot *slot=new cSmartCardSlot(Count());
+        if(slot) {
+          cSerial *ser=new cSerial(devName,invCD,invRST);
+          if(ser && ser->Open()) {
+            slot->Serial=ser;
+            if(clock>0) slot->Clock=clock;
+            Add(slot);
+            PRINTF(L_CORE_LOAD,"smartcards: added serial port %s as port %d (%s CD, %s RESET, CLOCK %d)",
+                      devName,slot->SlotNum,invCD?"inverse":"normal",invRST?"inverse":"normal",slot->Clock);
+            return true;
+            }
+          else PRINTF(L_GEN_ERROR,"failed to open serial port %s",devName);
+          delete ser;
+          delete slot;
+          }
+        else PRINTF(L_GEN_ERROR,"failed to create cardslot");
         }
-      PRINTF(L_GEN_ERROR,"failed to open serial port %s",devName);
-      delete ser;
-      return false;
+      else PRINTF(L_GEN_ERROR,"bad parameter for cardslot type '%s'",type);
       }
-    else if(!strcmp(ports[i].Serial->DeviceName(),devName)) {
-      PRINTF(L_GEN_ERROR,"duplicate serial port %s. Check your config!",devName);
-      return false;
-      }
+    else PRINTF(L_GEN_ERROR,"unknown cardslot type '%s'",type);
     }
-  PRINTF(L_GEN_ERROR,"only %d serial ports supported",MAX_PORTS);
   return false;
 }
+
 
 bool cSmartCards::HaveCard(int id)
 {
   cMutexLock lock(&mutex);
   while(Running() && firstRun) cond.Wait(mutex);
-  for(int i=0 ; i<MAX_PORTS ; i++)
-    if(ports[i].Serial && ports[i].CardId==id) return true;
+  for(cSmartCardSlot *slot=First(); slot; slot=Next(slot))
+    if(slot->CardId==id) return true;
   return false;
 }
 
@@ -1221,18 +1240,18 @@ cSmartCard *cSmartCards::LockCard(int id)
 {
   mutex.Lock();
   while(Running() && firstRun) cond.Wait(mutex);
-  for(int i=0 ; i<MAX_PORTS ; i++) {
-    if(ports[i].Serial && ports[i].CardId==id) {
-      ports[i].UseCount++;
+  for(cSmartCardSlot *slot=First(); slot; slot=Next(slot)) {
+    if(slot->CardId==id) {
+      slot->UseCount++;
       mutex.Unlock();
-      cSmartCard *sc=ports[i].Card;
+      cSmartCard *sc=slot->Card;
       sc->Lock();
-      if(CardInserted(ports[i].Serial) && sc->CardUp() && !sc->NeedsReset())
+      if(CardInserted(slot->Serial) && sc->CardUp() && !sc->NeedsReset())
         return sc;
       // if failed, unlock the card and decrement UseCount
       sc->Unlock();
       mutex.Lock();
-      ports[i].UseCount--;
+      slot->UseCount--;
       cond.Broadcast();
       break;
       }
@@ -1245,9 +1264,9 @@ void cSmartCards::ReleaseCard(cSmartCard *sc)
 {
   sc->Unlock();
   mutex.Lock();
-  for(int i=0 ; i<MAX_PORTS ; i++) {
-    if(ports[i].Card==sc) {
-      ports[i].UseCount--;
+  for(cSmartCardSlot *slot=First(); slot; slot=Next(slot)) {
+    if(slot->Card==sc) {
+      slot->UseCount--;
       cond.Broadcast();
       mutex.Unlock();
       return;
@@ -1262,37 +1281,37 @@ bool cSmartCards::CardInserted(cSerial *ser)
   return ser->CheckCAR();
 }
 
-bool cSmartCards::CardReset(struct Port *port)
+bool cSmartCards::CardReset(cSmartCardSlot *port)
 {
-  if(Reset(port)<2 || !cSmartCard::ParseAtr(&port->Atr,port->PortNum,port->Clock))
+  if(Reset(port)<2 || !cSmartCard::ParseAtr(&port->Atr,port->SlotNum,port->Clock))
     return false;
   if(!DoPTS(port)) {
     // reset card again and continue without PTS
-    if(Reset(port)<2 || !cSmartCard::ParseAtr(&port->Atr,port->PortNum,port->Clock))
+    if(Reset(port)<2 || !cSmartCard::ParseAtr(&port->Atr,port->SlotNum,port->Clock))
       return false;
     }
   return true;
 }
 
-int cSmartCards::Reset(struct Port *port)
+int cSmartCards::Reset(cSmartCardSlot *port)
 {
   cSerial *ser=port->Serial;
-  PRINTF(L_CORE_SC,"%d: reseting card (sermode %s)",port->PortNum,serModes[ser->CurrentMode()]);
+  PRINTF(L_CORE_SC,"%d: reseting card (sermode %s)",port->SlotNum,serModes[ser->CurrentMode()]);
   ser->ToggleRTS();
   cCondWait::SleepMs(100);
   ser->ToggleRTS();
   int r=ser->Read(port->Atr.atr,-MAX_ATR_LEN,800,2000);
   port->Atr.atrLen=r;
-  if(r>0) LDUMP(L_CORE_SC,port->Atr.atr,r,"%d: <- ATR len=%d:",port->PortNum,r);
+  if(r>0) LDUMP(L_CORE_SC,port->Atr.atr,r,"%d: <- ATR len=%d:",port->SlotNum,r);
   return r;
 }
 
-bool cSmartCards::DoPTS(struct Port *port)
+bool cSmartCards::DoPTS(cSmartCardSlot *port)
 {
   const struct Atr *atr=&port->Atr;
   if(atr->F!=372 || atr->D!=1.0) { // PTS required
     cSerial *ser=port->Serial;
-    const int id=port->PortNum;
+    const int id=port->SlotNum;
     int baud=(int)((float)port->Clock*atr->D/atr->F);
     PRINTF(L_CORE_SC,"%d: PTS cycle: calculated baudrate %d",id,baud);
 
@@ -1341,7 +1360,7 @@ bool cSmartCards::DoPTS(struct Port *port)
  return true;
 }
 
-void cSmartCards::SetPort(struct Port *port, cSmartCard *sc, int id, bool dead)
+void cSmartCards::SetPort(cSmartCardSlot *port, cSmartCard *sc, int id, bool dead)
 {
   mutex.Lock();
   while(port->UseCount) cond.Wait(mutex);
@@ -1356,63 +1375,62 @@ void cSmartCards::SetPort(struct Port *port, cSmartCard *sc, int id, bool dead)
 void cSmartCards::Action(void)
 {
   while(Running()) {
-    for(int i=0 ; i<MAX_PORTS ;) {
-      struct Port *port=&ports[i];
-      cSerial *ser=port->Serial;
+  for(cSmartCardSlot *slot=First(); slot;) {
+      cSerial *ser=slot->Serial;
       if(ser) {
-        if(port->Card) {
-          cSmartCard *sc=port->Card;
+        if(slot->Card) {
+          cSmartCard *sc=slot->Card;
           sc->Lock();
           if(!CardInserted(ser)) {
             sc->Unlock(); sc=0;
-            PRINTF(L_CORE_SC,"%d: card removed (UseCount=%d)",port->PortNum,port->UseCount);
-            SetPort(port,0,0,false);
+            PRINTF(L_CORE_SC,"%d: card removed (UseCount=%d)",slot->SlotNum,slot->UseCount);
+            SetPort(slot,0,0,false);
             }
           else if(sc->NeedsReset()) {
-            PRINTF(L_CORE_SC,"%d: card reset requested",port->PortNum);
+            PRINTF(L_CORE_SC,"%d: card reset requested",slot->SlotNum);
             if(!ser->SetMode(ser->CurrentMode()&SM_MASK)
-                || !CardReset(port)
-                || !sc->Setup(ser,&port->Atr,port->PortNum)) {
+                || !CardReset(slot)
+                || !sc->Setup(ser,&slot->Atr,slot->SlotNum)) {
               sc->Unlock(); sc=0;
-              PRINTF(L_CORE_SC,"%d: card re-init failed",port->PortNum);
-              SetPort(port,0,0,true);
+              PRINTF(L_CORE_SC,"%d: card re-init failed",slot->SlotNum);
+              SetPort(slot,0,0,true);
               }
             }
           if(sc) sc->Unlock();
           }
         else if(CardInserted(ser)) {
-          if(!port->Dead) {
-            PRINTF(L_CORE_SC,"%d: new card inserted",port->PortNum);
+          if(!slot->Dead) {
+            PRINTF(L_CORE_SC,"%d: new card inserted",slot->SlotNum);
             for(int mode=SM_NONE+1 ; mode<SM_MAX ; mode++) {
               if(ser->SetMode(mode)) {
-                if(CardReset(port)) {
+                if(CardReset(slot)) {
                   cSmartCardLink *scl=first;
                   while(scl) {
-                    PRINTF(L_CORE_SC,"%d: checking for %s card",port->PortNum,scl->name);
+                    PRINTF(L_CORE_SC,"%d: checking for %s card",slot->SlotNum,scl->name);
                     cSmartCard *sc=scl->Create();
-                    if(sc && sc->Setup(ser,&port->Atr,port->PortNum)) {
-                      SetPort(port,sc,scl->id,false);
+                    if(sc && sc->Setup(ser,&slot->Atr,slot->SlotNum)) {
+                      SetPort(slot,sc,scl->id,false);
                       goto next; // ugly, any better solution?
                       }
                     delete sc;
                     scl=scl->next;
                     }
-                  PRINTF(L_CORE_SC,"%d: no card handler found",port->PortNum);
+                  PRINTF(L_CORE_SC,"%d: no card handler found",slot->SlotNum);
                   }
-                else PRINTF(L_CORE_SC,"%d: reset/atr error",port->PortNum);
+                else PRINTF(L_CORE_SC,"%d: reset/atr error",slot->SlotNum);
                 }
-              else PRINTF(L_CORE_SC,"%d: failed to set serial mode %s",port->PortNum,serModes[mode]);
+              else PRINTF(L_CORE_SC,"%d: failed to set serial mode %s",slot->SlotNum,serModes[mode]);
               }
-            port->Dead=true;
-            PRINTF(L_CORE_SC,"%d: can't initialise new card, ignoring port until card reinserted",port->PortNum);
+            slot->Dead=true;
+            PRINTF(L_CORE_SC,"%d: can't initialise new card, ignoring port until card reinserted",slot->SlotNum);
             }
           }
         else {
-          if(port->Dead) PRINTF(L_CORE_SC,"%d: card removed, port reactivated",port->PortNum);
-          port->Dead=false;
+          if(slot->Dead) PRINTF(L_CORE_SC,"%d: card removed, port reactivated",slot->SlotNum);
+          slot->Dead=false;
           }
         }
-next: i++;
+next: slot=Next(slot);
       }
     if(firstRun) {
       mutex.Lock();
@@ -1424,17 +1442,25 @@ next: i++;
     }  
 }
 
+cSmartCardSlot *cSmartCards::GetSlot(int num)
+{
+  for(cSmartCardSlot *slot=First(); slot; slot=Next(slot))
+    if(slot->SlotNum==num) return slot;
+  return 0;
+}
+
 bool cSmartCards::ListCard(int num, char *str, int len)
 {
-  if(num>=MAX_PORTS || !ports[num].Serial) return false;
+  cSmartCardSlot *slot=GetSlot(num);
+  if(!slot) return false;
   str[0]=0;
   mutex.Lock();
-  cSmartCard *sc=ports[num].Card;
+  cSmartCard *sc=slot->Card;
   if(sc) {
     if(!sc->GetCardIdStr(str,len)) {
       cSmartCardLink *scl=first;
       while(scl) {
-        if(scl->id==ports[num].CardId) {
+        if(scl->id==slot->CardId) {
           strn0cpy(str,scl->name,len);
           break;
           }
@@ -1449,10 +1475,11 @@ bool cSmartCards::ListCard(int num, char *str, int len)
 bool cSmartCards::CardInfo(int num, char *str, int len)
 {
   bool res=false;
-  if(num<MAX_PORTS && ports[num].Serial) {
+  cSmartCardSlot *slot=GetSlot(num);
+  if(slot) {
     str[0]=0;
     mutex.Lock();
-    cSmartCard *sc=ports[num].Card;
+    cSmartCard *sc=slot->Card;
     if(sc) res=sc->GetCardInfoStr(str,len);
     mutex.Unlock();
     }
@@ -1461,9 +1488,10 @@ bool cSmartCards::CardInfo(int num, char *str, int len)
 
 void cSmartCards::CardReset(int num)
 {
-  if(num<MAX_PORTS && ports[num].Serial) {
+  cSmartCardSlot *slot=GetSlot(num);
+  if(slot) {
     mutex.Lock();
-    cSmartCard *sc=ports[num].Card;
+    cSmartCard *sc=slot->Card;
     if(sc) sc->TriggerReset();
     mutex.Unlock();
     }

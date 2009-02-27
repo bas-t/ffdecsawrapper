@@ -229,9 +229,13 @@ eOSState cMenuEditHexItem::ProcessKey(eKeys Key)
 class cScInfoItem : public cOsdItem {
 private:
   void SetValue(const char *Name, const char *Value);
+  //
+  int ident;
 public:
   cScInfoItem(const char *Name, int Value, eOSState State=osUnknown);
   cScInfoItem(const char *Name, const char *Value=0, eOSState State=osUnknown);
+  void Ident(int id) { ident=id; }
+  int Ident(void) { return ident; }
   };
 
 cScInfoItem::cScInfoItem(const char *Name, int Value, eOSState State)
@@ -256,6 +260,7 @@ void cScInfoItem::SetValue(const char *Name, const char *Value)
   asprintf(&buff,Value ? "%s:\t%s":"%s",Name,Value);
   SetText(buff,false);
   cStatus::MsgOsdCurrentItem(buff);
+  ident=-1;
 }
 
 // --- cOpt --------------------------------------------------------------------
@@ -839,11 +844,6 @@ public:
   virtual eOSState ProcessKey(eKeys Key);
   };
 
-static eOSState portStates[] = { osUser1,osUser2,osUser3,osUser4 };
-#if MAX_PORTS!=4
-#error Update portStates[]
-#endif
-
 cMenuSetupSc::cMenuSetupSc(const char *CfgDir)
 {
   cfgdir=strdup(CfgDir);
@@ -860,8 +860,11 @@ cMenuSetupSc::cMenuSetupSc(const char *CfgDir)
     for(int i=0; smartcards.ListCard(i,id,sizeof(id)); i++) {
       char buff[32];
       snprintf(buff,sizeof(buff),"%s %d",tr("Smartcard interface"),i);
-      if(id[0]) Add(new cScInfoItem(buff,id,portStates[i]));
-      else      Add(new cScInfoItem(buff,tr("(empty)")));
+      cScInfoItem *ii;
+      if(id[0]) ii=new cScInfoItem(buff,id,osUser4);
+      else      ii=new cScInfoItem(buff,tr("(empty)"));
+      ii->Ident(i);
+      Add(ii);
       }
     }
   Add(new cOsdItem(tr("Status information..."),osUser8));
@@ -883,10 +886,10 @@ eOSState cMenuSetupSc::ProcessKey(eKeys Key)
 {
   eOSState state = cOsdMenu::ProcessKey(Key);
   switch(state) {
-    case osUser1...osUser4:
+    case osUser4:
       if(Feature.SmartCard()) {
-        for(unsigned int i=0; i<sizeof(portStates)/sizeof(eOSState); i++)
-          if(portStates[i]==state) return(AddSubMenu(new cMenuInfoCard(i)));
+        cScInfoItem *ii=dynamic_cast<cScInfoItem *>(Get(Current()));
+        if(ii) return(AddSubMenu(new cMenuInfoCard(ii->Ident())));
         }
       state=osContinue;
       break;
@@ -1008,12 +1011,17 @@ bool cScSetup::Ignore(unsigned short caid)
 bool cSoftCAM::Load(const char *cfgdir)
 {
   if(!Feature.KeyFile()) keys.Disable();
-  if(!Feature.SmartCard()) carddatas.Disable();
+  if(!Feature.SmartCard()) {
+    carddatas.Disable();
+    smartcards.Disable();
+    }
   cStructLoaders::Load(false);
   if(Feature.KeyFile() && keys.Count()<1)
     PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
   if(!cSystems::Init(cfgdir)) return false;
   srand(time(0));
+  if(Feature.SmartCard())
+    smartcards.LaunchWatcher();
   return true;
 }
 
@@ -1307,12 +1315,6 @@ bool cScPlugin::Start(void)
   cStructLoaders::SetCfgDir(cfgdir);
   ScSetup.Check();
   if(!cSoftCAM::Load(cfgdir)) return false;
-  if(Feature.SmartCard()) {
-#ifdef DEFAULT_PORT
-    smartcards.AddPort(DEFAULT_PORT);
-#endif
-    smartcards.LaunchWatcher();
-    }
   cScDvbDevice::Startup();
   keeper=new cScHousekeeper;
   return true;
@@ -1346,17 +1348,11 @@ const char *cScPlugin::CommandLineHelp(void)
   
   free(help_str);    //                                     for easier orientation, this is column 80|
   asprintf(&help_str,"  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
-                     "  -I        --inverse-cd   use inverse CD detection for the next serial device\n"
-                     "  -R        --inverse-rst  use inverse RESET for the next serial device\n"
-                     "  -C FREQ   --clock=FREQ   use FREQ as clock for the card reader on the next\n"
-                     "                           serial device (rather than 3.5712 MHz\n"
-                     "  -s DEV    --serial=DEV   activate Phoenix ISO interface on serial device DEV\n"
-                     "                           (default: %s)\n"
                      "  -d CMD    --dialup=CMD   call CMD to start/stop dialup-network\n"
                      "                           (default: %s)\n"
                      "  -t SECS   --timeout=SECS shutdown timeout for dialup-network\n"
                      "                           (default: %d secs)\n",
-                     "none","none",netTimeout/1000
+                     "none",netTimeout/1000
                      );
   return help_str;
 }
@@ -1364,10 +1360,10 @@ const char *cScPlugin::CommandLineHelp(void)
 bool cScPlugin::ProcessArgs(int argc, char *argv[])
 {
   static struct option long_options[] = {
-      { "serial",      required_argument, NULL, 's' },
+      { "serial",      optional_argument, NULL, 's' },
       { "inverse-cd",  no_argument,       NULL, 'I' },
       { "inverse-rst", no_argument,       NULL, 'R' },
-      { "clock",       required_argument, NULL, 'C' },
+      { "clock",       optional_argument, NULL, 'C' },
       { "dialup",      required_argument, NULL, 'd' },
       { "external-au", required_argument, NULL, 'E' },
       { "budget",      required_argument, NULL, 'B' },
@@ -1375,14 +1371,12 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
     };
 
   int c, option_index=0;
-  bool invCD=false, invRST=false;
-  int clock=0;
   while((c=getopt_long(argc,argv,"d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
     switch (c) {
-      case 'I': invCD=true; break;
-      case 'R': invRST=true; break;
-      case 'C': clock=atoi(optarg); break;
-      case 's': smartcards.AddPort(optarg,invCD,invRST,clock); invCD=false; invRST=false; clock=0; break;
+      case 'I':
+      case 'R':
+      case 'C':
+      case 's': fprintf(stderr,"smartcard commandline options were removed. use cardslot.conf\n"); return false;
       case 'd': netscript=optarg; break;
       case 't': netTimeout=atoi(optarg)*1000; break;
       case 'E': externalAU=optarg; break;

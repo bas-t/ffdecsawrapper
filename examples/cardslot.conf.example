@@ -1,0 +1,13 @@
+;
+; Comment lines can start with # or ;
+;
+
+; cardslot with phoenix/smartmouse cardreader on serial port
+;
+; dev   - serial device e.g. /dev/ttyS0
+; CD    - card detect 0=normal 1=inverted
+; RST   - card reset  0=normal 1=inverted
+; clock - clock frequency in Hz. If missing or 0, default=3571200
+;
+serial:/dev/ttyS0:0:0
+serial:/dev/ttyS1:1:0:3579545
