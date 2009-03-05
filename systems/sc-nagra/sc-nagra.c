@@ -385,7 +385,7 @@ bool cSmartCardNagra::Init(void)
   bool sessOk=false;
   if(buff[5]!=0 && irdProvId==((buff[10]*256)|buff[11])) { // prepare DT08 data
     cSmartCardDataNagra cd(irdProvId,true);
-    if(!(entry=(cSmartCardDataNagra *)carddatas.Find(&cd))) {
+    if(!(entry=(cSmartCardDataNagra *)smartcards.FindCardData(&cd))) {
       PRINTF(L_GEN_WARN,"didn't find smartcard Nagra IRD modulus");
       }
     else {
@@ -395,7 +395,7 @@ bool cSmartCardNagra::Init(void)
     }
   else {
     cSmartCardDataNagra cd(irdProvId);
-    if(!(entry=(cSmartCardDataNagra *)carddatas.Find(&cd))) {
+    if(!(entry=(cSmartCardDataNagra *)smartcards.FindCardData(&cd))) {
       PRINTF(L_GEN_WARN,"didn't find smartcard Nagra CAM modulus");
       }
     else {

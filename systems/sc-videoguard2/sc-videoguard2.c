@@ -566,7 +566,7 @@ bool cSmartCardVideoGuard2::Init(void)
       }
   if(!boxidOK) {
     cSmartCardDataVideoGuard2 cd(dtBoxId);
-    cSmartCardDataVideoGuard2 *entry=(cSmartCardDataVideoGuard2 *)carddatas.Find(&cd);
+    cSmartCardDataVideoGuard2 *entry=(cSmartCardDataVideoGuard2 *)smartcards.FindCardData(&cd);
     if(entry) {
       memcpy(&boxID,entry->boxid,sizeof(boxID));
       boxidOK=true;
@@ -603,7 +603,7 @@ bool cSmartCardVideoGuard2::Init(void)
   PRINTF(L_SC_INIT,"cardtype: %c%c.%d boxID %s caid %04x cardID %s",atr->hist[10],atr->hist[11],atr->hist[12],HexStr(str,boxID,4),CAID,HexStr(str2,cardID,4));
 
   cSmartCardDataVideoGuard2 cd(dtSeed);
-  cSmartCardDataVideoGuard2 *entry=(cSmartCardDataVideoGuard2 *)carddatas.Find(&cd);
+  cSmartCardDataVideoGuard2 *entry=(cSmartCardDataVideoGuard2 *)smartcards.FindCardData(&cd);
   if(!entry) {
     PRINTF(L_SC_ERROR,"no NDS seed available");
     return false;

@@ -304,7 +304,7 @@ bool cSmartCardCryptoworks::Init(void)
   if(ReadRecord(buff,0x9E)>=66) {
     HEXDUMP(L_SC_EXTRA,&buff[2],64,"card ISK");
     cSmartCardDataCryptoworks cd(dtIPK,Caid);
-    cSmartCardDataCryptoworks *entry=(cSmartCardDataCryptoworks *)carddatas.Find(&cd);
+    cSmartCardDataCryptoworks *entry=(cSmartCardDataCryptoworks *)smartcards.FindCardData(&cd);
     if(entry) {
       PRINTF(L_SC_EXTRA,"got IPK from smartcard.conf");
       if(rsa.RSA(&buff[2],&buff[2],64,exp,entry->key,false)>0) {
@@ -322,7 +322,7 @@ bool cSmartCardCryptoworks::Init(void)
     }
   if(!ucpkValid) {
     cSmartCardDataCryptoworks cd(dtUCPK,serial);
-    cSmartCardDataCryptoworks *entry=(cSmartCardDataCryptoworks *)carddatas.Find(&cd);
+    cSmartCardDataCryptoworks *entry=(cSmartCardDataCryptoworks *)smartcards.FindCardData(&cd);
     if(entry) {
       BN_copy(ucpk,entry->key);
       ucpkValid=true;
@@ -418,7 +418,7 @@ bool cSmartCardCryptoworks::Init(void)
       }
     if(!pinOK) {
       cSmartCardDataCryptoworks cd(dtPIN,serial);
-      cSmartCardDataCryptoworks *entry=(cSmartCardDataCryptoworks *)carddatas.Find(&cd);
+      cSmartCardDataCryptoworks *entry=(cSmartCardDataCryptoworks *)smartcards.FindCardData(&cd);
       if(entry) {
         memcpy(&buff[2],entry->pin,4);
         pinOK=true;

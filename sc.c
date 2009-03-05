@@ -78,7 +78,7 @@
 #endif
 
 // SC API version number for loading shared libraries
-#define SCAPIVERS 21
+#define SCAPIVERS 22
 
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
@@ -1011,17 +1011,12 @@ bool cScSetup::Ignore(unsigned short caid)
 bool cSoftCAM::Load(const char *cfgdir)
 {
   if(!Feature.KeyFile()) keys.Disable();
-  if(!Feature.SmartCard()) {
-    carddatas.Disable();
-    smartcards.Disable();
-    }
+  if(!Feature.SmartCard()) smartcards.Disable();
   cStructLoaders::Load(false);
   if(Feature.KeyFile() && keys.Count()<1)
     PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
   if(!cSystems::Init(cfgdir)) return false;
   srand(time(0));
-  if(Feature.SmartCard())
-    smartcards.LaunchWatcher();
   return true;
 }
 
@@ -1030,7 +1025,6 @@ void cSoftCAM::Shutdown(void)
   cStructLoaders::Save(true);
   cSystems::Clean();
   smartcards.Shutdown();
-  carddatas.SafeClear();
   keys.SafeClear();
 }
 
