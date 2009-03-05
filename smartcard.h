@@ -40,8 +40,8 @@
 
 // ----------------------------------------------------------------
 
-class cSerial;
 class cSmartCards;
+class cSmartCardSlot;
 
 // ----------------------------------------------------------------
 
@@ -71,18 +71,6 @@ public:
   virtual bool Matches(cSmartCardData *cmp)=0;
   int Ident(void) const { return ident; }
   };
-
-// ----------------------------------------------------------------
-
-class cSmartCardDatas : public cStructList<cSmartCardData> {
-protected:
-  virtual cStructItem *ParseLine(char *line);
-public:
-  cSmartCardDatas(void);
-  cSmartCardData *Find(cSmartCardData *param);
-  };
-
-extern cSmartCardDatas carddatas;
 
 // ----------------------------------------------------------------
 
@@ -118,18 +106,14 @@ struct Atr {
   unsigned char hist[MAX_HIST];
   };
 
-class cSmartCard : protected cMutex {
-friend class cSmartCards;
+class cSmartCard : public cMutex {
+friend class cSmartCardSlot;
 private:
-  cSerial *ser;
+  cSmartCardSlot *slot;
+  int slotnum;
   const struct CardConfig *cfg;
   const struct StatusMsg *msg;
-  bool cardUp, needsReset;
-  int id;
-  //
-  int Procedure(unsigned char ins, int restLen);
-  int Read(unsigned char *data, int len, int to=0);
-  int Write(const unsigned char *data, int len);
+  bool cardUp;
 protected:
   const struct Atr *atr;
   unsigned char sb[SB_LEN];
@@ -141,11 +125,8 @@ protected:
   bool IsoRead(const unsigned char *cmd, unsigned char *data);
   bool IsoWrite(const unsigned char *cmd, const unsigned char *data);
   bool Status(void);
-  bool Test(bool res);
   void NewCardConfig(const struct CardConfig *Cfg);
   int CheckSctLen(const unsigned char *data, int off);
-  void TriggerReset(void) { needsReset=true; }
-  static void Invert(unsigned char *data, int n);
 public:
   cSmartCard(const struct CardConfig *Cfg, const struct StatusMsg *Msg);
   virtual ~cSmartCard() {};
@@ -154,37 +135,24 @@ public:
   virtual bool Update(int pid, int caid, const unsigned char *data) { return false; }
   virtual bool CanHandle(unsigned short CaId) { return true; }
   //
-  bool Setup(cSerial *Ser, const struct Atr *Atr, int Id);
-  static bool ParseAtr(struct Atr *atr, int id, int clock);
+  bool Setup(cSmartCardSlot *Slot, int sermode, const struct Atr *Atr);
   bool CardUp(void) { return cardUp; }
-  bool NeedsReset(void) { return needsReset; }
   bool GetCardIdStr(char *str, int len);
   bool GetCardInfoStr(char *str, int len);
   };
 
 // ----------------------------------------------------------------
 
-class cSmartCardSlot : public cStructItem {
-public:
-  cSmartCardSlot(int num);
-  ~cSmartCardSlot();
-  //
-  cSerial *Serial;
-  bool Dead;
-  cSmartCard *Card;
-  int CardId, UseCount, SlotNum, Clock;
-  struct Atr Atr;
-  };
-
-// ----------------------------------------------------------------
-
 class cSmartCardLink {
-public:
+friend class cSmartCards;
+private:
   cSmartCardLink *next;
   const char *name;
   int id;
 public:
   cSmartCardLink(const char *Name, int Id);
+  const char *Name(void) { return name; }
+  int Id(void) { return id; }
   virtual ~cSmartCardLink() {}
   virtual cSmartCard *Create(void)=0;
   virtual cSmartCardData *CreateData(void) { return 0; }
@@ -192,35 +160,23 @@ public:
 
 // ----------------------------------------------------------------
 
-class cSmartCards : private cThread, public cStructListPlain<cSmartCardSlot> {
+class cSmartCards {
 friend class cSmartCardLink;
-friend class cSmartCardDatas;
 private:
   static cSmartCardLink *first;
-  cMutex mutex;
-  cCondVar cond;
-  bool firstRun;
   //
   static void Register(cSmartCardLink *scl);
-  bool CardInserted(cSerial *ser);
-  bool CardReset(cSmartCardSlot *port);
-  int Reset(cSmartCardSlot *port);
-  bool DoPTS(cSmartCardSlot *port);
-  void SetPort(cSmartCardSlot *port, cSmartCard *sc, int id, bool dead);
-  cSmartCardSlot *GetSlot(int num);
-protected:
-  virtual void Action(void);
-  virtual void PreLoad(void);
-  virtual bool ParseLinePlain(const char *line);
 public:
-  cSmartCards(void);
   void Shutdown(void);
+  void Disable(void);
+  static cSmartCardLink *First(void) { return first; }
+  static cSmartCardLink *Next(cSmartCardLink *scl) { return scl->next; }
   // to be called ONLY from a system class!
+  cSmartCardData *FindCardData(cSmartCardData *param);
   bool HaveCard(int id);
   cSmartCard *LockCard(int id);
   void ReleaseCard(cSmartCard *sc);
   // to be called ONLY from frontend thread!
-  void LaunchWatcher(void);
   bool ListCard(int num, char *str, int len);
   bool CardInfo(int num, char *str, int len);
   void CardReset(int num);

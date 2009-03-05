@@ -23,7 +23,7 @@ DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -DSCAPIVERS
 
 OBJS = misc.o log.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
 SHAREDOBJS = compat.o $(VDRDIR)/tools.o $(VDRDIR)/thread.o
-LIBS = -lpthread -ljpeg -lcrypto
+LIBS = -lpthread -lrt -ljpeg -lcrypto
 DYNLIBS = -ldl $(VDRDIR)/libsi/libsi.a
 
 NOBJS  = $(patsubst %.o,../%.o,$(OBJS))

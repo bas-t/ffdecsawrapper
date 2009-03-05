@@ -61,11 +61,6 @@ void InitAll(const char *cfgdir)
   if(Feature.KeyFile() && keys.Count()<1)
     PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
   if(!cSystems::Init(cfgdir)) exit(2);
-
-#ifdef DEFAULT_PORT
-  smartcards.AddPort(DEFAULT_PORT);
-#endif
-  smartcards.LaunchWatcher();
 }
 
 void LogAll(void)

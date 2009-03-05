@@ -11,3 +11,11 @@
 ;
 serial:/dev/ttyS0:0:0
 serial:/dev/ttyS1:1:0:3579545
+
+; emulated smartcard on dummy port. For testing/debugging purpose only!
+; The emulation code has to be enabled with the CARD_EMU define im smartcard.c
+;
+emuseca:
+emucrypto:
+emuirdeto:acs383
+emuirdeto:acs384
