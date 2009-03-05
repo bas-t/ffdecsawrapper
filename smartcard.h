@@ -82,8 +82,9 @@ public:
 #define SM_MASK 0x1F
 #define SM_1SB  0x80
 
-#define SM_DIRECT   0
-#define SM_INDIRECT 1
+#define SM_DIRECT       0
+#define SM_INDIRECT     1
+#define SM_INDIRECT_INV 2
 
 struct CardConfig {
   int SerMode;
@@ -97,7 +98,7 @@ struct StatusMsg {
   };
 
 struct Atr {
-  int T, F, N, WI, BWI, CWI, TA1, Tspec;
+  int T, F, fs, N, WI, BWI, CWI, TA1, Tspec;
   float D;
   int wwt, bwt;
   int atrLen, histLen;

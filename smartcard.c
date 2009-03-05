@@ -402,11 +402,15 @@ int cSmartCardSlot::RawWrite(const unsigned char *data, int len)
 bool cSmartCardSlot::ParseAtr(void)
 {
   // default values
-  atr.histLen=0; atr.T=0; atr.F=372; atr.D=1.0; atr.N=0; atr.WI=10;
+  atr.histLen=0; atr.T=0; atr.F=372; atr.fs=clock; atr.D=1.0; atr.N=0; atr.WI=10;
   atr.BWI=4; atr.CWI=0; atr.Tspec=-1;
 
   static const int Ftable[16] = {
     372,372,558,744,1116,1488,1860,0,0,512,768,1024,1536,2048,0,0
+    };
+  static const int fstable[16] = {
+    3571200,5000000,6000000, 8000000,12000000,16000000,20000000,0,
+          0,5000000,7500000,10000000,15000000,20000000,       0,0
     };
   static const float Dtable[16] = {
     0.0,1.0,2.0,4.0,8.0,16.0,0.0,0.0,
@@ -422,6 +426,10 @@ bool cSmartCardSlot::ParseAtr(void)
   else if(rawatr[0]==0x3B) {
     PRINTF(L_CORE_SC,"%d: direct convention detected",slotnum);
     atr.convention=SM_DIRECT;
+    }
+  else if(rawatr[0]==0x3F) {
+    PRINTF(L_CORE_SC,"%d: inverted indirect convention detected",slotnum);
+    atr.convention=SM_INDIRECT_INV;
     }
   else {
     PRINTF(L_CORE_SC,"%d: byte mode not supported 0x%02x",slotnum,rawatr[0]);
@@ -439,9 +447,10 @@ bool cSmartCardSlot::ParseAtr(void)
       LBPUT("TA%d=%02x ",i,rawatr[len]);
       if(i==1) {
         atr.TA1=rawatr[len];
-        atr.F=Ftable[(rawatr[len]>>4)&0x0F];
-        atr.D=Dtable[ rawatr[len]    &0x0F];
-        LBPUT("F=%d D=%f ",atr.F,atr.D);
+        int i=(rawatr[len]>>4)&0x0F;
+        atr.F=Ftable[i]; atr.fs=fstable[i];
+        atr.D=Dtable[rawatr[len]&0x0F];
+        LBPUT("F=%d fs=%.4f D=%f ",atr.F,atr.fs/1000000.0,atr.D);
         }
       else if(i==2) {
         atr.Tspec=rawatr[len]&0x0F;
@@ -638,13 +647,17 @@ bool cSmartCardSlots::ParseLinePlain(const char *line)
 
 class cSmartCardSlotSerial : public cSmartCardSlot {
 private:
-  char devName[256];
-  int fd;
-  int currMode, statInv, invRST;
+  int statInv, invRST;
   //
-  void Flush(void);
   speed_t FindBaud(int baud);
 protected:
+  char devName[256];
+  int fd;
+  int currMode;
+  //
+  void Flush(void);
+  void SetDtrRts(void);
+  //
   virtual bool DeviceOpen(const char *cfg);
   virtual void DeviceClose(void);
   virtual bool DeviceSetMode(int mode, int baud);
@@ -673,10 +686,7 @@ bool cSmartCardSlotSerial::DeviceOpen(const char *cfg)
     PRINTF(L_CORE_SERIAL,"%s: open serial port",devName);
     fd=open(devName,O_RDWR|O_NONBLOCK|O_NOCTTY);
     if(fd>=0) {
-      PRINTF(L_CORE_SERIAL,"%s: set DTR/RTS",devName);
-      unsigned int modembits;
-      modembits=TIOCM_DTR; CHECK(ioctl(fd, TIOCMBIS, &modembits));
-      modembits=TIOCM_RTS; CHECK(ioctl(fd, invRST?TIOCMBIS:TIOCMBIC, &modembits));
+      SetDtrRts();
       PRINTF(L_CORE_SERIAL,"%s: init done",devName);
       PRINTF(L_CORE_LOAD,"cardslot: added serial port %s as port %d (%s CD, %s RESET, CLOCK %d)",
                 devName,slotnum,invCD?"inverse":"normal",invRST?"inverse":"normal",clock);
@@ -686,6 +696,14 @@ bool cSmartCardSlotSerial::DeviceOpen(const char *cfg)
     }
   else PRINTF(L_GEN_ERROR,"bad parameter for cardslot type 'serial'");
   return false;
+}
+
+void cSmartCardSlotSerial::SetDtrRts(void)
+{
+  PRINTF(L_CORE_SERIAL,"%s: set DTR/RTS",devName);
+  unsigned int modembits;
+  modembits=TIOCM_DTR; CHECK(ioctl(fd, TIOCMBIS, &modembits));
+  modembits=TIOCM_RTS; CHECK(ioctl(fd, invRST?TIOCMBIS:TIOCMBIC, &modembits));
 }
 
 void cSmartCardSlotSerial::DeviceClose(void)
@@ -931,9 +949,117 @@ bool cSmartCardSlotSerial::DeviceIsInserted(void)
   return !(status & TIOCM_CAR);
 }
 
-#ifdef CARD_EMU
+// -- cSmartCardSlotSRPlus -----------------------------------------------------
+
+class cSmartCardSlotSRPlus : public cSmartCardSlotSerial {
+private:
+  bool SRConfig(int F, float D, int fs, int N, int T, int inv);
+protected:
+  virtual bool DeviceOpen(const char *cfg);
+  virtual bool DeviceSetMode(int mode, int baud);
+  virtual bool DevicePTS(void);
+public:
+  cSmartCardSlotSRPlus(void);
+  };
+
+static cSmartCardSlotLinkReg<cSmartCardSlotSRPlus> __scs_srplus("srplus");
+
+cSmartCardSlotSRPlus::cSmartCardSlotSRPlus(void)
+{
+  localecho=false;
+}
+
+bool cSmartCardSlotSRPlus::DeviceOpen(const char *cfg)
+{
+  if(sscanf(cfg,"%255[^:]:%d",devName,&clock)>=1) {
+    if(clock==0) clock=ISO_FREQ;
+    PRINTF(L_CORE_SERIAL,"%s: open serial port",devName);
+    fd=open(devName,O_RDWR|O_NONBLOCK|O_NOCTTY);
+    if(fd>=0) {
+      SetDtrRts();
+      PRINTF(L_CORE_SERIAL,"%s: init done",devName);
+      PRINTF(L_CORE_LOAD,"cardslot: added smartreader+ port %s as port %d (CLOCK %d)",
+                devName,slotnum,clock);
+      return true;
+      }
+    else PRINTF(L_GEN_ERROR,"%s: open failed: %s",devName,strerror(errno));
+    }
+  else PRINTF(L_GEN_ERROR,"bad parameter for cardslot type 'srplus'");
+  return false;
+}
+
+bool cSmartCardSlotSRPlus::DeviceSetMode(int mode, int baud)
+{
+  // Configure SmartReader+ with initial settings, ref ISO 7816 3.1.
+  return baud==ISO_BAUD &&
+         cSmartCardSlotSerial::DeviceSetMode(mode,ISO_BAUD) &&
+         SRConfig(372,0.0,clock,0,0,0);
+}
+
+bool cSmartCardSlotSRPlus::DevicePTS(void)
+{
+  // Configure SmartReader+ with work settings, ref ISO 7816 3.1.
+  int inv=0;
+  if(atr.convention==SM_INDIRECT) atr.convention=SM_INDIRECT_INV;
+  if(atr.convention==SM_INDIRECT_INV) inv=1;
+  // Use ISO work clock frequency unless a fixed frequency is specified.
+  int cl=(clock==ISO_FREQ) ? atr.fs:clock;
+  if(!SRConfig(atr.F,atr.D,cl,atr.N,atr.T,inv)) return false;
+  PRINTF(L_CORE_SERIAL,"%s: SmartReader+ mode %.4f MHz",devName,cl/1000000.0);
+  return true;
+}
+
+bool cSmartCardSlotSRPlus::SRConfig(int F, float D, int fs, int N, int T, int inv)
+{
+  fs/=1000; // convert to kHz.
+  PRINTF(L_CORE_SERIAL,"%s: SR+ options F=%d D=%f fs=%d N=%d T=%d inv=%d",devName,F,D,fs,N,T,inv);
+  // Set SmartReader+ in CMD mode.
+  struct termios term;
+  if(tcgetattr(fd,&term)==-1) {
+    PRINTF(L_GEN_ERROR,"%s: tcgetattr failed: %s",devName,strerror(errno));
+    return false;
+    }
+  term.c_cflag&=~CSIZE;
+  term.c_cflag|=CS5;
+  if(tcsetattr(fd,TCSADRAIN,&term)==-1) {
+    PRINTF(L_GEN_ERROR,"%s: tcsetattr failed: %s",devName,strerror(errno));
+    return false;
+    }
+  // Write SmartReader+ configuration commands.
+  unsigned char cmd[16];
+  //XXX how is (int)D supposed to work for fractional values e.g. 0.125 ??
+  cmd[0]=1; cmd[1]=F>>8; cmd[2]=F; cmd[3]=(int)D;
+  if(DeviceWrite(cmd,4)!=4) return false;
+  cmd[0]=2; cmd[1]=fs>>8; cmd[2]=fs;
+  if(DeviceWrite(cmd,3)!=3) return false;
+  cmd[0]=3; cmd[1]=N;
+  if(DeviceWrite(cmd,2)!=2) return false;
+  cmd[0]=4; cmd[1]=T;
+  if(DeviceWrite(cmd,2)!=2) return false;
+  cmd[0]=5; cmd[1]=inv;
+  if(DeviceWrite(cmd,2)!=2) return false;
+  // Send zero bits for 0.25 - 0.5 seconds.
+  if(tcsendbreak(fd,0)==-1) {
+    PRINTF(L_GEN_ERROR,"%s: tcsendbreak failed: %s",devName,strerror(errno));
+    return false;
+    }
+  // We're entering SmartReader+ mode; speed up serial communication.
+  // B3000000 is the highest setting that sticks.
+  cfsetispeed(&term,B3000000);
+  cfsetospeed(&term,B3000000);
+  // Set SmartReader+ in DATA mode.
+  term.c_cflag&=~CSIZE;
+  term.c_cflag|=CS8;
+  if(tcsetattr(fd,TCSADRAIN,&term)==-1) {
+    PRINTF(L_GEN_ERROR,"%s: tcsetattr failed: %s",devName,strerror(errno));
+    return false;
+    }
+  return true;
+}
 
 // -- cSmartCardSlotEmuGeneric -------------------------------------------------
+
+#ifdef CARD_EMU
 
 #define PUSH(mem,len) { memcpy(devBuff+buffCount,(mem),(len)); buffCount+=(len); }
 #define PUSHB(b)      { devBuff[buffCount++]=(b); }
