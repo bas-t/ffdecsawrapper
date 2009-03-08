@@ -27,6 +27,20 @@ serial:/dev/ttyS1:1:0:3579545
 srplus:/dev/ttyS0
 srplus:/dev/ttyS1:6000000
 
+; cardslot talking to PCSCd using CCID protocol for communication
+;
+; ccid:dev
+;
+; dev   - serial device e.g. /dev/ttyS0
+;
+; For using this cardslot type, you must have installed pcsd-lite and ccid
+; driver package. Before compiling you should add something like this to your
+; Make.config file:
+; WITH_PCSC = 1
+; INCLUDES += /usr/include/PCSC
+;
+ccid:/dev/usb0
+
 ; emulated smartcard on dummy port. For testing/debugging purpose only!
 ; The emulation code has to be enabled with the CARD_EMU define im smartcard.c
 ;
