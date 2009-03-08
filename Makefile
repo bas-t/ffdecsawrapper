@@ -115,6 +115,11 @@ ifdef DEFAULT_PORT
   $(error DEFAULT_PORT support was removed, use cardslot.conf)
 endif
 
+ifdef WITH_PCSC
+  DEFINES  += -DWITH_PCSC
+  LIBS     += -lpcsclite
+endif
+
 # max number of CAIDs per slot
 MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(VDRDIR)/ci.c)
 ifneq ($(strip $(MAXCAID)),)
