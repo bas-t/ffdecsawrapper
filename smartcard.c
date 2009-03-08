@@ -47,7 +47,7 @@ class cSmartCardSlot : private cThread, public cStructItem {
 private:
   cSmartCard *card;
   int usecount, cardid;
-  bool firstRun, needsReset, dead, ready;
+  bool firstRun, needsReset, dead;
   cMutex mutex;
   cCondVar cond;
   //
@@ -62,26 +62,31 @@ protected:
   virtual void DeviceToggleReset(void)=0;
   virtual bool DevicePTS(void)=0;
   virtual bool DeviceIsInserted(void)=0;
-  virtual int DeviceCurrentMode(void)=0;
+  virtual int DeviceCurrentMode(void) { return currMode; }
   //
   virtual void Action(void);
-  // possibly virtual
-  bool Reset(void);
   //
   int Procedure(unsigned char ins, int restLen);
   int Read(unsigned char *data, int len, int to=0);
   int Write(const unsigned char *data, int len);
   bool Test(bool res);
   void Invert(unsigned char *data, int n);
+  virtual bool Reset(void);
   bool ParseAtr(void);
   //
   int slotnum, clock;
+  const struct CardConfig *cfg;
+  unsigned char sb[SB_LEN];
   struct Atr atr;
   bool localecho;
+  //
+  char devName[256];
+  int currMode;
 public:
   cSmartCardSlot(void);
   virtual ~cSmartCardSlot();
   bool Setup(int num, const char *cfg);
+  void SetCardConfig(const struct CardConfig *Cfg) { cfg=Cfg; }
   void TriggerReset(void) { needsReset=true; }
   bool HaveCard(int id);
   cSmartCard *LockCard(int id);
@@ -89,19 +94,19 @@ public:
   void GetCardIdStr(char *str, int len);
   bool GetCardInfoStr(char *str, int len);
   int SlotNum(void) { return slotnum; }
-  // possibly virtual
-  bool IsoRead(const unsigned char *cmd, unsigned char *data);
-  bool IsoWrite(const unsigned char *cmd, const unsigned char *data);
-  int RawRead(unsigned char *data, int len, int to=0);
-  int RawWrite(const unsigned char *data, int len);
+  //
+  virtual bool IsoRead(const unsigned char *cmd, unsigned char *data);
+  virtual bool IsoWrite(const unsigned char *cmd, const unsigned char *data);
+  virtual int RawRead(unsigned char *data, int len, int to=0);
+  virtual int RawWrite(const unsigned char *data, int len);
   };
 
 static const char *serModes[] = { 0,"8e2","8o2","8n2" };
 
 cSmartCardSlot::cSmartCardSlot(void)
 {
-  card=0; usecount=0; slotnum=-1; clock=ISO_FREQ;
-  firstRun=true; needsReset=false; dead=false; ready=false; localecho=true;
+  card=0; cfg=0; usecount=0; slotnum=-1; currMode=SM_NONE; clock=ISO_FREQ;
+  firstRun=true; needsReset=false; dead=false; localecho=true;
 }
 
 cSmartCardSlot::~cSmartCardSlot()
@@ -127,14 +132,14 @@ bool cSmartCardSlot::HaveCard(int id)
 {
   cMutexLock lock(&mutex);
   while(Running() && firstRun) cond.Wait(mutex);
-  return ready && card && cardid==id;
+  return card && cardid==id;
 }
 
 cSmartCard *cSmartCardSlot::LockCard(int id)
 {
   mutex.Lock();
   while(Running() && firstRun) cond.Wait(mutex);
-  if(ready && card && cardid==id) {
+  if(card && cardid==id) {
     usecount++;
     mutex.Unlock();
     card->Lock();
@@ -163,7 +168,7 @@ void cSmartCardSlot::ReleaseCard(cSmartCard *sc)
 void cSmartCardSlot::GetCardIdStr(char *str, int len)
 {
   mutex.Lock();
-  if(ready && card && !card->GetCardIdStr(str,len)) {
+  if(card && !card->GetCardIdStr(str,len)) {
     for(cSmartCardLink *scl=smartcards.First(); scl; smartcards.Next(scl)) {
       if(scl->Id()==cardid) {
         strn0cpy(str,scl->Name(),len);
@@ -178,7 +183,7 @@ bool cSmartCardSlot::GetCardInfoStr(char *str, int len)
 {
   mutex.Lock();
   bool res=false;
-  if(ready && card) res=card->GetCardInfoStr(str,len);
+  if(card) res=card->GetCardInfoStr(str,len);
   mutex.Unlock();
   return res;
 }
@@ -187,8 +192,8 @@ void cSmartCardSlot::SetCard(cSmartCard *c, int cid)
 {
   mutex.Lock();
   while(usecount) cond.Wait(mutex);
-  if(card!=c) delete card;
-  card=c; cardid=cid; ready=(card!=0); needsReset=dead=false;
+  delete card;
+  card=c; cardid=cid; needsReset=dead=false;
   mutex.Unlock();
 }
 
@@ -207,7 +212,7 @@ void cSmartCardSlot::Action(void)
         int mode=DeviceCurrentMode()&SM_MASK;
         if(!DeviceSetMode(mode,ISO_BAUD)
             || !CardReset()
-            || !card->Setup(this,mode,&atr)) {
+            || !card->Setup(this,mode,&atr,sb)) {
           card->Unlock();
           PRINTF(L_CORE_SC,"%d: card re-init failed",slotnum);
           SetCard(0); dead=true;
@@ -224,12 +229,12 @@ void cSmartCardSlot::Action(void)
               for(cSmartCardLink *scl=smartcards.First(); scl; scl=smartcards.Next(scl)) {
                 if(!Running()) goto done;
                 PRINTF(L_CORE_SC,"%d: checking for %s card",slotnum,scl->Name());
-                card=scl->Create();
-                if(card && card->Setup(this,mode,&atr)) {
-                  SetCard(card,scl->Id());
+                cSmartCard *sc=scl->Create();
+                if(sc && sc->Setup(this,mode,&atr,sb)) {
+                  SetCard(sc,scl->Id());
                   goto done; // ugly, any better solution?
                   }
-                delete card; card=0;
+                delete sc;
                 }
               PRINTF(L_CORE_SC,"%d: no card handler found",slotnum);
               }
@@ -287,7 +292,7 @@ void cSmartCardSlot::Invert(unsigned char *data, int n)
 
 int cSmartCardSlot::Read(unsigned char *data, int len, int to)
 {
-  int r=DeviceRead(data,len,card->cfg->serTO,to);
+  int r=DeviceRead(data,len,cfg->serTO,to);
   if(atr.convention==SM_INDIRECT && r>0) Invert(data,r);
   return r;
 }
@@ -300,10 +305,10 @@ int cSmartCardSlot::Write(const unsigned char *data, int len)
     Invert(tmp,len);
     data=tmp;
     }
-  int r=DeviceWrite(data,len,card->cfg->serDL);
+  int r=DeviceWrite(data,len,cfg->serDL);
   if(r>0 && localecho) {
     unsigned char *buff=AUTOMEM(r);
-    int rr=DeviceRead(buff,r,card->cfg->serTO);
+    int rr=DeviceRead(buff,r,cfg->serTO);
     if(rr<0) r=rr;
     }
   return r;
@@ -317,15 +322,15 @@ int cSmartCardSlot::Procedure(unsigned char ins, int restLen)
   LBPUT("%d: <- PROC: ",slotnum);
   do {
     do {
-      if(Read(&buff,1,card->cfg->workTO)<=0) return -1;
+      if(Read(&buff,1,cfg->workTO)<=0) return -1;
       LBPUT("%02x ",buff);
       } while(buff==0x60);
 
     if((buff&0xF0)==0x60 || (buff&0xF0)==0x90) { // SW1/SW2
-      card->sb[0]=buff;
+      sb[0]=buff;
       if(Read(&buff,1)<=0) return -1;
       LBPUT("%02x",buff);
-      card->sb[1]=buff;
+      sb[1]=buff;
       return 0;
       }
     else {
@@ -651,9 +656,7 @@ private:
   //
   speed_t FindBaud(int baud);
 protected:
-  char devName[256];
   int fd;
-  int currMode;
   //
   void Flush(void);
   void SetDtrRts(void);
@@ -666,7 +669,6 @@ protected:
   virtual void DeviceToggleReset(void);
   virtual bool DevicePTS(void);
   virtual bool DeviceIsInserted(void);
-  virtual int DeviceCurrentMode(void) { return currMode; }
 public:
   cSmartCardSlotSerial(void);
   };
@@ -675,7 +677,7 @@ static cSmartCardSlotLinkReg<cSmartCardSlotSerial> __scs_serial("serial");
 
 cSmartCardSlotSerial::cSmartCardSlotSerial(void)
 {
-  fd=-1; statInv=0; invRST=false; currMode=SM_NONE;
+  fd=-1; statInv=0; invRST=false;
 }
 
 bool cSmartCardSlotSerial::DeviceOpen(const char *cfg)
@@ -1065,10 +1067,7 @@ bool cSmartCardSlotSRPlus::SRConfig(int F, float D, int fs, int N, int T, int in
 #define PUSHB(b)      { devBuff[buffCount++]=(b); }
 
 class cSmartCardSlotEmuGeneric : public cSmartCardSlot {
-private:
-  int currMode;
 protected:
-  char devName[256];
   unsigned char devBuff[1024], nextSW[SB_LEN];
   int buffCount, dataLen, record;
   bool cmdStart, rts, dsr, flag;
@@ -1081,18 +1080,10 @@ protected:
   virtual void DeviceToggleReset(void);
   virtual bool DevicePTS(void);
   virtual bool DeviceIsInserted(void);
-  virtual int DeviceCurrentMode(void) { return currMode; }
   //
   virtual void EmuPushAtr(void)=0;
   void Flush(void);
-public:
-  cSmartCardSlotEmuGeneric(void);
   };
-
-cSmartCardSlotEmuGeneric::cSmartCardSlotEmuGeneric(void)
-{
-  currMode=SM_NONE;
-}
 
 bool cSmartCardSlotEmuGeneric::DeviceOpen(const char *cfg)
 {
@@ -1647,13 +1638,14 @@ cStructItem *cSmartCardDatas::ParseLine(char *line)
 cSmartCard::cSmartCard(const struct CardConfig *Cfg, const struct StatusMsg *Msg)
 {
   msg=Msg;
-  slot=0; atr=0; idStr[0]=0; cardUp=false;
+  slot=0; sb=0; atr=0; idStr[0]=0; cardUp=false;
   NewCardConfig(Cfg);
 }
 
 void cSmartCard::NewCardConfig(const struct CardConfig *Cfg)
 {
   cfg=Cfg;
+  if(slot) slot->SetCardConfig(cfg);
 }
 
 bool cSmartCard::GetCardIdStr(char *str, int len)
@@ -1667,9 +1659,10 @@ bool cSmartCard::GetCardInfoStr(char *str, int len)
   return infoStr.Get(str,len);
 }
 
-bool cSmartCard::Setup(cSmartCardSlot *Slot, int sermode, const struct Atr *Atr)
+bool cSmartCard::Setup(cSmartCardSlot *Slot, int sermode, const struct Atr *Atr, unsigned char *Sb)
 {
-  slot=Slot; atr=Atr; slotnum=slot->SlotNum();
+  slot=Slot; atr=Atr; sb=Sb;
+  slotnum=slot->SlotNum(); slot->SetCardConfig(cfg);
   cardUp=false;
   if(cfg->SerMode==sermode && Init()) cardUp=true;
   return cardUp;
