@@ -108,7 +108,6 @@ struct Atr {
   };
 
 class cSmartCard : public cMutex {
-friend class cSmartCardSlot;
 private:
   cSmartCardSlot *slot;
   int slotnum;
@@ -117,7 +116,7 @@ private:
   bool cardUp;
 protected:
   const struct Atr *atr;
-  unsigned char sb[SB_LEN];
+  unsigned char *sb;
   char idStr[IDSTR_LEN];
   cInfoStr infoStr;
   //
@@ -136,7 +135,7 @@ public:
   virtual bool Update(int pid, int caid, const unsigned char *data) { return false; }
   virtual bool CanHandle(unsigned short CaId) { return true; }
   //
-  bool Setup(cSmartCardSlot *Slot, int sermode, const struct Atr *Atr);
+  bool Setup(cSmartCardSlot *Slot, int sermode, const struct Atr *Atr, unsigned char *Sb);
   bool CardUp(void) { return cardUp; }
   bool GetCardIdStr(char *str, int len);
   bool GetCardInfoStr(char *str, int len);
