@@ -37,7 +37,7 @@ srplus:/dev/ttyS1:6000000
 ; driver package. Before compiling you should add something like this to your
 ; Make.config file:
 ; WITH_PCSC = 1
-; INCLUDES += /usr/include/PCSC
+; INCLUDES += -I/usr/include/PCSC
 ;
 ccid:/dev/usb0
 
