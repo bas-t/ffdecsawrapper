@@ -547,7 +547,23 @@ bool cSmartCardSlot::ParseAtr(void)
 
 #undef NEED
 
-// -- cSmartCardSlots ----------------------------------------------------------
+// -- cSmartCardSlots / cSmartCardSlotLink -------------------------------------
+
+class cSmartCardSlotLink {
+public:
+  cSmartCardSlotLink *next;
+  const char *name;
+public:
+  cSmartCardSlotLink(const char *Name);
+  virtual ~cSmartCardSlotLink() {}
+  virtual cSmartCardSlot *Create(void)=0;
+  };
+
+template<class LL> class cSmartCardSlotLinkReg : public cSmartCardSlotLink {
+public:
+  cSmartCardSlotLinkReg(const char *Name):cSmartCardSlotLink(Name) {}
+  virtual cSmartCardSlot *Create(void) { return new LL; }
+  };
 
 class cSmartCardSlots : public cStructListPlain<cSmartCardSlot> {
 friend class cSmartCardSlotLink;
@@ -568,31 +584,11 @@ cSmartCardSlotLink *cSmartCardSlots::first=0;
 
 static cSmartCardSlots cardslots;
 
-// -- cSmartCardSlotLink -------------------------------------------------------
-
-class cSmartCardSlotLink {
-public:
-  cSmartCardSlotLink *next;
-  const char *name;
-public:
-  cSmartCardSlotLink(const char *Name);
-  virtual ~cSmartCardSlotLink() {}
-  virtual cSmartCardSlot *Create(void)=0;
-  };
-
-template<class LL> class cSmartCardSlotLinkReg : public cSmartCardSlotLink {
-public:
-  cSmartCardSlotLinkReg(const char *Name):cSmartCardSlotLink(Name) {}
-  virtual cSmartCardSlot *Create(void) { return new LL; }
-  };
-
 cSmartCardSlotLink::cSmartCardSlotLink(const char *Name)
 {
   name=Name;
   cSmartCardSlots::Register(this);
 }
-
-// -- cSmartCardSlots ----------------------------------------------------------
 
 cSmartCardSlots::cSmartCardSlots(void)
 :cStructListPlain<cSmartCardSlot>("cardslot config","cardslot.conf",SL_MISSINGOK|SL_VERBOSE|SL_NOPURGE)
