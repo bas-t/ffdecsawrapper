@@ -1076,7 +1076,7 @@ protected:
   virtual int DeviceRead(unsigned char *mem, int len, int timeout, int initialTimeout=0) { return -1; }
   virtual int DeviceWrite(const unsigned char *mem, int len, int delay=0) { return -1; }
   virtual void DeviceToggleReset(void) {}
-  virtual bool DevicePTS(void) { return false; }
+  virtual bool DevicePTS(void) { return true; }
   virtual bool DeviceIsInserted(void);
   //
   virtual bool Reset(void);
