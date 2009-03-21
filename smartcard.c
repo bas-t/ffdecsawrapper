@@ -1093,7 +1093,7 @@ bool cSmartCardSlotCCID::DeviceOpen(const char *cfg)
 {
   if(sscanf(cfg,"%255[^:]",devName)==1) {
     LONG rv=SCardEstablishContext(SCARD_SCOPE_SYSTEM,NULL,NULL,&hContext);
-    PRINTF(L_CORE_SC,"%s: establish Context: %ld:%s",devName,rv,pcsc_stringify_error(rv));
+    PRINTF(L_CORE_SC,"%s: establish context: %ld:%s",devName,rv,pcsc_stringify_error(rv));
     DWORD protocol=SCARD_PROTOCOL_T0|SCARD_PROTOCOL_T1;
     rv=SCardConnect(hContext,devName,SCARD_SHARE_SHARED,protocol,&hCard,&dwActiveProtocol);
     dwProtocol=dwActiveProtocol;
