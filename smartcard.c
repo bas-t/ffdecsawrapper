@@ -78,7 +78,7 @@ protected:
   const struct CardConfig *cfg;
   unsigned char sb[SB_LEN];
   struct Atr atr;
-  bool localecho;
+  bool localecho, singlereset;
   //
   char devName[256];
   int currMode;
@@ -106,7 +106,8 @@ static const char *serModes[] = { 0,"8e2","8o2","8n2" };
 cSmartCardSlot::cSmartCardSlot(void)
 {
   card=0; cfg=0; usecount=0; slotnum=-1; currMode=SM_NONE; clock=ISO_FREQ;
-  firstRun=true; needsReset=false; dead=false; localecho=true;
+  firstRun=true; needsReset=false; dead=false;
+  localecho=true; singlereset=false;
 }
 
 cSmartCardSlot::~cSmartCardSlot()
@@ -223,9 +224,10 @@ void cSmartCardSlot::Action(void)
     else if(DeviceIsInserted()) {
       if(!dead) {
         PRINTF(L_CORE_SC,"%d: new card inserted",slotnum);
+        bool resetdone=false;
         for(int mode=SM_NONE+1 ; mode<SM_MAX ; mode++) {
           if(DeviceSetMode(mode,ISO_BAUD)) {
-            if(CardReset()) {
+            if((singlereset && resetdone) || (resetdone=CardReset())) {
               for(cSmartCardLink *scl=smartcards.First(); scl; scl=smartcards.Next(scl)) {
                 if(!Running()) goto done;
                 PRINTF(L_CORE_SC,"%d: checking for %s card",slotnum,scl->Name());
@@ -1080,6 +1082,7 @@ protected:
   //
   virtual bool Reset(void);
 public:
+  cSmartCardSlotCCID(void);
   virtual bool IsoRead(const unsigned char *cmd, unsigned char *data);
   virtual bool IsoWrite(const unsigned char *cmd, const unsigned char *data);
   virtual int RawRead(unsigned char *data, int len, int to=0) { return -1; }
@@ -1087,6 +1090,11 @@ public:
   };
 
 static cSmartCardSlotLinkReg<cSmartCardSlotCCID> __scs_ccid("ccid");
+
+cSmartCardSlotCCID::cSmartCardSlotCCID(void)
+{
+  singlereset=true;
+}
 
 bool cSmartCardSlotCCID::DeviceOpen(const char *cfg)
 {
