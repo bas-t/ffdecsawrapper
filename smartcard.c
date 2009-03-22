@@ -1064,8 +1064,7 @@ class cSmartCardSlotCCID : public cSmartCardSlot {
 private:
   SCARDCONTEXT hContext;
   SCARDHANDLE hCard;
-  DWORD dwActiveProtocol, dwProtocol;
-  DWORD dwState, dwReaderLen;
+  DWORD dwProtocol;
   bool needsReOpen;
   //
   int Transmit(const unsigned char *request, int requestlen, unsigned char *answer, int answerlen);
@@ -1091,15 +1090,18 @@ static cSmartCardSlotLinkReg<cSmartCardSlotCCID> __scs_ccid("ccid");
 
 bool cSmartCardSlotCCID::DeviceOpen(const char *cfg)
 {
-  if(sscanf(cfg,"%255[^:]",devName)==1) {
+  if(!cfg || sscanf(cfg,"%255[^:]",devName)==1) {
     LONG rv=SCardEstablishContext(SCARD_SCOPE_SYSTEM,NULL,NULL,&hContext);
-    PRINTF(L_CORE_SC,"%s: establish context: %ld:%s",devName,rv,pcsc_stringify_error(rv));
-    DWORD protocol=SCARD_PROTOCOL_T0|SCARD_PROTOCOL_T1;
-    rv=SCardConnect(hContext,devName,SCARD_SHARE_SHARED,protocol,&hCard,&dwActiveProtocol);
-    dwProtocol=dwActiveProtocol;
-    PRINTF(L_CORE_SC,"%s: connect: %ld:%s",devName,rv,pcsc_stringify_error(rv));
-    needsReOpen=false;
-    return true;
+    PRINTF(L_CORE_SC,"%d: establish context: %lx:%s",slotnum,rv,pcsc_stringify_error(rv));
+    if(rv==SCARD_S_SUCCESS) {
+      DWORD protocol=SCARD_PROTOCOL_T0|SCARD_PROTOCOL_T1;
+      rv=SCardConnect(hContext,devName,SCARD_SHARE_SHARED,protocol,&hCard,&dwProtocol);
+      PRINTF(L_CORE_SC,"%d: connect '%s': %lx:%s",slotnum,devName,rv,pcsc_stringify_error(rv));
+      if(rv==SCARD_S_SUCCESS) {
+        needsReOpen=false;
+        return true;
+        }
+      }
     }
   else PRINTF(L_GEN_ERROR,"bad parameter for cardslot type 'ccid'");
   return false;
@@ -1120,7 +1122,7 @@ bool cSmartCardSlotCCID::DeviceSetMode(int mode, int baud)
 bool cSmartCardSlotCCID::DeviceIsInserted(void)
 {
   BYTE pbAtr[MAX_ATR_SIZE];
-  DWORD dwAtrLen=sizeof(pbAtr);
+  DWORD dwState, dwReaderLen=0, dwAtrLen=sizeof(pbAtr);
   LONG rv=SCardStatus(hCard,NULL,&dwReaderLen,&dwState,&dwProtocol,pbAtr,&dwAtrLen);
   if(rv==SCARD_S_SUCCESS && (dwState&SCARD_NEGOTIABLE)) return true;
   needsReOpen=true;
@@ -1131,12 +1133,13 @@ bool cSmartCardSlotCCID::Reset(void)
 {
   PRINTF(L_CORE_SC,"%d: reseting card (sermode %s)",slotnum,serModes[DeviceCurrentMode()]);
   if(needsReOpen) { DeviceClose(); DeviceOpen(0); }
-  LONG rv=SCardReconnect(hCard,SCARD_SHARE_EXCLUSIVE,dwProtocol,SCARD_RESET_CARD,&dwActiveProtocol);
+  DWORD protocol=dwProtocol;
+  LONG rv=SCardReconnect(hCard,SCARD_SHARE_EXCLUSIVE,protocol,SCARD_RESET_CARD,&dwProtocol);
   if(rv!=SCARD_S_SUCCESS) {
     PRINTF(L_CORE_SC,"%d: reset failed: %lx:%sn",slotnum,rv,pcsc_stringify_error(rv));
     return false;
     }
-  DWORD dwAtrLen=sizeof(atr.atr);
+  DWORD dwState, dwReaderLen=0, dwAtrLen=sizeof(atr.atr);
   rv=SCardStatus(hCard,NULL,&dwReaderLen,&dwState,&dwProtocol,atr.atr,&dwAtrLen);
   if(rv==SCARD_S_SUCCESS) {
     atr.atrLen=dwAtrLen;
@@ -1149,7 +1152,7 @@ bool cSmartCardSlotCCID::Reset(void)
 int cSmartCardSlotCCID::Transmit(const unsigned char *request, int requestlen, unsigned char *answer, int answerlen)
 {
   SCARD_IO_REQUEST pioRecvPci, pioSendPci;
-  switch (dwProtocol) {
+  switch(dwProtocol) {
     case SCARD_PROTOCOL_T0:
     case SCARD_PROTOCOL_T1:
       	pioSendPci.dwProtocol=dwProtocol;
@@ -1164,7 +1167,7 @@ int cSmartCardSlotCCID::Transmit(const unsigned char *request, int requestlen, u
   DWORD answlen=answerlen;
   DWORD rv=SCardTransmit(hCard,&pioSendPci,(LPCBYTE)request,(DWORD)requestlen,&pioRecvPci,(LPBYTE)answer,&answlen);
   if(rv!=SCARD_S_SUCCESS) {
-     PRINTF(L_CORE_SC, "%d: transmit failed: %0lx:%s\n",slotnum,rv,pcsc_stringify_error(rv));
+     PRINTF(L_CORE_SC, "%d: transmit failed: %lx:%s\n",slotnum,rv,pcsc_stringify_error(rv));
      return -1;
      }
   return answlen;
