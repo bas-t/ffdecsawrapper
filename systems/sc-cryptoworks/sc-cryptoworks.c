@@ -426,14 +426,16 @@ bool cSmartCardCryptoworks::Init(void)
         }
       }
     if(pinOK) {
-      static const unsigned char ins24[] = { 0xA4,0x24,0x00,0x01,0x05 };
+      //static const unsigned char ins[] = { 0xA4,0x24,0x00,0x01,0x05 };
+      static const unsigned char ins[] = { 0xA4,0x20,0x00,0x00,0x04 }; // verify PIN
+      //static const unsigned char ins[] = { 0xA4,0x26,0x00,0x00,0x04 }; // disable PIN
       PRINTF(L_SC_INIT,"your card PIN is %.4s",&buff[2]);
       // parental rating
       // 0x00      - undefined
       // 0x01-0x0f - minimum age=rating+3 years
       // 0x10-0xff - reserved for provider usage
       buff[6]=0;
-      if(IsoWrite(ins24,&buff[2]) && Status())
+      if(IsoWrite(ins,&buff[2]) && Status())
         PRINTF(L_SC_INIT,"parental rating set to %02x",buff[6]);
       else
         PRINTF(L_SC_ERROR,"failed to set parental rating.");
