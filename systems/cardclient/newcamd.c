@@ -32,7 +32,7 @@
 
 #include <openssl/des.h>
 
-#define CWS_NETMSGSIZE 240
+#define CWS_NETMSGSIZE 256
 
 // -- cTripleDes ---------------------------------------------------------------
 
