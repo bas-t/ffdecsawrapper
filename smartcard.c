@@ -651,6 +651,7 @@ bool cSmartCardSlots::ParseLinePlain(const char *line)
 class cSmartCardSlotSerial : public cSmartCardSlot {
 private:
   int statInv, invRST;
+  bool custombaud;
   //
   speed_t FindBaud(int baud);
 protected:
@@ -675,7 +676,7 @@ static cSmartCardSlotLinkReg<cSmartCardSlotSerial> __scs_serial("serial");
 
 cSmartCardSlotSerial::cSmartCardSlotSerial(void)
 {
-  fd=-1; statInv=0; invRST=false;
+  fd=-1; statInv=0; invRST=false; custombaud=false;
 }
 
 bool cSmartCardSlotSerial::DeviceOpen(const char *cfg)
@@ -777,8 +778,12 @@ bool cSmartCardSlotSerial::DeviceSetMode(int mode, int baud)
 
     struct serial_struct s;
     if(ioctl(fd,TIOCGSERIAL,&s)<0) {
-      PRINTF(L_GEN_ERROR,"%s: get serial failed: %s",devName,strerror(errno));
-      return false;
+      if(custom || custombaud) {
+        PRINTF(L_GEN_ERROR,"%s: get serial failed: %s",devName,strerror(errno));
+        return false;
+        }
+      PRINTF(L_CORE_SERIAL,"%s: get serial failed: %s",devName,strerror(errno));
+      PRINTF(L_CORE_SERIAL,"%s: custombaud not used, try to continue...",devName);
       }
     if(!custom && ((s.flags&ASYNC_SPD_MASK)==ASYNC_SPD_CUST || s.custom_divisor!=0)) {
       s.custom_divisor=0;
@@ -787,6 +792,7 @@ bool cSmartCardSlotSerial::DeviceSetMode(int mode, int baud)
         PRINTF(L_GEN_ERROR,"%s: set serial failed: %s",devName,strerror(errno));
         return false;
         }
+      custombaud=false;
       }
     if(!tcsetattr(fd,TCSANOW,&tio)) {
       if(custom) {
@@ -797,6 +803,7 @@ bool cSmartCardSlotSerial::DeviceSetMode(int mode, int baud)
           PRINTF(L_GEN_ERROR,"%s: set serial failed: %s",devName,strerror(errno));
           return false;
           }
+        custombaud=true;
         }
       currMode=mode; Flush();
       return true;
