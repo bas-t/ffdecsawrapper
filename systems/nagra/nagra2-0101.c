@@ -190,6 +190,14 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       cycles=898;
       break;
     case 0x22:
+// START INCOMPLETE FIX
+      BN_zero(B);
+      BN_set_bit(B,80);
+      AddMapCycles(644);
+      BN_zero(B);
+      BN_set_bit(B,96);
+      AddMapCycles(76);
+// END INCOMPLETE FIX
       if(BN_is_zero(D)) { cycles=639-6; break; }
       l&=0x1fff;
       BN_one(B);
@@ -230,6 +238,27 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       BN_zero(C);
       break;
       }
+    case 0x2e:
+// START INCOMPLETE FIX
+      BN_rshift(H,H,64);
+      BN_lshift(H,H,64);
+      BN_add(H,J,H);
+      BN_rshift(H,H,16);
+      BN_copy(J,H);
+      BN_mask_bits(J,64);
+// END INCOMPLETE FIX
+      break;
+    case 0x2F:
+// START INCOMPLETE FIX
+      H.GetLE(data,16);
+      BN_rshift(H,H,64);
+      BN_lshift(H,H,64);
+      BN_add(H,H,J);
+      BN_rshift(J,H,8);
+      BN_mask_bits(J,64);
+      cycles = 808;
+// END INCOMPLETE FIX
+      break;
     case 0x30:
     case 0x31:
       BN_sqr(D,B,ctx);
@@ -259,6 +288,15 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       AddMapCycles(102);
       MonFin(B,D);
       break;
+    case 0x3a:
+// START INCOMPLETE FIX (this map is normaly in nagra2.c)
+      AddMapCycles(192);
+      IMonInit();
+      MonMul(B,A,B);
+      //MonMul(B,A,B);
+      BN_zero(B);
+// END INCOMPLETE FIX
+      break;
     case 0x3b:
       AddMapCycles(441);
       IMakeJ();
@@ -267,6 +305,13 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       I.GetLE(data,l<<3);
       MonMul(B,I,B,l);
       cycles=tim3b[wordsize-1][l-1]-6;
+      break;
+    case 0x3d:
+// START INCOMPLETE FIX
+      D.GetLE(data,l<<3);
+      MakeJ0(J,D,C);
+      MonMul0(C,B,B,C,D,J,0);
+// END INCOMPLETE FIX
       break;
     case 0x3c:
     case 0x3e:
@@ -297,6 +342,16 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       for(int i=0; i<sbits; ++i) if(BN_is_bit_set(scalar,i)) cycles+=88;
       break;
       }
+    case 0x46:
+// START INCOMPLETE FIX
+      IMakeJ();
+      BN_zero(I);
+      BN_set_bit(I,136);
+      BN_mod(B,I,D,ctx);
+      MonMul0(B,B,B,C,D,J,0);
+      MonMul0(B,B,B,C,D,J,0);
+// END INCOMPLETE FIX
+      break;
     case 0x4d:
       if(-0x018000==l)
         BN_mask_bits(B,64);
@@ -646,9 +701,12 @@ bool cN2Prov0101::ProcessMap(int f)
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,Get(0x48));
       break;
+    case 0x2e:
+    case 0x2f:
     case 0x32:
     case 0x39:
     case 0x3b:
+    case 0x3d:
       GetMem(HILO(0x44),tmp,dl,0);
       DoMap(f,tmp,l);
       break;
@@ -669,6 +727,10 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,tmp,l);
       SetMem(0x440,tmp,20,0);
       break; 
+    case 0x46:
+      GetMem(HILO(0x44),tmp,8,0);
+      DoMap(f,tmp,l);
+      break;
     case 0x4d:
       DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
       SetMem(0x400,tmp,53,0);

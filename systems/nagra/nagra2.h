@@ -91,7 +91,7 @@ private:
   int words;
 protected:
   int wordsize;
-  cMapReg A, B, C, D, J, I;
+  cMapReg A, B, C, D, J, I, H;
   cBNctx ctx;
   SHA_CTX sctx;
   // stateless
