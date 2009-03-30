@@ -593,7 +593,7 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f,0,Get(0x48));
       break;
     case IMPORT_J:
-      l=8; dl=8<<3;
+      l=1; dl=1<<3;
       // fall throught
     case IMPORT_A:
     case IMPORT_B:
@@ -604,7 +604,7 @@ bool cN2Prov0101::ProcessMap(int f)
       GetMem(addr,tmp,dl,0); DoMap(f,tmp,l);
       break;
     case EXPORT_J:
-      l=8; dl=8<<3;
+      l=1; dl=1<<3;
       // fall throught
     case EXPORT_A:
     case EXPORT_B:
