@@ -785,7 +785,7 @@ bool cSmartCardSlotSerial::DeviceSetMode(int mode, int baud)
       PRINTF(L_CORE_SERIAL,"%s: get serial failed: %s",devName,strerror(errno));
       PRINTF(L_CORE_SERIAL,"%s: custombaud not used, try to continue...",devName);
       }
-    if(!custom && ((s.flags&ASYNC_SPD_MASK)==ASYNC_SPD_CUST || s.custom_divisor!=0)) {
+    else if(!custom && ((s.flags&ASYNC_SPD_MASK)==ASYNC_SPD_CUST || s.custom_divisor!=0)) {
       s.custom_divisor=0;
       s.flags &= ~ASYNC_SPD_MASK;
       if(ioctl(fd,TIOCSSERIAL,&s)<0) {
