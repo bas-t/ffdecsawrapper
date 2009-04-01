@@ -683,6 +683,7 @@ bool cSmartCardSlotSerial::DeviceOpen(const char *cfg)
 {
   int invCD=0;
   if(sscanf(cfg,"%255[^:]:%d:%d:%d",devName,&invCD,&invRST,&clock)>=3) {
+    if(clock<=0) clock=ISO_FREQ;
     statInv=invCD ? TIOCM_CAR:0;
     PRINTF(L_CORE_SERIAL,"%s: open serial port",devName);
     fd=open(devName,O_RDWR|O_NONBLOCK|O_NOCTTY);
@@ -979,7 +980,7 @@ cSmartCardSlotSRPlus::cSmartCardSlotSRPlus(void)
 bool cSmartCardSlotSRPlus::DeviceOpen(const char *cfg)
 {
   if(sscanf(cfg,"%255[^:]:%d",devName,&clock)>=1) {
-    if(clock==0) clock=ISO_FREQ;
+    if(clock<=0) clock=ISO_FREQ;
     PRINTF(L_CORE_SERIAL,"%s: open serial port",devName);
     fd=open(devName,O_RDWR|O_NONBLOCK|O_NOCTTY);
     if(fd>=0) {
