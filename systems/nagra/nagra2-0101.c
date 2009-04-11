@@ -240,12 +240,14 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       }
     case 0x2e:
 // START INCOMPLETE FIX
+      H.GetLE(data,16);
       BN_rshift(H,H,64);
       BN_lshift(H,H,64);
       BN_add(H,J,H);
       BN_rshift(H,H,16);
       BN_copy(J,H);
       BN_mask_bits(J,64);
+      cycles=864;
 // END INCOMPLETE FIX
       break;
     case 0x2F:
@@ -256,7 +258,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       BN_add(H,H,J);
       BN_rshift(J,H,8);
       BN_mask_bits(J,64);
-      cycles = 808;
+      cycles=808;
 // END INCOMPLETE FIX
       break;
     case 0x30:
