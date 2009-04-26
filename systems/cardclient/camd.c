@@ -454,9 +454,10 @@ bool cCardClientCamd35::ParseUserConfig(const char *config, int *num)
   int startNum=*num;
   if(sscanf(&config[*num],":%32[^:]:%32[^:]%n",username,password,num)==2) {
     *num+=startNum;
-    ucrc=bswap_32(crc32_le(0,MD5((unsigned char *)username,strlen(username),0),16));
+    unsigned char md[16];
+    ucrc=bswap_32(crc32_le(0,MD5((unsigned char *)username,strlen(username),md),16));
     PRINTF(L_CC_CORE,"%s: username=%s password=%s ucrc=%08x",name,username,password,ucrc);;
-    SetKey(MD5((unsigned char *)password,strlen(password),0));
+    SetKey(MD5((unsigned char *)password,strlen(password),md));
     return true;
     }
   return false;
