@@ -23,6 +23,8 @@
 
 #include <vdr/tools.h>
 
+#include <openssl/md5.h>
+
 #include "sc.h"
 #include "scsetup.h"
 #include "system.h"
@@ -498,7 +500,8 @@ struct Cache *cMsgCache::FindMsg(int crc)
 // >0 - msg not cached, queue id
 int cMsgCache::Get(const unsigned char *msg, int len, unsigned char *store)
 {
-  int crc=crc32_le(0,msg,len);
+  unsigned char md[16];
+  int crc=crc32_le(0,MD5(msg,len,md),16);
   cMutexLock lock(&mutex);
   if(!caches || (storeSize>0 && !stores)) return -1; // sanity
   struct Cache *s;
