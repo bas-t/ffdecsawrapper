@@ -302,6 +302,11 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
     case 0x3b:
       AddMapCycles(441);
       IMakeJ();
+// START FIX
+      AddMapCycles(327);
+      BN_zero(B);
+      BN_set_bit(B,104);
+// END FIX
       AddMapCycles(46);
       IMonInit0(wordsize*60+4*l);
       I.GetLE(data,l<<3);
@@ -365,7 +370,10 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       for(int i=0; i<53; i++) data[i]=BN_mod_word(B,primes[i]);
       break;
     case 0x4e:
-      MakePrime(B,data);
+// START INCOMPLETE FIX
+      //MakePrime(B,data);
+      BN_copy(D,B);
+// END INCOMPLETE FIX
       break;
     case 0x57:
 #ifdef HAS_AUXSRV
