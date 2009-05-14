@@ -244,7 +244,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       BN_rshift(H,H,64);
       BN_lshift(H,H,64);
       BN_add(H,J,H);
-      BN_rshift(H,H,16);
+      const int ti=1;
+      BN_rshift(H,H,ti<<3);
       BN_copy(J,H);
       BN_mask_bits(J,64);
       cycles=864;
@@ -317,7 +318,11 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
 // START INCOMPLETE FIX
       D.GetLE(data,l<<3);
       MakeJ0(J,D,C);
-      MonMul0(C,B,B,C,D,J,0);
+      BN_rshift(A,A,64);
+      BN_mask_bits(A,64);
+      BN_lshift(A,A,64);
+      BN_add(C,A,C);
+      //MonMul0(C,B,B,C,D,J,0);
 // END INCOMPLETE FIX
       break;
     case 0x3c:
@@ -372,6 +377,11 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
     case 0x4e:
 // START INCOMPLETE FIX
       //MakePrime(B,data);
+      BN_copy(D,B);
+// END INCOMPLETE FIX
+      break;
+    case 0x4f:
+// START INCOMPLETE FIX
       BN_copy(D,B);
 // END INCOMPLETE FIX
       break;
@@ -729,6 +739,7 @@ bool cN2Prov0101::ProcessMap(int f)
     case 0x38:
     case 0x3a:
     case 0x43:
+    case 0x4f:
       DoMap(f);
       break;
     case 0x44:
