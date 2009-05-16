@@ -273,7 +273,7 @@ bool cN2Emu::Init(int id, int romv)
     // ROM02 0x02:0x8000-0xbfff
     if(!AddMapper(new cMapRom(0x8000,buff,0x14000),0x8000,romv>=110?0x8000:0x4000,0x02)) return false;
 
-    snprintf(buff,sizeof(buff),"EEP%02X_%d.bin",(id>>8)&0xFF|0x01,romv);
+    snprintf(buff,sizeof(buff),"EEP%02X_%d.bin",((id>>8)&0xFF)|0x01,romv);
     // Eeprom00 0x00:0x3000-0x37ff OTP 0x80
     //XXX if(!AddMapper(new cMapRom(0x3000,buff,0x0000),0x3000,0x0800,0x00)) return false;
     if(!AddMapper(new cMapEeprom(0x3000,buff,128,0x0000),0x3000,0x0800,0x00)) return false;
@@ -1163,9 +1163,9 @@ bool cSystemNagra2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
       else data[5]=0x01;
       }
     data[6]&=0x1F;
-    data[7]=data[7]&0x10|0x86;
+    data[7]=(data[7]&0x10)|0x86;
     data[8]=0;
-    data[9]=data[9]&0x80|0x08;
+    data[9]=(data[9]&0x80)|0x08;
     }
 
   int cmdLen=data[4]-5;
