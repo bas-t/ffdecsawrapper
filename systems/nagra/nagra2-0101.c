@@ -244,8 +244,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       BN_rshift(H,H,64);
       BN_lshift(H,H,64);
       BN_add(H,J,H);
-      const int ti=1;
-      BN_rshift(H,H,ti<<3);
+      BN_rshift(H,H,1<<3);
       BN_copy(J,H);
       BN_mask_bits(J,64);
       cycles=864;
