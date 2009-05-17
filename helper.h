@@ -54,16 +54,16 @@ template<class T> inline void put_misalign(unsigned int v, T* p)
 #if defined __GNUC__ && __GNUC__ >= 2 && defined __i386__
 
 #define ror16(x,xx) ({ unsigned int v; \
-                     __asm__ ("rorw %2, %w0" : "=g" (v) : "0" (x), "i" (xx) : "cc"); \
+                     __asm__ ("rorw %2, %w0" : "=qm" (v) : "0" (x), "i" (xx) : "cc"); \
                      v; })
 #define rol16(x,xx) ({ unsigned int v; \
-                     __asm__ ("rolw %2, %w0" : "=g" (v) : "0" (x), "i" (xx) : "cc"); \
+                     __asm__ ("rolw %2, %w0" : "=qm" (v) : "0" (x), "i" (xx) : "cc"); \
                      v; })
 #define sn8(b)      ({ unsigned char v; \
                      if(__builtin_constant_p(b)) \
                        v=__sn8_const(b); \
                      else \
-                       __asm__ ("rorb $4, %b0" : "=g" (v) : "0" (b) : "cc"); \
+                       __asm__ ("rorb $4, %b0" : "=qm" (v) : "0" (b) : "cc"); \
                      v; })
 
 #else //__GNUC__
