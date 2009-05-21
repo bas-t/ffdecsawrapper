@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include <vdr/tools.h>
 #include <vdr/thread.h>
@@ -89,9 +90,11 @@ bool cLogging::GetHeader(int c, struct LogHeader *lh)
   const struct LogModule *lm=GetModule(c);
   if(lm) {
     if(!logcfg.noTimestamp) {
-      time_t tt=time(0);
+      struct timeval t;
+      gettimeofday(&t,NULL);
       struct tm tm_r;
-      strftime(lh->stamp,sizeof(lh->stamp),"%b %e %T",localtime_r(&tt,&tm_r));
+      int q=strftime(lh->stamp,sizeof(lh->stamp),"%b %e %T",localtime_r(&t.tv_sec,&tm_r));
+      snprintf(lh->stamp+q,sizeof(lh->stamp)-q,".%03u",(unsigned int)(t.tv_usec/1000));
       }
     else lh->stamp[0]=0;
     int i, o=LOPT(c)&~LMOD_ENABLE;
