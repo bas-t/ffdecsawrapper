@@ -2268,18 +2268,18 @@ bool cScCiAdapter::Assign(cDevice *Device, bool Query)
 
 #define MAX_CSA_PIDS 8192
 #define MAX_CSA_IDX  16
-
-//#define DEBUG_CSA
+#define MAX_STALL_MS 70
 
 class cDeCSA {
 private:
   int cs;
-  unsigned char **range;
+  unsigned char **range, *lastData;
   unsigned char pidmap[MAX_CSA_PIDS];
   void *keys[MAX_CSA_IDX];
   unsigned int even_odd[MAX_CSA_IDX];
   cMutex mutex;
   cCondVar wait;
+  cTimeMs stall;
   bool active;
   int cardindex;
   //
@@ -2294,6 +2294,7 @@ public:
   };
 
 cDeCSA::cDeCSA(int CardIndex)
+:stall(MAX_STALL_MS)
 {
   cardindex=CardIndex;
   cs=get_suggested_cluster_size();
@@ -2302,6 +2303,7 @@ cDeCSA::cDeCSA(int CardIndex)
   memset(keys,0,sizeof(keys));
   memset(even_odd,0,sizeof(even_odd));
   memset(pidmap,0,sizeof(pidmap));
+  lastData=0;
 }
 
 cDeCSA::~cDeCSA()
@@ -2357,7 +2359,8 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
   bool newRange=true;
   range[0]=0;
   len-=(TS_SIZE-1);
-  for(int l=0; l<len; l+=TS_SIZE) {
+  int l;
+  for(l=0; l<len; l+=TS_SIZE) {
     if(data[l]!=TS_SYNC_BYTE) {       // let higher level cope with that
       PRINTF(L_CORE_CSA,"%d: garbage in TS buffer",cardindex);
       if(ccs) force=true;             // prevent buffer stall
@@ -2387,19 +2390,51 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
       // nothing, we don't create holes for unencrypted packets
       }
     }
+  int scanTS=l/TS_SIZE;
+  int stallP=ccs*100/scanTS;
+
+  LBSTART(L_CORE_CSAVERB);
+  LBPUT("%d: %s-%d-%d : %d-%d-%d stall=%d :: ",
+        cardindex,data==lastData?"SAME":"MOVE",(len+(TS_SIZE-1))/TS_SIZE,force,
+        currIdx,ccs,scanTS,stallP);
+  for(int l=0; l<len; l+=TS_SIZE) {
+    if(data[l]!=TS_SYNC_BYTE) break;
+    unsigned int ev_od=data[l+3]&0xC0;
+    if(ev_od&0x80) {
+      int pid=(data[l+1]<<8)+data[l+2];
+      int idx=pidmap[pid&(MAX_CSA_PIDS-1)];
+      LBPUT("%s/%x/%d ",(ev_od&0x40)?"o":"e",pid,idx);
+      }
+    else {
+      LBPUT("*/%x ",(data[l+1]<<8)+data[l+2]);
+      }
+    }
+  LBEND();
+
+  if(r>=0 && ccs<cs && !force) {
+    if(lastData==data && stall.TimedOut()) {
+      PRINTF(L_CORE_CSAVERB,"%d: stall timeout -> forced",cardindex);
+      force=true;
+      }
+    else if(stallP<=10 && scanTS>=cs) {
+      PRINTF(L_CORE_CSAVERB,"%d: flow factor stall -> forced",cardindex);
+      force=true;
+      }
+    }
+  lastData=data;
+
   if(r>=0) {                          // we have some range
     if(ccs>=cs || force) {
       if(GetKeyStruct(currIdx)) {
         int n=decrypt_packets(keys[currIdx],range);
-#ifdef DEBUG_CSA
-        PRINTF(L_CORE_CSA,"%d.%d: decrypting ccs=%3d cs=%3d %s -> %3d decrypted",cardindex,currIdx,ccs,cs,ccs>=cs?"OK ":"INC",n);
-#endif
-        if(n>0) return true;
+        PRINTF(L_CORE_CSAVERB,"%d.%d: decrypting ccs=%3d cs=%3d %s -> %3d decrypted",cardindex,currIdx,ccs,cs,ccs>=cs?"OK ":"INC",n);
+        if(n>0) {
+          stall.Set(MAX_STALL_MS);
+          return true;
+          }
         }
       }
-#ifdef DEBUG_CSA
-    else PRINTF(L_CORE_CSA,"%d.%d: incomplete cluster ccs=%3d cs=%3d",cardindex,currIdx,ccs,cs);
-#endif
+    else PRINTF(L_CORE_CSAVERB,"%d.%d: incomplete ccs=%3d cs=%3d",cardindex,currIdx,ccs,cs);
     }
   return false;
 }
@@ -2415,8 +2450,6 @@ private:
   //
   cDeCSA *decsa;
   bool scActive;
-  unsigned char *lastP;
-  int lastCount;
   //
   virtual void Action(void);
 public:
@@ -2431,7 +2464,6 @@ cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa,
   SetDescription("TS buffer on device %d", CardIndex);
   f=File; size=Size; cardIndex=CardIndex; decsa=DeCsa;
   delivered=false;
-  lastP=0; lastCount=0;
   ringBuffer=new cRingBufferLinear(Size,TS_SIZE,true,"FFdecsa-TS");
   ringBuffer->SetTimeouts(100,100);
   if(decsa) decsa->SetActive(true);
@@ -2487,12 +2519,10 @@ uchar *cDeCsaTSBuffer::Get(void)
 
     if(scActive && (p[3]&0xC0)) {
       if(decsa) {
-        if(!decsa->Decrypt(p,Count,(lastP==p && (lastCount==Count || Count>size/5)))) {
-          lastP=p; lastCount=Count;
+        if(!decsa->Decrypt(p,Count,false)) {
           cCondWait::SleepMs(20);
           return NULL;
           }
-        lastP=0;
         }
       else p[3]&=~0xC0; // FF hack
       }

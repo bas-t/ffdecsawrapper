@@ -90,7 +90,7 @@ static const struct LogModule lm_core = {
   "core",
   { "load","action","ecm","ecmProc","pids","au","auStats","auExtra","auExtern",
     "caids","keys","dynamic","csa","ci","av7110","net","netData","msgcache",
-    "serial","smartcard","hook","ciFull" }
+    "serial","smartcard","hook","ciFull","csaVerb" }
   };
 ADD_MODULE(L_CORE,lm_core)
 
