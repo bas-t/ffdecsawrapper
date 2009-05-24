@@ -547,7 +547,9 @@ void cMapCore::IMonInit0(int bits)
     BN_set_bit(I,bits ? bits : 68*wordsize);
     BN_zero(B);
     AddMapCycles(141+(wordsize*8+3)/5*5);
-    BN_set_bit(B,64*(wordsize-1));
+    //BN_set_bit(B,64*(wordsize-1));
+    // TEMP or not?
+    BN_set_bit(B,64*(wordsize-1)+bits);
     AddMapCycles(92+72*wordsize);
     BN_mod(B,I,D,ctx);
     AddMapCycles(639);
