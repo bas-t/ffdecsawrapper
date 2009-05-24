@@ -212,7 +212,9 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       break;
     case 0x23:
       AddMapCycles(169);
-      IMonInit0();
+// START FIX
+      IMonInit0(24);
+// END FIX
       break;
     case 0x25:
       AddMapCycles(254);
@@ -355,12 +357,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       }
     case 0x46:
 // START INCOMPLETE FIX
-      IMakeJ();
-      BN_zero(I);
-      BN_set_bit(I,136);
-      BN_mod(B,I,D,ctx);
-      MonMul0(B,B,B,C,D,J,0);
-      MonMul0(B,B,B,C,D,J,0);
+      AddMapCycles(328);
+      IMonInit();
 // END INCOMPLETE FIX
       break;
     case 0x4d:
