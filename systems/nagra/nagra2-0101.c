@@ -306,8 +306,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       AddMapCycles(327);
       BN_zero(B);
       BN_set_bit(B,104);
+      AddMapCycles(46-373);
 // END FIX
-      AddMapCycles(46);
       IMonInit0(wordsize*60+4*l);
       I.GetLE(data,l<<3);
       MonMul(B,I,B,l);
@@ -381,7 +381,9 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       break;
     case 0x4f:
 // START INCOMPLETE FIX
-      BN_copy(D,B);
+      BN_zero(A);
+      BN_set_bit(A,40); //cycles=808
+      BN_add(A,A,A);
 // END INCOMPLETE FIX
       break;
     case 0x57:
