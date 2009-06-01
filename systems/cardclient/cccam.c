@@ -212,6 +212,7 @@ bool cCardClientCCcam::Login(void)
 {
   cMutexLock lock(this);
   so.Disconnect();
+  so.SetQuietLog(true);
   if(!so.Bind("127.0.0.1",port)) return false;
   PRINTF(L_CC_CCCAM,"Bound to port %d, starting UDP listener",port);
   Start();
@@ -321,6 +322,6 @@ void cCardClientCCcam::Action(void)
       if(cw[1]==0x0f && cw[0]<4)
         card[cw[0]].NewCw(cw+2);
       }
-    else PRINTF(L_CC_CCCAM,"unexpected read length r=%d",r);
+    else if(r>0) PRINTF(L_CC_CCCAM,"unexpected read length r=%d",r);
     }
 }

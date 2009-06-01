@@ -43,7 +43,7 @@ private:
   int sd;
   char *hostname;
   int port, dummy, conTimeout, rwTimeout, idleTimeout;
-  bool udp, connected, netup;
+  bool udp, connected, netup, quietlog;
   cTimeMs activity;
   //
   int Select(bool forRead, int timeout);
@@ -61,6 +61,7 @@ public:
   int SendTo(const char *Host, int Port, const unsigned char *data, int len, int timeout=-1);
   void Flush(void);
   bool Connected(void) { return connected; }
+  void SetQuietLog(bool ql) { quietlog=ql; }
   };
 
 #endif //___NETWORK_H
