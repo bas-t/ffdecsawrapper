@@ -147,7 +147,7 @@ int cNetWatcher::RunCommand(const char *cmd, const char *state)
 
 cNetSocket::cNetSocket(int ConnectTimeout, int ReadWriteTimeout, int IdleTimeout, bool Udp)
 {
-  hostname=0; sd=-1; connected=netup=false;
+  hostname=0; sd=-1; connected=netup=quietlog=false;
   udp=Udp; conTimeout=ConnectTimeout; rwTimeout=ReadWriteTimeout;
   idleTimeout=IdleTimeout*1000;
 }
@@ -210,7 +210,7 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
   nw.Unblock();
   struct sockaddr_in socketAddr;
   if(GetAddr(&socketAddr,hostname,port) && (sd=GetSocket(udp))>=0) {
-    PRINTF(L_CORE_NET,"connecting to %s:%d/%s (%d.%d.%d.%d)",
+    if(!quietlog) PRINTF(L_CORE_NET,"connecting to %s:%d/%s (%d.%d.%d.%d)",
                hostname,port,udp?"udp":"tcp",
                (socketAddr.sin_addr.s_addr>> 0)&0xff,(socketAddr.sin_addr.s_addr>> 8)&0xff,(socketAddr.sin_addr.s_addr>>16)&0xff,(socketAddr.sin_addr.s_addr>>24)&0xff);
     if(connect(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr))==0)
@@ -251,7 +251,7 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
   nw.Unblock();
   struct sockaddr_in socketAddr;
   if(GetAddr(&socketAddr,hostname,port) && (sd=GetSocket(udp))>=0) {
-    PRINTF(L_CORE_NET,"socket: binding to %s:%d/%s (%d.%d.%d.%d)",
+    if(!quietlog) PRINTF(L_CORE_NET,"socket: binding to %s:%d/%s (%d.%d.%d.%d)",
                hostname,port,udp?"udp":"tcp",
                (socketAddr.sin_addr.s_addr>> 0)&0xff,(socketAddr.sin_addr.s_addr>> 8)&0xff,(socketAddr.sin_addr.s_addr>>16)&0xff,(socketAddr.sin_addr.s_addr>>24)&0xff);
     if(bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr))==0) {
@@ -345,7 +345,7 @@ int cNetSocket::Select(bool forRead, int timeout)
       return -1;
       }
     else {
-      if(timeout>0) PRINTF(L_CORE_NET,"socket: select timed out (%d secs)",timeout);
+      if(timeout>0 && !quietlog) PRINTF(L_CORE_NET,"socket: select timed out (%d secs)",timeout);
       return 0;
       }
     }
