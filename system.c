@@ -177,8 +177,9 @@ void cSystem::ParseCAT(cPids *pids, const unsigned char *buffer)
         pids->AddPid(pid,0x80,0xFF,0x06);
         pids->AddPid(pid,0x88,0xFE);
         break;
-      case 0x18: // Nagra style, Nagra1(82) Nagra2(82/83) 
-        pids->AddPid(pid,0x82,caid==0x1801 ? 0xFE:0xFF);
+      case 0x18: // Nagra style, Nagra1(82) Nagra2(82/83) Nagra3(84/83)
+        if(caid>=0x1801) pids->AddPid(pid,0x80,0xFE,0x06); // mismatching 85/86/87
+        else             pids->AddPid(pid,0x82,0xFF);
         break;
       default:   // default style (82)
         pids->AddPid(pid,0x82,0xFF);
