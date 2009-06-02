@@ -512,7 +512,7 @@ cCardNagra2::cCardNagra2(const unsigned char *a)
 
 bool cCardNagra2::MatchEMM(const unsigned char *data)
 {
-  return data[0]==0x82 ||
+  return data[0]==0x82 || data[0]==0x84 ||
         (data[0]==0x83 && !memcmp(&data[3],addr,(data[7]==0x10)?3:4));
 }
 
