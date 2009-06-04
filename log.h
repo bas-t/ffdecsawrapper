@@ -26,7 +26,7 @@ class cMutex;
 
 // ----------------------------------------------------------------
 
-#define LOPT_NUM    24
+#define LOPT_NUM    27
 #define LOPT_MAX    (1<<LOPT_NUM)
 #define LOPT_MASK   (LOPT_MAX-1)
 #define LMOD_MAX    (1<<(32-LOPT_NUM))
