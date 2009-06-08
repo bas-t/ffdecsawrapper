@@ -26,6 +26,9 @@
 #include "data.h"
 #include "misc.h"
 #include "log-sys.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_CONAX         0x0B00
 

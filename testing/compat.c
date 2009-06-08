@@ -23,10 +23,17 @@
 static bool DllLoad(const char *fileName)
 {
   const char *base=rindex(fileName,'/');
-  if(!base) base=fileName;
+  if(base) base++; else base=fileName;
   void *handle=dlopen(fileName,RTLD_NOW|RTLD_LOCAL);
-  if(handle) return true;
-  printf("dload: %s: %s\n",base,dlerror());
+  if(handle) {
+    dlerror();
+    int *libapivers=(int *)dlsym(handle,"ScLibApiVersion");
+    const char *error=dlerror();
+    if(!error && *libapivers==SCAPIVERS)
+      return true;
+    else printf("dload: %s: SCAPI version doesn't match (plugin=%d, library=%d)\n",base,SCAPIVERS,!error?*libapivers:0);
+    }
+  else printf("dload: %s: %s\n",base,dlerror());
   return false;
 }
 
@@ -39,7 +46,7 @@ bool DllsLoad(const char *libdir)
   struct dirent *e;
   while((e=dir.Next())) {
     if(!fnmatch(pat,e->d_name,FNM_PATHNAME|FNM_NOESCAPE)) {
-      DllLoad(AddDirectory(libdir,e->d_name));
+      if(!DllLoad(AddDirectory(libdir,e->d_name))) res=false;
       }
     }
   return res;

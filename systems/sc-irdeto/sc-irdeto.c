@@ -30,6 +30,9 @@
 #include "parse.h"
 #include "log-sc.h"
 #include "log-core.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_NAME          "SC-Irdeto"
 #define SYSTEM_PRI           -5

@@ -29,6 +29,9 @@
 #include "helper.h"
 #include "log-sc.h"
 #include "log-core.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_VIDEOGUARD2   0x0900
 

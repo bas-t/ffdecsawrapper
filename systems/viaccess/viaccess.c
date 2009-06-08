@@ -30,6 +30,9 @@
 #include "viaccess.h"
 #include "tps.h"
 #include "log-viaccess.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_NAME          "Viaccess"
 #define SYSTEM_PRI           -10

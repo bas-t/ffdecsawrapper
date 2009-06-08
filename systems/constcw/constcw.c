@@ -28,6 +28,9 @@
 #include "system-common.h"
 #include "data.h"
 #include "misc.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_NAME          "ConstCW"
 #define SYSTEM_PRI           -20

@@ -37,7 +37,7 @@ SUBREL  := $(shell if test -d .hg; then \
                      echo -n "Unknown"; \
                    fi)
 VERSION := $(RELEASE)-$(SUBREL)
-SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(PLUGIN).c)
+SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' version.h)
 
 ### The directory environment:
 

@@ -25,6 +25,9 @@
 
 #include "irdeto.h"
 #include "log-irdeto.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 static const struct LogModule lm_sys = {
   (LMOD_ENABLE|L_SYS_ALL)&LOPT_MASK,

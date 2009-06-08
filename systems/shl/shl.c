@@ -32,6 +32,9 @@
 #include "filter.h"
 #include "misc.h"
 #include "log-sys.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_SHL           0x4A60
 

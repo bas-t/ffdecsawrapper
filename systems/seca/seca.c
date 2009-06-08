@@ -32,6 +32,9 @@
 #include "misc.h"
 #include "log-sys.h"
 #include "log-core.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_SECA          0x0100
 
