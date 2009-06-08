@@ -42,6 +42,7 @@
 #include "filter.h"
 #include "system.h"
 #include "data.h"
+#include "override.h"
 #include "misc.h"
 #include "log-core.h"
 
@@ -282,20 +283,21 @@ void cHookManager::Process(cPidFilter *filter, unsigned char *data, int len)
 
 class cLogChain : public cSimpleItem {
 public:
-  int cardNum, caid;
+  int cardNum, caid, source, transponder;
   bool softCSA, active, delayed;
   cTimeMs delay;
   cPids pids;
   cSimpleList<cSystem> systems;
   //
-  cLogChain(int CardNum, bool soft);
+  cLogChain(int CardNum, bool soft, int src, int tr);
   void Process(int pid, unsigned char *data);
   bool Parse(const unsigned char *cat);
   };
 
-cLogChain::cLogChain(int CardNum, bool soft)
+cLogChain::cLogChain(int CardNum, bool soft, int src, int tr)
 {
-  cardNum=CardNum; softCSA=soft; active=delayed=false;
+  cardNum=CardNum; softCSA=soft; source=src; transponder=tr;
+  active=delayed=false;
 }
 
 void cLogChain::Process(int pid, unsigned char *data)
@@ -316,7 +318,7 @@ bool cLogChain::Parse(const unsigned char *cat)
     if(systems.Count()>0) {
       LBPUT(" ++");
       for(sys=systems.First(); sys; sys=systems.Next(sys))
-        sys->ParseCAT(&pids,cat);
+        sys->ParseCAT(&pids,cat,source,transponder);
       }
     else {
       LBPUT(" ->");
@@ -325,7 +327,7 @@ bool cLogChain::Parse(const unsigned char *cat)
         Pri=sys->Pri();
         if(sys->HasLogger()) {
           sys->CardNum(cardNum);
-          sys->ParseCAT(&pids,cat);
+          sys->ParseCAT(&pids,cat,source,transponder);
           systems.Add(sys);
           LBPUT(" %s(%d)",sys->Name(),sys->Pri());
           }
@@ -354,6 +356,7 @@ private:
   //
   cPidFilter *catfilt;
   int catVers;
+  int source, transponder;
   //
   enum ePreMode { pmNone, pmStart, pmWait, pmActive, pmStop };
   ePreMode prescan;
@@ -364,6 +367,7 @@ private:
   void ClearChains(void);
   void StartChain(cLogChain *chain);
   void StopChain(cLogChain *chain, bool force);
+  void ProcessCat(unsigned char *data, int len);
 protected:
   virtual void Process(cPidFilter *filter, unsigned char *data, int len);
 public:
@@ -372,7 +376,7 @@ public:
   void EcmStatus(const cEcmInfo *ecm, bool on);
   void Up(void);
   void Down(void);
-  void PreScan(void);
+  void PreScan(int src, int tr);
   };
 
 cLogger::cLogger(int CardNum, bool soft)
@@ -412,9 +416,10 @@ void cLogger::Down(void)
   Unlock();
 }
 
-void cLogger::PreScan(void)
+void cLogger::PreScan(int src, int tr)
 {
   Lock();
+  source=src; transponder=tr;
   prescan=pmStart; Up();
   Unlock();
 }
@@ -423,6 +428,7 @@ void cLogger::EcmStatus(const cEcmInfo *ecm, bool on)
 {
   Lock();
   PRINTF(L_CORE_AUEXTRA,"%d: ecm prgid=%d caid=%04x prov=%.4x %s",cardNum,ecm->prgId,ecm->caId,ecm->provId,on ? "active":"inactive");
+  source=ecm->source; transponder=ecm->transponder;
   cEcmInfo *e;
   if(on) {
     e=new cEcmInfo(ecm);
@@ -517,6 +523,27 @@ cPidFilter *cLogger::AddFilter(int Pid, int Section, int Mask, int Mode, int Idl
   return filter;
 }
 
+void cLogger::ProcessCat(unsigned char *data, int len)
+{
+  for(int i=0; i<len; i+=data[i+1]+2) {
+    if(data[i]==0x09) {
+      int caid=WORD(data,i+2,0xFFFF);
+      cLogChain *chain;
+      for(chain=chains.First(); chain; chain=chains.Next(chain))
+        if(chain->caid==caid) break;
+      if(chain)
+        chain->Parse(&data[i]);
+      else {
+        chain=new cLogChain(cardNum,softCSA,source,transponder);
+        if(chain->Parse(&data[i]))
+          chains.Add(chain);
+        else
+          delete chain;
+        }
+      }
+    }
+}
+
 void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
 {
   if(data && len>0) {
@@ -527,22 +554,11 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
         catVers=vers;
         HEXDUMP(L_HEX_CAT,data,len,"CAT vers %02x",catVers);
         ClearChains();
-        for(int i=8; i<len-4; i+=data[i+1]+2) {
-          if(data[i]==0x09) {
-            int caid=WORD(data,i+2,0xFFFF);
-            cLogChain *chain;
-            for(chain=chains.First(); chain; chain=chains.Next(chain))
-              if(chain->caid==caid) break;
-            if(chain)
-              chain->Parse(&data[i]);
-            else {
-              chain=new cLogChain(cardNum,softCSA);
-              if(chain->Parse(&data[i]))
-                chains.Add(chain);
-              else
-                delete chain;
-              }
-            }
+        ProcessCat(&data[8],len-4-8);
+        unsigned char buff[2048];
+        if((len=overrides.GetCat(source,transponder,buff,sizeof(buff)))>0) {
+          HEXDUMP(L_HEX_CAT,buff,len,"override CAT");
+          ProcessCat(buff,len);
           }
         SetChains();
         if(prescan==pmStart) { prescan=pmWait; pretime.Set(2000); }
@@ -1255,8 +1271,9 @@ void cEcmHandler::ParseCAInfo(int SysId)
             cEcmInfo *n;
             while((n=ecms.First())) {
               ecms.Del(n,false);
+              overrides.UpdateEcm(ecm,dolog);
               LBSTARTF(L_CORE_ECM);
-              if(dolog) LBPUT("%s: found %04x (%s) id %04x with ecm %x ",id,n->caId,n->name,n->provId,n->ecm_pid);
+              if(dolog) LBPUT("%s: found %04x(%04x) (%s) id %04x with ecm %x/%x ",id,n->caId,n->emmCaId,n->name,n->provId,n->ecm_pid,n->ecm_table);
               cEcmInfo *e=ecmList.First();
               while(e) {
                 if(e->ecm_pid==n->ecm_pid) {
@@ -1336,7 +1353,7 @@ void cCam::PostTune(void)
 {
   if(ScSetup.PrestartAU) {
     LogStartup();
-    if(logger) logger->PreScan();
+    if(logger) logger->PreScan(source,transponder);
     }
 }
 

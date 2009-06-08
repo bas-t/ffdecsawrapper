@@ -1,0 +1,83 @@
+;
+; Comment lines can start with # or ;
+;
+
+; NOTE: everything which was hardcoded to SC before has been added as an active
+; example to this file.
+; But the entries may already be out-dated at the time you are reading this.
+; Please feel free to submit updates on this...
+
+;
+; In general every entry has a validity range, specified by caid/source/freq or
+; source/freq. The validity range is enclosed with {} brakets. Some specifiers
+; may be obmited, but you cannot omit the ':' delimiters.
+;
+; format:
+; {caid[-caid]:[src[-src]]:[freq[-freq]]}
+; {src[-src]:[freq[-freq]]}
+;
+; examples:
+; matches caid 1815-1830 on sat 19.2E. Freqency is empty, so match all.
+; {1815-1830:S19.2E:}
+; same, but only matches on one frequency
+; {1815-1830:S19.2E:12973}
+; matches a lot of NA sats, all frequencies
+; {S61.5W-S148W:}
+; matches a single caid on a single sat
+; {1801:S28.5E:}
+; matches a frequency range on a sat
+; {S13W:10500-11674}
+; matches a caid on everything
+; {1234::}
+;
+
+;
+; Add entries to the CAT (conditional access table) in case a EMM stream is
+; not announced there.
+;
+; format
+; cat:{src[-src]:[freq[-freq]]}caid:pid
+;
+; examples:
+; cat:{S61.5W-S148W:}1816:0120
+;
+cat:{S61.5W-S148W:}1816:0120  # DISH N3
+
+;
+; Define an alternative table for ECM data (default is 80/81)
+;
+; format:
+; ecmtable:{caid[-caid]:[src[-src]]:[freq[-freq]]}table
+;
+; examples:
+; ecmtable:{1234::}8E
+;
+ecmtable:{1234::}8E       # DISH
+ecmtable:{1801:S82W:}8E    # BEV
+ecmtable:{1801:S91W:}8E    # BEV
+
+;
+; Define an alternative caid to use for EMM data.
+;
+; format:
+; emmcaid:{caid[-caid]:[src[-src]]:[freq[-freq]]}emmcaid
+;
+; examples
+; emmcaid:{1234::}1801
+; emmcaid:{1816:S61.5W-S148W:}1801
+;
+emmcaid:{1234::}1801      # DISH
+
+;
+; Define alternative table for EMM data
+;
+; format:
+; emmtable:{caid[-caid]:[src[-src]]:[freq[-freq]]}table[/mask][:table[/mask]][...]
+;
+; examples:
+; emmtable:{1816:S61.5W-S148W:}83:84
+; emmtable:{1815:S61.5W-S148W:}83:84
+; emmtable:{1811:S19.2E:}82/FE
+;
+emmtable:{1816:S61.5W-S148W:}83:84 # DISH N3
+emmtable:{1815:S61.5W-S148W:}83:84 # BEV N3
