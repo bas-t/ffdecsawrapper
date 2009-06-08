@@ -68,7 +68,7 @@ bool cLogging::AddModule(int m, const struct LogModule *lm)
     mods[m]=lm;
     if(config[m]&LMOD_CFG_VALID) UpgradeOptions(m);
     else SetModuleDefault(LCLASS(m,0));
-//printf("module %-16s added. mod=%x supp=%x def=%x cfg=%x\n",lm->Name,m,lm->OptSupported,lm->OptDefault,config[m]);
+//printf("module %-16s added. mod=%x supp=%08x def=%08x cfg=%08x\n",lm->Name,m,lm->OptSupported,lm->OptDefault,config[m]);
     }
   else Printf(L_GEN_DEBUG,"failed to add logging module %d (%s)",m,lm->Name);
   return true;

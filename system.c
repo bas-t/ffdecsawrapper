@@ -29,6 +29,7 @@
 #include "scsetup.h"
 #include "system.h"
 #include "data.h"
+#include "override.h"
 #include "opts.h"
 #include "log-core.h"
 #include "i18n.h"
@@ -145,23 +146,17 @@ void cSystem::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysI
           ecms->Add(new cEcmInfo(name,pid,sysId,(data[p+2]<<16)|(data[p+3]<<8)|(data[p+4]&0xF0)));
       break;
     default:   // default style
-      {
-      cEcmInfo *n=new cEcmInfo(name,pid,sysId,0);
-      if(sysId==0x1234 || (sysId==0x1801 && (source==0x8334 || source==0x838e))) { // BEV
-        n->ecm_table=0x8e;
-        n->emmCaId=0x1801;
-        }
-      ecms->Add(n);
+      ecms->Add(new cEcmInfo(name,pid,sysId,0));
       break;
-      }
     }
 }
 
-void cSystem::ParseCAT(cPids *pids, const unsigned char *buffer)
+void cSystem::ParseCAT(cPids *pids, const unsigned char *buffer, int source, int transponder)
 {
   if(buffer[0]==0x09) {
     int caid=WORD(buffer,2,0xFFFF);
     int pid=WORD(buffer,4,0x1FFF);
+    if(overrides.AddEmmPids(caid,source,transponder,pids,pid)) return;
     switch(caid>>8) {
       case 0x01: // Seca style (82/84)
         if(buffer[1]>4) {
@@ -178,8 +173,7 @@ void cSystem::ParseCAT(cPids *pids, const unsigned char *buffer)
         pids->AddPid(pid,0x88,0xFE);
         break;
       case 0x18: // Nagra style, Nagra1(82) Nagra2(82/83) Nagra3(84/83)
-        if(caid>=0x1801) pids->AddPid(pid,0x80,0xFE,0x06); // mismatching 85/86/87
-        else             pids->AddPid(pid,0x82,0xFF);
+        pids->AddPid(pid,0x82,0xFE);
         break;
       default:   // default style (82)
         pids->AddPid(pid,0x82,0xFF);

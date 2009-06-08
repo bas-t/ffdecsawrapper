@@ -132,11 +132,11 @@ extern const char *I18nTranslate(const char *s, const char *Plugin)
 
 static const struct LogModule lm_core = {
   (LMOD_ENABLE|L_CORE_ALL)&LOPT_MASK,
-  (LMOD_ENABLE|L_CORE_LOAD|L_CORE_ECM|L_CORE_PIDS|L_CORE_AU|L_CORE_AUSTATS|L_CORE_CAIDS|L_CORE_NET|L_CORE_CI|L_CORE_SC|L_CORE_HOOK)&LOPT_MASK,
+  (LMOD_ENABLE|L_CORE_LOAD|L_CORE_ECM|L_CORE_PIDS|L_CORE_AU|L_CORE_AUSTATS|L_CORE_CAIDS|L_CORE_NET|L_CORE_CI|L_CORE_SC|L_CORE_HOOK|L_CORE_OVER)&LOPT_MASK,
   "core",
   { "load","action","ecm","ecmProc","pids","au","auStats","auExtra","auExtern",
     "caids","keys","dynamic","csa","ci","av7110","net","netData","msgcache",
-    "serial","smartcard","hook","ciFull" }
+    "serial","smartcard","hook","ciFull","csaVerb","override" }
   };
 ADD_MODULE(L_CORE,lm_core)
 
