@@ -77,9 +77,6 @@
 #error Your VDR API version is too old. See README.
 #endif
 
-// SC API version number for loading shared libraries
-#define SCAPIVERS 24
-
 static cPlugin *ScPlugin;
 static cOpts *ScOpts, *LogOpts;
 static const char * const cfgsub="sc";
@@ -1137,12 +1134,18 @@ cScDll::~cScDll()
 bool cScDll::Load(void)
 {
   char *base=rindex(fileName,'/');
-  if(!base) base=fileName;
+  if(base) base++; else base=fileName;
   PRINTF(L_CORE_DYN,"loading library: %s",base);
   if(!handle) {
     handle=dlopen(fileName,RTLD_NOW|RTLD_LOCAL);
-    if(handle) return true;
-    PRINTF(L_GEN_ERROR,"dload: %s: %s",base,dlerror());
+    if(handle) {
+      dlerror();
+      int *libapivers=(int *)dlsym(handle,"ScLibApiVersion");
+      const char *error=dlerror();
+      if(!error && *libapivers==SCAPIVERS) return true;
+      else PRINTF(L_GEN_ERROR,"dload: %s: SCAPI version doesn't match (plugin=%d, library=%d)",base,SCAPIVERS,!error?*libapivers:0);
+      }
+    else PRINTF(L_GEN_ERROR,"dload: %s: %s",base,dlerror());
     }
   return false;
 }
@@ -1223,6 +1226,7 @@ private:
   cScDlls dlls;
 #endif
   cScHousekeeper *keeper;
+  bool dllSuccess;
 public:
   cScPlugin(void);
   virtual ~cScPlugin();
@@ -1265,9 +1269,11 @@ cScPlugin::cScPlugin(void)
   LogOpts->Add(new cOptBool ("LogSyslog"   ,trNOOP("Log to syslog")       ,&logcfg.logSys));
   LogOpts->Add(new cOptBool ("LogUserMsg"  ,trNOOP("Show user messages")  ,&logcfg.logUser));
 #ifndef STATICBUILD
-  dlls.Load();
+  dllSuccess=dlls.Load();
+#else
+  dllSuccess=true;
 #endif
-  cScDvbDevice::Capture();
+  if(dllSuccess) cScDvbDevice::Capture();
   keeper=0;
 }
 
@@ -1281,7 +1287,7 @@ cScPlugin::~cScPlugin()
 bool cScPlugin::Initialize(void)
 {
   PRINTF(L_GEN_INFO,"SC version %s initializing",ScVersion);
-  return cScDvbDevice::Initialize();
+  return dllSuccess && cScDvbDevice::Initialize();
 }
 
 bool cScPlugin::Start(void)

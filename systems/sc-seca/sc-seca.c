@@ -28,6 +28,9 @@
 #include "opts.h"
 #include "parse.h"
 #include "log-sc.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_SECA          0x0100
 

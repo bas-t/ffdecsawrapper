@@ -30,6 +30,9 @@
 #include "misc.h"
 #include "log-sc.h"
 #include "log-core.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_NAME          "SC-Cryptoworks"
 #define SYSTEM_PRI           -5

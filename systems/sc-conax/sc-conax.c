@@ -25,6 +25,9 @@
 #include "parse.h"
 #include "misc.h"
 #include "log-sc.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_CONAX         0x0B00
 

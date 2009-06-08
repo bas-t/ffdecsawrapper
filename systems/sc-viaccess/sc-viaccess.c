@@ -27,6 +27,9 @@
 #include "misc.h"
 #include "log-sc.h"
 #include "log-core.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_VIACCESS      0x0500
 

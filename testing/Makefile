@@ -14,12 +14,11 @@ CXXFLAGS ?= -g -march=pentium3 -O2 -Wall -Woverloaded-virtual
 
 ### Includes and Defines
 
-SCAPIVERS = $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' ../sc.c)
 APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 
 INCLUDES = -I.. -I$(VDRDIR)/include
-DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -DSCAPIVERS=$(SCAPIVERS) -D_GNU_SOURCE
+DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOURCE
 
 OBJS = misc.o log.o override.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
 SHAREDOBJS = compat.o $(VDRDIR)/tools.o $(VDRDIR)/thread.o

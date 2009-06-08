@@ -29,6 +29,9 @@
 #include "misc.h"
 #include "opts.h"
 #include "log-core.h"
+#include "version.h"
+
+SCAPIVERSTAG();
 
 #define SYSTEM_NAME          "Cardclient"
 #define SYSTEM_PRI           -15
