@@ -211,9 +211,24 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         }
       break;
     case 0x23:
-      AddMapCycles(169);
 // START FIX
-      IMonInit0(24);
+      {
+      cBN s,x,y;
+      BN_copy(s,D);
+      BN_rshift(s,s,64+ 1 *8);
+      BN_lshift(s,s,64);
+      BN_copy(x,D);
+      BN_mask_bits(x,64);
+      BN_copy(y,D);
+      BN_rshift(y,y,64);
+      BN_mask_bits(y,1*8);
+      BN_lshift(y,y,128-1*8);
+      BN_copy(D,s);
+      BN_add(D,D,x);
+      BN_add(D,D,y);
+      }
+      BN_zero(B);
+      BN_set_bit(B,88);
 // END FIX
       break;
     case 0x25:
@@ -379,9 +394,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       break;
     case 0x4f:
 // START INCOMPLETE FIX
-      BN_zero(A);
-      BN_set_bit(A,40); //cycles=808
-      BN_add(A,A,A);
+      BN_set_word(A,2);
+      BN_add(B,B,A);
 // END INCOMPLETE FIX
       break;
     case 0x57:
