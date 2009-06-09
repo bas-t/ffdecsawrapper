@@ -225,7 +225,7 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
 
   cCCcamCard *c=&card[cardnum];
-  int timeout=700;
+  int timeout=3000;
   if(ecm->ecm_pid!=c->Pid() || !c->Connected()) { // channel change
     static const unsigned char pmt[] = {
       0x9f,0x80,0x32,0x82,0xFF,0xFF,
@@ -287,13 +287,13 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
 
     HEXDUMP(L_CC_CCCAM,capmt,wp,"%d: sending capmts for pid %04x",cardnum,ecm->ecm_pid);
     c->NewCaPmt(ecm->ecm_pid,capmt,wp);
-    timeout=3000;
+    timeout=6000;
     }
   if(!c->GetCw(cw,timeout)) {
     PRINTF(L_CC_CCCAM,"%d: getting CW timedout, re-writing CAPMT",cardnum);
     // somethings up, so we will send capmt again.
     c->WriteCaPmt();
-    if(!c->GetCw(cw,1000)) {
+    if(!c->GetCw(cw,timeout)) {
       PRINTF(L_CC_CCCAM,"%d: getting CW timedout again, failed ECM",cardnum);
       c->Disconnect();
       failedcw++;
