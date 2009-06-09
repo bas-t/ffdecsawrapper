@@ -152,18 +152,19 @@ export CXXFLAGS
 ### Targets:
 
 ifdef STATIC
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).a systems
+BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).a
 SHAREDDEFINES += -DSTATICBUILD
 else
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems systems-pre
+BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
 endif
+BUILDTARGETS += systems contrib
 
 ifneq ($(strip $(HASLOCALE)),)
 BUILDTARGETS += i18n
 endif
 
 all: $(BUILDTARGETS)
-.PHONY: i18n systems systems-pre clean clean-core clean-systems clean-pre dist srcdist
+.PHONY: i18n systems systems-pre contrib clean clean-core clean-systems clean-pre dist srcdist
 
 # Dependencies:
 
@@ -224,11 +225,15 @@ systems:
 systems-pre:
 	@for i in `ls -A -I ".*" $(PREDIR) | grep -- '-$(SCAPIVERS).so.$(APIVERSION)$$'`; do cp -p "$(PREDIR)/$$i" "$(LIBDIR)"; done
 
+contrib:
+	@$(MAKE) -C contrib all
+
 clean-systems:
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" clean; done
 
 clean-core:
 	@$(MAKE) -C testing clean
+	@$(MAKE) -C contrib clean
 	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
