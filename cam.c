@@ -1271,7 +1271,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
             cEcmInfo *n;
             while((n=ecms.First())) {
               ecms.Del(n,false);
-              overrides.UpdateEcm(ecm,dolog);
+              overrides.UpdateEcm(n,dolog);
               LBSTARTF(L_CORE_ECM);
               if(dolog) LBPUT("%s: found %04x(%04x) (%s) id %04x with ecm %x/%x ",id,n->caId,n->emmCaId,n->name,n->provId,n->ecm_pid,n->ecm_table);
               cEcmInfo *e=ecmList.First();
