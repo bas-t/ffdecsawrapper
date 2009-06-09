@@ -299,12 +299,6 @@ Summary of commandline options
 ------------------------------
 
 -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)
--I        --inverse-cd   use inverse CD detection for the next serial device
--R        --inverse-rst  use inverse RESET for the next serial device
--C FREQ   --clock=FREQ   use FREQ as clock for the card reader on the next
-                         serial device (rather than 3.5712 MHz
--s DEV    --serial=DEV   activate Phoenix ISO interface on serial device DEV
-                         (default: none)
 -d CMD    --dialup=CMD   call CMD to start/stop dialup-network
                          (default: none)
 -t SECS   --timeout=SECS shutdown timeout for dialup-network
