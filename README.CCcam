@@ -79,6 +79,12 @@ place inside the chroot.
 7) compile ca.c
 	cd /var/emu/chroot0/var/emu
 	gcc -O -fbuiltin -fomit-frame-pointer -fPIC -shared -o ca.so ca.c -ldl
+[COMMENT]
+** With vdr-sc the file has been renamed to cccam_ca.c and cccam_ca.so.
+** You will find the compiled cccam_ca.so in the contrib directory
+** after making the plugin
+** Probably you need to adjust you startup script to the new name.
+[/COMMENT]
 
 (ignore the warnings)
 8) In yout boot up which method you use to do this you should have a line for insmod dvbloopback (assuming you have followed a guide for installing sasc-ng)
