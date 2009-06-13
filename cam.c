@@ -1741,7 +1741,7 @@ public:
   void Unique(void);
   void CheckIgnore(void);
   int Histo(void);
-  void Purge(int caid);
+  void Purge(int caid, bool fullch);
   };
 
 cChannelList::cChannelList(int N)
@@ -1799,10 +1799,11 @@ int cChannelList::Histo(void)
   return h;
 }
 
-void cChannelList::Purge(int caid)
+void cChannelList::Purge(int caid, bool fullch)
 {
   for(cChannelCaids *ch=First(); ch;) {
-    if(ch->NumCaids()<=0 || ch->HasCaid(caid)) {
+    if(!fullch) ch->Del(caid);
+    if(ch->NumCaids()<=0 || (fullch && ch->HasCaid(caid))) {
       cChannelCaids *t=Next(ch);
       Del(ch);
       ch=t;
@@ -2144,7 +2145,7 @@ void cScCiAdapter::BuildCaids(bool force)
       LBSTART(L_CORE_CAIDS);
       LBPUT("%d: added %04x caids now",cardIndex,h); for(int i=0; i<n; i++) LBPUT(" %04x",c[i]);
       LBEND();
-      list.Purge(h);
+      list.Purge(h,false);
       } while(n<MAX_CI_SLOT_CAIDS && list.Count()>0);
     c[n]=0;
     if(n==0) PRINTF(L_CORE_CI,"no active CAIDs");
