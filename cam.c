@@ -1343,7 +1343,7 @@ void cCam::Tune(const cChannel *channel)
   cMutexLock lock(this);
   if(source!=channel->Source() || transponder!=channel->Transponder()) {
     source=channel->Source(); transponder=channel->Transponder();
-    PRINTF(L_CORE_PIDS,"%d: now tuned to source %x transponder %x",cardNum,source,transponder);
+    PRINTF(L_CORE_PIDS,"%d: now tuned to source %x(%s) transponder %x",cardNum,source,*cSource::ToString(source),transponder);
     Stop();
     }
   else PRINTF(L_CORE_PIDS,"%d: tune to same source/transponder",cardNum);
