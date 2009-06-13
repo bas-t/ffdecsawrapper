@@ -52,9 +52,9 @@ cat:{S61.5W-S148W:}1816:0120  # DISH N3
 ; examples:
 ; ecmtable:{1234::}8E
 ;
-ecmtable:{1234::}8E       # DISH
-ecmtable:{1801:S82W:}8E    # BEV
-ecmtable:{1801:S91W:}8E    # BEV
+ecmtable:{1234::}8E       # BEV
+ecmtable:{1801:S82W:}8E   # DISH
+ecmtable:{1801:S91W:}8E   # DISH
 
 ;
 ; Define an alternative caid to use for EMM data.
@@ -66,7 +66,7 @@ ecmtable:{1801:S91W:}8E    # BEV
 ; emmcaid:{1234::}1801
 ; emmcaid:{1816:S61.5W-S148W:}1801
 ;
-emmcaid:{1234::}1801      # DISH
+emmcaid:{1234::}1801      # BEV
 
 ;
 ; Define alternative table for EMM data
@@ -80,4 +80,4 @@ emmcaid:{1234::}1801      # DISH
 ; emmtable:{1811:S19.2E:}82/FE
 ;
 emmtable:{1816:S61.5W-S148W:}83:84 # DISH N3
-emmtable:{1815:S61.5W-S148W:}83:84 # BEV N3
+emmtable:{1815:S82W-S91W:}83:84    # BEV N3
