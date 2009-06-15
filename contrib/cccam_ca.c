@@ -110,7 +110,7 @@ static int cactl (int fd, int cai, int request, void *argp) {
         ca_info[cai][cpd->index][0] = (cpd->pid >> 0) & 0xff;
 				ca_info[cai][cpd->index][1] = (cpd->pid >> 8) & 0xff;
       } else if (cpd->index == -1) {
-        memset(&ca_info[cai], 0, sizeof(ca_info));
+        memset(&ca_info[cai], 0, sizeof(ca_info[cai]));
       } else
         ERR("ca.so: Invalid index %d in CA_SET_PID (%d) for ca id %d", cpd->index, MAX_INDEX, cai);
       return 1;
