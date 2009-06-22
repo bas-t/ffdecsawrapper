@@ -2210,7 +2210,7 @@ void cScCiAdapter::Write(const unsigned char *buff, int len)
 {
   cMutexLock lock(&ciMutex);
   if(cam && buff && len>=5) {
-    unsigned char a[128], *b=&a[1];
+    unsigned char a[256], *b=&a[1];
     struct TPDU *tpdu=(struct TPDU *)buff;
     int slot=tpdu->slot;
     if(buff[2]!=0xA0 || buff[3]>0x01 || LOG(L_CORE_CIFULL))
@@ -2225,8 +2225,11 @@ void cScCiAdapter::Write(const unsigned char *buff, int len)
           if(d) {
             int s=d[0];
             if(c>=s) {
-              memcpy(&b[l],&d[1],s);
-              l+=s;
+              if(l+s<sizeof(a)-6) {
+                memcpy(&b[l],&d[1],s);
+                l+=s;
+                }
+              else PRINTF(L_GEN_DEBUG,"internal: sc-ci %d a-buff overflow l+s=%d",cardIndex,l+s);
               slots[slot]->Del(s+1);
               }
             else slots[slot]->Del(c);
