@@ -26,6 +26,10 @@ extern const char *ScVersion;
 
 // SC API version number for loading shared libraries
 #define SCAPIVERS 24
+#ifndef STATICBUILD
 #define SCAPIVERSTAG() int ScLibApiVersion=SCAPIVERS
+#else
+#define SCAPIVERSTAG()
+#endif //STATICBUILD
 
 #endif
