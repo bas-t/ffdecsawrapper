@@ -2225,7 +2225,7 @@ void cScCiAdapter::Write(const unsigned char *buff, int len)
           if(d) {
             int s=d[0];
             if(c>=s) {
-              if(l+s<sizeof(a)-6) {
+              if(l+s<(int)sizeof(a)-6) {
                 memcpy(&b[l],&d[1],s);
                 l+=s;
                 }
