@@ -515,7 +515,7 @@ cPidFilter *cLogger::AddFilter(int Pid, int Section, int Mask, int Mode, int Idl
 {
   cPidFilter *filter=NewFilter(IdleTime);
   if(filter) {
-    if(Pid>1) filter->SetBuffSize(32768);
+    if(Pid>1) filter->SetBuffSize(KILOBYTE(64));
     filter->Start(Pid,Section,Mask,Mode,Crc);
     PRINTF(L_CORE_AUEXTRA,"%d: added filter pid=0x%.4x sct=0x%.2x/0x%.2x/0x%.2x idle=%d crc=%d",cardNum,Pid,Section,Mask,Mode,IdleTime,Crc);
     }
