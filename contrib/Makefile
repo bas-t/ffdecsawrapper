@@ -16,12 +16,17 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 # Or, point your browser to http://www.gnu.org/copyleft/gpl.html
 
-all: cccam_ca.so
+all: cccam_ca.so bsdiff bspatch
 .PHONY: clean
 
 
 cccam_ca.so: cccam_ca.c
 	gcc -O -fbuiltin -fomit-frame-pointer -fPIC -shared -o $@ $< -ldl
 
+bsdiff:		bsdiff.c
+	gcc -O3 -o $@ $< -lbz2
+bspatch:	bspatch.c
+	gcc -O3 -o $@ $< -lbz2
+
 clean:
-	@-rm cccam_ca.so
+	@-rm cccam_ca.so bsdiff bspatch
