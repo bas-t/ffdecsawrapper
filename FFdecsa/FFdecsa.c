@@ -115,6 +115,7 @@
 
 //// debug tool
 
+#ifdef DEBUG
 static void dump_mem(const char *string, const unsigned char *p, int len, int linelen){
   int i;
   for(i=0;i<len;i++){
@@ -128,6 +129,7 @@ static void dump_mem(const char *string, const unsigned char *p, int len, int li
   }
   if(i%linelen==0) fprintf(stderr,"\n");
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////
 

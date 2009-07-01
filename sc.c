@@ -253,8 +253,7 @@ cScInfoItem::cScInfoItem(const char *Name, const char *Value, eOSState State)
 
 void cScInfoItem::SetValue(const char *Name, const char *Value)
 {
-  char *buff;
-  asprintf(&buff,Value ? "%s:\t%s":"%s",Name,Value);
+  char *buff=bprintf(Value ? "%s:\t%s":"%s",Name,Value);
   SetText(buff,false);
   cStatus::MsgOsdCurrentItem(buff);
   ident=-1;
@@ -277,7 +276,7 @@ const char *cOpt::FullName(const char *PreStr)
 {
   if(PreStr) {
     free(fullname);
-    asprintf(&fullname,"%s.%s",PreStr,name);
+    fullname=bprintf("%s.%s",PreStr,name);
     return fullname;
     }
   else return name;
@@ -1347,7 +1346,7 @@ const char *cScPlugin::CommandLineHelp(void)
   static char *help_str=0;
   
   free(help_str);    //                                     for easier orientation, this is column 80|
-  asprintf(&help_str,"  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
+  help_str=bprintf(  "  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
                      "  -d CMD    --dialup=CMD   call CMD to start/stop dialup-network\n"
                      "                           (default: %s)\n"
                      "  -t SECS   --timeout=SECS shutdown timeout for dialup-network\n"

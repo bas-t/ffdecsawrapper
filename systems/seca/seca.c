@@ -1327,7 +1327,7 @@ bool cSystemSeca::Process0FNano(int count, unsigned char *hashDW, unsigned char 
     int off=WORD(hashDW,0,0x3FFF);
     xxor(buffE,8,&MT[off],&MT[0x3FFF-off]);
     xxor(buffE,8,&MT[( ((buffE[0] ^ hashDW[6])<<8)
-                     +  buffE[7] ^ hashDW[7]     )&0x3FFF],buffE);
+                     +  (buffE[7] ^ hashDW[7])   )&0x3FFF],buffE);
     LDUMP(L_SYS_VERBOSE,buffE,8,"0f: buffE:");
 
     unsigned char buffC[16];
