@@ -133,6 +133,16 @@ unsigned char XorSum(const unsigned char *mem, int len)
   return cs;
 }
 
+char *bprintf(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap,fmt);
+  char *str=0;
+  if(vasprintf(&str,fmt,ap)<0);
+  va_end(ap);
+  return str;
+}
+
 // crc stuff taken from linux-2.6.0/lib/crc32.c
 /*
  * There are multiple 16-bit CRC polynomials in common use, but this is

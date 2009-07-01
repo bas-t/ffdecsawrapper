@@ -135,8 +135,7 @@ void cNetWatcher::Action(void)
 
 int cNetWatcher::RunCommand(const char *cmd, const char *state)
 {
-  char *tmp;
-  asprintf(&tmp,"%s %s",cmd,state);
+  char *tmp=bprintf("%s %s",cmd,state);
   PRINTF(L_CORE_NET,"netwatch cmd exec '%s'",tmp);
   int res=SystemExec(tmp);
   free(tmp);

@@ -172,8 +172,7 @@ void cLogging::PrivateLogPrint(const struct LogHeader *lh, const char *txt)
         fprintf(logfile,"%s [%s] %s\n",lh->stamp,lh->tag,"logfile closed, filesize limit reached");
         fclose(logfile);
         logfile=0; logfileShutup=false;
-        char *name;
-        asprintf(&name,"%s.old",logcfg.logFilename);
+        char *name=bprintf("%s.old",logcfg.logFilename);
         if(rename(logcfg.logFilename,name)) {
           logfileShutup=true;
           PRINTF(L_GEN_ERROR,"failed to rotate logfile: %s",strerror(errno));

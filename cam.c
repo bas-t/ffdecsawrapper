@@ -794,7 +794,7 @@ cEcmHandler::cEcmHandler(cCam *Cam, int CardNum, int cwindex)
   sys=0; filter=0; ecm=0; ecmPri=0; mode=-1; sid=-1;
   trigger=false; triggerMode=-1;
   filterSource=filterTransponder=0; filterCwIndex=-1; filterSid=-1;
-  asprintf(&id,"%d.%d",cardNum,cwindex);
+  id=bprintf("%d.%d",cardNum,cwindex);
 }
 
 cEcmHandler::~cEcmHandler()
@@ -839,7 +839,7 @@ void cEcmHandler::ShiftCwIndex(int cwindex)
   if(cwIndex!=cwindex) {
     PRINTF(L_CORE_PIDS,"%s: shifting cwIndex from %d to %d",id,cwIndex,cwindex);
     free(id);
-    asprintf(&id,"%d.%d",cardNum,cwindex);
+    id=bprintf("%d.%d",cardNum,cwindex);
     dataMutex.Lock();
     trigger=true;
     cwIndex=cwindex;

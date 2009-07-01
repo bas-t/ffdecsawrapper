@@ -934,7 +934,7 @@ cString cPlainKeys::KeyString(int Type, int Id, int Keynr)
   char *s;
   if(pk) {
     pk->type=Type; pk->id=Id; pk->keynr=Keynr;
-    asprintf(&s,"%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
+    s=bprintf("%c %.*X %s",Type,pk->IdSize(),Id,*pk->PrintKeyNr());
     delete pk;
     }
   else s=strdup("unknown");

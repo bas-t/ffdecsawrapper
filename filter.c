@@ -40,7 +40,7 @@ cPidFilter::cPidFilter(const char *Id, int Num, int DvbNum, unsigned int IdleTim
   dvbNum=DvbNum;
   idleTime=IdleTime;
   id=0; fd=-1; active=false; forceRun=false; userData=0;
-  asprintf(&id,"%s/%d",Id,Num);
+  id=bprintf("%s/%d",Id,Num);
   PRINTF(L_CORE_ACTION,"new filter '%s' on card %d (%d ms)",id,dvbNum,idleTime);
 }
 
@@ -150,7 +150,7 @@ int cPidFilter::Pid(void)
 
 cAction::cAction(const char *Id, int DvbNum)
 {
-  asprintf(&id,"%s %d",Id,DvbNum);
+  id=bprintf("%s %d",Id,DvbNum);
   dvbNum=DvbNum;
   unique=0; pri=-1;
   SetDescription("%s filter",id);

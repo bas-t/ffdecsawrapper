@@ -61,6 +61,8 @@ bool CheckFF(const unsigned char *data, int len);
 unsigned char XorSum(const unsigned char *mem, int len);
 unsigned int crc32_le(unsigned int crc, unsigned char const *p, int len);
 
+char *bprintf(const char *fmt, ...) __attribute__ ((format (printf,1,2)));
+
 // ----------------------------------------------------------------
 
 class cLineBuff {

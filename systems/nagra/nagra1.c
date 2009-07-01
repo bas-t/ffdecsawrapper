@@ -97,9 +97,9 @@ bool cEmu::Matches(int RomNr, int Id)
 bool cEmu::Init(int RomNr, int Id)
 {
   romNr=RomNr; id=Id;
-  asprintf(&romName,"ROM%d.bin",romNr);
-  asprintf(&romExtName,"ROM%dext.bin",romNr);
-  asprintf(&eepromName,"eep%i_%02x.bin",romNr,(id&0xff00)>>8);
+  romName=bprintf("ROM%d.bin",romNr);
+  romExtName=bprintf("ROM%dext.bin",romNr);
+  eepromName=bprintf("eep%i_%02x.bin",romNr,(id&0xff00)>>8);
   if(InitSetup()) {
     ForceSet(EnsIrdChk, 0x81,true);
     ForceSet(Cmd83Chk+0,0x98,true);
