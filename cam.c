@@ -1818,6 +1818,8 @@ void cChannelList::Purge(int caid, bool fullch)
 
 // -- cScCiAdapter -------------------------------------------------------------
 
+#define TDPU_SIZE_INDICATOR 0x80
+
 struct TPDU {
   unsigned char slot;
   unsigned char tcid;
@@ -1946,26 +1948,30 @@ bool cScCamSlot::Check(void)
 int cScCamSlot::GetLength(const unsigned char * &data)
 {
   int len=*data++;
-  if(len&0x80) {
+  if(len&TDPU_SIZE_INDICATOR) {
     int i;
-    for(i=len&~0x80, len=0; i>0; i--) len=(len<<8) + *data++;
+    for(i=len&~TDPU_SIZE_INDICATOR, len=0; i>0; i--) len=(len<<8) + *data++;
     }
   return len;
 }
 
 void cScCamSlot::CaInfo(unsigned char *b, int tcid, int cid)
 {
-  b[0]=0xa0; b[2]=tcid;
-  b[3]=0x90;
-  b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
-  b[7]=0x9f; b[8]=0x80;   b[9]=0x31; // AOT_CA_INFO
-  int l=0;
-  for(int i=0; caids[i]; i++) {
-    b[l+11]=caids[i]>>8;
-    b[l+12]=caids[i]&0xff;
-    l+=2;
-    }
-  b[10]=l; b[1]=l+9; b[-1]=l+11; Put(b-1,l+12);
+  unsigned char *p=b;
+  *p++=0xa0;
+  int n=9;
+  for(int i=0; caids[i]; i++) n+=2;
+  if(n<TDPU_SIZE_INDICATOR) *p++=n;
+  else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
+  *p++=tcid;
+  *p++=0x90;
+  *p++=0x02; *p++=cid>>8; *p++=cid&0xff;
+  *p++=0x9f; *p++=0x80;   *p++=0x31; // AOT_CA_INFO
+  *p++=n-9;
+  for(int i=0; caids[i]; i++) { *p++=caids[i]>>8; *p++=caids[i]&0xff; }
+  n=(p-b);
+  if(n>255) PRINTF(L_GEN_DEBUG,"internal: sc-camslot %d.%d ca-info length exceed %d",cardIndex,slot,n);
+  b[-1]=n; Put(b-1,n+1);
   PRINTF(L_CORE_CI,"%d.%d sending CA info",cardIndex,slot);
 }
 
