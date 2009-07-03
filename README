@@ -69,8 +69,9 @@ additional shared library object for every supported system (libsc-*.so). You
 can enable/disable individual systems by adding or removing the shared library
 from your VDR plugin lib directory.
 
-Starting with version 0.5.8 all make compile time options (e.g. IRDETO=1) except
-DEFAULT_PORT have been removed!
+There are some make options to adapt FFdecsa to your system, which can be
+given on the make command line or added to Make.config. Please refer to
+README.FFdecsa for it.
 
 Note that in combination with other plugins which create devices (e.g.
 softdevice) it's essential that this plugin is loaded before any of these

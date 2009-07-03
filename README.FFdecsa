@@ -50,6 +50,10 @@ CSAFLAGS=opts to set compiler options.
 
 All of them can be added to VDR's make.config file.
 
+It has been reported that FFdecsa yields invalid results (make test fails) if
+compiled with gcc 4.4.x and option -O3. Use -O2 in this case to work around.
+Suggestions how to fix the problem in source are highly appreciated.
+
 
 
 History:
