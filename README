@@ -196,6 +196,11 @@ possible. Updated key are inserted near to the old one (there is a setup option
 to selected if the old key is commented out or deleted), while new keys are
 inserted close to the top of the file.
 
+Certain parameters (normaly auto-configured from CAT/PMT) can be overriden by
+entries in override.conf. See example file in the "examples" subdirectory for
+format. Override configuration is needed if the provider fails to broadcast
+correct data in CAT/PMT only.
+
 For Irdeto, Seca and Viaccess AU you need valid subscription card data, which
 have to be located in the files "Ird-Beta.KID", "Seca.KID" or "Viaccess.KID".
 See the files in the "examples" subdirectory for file formats.
