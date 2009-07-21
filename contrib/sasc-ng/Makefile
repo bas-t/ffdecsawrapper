@@ -78,6 +78,7 @@ clean:
 	@-rm -f objs/dload.o
 	@-rm -f $(TOOL)
 	@-rm -f libscanwrap.so
+	@-rm -f FFdecsa/*
 
 module_clean:
 	cd dvbloopback/module && $(MAKE) clean
@@ -93,8 +94,14 @@ else
 	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 STATIC=1 all
 endif
 
-FFdecsa/FFdecsa.o:
-	 $(MAKE) -C FFdecsa $(FFDECSA_OPTS)
+link-FFdecsa:
+	@(cd FFdecsa; \
+          for i in `find ../../../FFdecsa/ -maxdepth 1 -type f -name Makefile -or -iname "*.h" -or -iname "*.c"`; \
+            do ln -sf $$i `basename $$i`; \
+          done)
+
+FFdecsa/FFdecsa.o: link-FFdecsa
+	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
 
 module:
 	cd dvbloopback/module && $(MAKE) $(DVB_MOD_DIR)
@@ -124,7 +131,7 @@ objs/libsi.a: $(OBJ_LIBSI)
 objs/%.o: $(LBDIR)/%.c $(INC_DEPS)
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB)
+objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB) link-FFdecsa
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
 objs/%.o: sc/%.cpp
