@@ -203,7 +203,7 @@ void cMutex::Unlock(void)
 	  active = running = false;
 	  childTid = 0;
 	  description = NULL;
-	  SetDescription(Description);
+	  SetDescription("%s",Description);
 	}
 
 	cThread::~cThread()

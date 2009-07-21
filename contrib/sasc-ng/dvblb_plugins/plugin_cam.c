@@ -628,7 +628,7 @@ static void usermsg_cam(char * str) {
     }
     printf("User Message %s data: %s\n", str, data);
     outstr = sc->SVDRPCommand((const char *)str, (const char *)data, res);
-    printf(outstr);
+    printf("%s",*outstr);
     printf("User Message %s returned: %d\n", str, res);
   }
 }
