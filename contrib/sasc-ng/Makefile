@@ -84,13 +84,9 @@ clean:
 	@-rm -f objs/version.cpp
 	@-rm -f objs/dload.o
 	@-rm -f $(TOOL)
-	@$(MAKE) -C scripts clean
 
 module_clean:
 	cd dvbloopback/module && $(MAKE) clean
-
-utils:
-	@$(MAKE) -C scripts
 
 sc-plugin:
 	@-rm -f sc/config.h
