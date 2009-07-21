@@ -27,11 +27,9 @@ ifdef AUXSERVER_OPTS
   DEFINES += ${AUXSERVER_OPTS}
 endif
 
-ifndef RELEASE
-  CXXFLAGS += -g
-  CFLAGS   += -g
-  SC_FLAGS += -g
-endif
+CXXFLAGS += -g
+CFLAGS   += -g
+SC_FLAGS += -g
 
 ifdef USE_DLOAD
   SCLIBS = -Lsc/PLUGINS/lib `find sc/PLUGINS/lib/ -name "*.so" \
@@ -40,8 +38,6 @@ else
   SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
 	./sc/PLUGINS/lib/libvdr-sc.a
 endif
-
-RELDIR = $(TOOL)-$(VERSION)
 
 OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 	plugin_showioctl.o plugin_legacysw.o plugin_dss.o plugin_cam.o \
@@ -68,9 +64,6 @@ all: $(TOOL) libscanwrap.so
 
 $(TOOL): $(OBJS) sc-plugin
 	$(CXX) $(CFLAGS) -o $(TOOL) $(SCLIBS) $(OBJS) $(LIBS)
-ifdef RELEASE
-	$(MAKE) strip-sasc
-endif
 
 libscanwrap.so: dvblb_plugins/scanwrap.c
 	$(CC) -fPIC -g -O2 -Wall -I. -nostdlib -shared -o $@ $< -ldl  -lc
@@ -96,9 +89,6 @@ sc-plugin:
 ifdef USE_DLOAD
 	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 all
 	$(MAKE) link-shared
-ifdef RELEASE
-	$(MAKE) strip-sc
-endif 
 else
 	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 STATIC=1 all
 endif
@@ -109,18 +99,6 @@ FFdecsa/FFdecsa.o:
 module:
 	cd dvbloopback/module && $(MAKE) $(DVB_MOD_DIR)
 	@cp -f dvbloopback/module/dvbloopback.ko .
-
-release:
-	rm -rf $(RELDIR)
-	mkdir $(RELDIR)
-	@mkdir $(RELDIR)/objs
-	@mkdir $(RELDIR)/sc_files
-	@cp Makefile $(RELDIR)/Makefile
-	@ln -s ../dvbloopback  $(RELDIR)/dvbloopback
-	@ln -s ../sc $(RELDIR)/sc
-	@ln -s ../dvblb_plugins $(RELDIR)/dvblb_plugins
-	@ln -s ../FFdecsa $(RELDIR)/FFdecsa
-	tar --exclude="*.o" --exclude ".svn" --numeric-owner -h -cvzf $(RELDIR).tgz $(RELDIR)
 
 link-shared:
 	@cd ./sc/PLUGINS/lib; \
