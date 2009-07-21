@@ -16,6 +16,10 @@ dump.*
 core*
 contrib/bsdiff
 contrib/bspatch
+contrib/sasc-ng/config.*
+contrib/sasc-ng/sasc-ng
+contrib/sasc-ng/objs/version.cpp
+contrib/sasc-ng/sc/config.h
 
 syntax: regexp
 ^testing/test[^.]*$
