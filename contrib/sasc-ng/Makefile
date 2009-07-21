@@ -84,6 +84,7 @@ clean:
 	@-rm -f objs/version.cpp
 	@-rm -f objs/dload.o
 	@-rm -f $(TOOL)
+	@-rm -f libscanwrap.so
 
 module_clean:
 	cd dvbloopback/module && $(MAKE) clean
