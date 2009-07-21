@@ -1420,6 +1420,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
             cEcmInfo *n;
             while((n=ecms.First())) {
               ecms.Del(n,false);
+              n->AddCaDescr(&buff[index],buff[index+1]+2);
               overrides.UpdateEcm(n,dolog);
               LBSTARTF(L_CORE_ECM);
               if(dolog) LBPUT("%s: found %04x(%04x) (%s) id %04x with ecm %x/%x ",id,n->caId,n->emmCaId,n->name,n->provId,n->ecm_pid,n->ecm_table);
@@ -1442,7 +1443,6 @@ void cEcmHandler::ParseCAInfo(int SysId)
               if(n) {
                 if(dolog) LBPUT("(new)");
                 n->SetSource(filterSid,filterSource,filterTransponder);
-                n->AddCaDescr(&buff[index+2],buff[index+1]);
                 ecmList.Add(n);
                 AddEcmPri(n);
                 }
