@@ -61,7 +61,7 @@ LIBS = -lpthread -lcrypto -lcrypt
 
 all: $(TOOL) libscanwrap.so
 
-$(TOOL): $(OBJS) sc-plugin
+$(TOOL): $(OBJS) | sc-plugin
 	$(CXX) $(CFLAGS) -o $(TOOL) $(SCLIBS) $(OBJS) $(LIBS)
 
 libscanwrap.so: dvblb_plugins/scanwrap.c
@@ -77,16 +77,16 @@ clean:
 	@-rm -f objs/dload.o
 	@-rm -f $(TOOL)
 	@-rm -f libscanwrap.so
-	@-rm -f FFdecsa/*
+	@-rm -rf FFdecsa/*
 
 module_clean:
 	cd dvbloopback/module && $(MAKE) clean
 
-sc-plugin-link:
+link-sc-plugin:
 	@bash ./makelinks.sh . $(SCDIR)
 	@mkdir -p $(SCDIR)/systems-pre $(SCDIR)/po
 
-sc-plugin: sc-plugin-link
+sc-plugin: link-sc-plugin
 	@-rm -f sc/config.h
 	@ln -s include/vdr/config.h sc/config.h
 	@if [ ! -d sc/PLUGINS/lib ]; then mkdir sc/PLUGINS/lib; fi
@@ -131,10 +131,10 @@ objs/libsi.a: $(OBJ_LIBSI)
 objs/%.o: $(LBDIR)/%.c $(INC_DEPS)
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB) link-FFdecsa
+objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB) | link-FFdecsa
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-objs/%.o: sc/%.cpp sc-plugin-link
+objs/%.o: sc/%.cpp | link-sc-plugin
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) $(INCLUDES_SC) $(INCLUDES) $<
 
 objs/si_%.o: sc/libsi/%.c
@@ -144,6 +144,6 @@ objs/version.o: objs/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $(DEFINES) $<
 
 objs/version.cpp: FORCE
-	echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
+	@echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
 
 FORCE:
