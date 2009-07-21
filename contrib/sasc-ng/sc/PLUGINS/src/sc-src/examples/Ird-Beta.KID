@@ -1,0 +1,12 @@
+; Irdeto/Betacrypt cards
+;
+; AAAAAA BBBBBBBBBBBBBBBBBBBB CC DDDDDD EEEEEEEEEEEEEEEE
+;
+; AAAAAA               - HS hex serial
+; BBBBBBBBBBBBBBBBBBBB - HMK hex master key
+; CC                   - provider
+; DDDDDD               - provider ID
+; EEEEEEEEEEEEEEEE     - PMK plain master key
+;
+123456 12345612345612345612 00 123456 1234567890123456 ; dummy
+

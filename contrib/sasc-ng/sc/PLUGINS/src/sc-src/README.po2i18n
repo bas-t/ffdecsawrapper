@@ -1,0 +1,44 @@
+        
+                  po2i18n - Converter for po files
+
+
+Written by:              Udo Richter <udo_richter@gmx.de>
+Project's homepage:      http://www.udo-richter.de/vdr/scripts.html#po2i18n
+                         http://www.udo-richter.de/vdr/scripts.en.html#po2i18n
+
+
+
+About
+--------------------------------------------------------------------------
+po2i18n is a perl script that generates an i18n.c file compatible to the i18n
+system of VDR 1.2.0 - VDR 1.5.6, based on the .po files of VDR 1.5.7. This
+allows plugins to transit to the translation system of VDR 1.5.7 while 
+maintaining compatibility to earlier versions. The script can be used manually
+or automatically as part of the Makefile.
+
+
+Use
+--------------------------------------------------------------------------
+po2i18n.pl is a filter and can be used manually like this:
+
+  ./po2i18n.pl < i18n-template.c > i18n.c
+  
+The filter reads all relevant ./po/*.po files and writes the i18n strings
+into the template file. Strings will be added between the following two lines:
+
+  // START I18N
+  // END I18N
+
+See also the sample i18n.h and i18n-template.c file. Note that the phrases data
+structure is encapsulated in #if VDRVERSNUM < 10507, so the i18n strings won't 
+be in the plugin file after 1.5.7. The call to RegisterI18n() of your plugin 
+should also be encapsulated like this.
+
+po2i18n can also generate the i18n.c file on the fly while compiling. The 
+changes to the Makefile are demonstrated by the included Makefile.diff sample.
+With these changes, the i18n.c file will be generated on VDR up to 1.5.6, and
+the whole gettext conversion is skipped. From 1.5.7 on, the i18n-template.c 
+file will be simply copied as a dummy, and the new locale system will run.
+
+As a drawback, the automatic .dependencies for i18n.c won't work.
+

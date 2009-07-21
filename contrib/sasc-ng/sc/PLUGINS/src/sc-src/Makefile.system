@@ -1,0 +1,94 @@
+#
+# Softcam plugin to VDR
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+# Or, point your browser to http://www.gnu.org/copyleft/gpl.html
+
+### The directory environment:
+
+LIBDIR = ../../../../lib
+PREDIR = ../../systems-pre
+
+### Includes and Defines
+
+SINCLUDES = -I../..
+SINCLUDES += $(shell echo "$(INCLUDES)" | sed -e 's+-I *+-I+g' | sed -e 's+-I\([^/]\)+-I../../\1+g')
+
+-include *.mk
+
+# Dependencies:
+
+MAKEDEP = g++ -MM -MG
+DEPFILE = .dependencies
+$(DEPFILE): $(OBJS:%.o=%.c) $(wildcard *.h)
+	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(SINCLUDES) $(OBJS:%.o=%.c) > $@
+
+-include $(DEPFILE)
+
+### Targets:
+
+LIBSC    = libsc-$(TARGET).so
+LIBSCVER = libsc-$(TARGET)-$(SCAPIVERS).so.$(APIVERSION)
+LIBSCAR  = libsc-$(TARGET).a
+
+ifdef STATIC
+BUILDTARGETS = $(LIBDIR)/$(LIBSCAR)
+else
+BUILDTARGETS = $(LIBDIR)/$(LIBSCVER) $(PREDIR)/$(LIBSCVER)
+endif
+
+define clean
+@-rm -f $(OBJS) $(CLEAN_RM) $(DEPFILE) $(LIBSC) core* *~
+endef
+
+define clean-pre
+@find "$(PREDIR)" -type f -iname "libsc-$(TARGET)-*.so.*" -not -iname "libsc-$(TARGET)-$(SCAPIVERS).so.*" | xargs rm -f
+@-rm -f $(PREDIR)/$(LIBSCVER)
+endef
+
+all: $(BUILDTARGETS)
+.PHONY: clean dist
+
+%.o: %.c
+	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(SINCLUDES) $<
+
+$(LIBSC): $(OBJS)
+	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(LIBS) $(SHAREDLIBS) -o $@
+	$(clean-pre)
+
+$(LIBDIR)/$(LIBSCVER): $(LIBSC)
+	@cp -p $< $@
+
+$(LIBDIR)/$(LIBSCAR): $(OBJS)
+	$(AR) r $@ $(OBJS)
+
+ifdef NONPUBLIC
+$(PREDIR)/$(LIBSCVER): $(LIBSC)
+	$(clean-pre)
+	@cp -p $< $@
+
+dist: $(PREDIR)/$(LIBSCVER)
+	$(clean)
+else
+$(PREDIR)/$(LIBSCVER):
+
+dist:
+	$(clean-pre)
+	$(clean)
+endif
+
+clean:
+	$(clean-pre)
+	$(clean)

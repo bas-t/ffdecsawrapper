@@ -1,0 +1,272 @@
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/ci.c vdr-1.4.7-sc7/ci.c
+--- vdr-1.4.7-orig/ci.c	2007-04-30 14:58:41.000000000 +0200
++++ vdr-1.4.7-sc7/ci.c	2007-05-13 18:04:04.000000000 +0200
+@@ -1502,9 +1502,8 @@
+   close(fd);
+ }
+ 
+-cCiHandler *cCiHandler::CreateCiHandler(const char *FileName)
++cCiHandler *cCiHandler::CreateCiHandler(int fd_ca)
+ {
+-  int fd_ca = open(FileName, O_RDWR);
+   if (fd_ca >= 0) {
+      ca_caps_t Caps;
+      if (ioctl(fd_ca, CA_GET_CAP, &Caps) == 0) {
+@@ -1520,8 +1519,7 @@
+            esyslog("ERROR: no CAM slots found");
+         }
+      else
+-        LOG_ERROR_STR(FileName);
+-     close(fd_ca);
++        LOG_ERROR_STR("CA_GET_CAP");
+      }
+   return NULL;
+ }
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/ci.h vdr-1.4.7-sc7/ci.h
+--- vdr-1.4.7-orig/ci.h	2006-08-12 11:43:31.000000000 +0200
++++ vdr-1.4.7-sc7/ci.h	2007-06-24 19:46:39.000000000 +0200
+@@ -85,10 +85,12 @@
+ class cCiCaProgramData : public cListObject {
+ public:
+   int programNumber;
++  bool modified;
+   cList<cCiCaPidData> pidList;
+   cCiCaProgramData(int ProgramNumber)
+   {
+     programNumber = ProgramNumber;
++    modified = true;
+   }
+   };
+ 
+@@ -96,6 +98,8 @@
+ class cCiTransportLayer;
+ class cCiTransportConnection;
+ 
++#define VDR_IS_SC_PATCHED 402
++
+ class cCiHandler {
+ private:
+   cMutex mutex;
+@@ -123,7 +127,7 @@
+   void SendCaPmt(void);
+ public:
+   ~cCiHandler();
+-  static cCiHandler *CreateCiHandler(const char *FileName);
++  static cCiHandler *CreateCiHandler(int fd_ca);
+        ///< Creates a new cCiHandler for the given CA device.
+   int NumSlots(void) { return numSlots; }
+        ///< Returns the number of CAM slots provided by this CA device.
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/device.c vdr-1.4.7-sc7/device.c
+--- vdr-1.4.7-orig/device.c	2006-09-03 12:13:25.000000000 +0200
++++ vdr-1.4.7-sc7/device.c	2007-05-13 18:30:57.000000000 +0200
+@@ -395,6 +395,54 @@
+   return false;
+ }
+ 
++void cDevice::CiStartDecrypting(void)
++{
++  if (ciHandler)
++     ciHandler->StartDecrypting();
++}
++
++void cDevice::CiSetSource(int Source, int Transponder)
++{
++  cMutexLock MutexLock(&ciListMutex);
++  if (ciSource != Source || ciTransponder != Transponder)
++     ciProgramList.Clear();
++  ciSource = Source;
++  ciTransponder = Transponder;
++}
++
++void cDevice::CiAddPid(int ProgramNumber, int Pid, int StreamType)
++{
++  cMutexLock MutexLock(&ciListMutex);
++  cCiCaProgramData *ProgramData = NULL;
++  for (cCiCaProgramData *p = ciProgramList.First(); p; p = ciProgramList.Next(p)) {
++      if (p->programNumber == ProgramNumber) {
++         ProgramData = p;
++         for (cCiCaPidData *q = p->pidList.First(); q; q = p->pidList.Next(q)) {
++             if (q->pid == Pid)
++                return;
++             }
++         }
++      }
++  if (!ProgramData)
++     ciProgramList.Add(ProgramData = new cCiCaProgramData(ProgramNumber));
++  ProgramData->pidList.Add(new cCiCaPidData(Pid, StreamType));
++  ProgramData->modified=true;
++}
++
++void cDevice::CiSetPid(int Pid, bool Active)
++{
++  cMutexLock MutexLock(&ciListMutex);
++  for (cCiCaProgramData *p = ciProgramList.First(); p; p = ciProgramList.Next(p)) {
++      for (cCiCaPidData *q = p->pidList.First(); q; q = p->pidList.Next(q)) {
++          if (q->pid == Pid) {
++             q->active = Active;
++             p->modified = true;
++             return;
++             }
++         }
++      }
++}
++
+ bool cDevice::AddPid(int Pid, ePidType PidType)
+ {
+   if (Pid || PidType == ptPcr) {
+@@ -424,6 +472,7 @@
+               }
+            if (ciHandler)
+               ciHandler->SetPid(Pid, true);
++           CiSetPid(Pid, true);
+            }
+         PRINTPIDS("a");
+         return true;
+@@ -453,6 +502,7 @@
+            }
+         if (ciHandler)
+            ciHandler->SetPid(Pid, true);
++        CiSetPid(Pid, true);
+         }
+      }
+   return true;
+@@ -481,6 +531,7 @@
+               pidHandles[n].pid = 0;
+               if (ciHandler)
+                  ciHandler->SetPid(Pid, false);
++              CiSetPid(Pid, false);
+               }
+            }
+         PRINTPIDS("E");
+@@ -663,6 +714,16 @@
+            }
+ #endif
+         }
++
++     CiSetSource(Channel->Source(), Channel->Transponder());
++     if (Channel->Ca() >= CA_ENCRYPTED_MIN) {
++        CiAddPid(Channel->Sid(), Channel->Vpid(), 2);
++        for (const int *Apid = Channel->Apids(); *Apid; Apid++)
++            CiAddPid(Channel->Sid(), *Apid, 4);
++        for (const int *Dpid = Channel->Dpids(); *Dpid; Dpid++)
++            CiAddPid(Channel->Sid(), *Dpid, 0);
++        }
++
+      if (NeedsDetachReceivers)
+         DetachAllReceivers();
+      if (SetChannelDevice(Channel, LiveView)) {
+@@ -672,8 +733,7 @@
+            sectionHandler->SetStatus(true);
+            }
+         // Start decrypting any PIDs that might have been set in SetChannelDevice():
+-        if (ciHandler)
+-           ciHandler->StartDecrypting();
++        CiStartDecrypting();
+         }
+      else
+         Result = scrFailed;
+@@ -1258,8 +1318,7 @@
+          Unlock();
+          if (!Running())
+             Start();
+-         if (ciHandler)
+-            ciHandler->StartDecrypting();
++         CiStartDecrypting();
+          return true;
+          }
+       }
+@@ -1286,8 +1345,7 @@
+       else if (receiver[i])
+          receiversLeft = true;
+       }
+-  if (ciHandler)
+-     ciHandler->StartDecrypting();
++  CiStartDecrypting();
+   if (!receiversLeft)
+      Cancel(3);
+ }
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/device.h vdr-1.4.7-sc7/device.h
+--- vdr-1.4.7-orig/device.h	2006-06-15 11:32:48.000000000 +0200
++++ vdr-1.4.7-sc7/device.h	2007-05-13 18:04:04.000000000 +0200
+@@ -311,6 +311,14 @@
+ 
+ protected:
+   cCiHandler *ciHandler;
++  int ciSource, ciTransponder;
++  cList<cCiCaProgramData> ciProgramList;
++  cMutex ciListMutex;
++  virtual void CiStartDecrypting(void);
++  virtual bool CiAllowConcurrent(void) const { return false; }
++  void CiSetSource(int Source, int Transponder);
++  void CiAddPid(int ProgramNumber, int Pid, int StreamType);
++  void CiSetPid(int Pid, bool Active);
+ public:
+   cCiHandler *CiHandler(void) { return ciHandler; }
+ 
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/dvbdevice.c vdr-1.4.7-sc7/dvbdevice.c
+--- vdr-1.4.7-orig/dvbdevice.c	2007-02-24 12:10:14.000000000 +0100
++++ vdr-1.4.7-sc7/dvbdevice.c	2007-06-24 19:42:24.000000000 +0200
+@@ -419,7 +419,11 @@
+      dvb_frontend_info feinfo;
+      if (ioctl(fd_frontend, FE_GET_INFO, &feinfo) >= 0) {
+         frontendType = feinfo.type;
+-        ciHandler = cCiHandler::CreateCiHandler(*cDvbName(DEV_DVB_CA, n));
++        int fd_ca = DvbOpen(DEV_DVB_CA, n, O_RDWR);
++        if(fd_ca>=0) {
++          ciHandler = cCiHandler::CreateCiHandler(fd_ca);
++          if(!ciHandler) close(fd_ca);
++          }
+         dvbTuner = new cDvbTuner(fd_frontend, CardIndex(), frontendType, ciHandler);
+         }
+      else
+@@ -776,8 +780,12 @@
+            if (Channel->Vpid() && !HasPid(Channel->Vpid()) || Channel->Apid(0) && !HasPid(Channel->Apid(0))) {
+ #ifdef DO_MULTIPLE_RECORDINGS
+ #ifndef DO_MULTIPLE_CA_CHANNELS
+-              if (Ca() >= CA_ENCRYPTED_MIN || Channel->Ca() >= CA_ENCRYPTED_MIN)
+-                 needsDetachReceivers = Ca() != Channel->Ca();
++              if (Ca() >= CA_ENCRYPTED_MIN || Channel->Ca() >= CA_ENCRYPTED_MIN) {
++                 if(Channel->Ca()<CA_ENCRYPTED_MIN || CiAllowConcurrent())
++                   result = true;
++                 else
++                   needsDetachReceivers = Ca() != Channel->Ca();
++                 }
+               else
+ #endif
+               if (!IsPrimaryDevice())
+@@ -927,7 +935,7 @@
+            SetPid(&pidHandles[ptAudio], ptAudio, true);
+            if (ciHandler) {
+               ciHandler->SetPid(pidHandles[ptAudio].pid, true);
+-              ciHandler->StartDecrypting();
++              CiStartDecrypting();
+               }
+            }
+         }
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/tools.c vdr-1.4.7-sc7/tools.c
+--- vdr-1.4.7-orig/tools.c	2006-12-02 12:12:59.000000000 +0100
++++ vdr-1.4.7-sc7/tools.c	2007-05-13 18:04:04.000000000 +0200
+@@ -542,9 +542,9 @@
+ 
+ // --- cTimeMs ---------------------------------------------------------------
+ 
+-cTimeMs::cTimeMs(void)
++cTimeMs::cTimeMs(int Ms)
+ {
+-  Set();
++  Set(Ms);
+ }
+ 
+ uint64_t cTimeMs::Now(void)
+diff -urN -X ex.vdr-sc7 vdr-1.4.7-orig/tools.h vdr-1.4.7-sc7/tools.h
+--- vdr-1.4.7-orig/tools.h	2006-12-03 18:38:38.000000000 +0100
++++ vdr-1.4.7-sc7/tools.h	2007-05-13 18:04:04.000000000 +0200
+@@ -162,7 +162,7 @@
+ private:
+   uint64_t begin;
+ public:
+-  cTimeMs(void);
++  cTimeMs(int Ms = 0);
+   static uint64_t Now(void);
+   void Set(int Ms = 0);
+   bool TimedOut(void);
