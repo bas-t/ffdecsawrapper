@@ -1,0 +1,13 @@
+--- linux/drivers/media/dvb/dvb-core/dvb_demux.c	2004-03-03 17:49:42.000000000 +0100
++++ linux/drivers/media/dvb/dvb-core/dvb_demux.c	2004-04-05 12:44:59.000000000 +0200
+@@ -329,8 +329,8 @@
+ 		** in the following dvb_dmx_swfilter_section_new
+ 		*/
+ #endif
+-		dvb_dmx_swfilter_section_new(feed);
+-		return 0;
++		//dvb_dmx_swfilter_section_new(feed);
++		//return 0;
+ 	}
+ 
+ 	if(buf[1] & 0x40)

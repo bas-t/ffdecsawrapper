@@ -1,0 +1,219 @@
+# VDR plugin language source file.
+# Copyright (C) 2007 somebody
+# This file is distributed under the same license as the vdr-sc package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: VDR 1.5.9\n"
+"Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
+"POT-Creation-Date: 2008-07-11 20:28-0400\n"
+"PO-Revision-Date: 2008-03-13 15:43+0100\n"
+"Last-Translator: somebody\n"
+"Language-Team: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-5\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+
+msgid "Key update"
+msgstr "Обновление ключа"
+
+msgid "off"
+msgstr "выкл"
+
+msgid "SoftCAM"
+msgstr "SoftCAM"
+
+msgid "Current keys:"
+msgstr "Используемые ключи:"
+
+msgid "Key update status:"
+msgstr "Обновление ключей:"
+
+#. TRANSLATORS: 2 leading spaces!
+msgid "  [Seen keys]"
+msgstr "  [ключей найдено]"
+
+#. TRANSLATORS: 2 leading spaces!
+msgid "  [New keys]"
+msgstr "  [новых ключей]"
+
+msgid "Smartcard"
+msgstr "Карточка"
+
+msgid "Reset card"
+msgstr "Сбросить карточку"
+
+msgid "Really reset card?"
+msgstr "Действительно сбросить карточку?"
+
+msgid "Module config"
+msgstr "Настройка модуля"
+
+msgid "Reset module to default"
+msgstr "Сброс модуля по умолчанию"
+
+msgid "Really reset module to default?"
+msgstr "Действительно сбросить модуль по умолчанию?"
+
+msgid "Module"
+msgstr "Модуль"
+
+msgid "Message logging"
+msgstr "Протоколирование сообщений"
+
+msgid "Disable ALL modules"
+msgstr "Выключить все модули"
+
+msgid "Reset ALL modules to default"
+msgstr "Сбросить все модули по умолчанию"
+
+msgid "Really disable ALL modules?"
+msgstr "Действительно выключить все модули?"
+
+msgid "Really reset ALL modules to default?"
+msgstr "Действительно сбросить все модули по умолчанию?"
+
+msgid "Cryptsystem options"
+msgstr "Опции криптосистем"
+
+msgid "Cryptsystem options..."
+msgstr "Опции криптосистем..."
+
+msgid "Message logging..."
+msgstr "Протоколирование сообщений..."
+
+msgid "Smartcard interface"
+msgstr "Карточный модуль"
+
+msgid "(empty)"
+msgstr "(пусто)"
+
+msgid "Status information..."
+msgstr "Состояние..."
+
+msgid "Flush ECM cache"
+msgstr "Очистить кэш ECM"
+
+msgid "Reload files"
+msgstr "Перезагрузить файлы"
+
+msgid "Really flush ECM cache?"
+msgstr "Действительно очистить кэш ECM?"
+
+msgid "Really reload files?"
+msgstr "Действительно перезагрузить файлы?"
+
+msgid "Active! Can't reload files now"
+msgstr "Занят! Не могу перезагрузить файлы"
+
+msgid "(none)"
+msgstr "(нет)"
+
+msgid "active CAIDs"
+msgstr "активные CAID"
+
+msgid "all CAIDs"
+msgstr "все CAID"
+
+msgid "comment out"
+msgstr "закоментировать"
+
+msgid "remove"
+msgstr "удалить"
+
+msgid "Update keys (AU)"
+msgstr "Обновлять ключи (AU)"
+
+msgid "Start AU on EPG scan"
+msgstr "Старт автообновления при EPG сканировании"
+
+msgid "Superseded keys"
+msgstr "Устаревшие ключи"
+
+msgid "Concurrent FF streams"
+msgstr "Параллельные потоки FF"
+
+msgid "Force TransferMode"
+msgstr "Вынужденный TransferMode"
+
+msgid "Prefer local systems"
+msgstr "Предпочитать локальные системы"
+
+msgid "Active on DVB card"
+msgstr "Активный на плате DVB"
+
+msgid "Ignore CAID"
+msgstr "Игнорировать CAID"
+
+msgid "Log to console"
+msgstr "Сообщения в консоле"
+
+msgid "Log to file"
+msgstr "Сообщения в файл"
+
+msgid "Filename"
+msgstr "Название файла"
+
+msgid "Filesize limit (KB)"
+msgstr "Лимит файла (кБ)"
+
+msgid "Log to syslog"
+msgstr "Сообщения в Syslog"
+
+msgid "Show user messages"
+msgstr "Показать сообщения пользователя"
+
+msgid "A software emulated CAM"
+msgstr "Программный эмулятор CAM"
+
+msgid "undisclosed key"
+msgstr "неизвестный ключ"
+
+msgid "allow ALL"
+msgstr "все разрешить"
+
+msgid "block UNIQUE"
+msgstr "блокировать UNIQUE"
+
+msgid "block SHARED"
+msgstr "блокировать SHARED"
+
+msgid "block ALL"
+msgstr "все блокировать"
+
+msgid "SC-Seca: EMM updates"
+msgstr "SC-Seca: обновления EMM"
+
+msgid "SC-Seca: activate PPV"
+msgstr "SC-Seca: активировать PPV"
+
+msgid "Nagra: min. ECM processing time"
+msgstr "Nagra: мин. время обработки ECM"
+
+msgid "Nagra2: drop EMM-S packets"
+msgstr "Награ2: запрет EMM-S пакетов"
+
+msgid "Nagra2: Enable AUXserver"
+msgstr "Nagra2: разрешить AUXserver"
+
+msgid "Nagra2: AUXserver hostname"
+msgstr "Nagra2: AUXserver имя хоста"
+
+msgid "Nagra2: AUXserver port"
+msgstr "Nagra2: AUXserver порт"
+
+msgid "Nagra2: AUXserver password"
+msgstr "Nagra2: AUXserver пароль"
+
+msgid "don't touch"
+msgstr "не изменять"
+
+msgid "disable"
+msgstr "выключить"
+
+msgid "SC-Cryptoworks: Parental rating"
+msgstr "SC-Cryptoworks: возрастное ограничение"
+
+msgid "Cardclient: connect immediately"
+msgstr "Cardclient: соединить немедленно"

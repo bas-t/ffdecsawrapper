@@ -1,0 +1,16 @@
+patches
+systems-pre
+.dependencies
+diff.exclude
+*.so
+*.a
+*.o
+*.save
+*.orig
+*.rej
+*.bak
+*.mo
+*.pot
+dump.txt
+.hg
+version.c
