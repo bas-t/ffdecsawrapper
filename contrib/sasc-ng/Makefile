@@ -19,8 +19,7 @@ endif
 DEFINES += -DRELEASE_VERSION=\"$(VERSION)\"
 INCLUDES += -Idvbloopback/module -I/lib/modules/$(shell uname -r)/build/include
 LBDIR = dvbloopback/src
-SCDIR = ./sc/PLUGINS/src/$(SCVER)
-SCSYSLIBS := $(foreach ob,$(shell ls -A -I ".*" $(SCDIR)/systems), -lsc-$(ob))
+SCDIR = sc/PLUGINS/src/$(SCVER)
 SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual
 
 ifdef AUXSERVER_OPTS
@@ -69,7 +68,7 @@ libscanwrap.so: dvblb_plugins/scanwrap.c
 	$(CC) -fPIC -g -O2 -Wall -I. -nostdlib -shared -o $@ $< -ldl  -lc
 
 clean:
-	@$(MAKE) -C $(SCDIR) SASC=1 clean
+	@-rm -rf $(SCDIR)/*
 	@-rm -f ./sc/PLUGINS/lib/*.so*
 	@-rm -f ./sc/config.h
 	@-rm -f $(OBJS)
@@ -83,7 +82,11 @@ clean:
 module_clean:
 	cd dvbloopback/module && $(MAKE) clean
 
-sc-plugin:
+sc-plugin-link:
+	@bash ./makelinks.sh . $(SCDIR)
+	@mkdir -p $(SCDIR)/systems-pre $(SCDIR)/po
+
+sc-plugin: sc-plugin-link
 	@-rm -f sc/config.h
 	@ln -s include/vdr/config.h sc/config.h
 	@if [ ! -d sc/PLUGINS/lib ]; then mkdir sc/PLUGINS/lib; fi
@@ -134,7 +137,7 @@ objs/%.o: $(LBDIR)/%.c $(INC_DEPS)
 objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB) link-FFdecsa
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-objs/%.o: sc/%.cpp
+objs/%.o: sc/%.cpp sc-plugin-link
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) $(INCLUDES_SC) $(INCLUDES) $<
 
 objs/si_%.o: sc/libsi/%.c
