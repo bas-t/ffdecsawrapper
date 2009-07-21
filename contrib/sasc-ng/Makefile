@@ -137,10 +137,6 @@ objs/version.o: objs/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $(DEFINES) $<
 
 objs/version.cpp: FORCE
-ifeq ($(shell test -d .hg && echo -n 1), 1)
 	echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
-else
-	echo 'const char *source_version =' '"'`(svnversion $(shell pwd) 2>/dev/null) || echo Unknown`/`(svnversion $(shell pwd)/dvbloopback 2>/dev/null) || echo Unknown`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
-endif
 
 FORCE:
