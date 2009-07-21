@@ -584,7 +584,8 @@ cEcmInfo::cEcmInfo(const cEcmInfo *e)
   caId=e->caId;
   emmCaId=e->emmCaId;
   provId=e->provId;
-  Update(e);
+  AddCaDescr(e);
+  dataIdx=e->dataIdx;
   prgId=e->prgId;
   source=e->source;
   transponder=e->transponder;
@@ -600,14 +601,14 @@ cEcmInfo::cEcmInfo(const char *Name, int Pid, int CaId, int ProvId)
 
 cEcmInfo::~cEcmInfo()
 {
-  ClearData();
+  ClearCaDescr();
   free(name);
 }
 
 void cEcmInfo::Setup(void)
 {
   cached=failed=false;
-  name=0; data=0;
+  name=0; caDescr=0; caDescrLen=0; dataIdx=-1;
   prgId=source=transponder=-1;
   ecm_table=0x80; emmCaId=0;
 }
@@ -618,11 +619,6 @@ bool cEcmInfo::Compare(const cEcmInfo *e)
          caId==e->caId && ecm_pid==e->ecm_pid && provId==e->provId;
 }
 
-bool cEcmInfo::Update(const cEcmInfo *e)
-{
-  return (e->data && (!data || e->dataLen!=dataLen)) ? AddData(e->data,e->dataLen) : false;
-}
-
 void cEcmInfo::SetSource(int PrgId, int Source, int Transponder)
 {
   prgId=PrgId;
@@ -630,21 +626,49 @@ void cEcmInfo::SetSource(int PrgId, int Source, int Transponder)
   transponder=Transponder;
 }
 
-void cEcmInfo::ClearData(void)
+void cEcmInfo::ClearCaDescr(void)
 {
-  free(data); data=0;
+  free(caDescr); caDescr=0; caDescrLen=0;
 }
 
-bool cEcmInfo::AddData(const unsigned char *Data, int DataLen)
+bool cEcmInfo::AddCaDescr(const cEcmInfo *e)
 {
-  ClearData();
-  data=MALLOC(unsigned char,DataLen);
-  if(data) {
-    memcpy(data,Data,DataLen);
-    dataLen=DataLen;
+  bool res=AddCaDescr(e->caDescr,e->caDescrLen);
+  if(e->dataIdx>=0 && (dataIdx<0 || e->dataIdx!=dataIdx)) res=true;
+  dataIdx=e->dataIdx;
+  return res;
+}
+
+bool cEcmInfo::AddCaDescr(const unsigned char *descr, int len)
+{
+  bool res=false;
+  if(descr && (!caDescr || caDescrLen!=len || memcmp(caDescr,descr,len)!=0)) {
+    unsigned char *mem=MALLOC(unsigned char,len);
+    if(mem) {
+      ClearCaDescr();
+      memcpy(mem,descr,len);
+      caDescr=mem; caDescrLen=len;
+      res=true;
+      }
+    else PRINTF(L_GEN_ERROR,"malloc failed in cEcmInfo::AddCaDescr()");
     }
-  else PRINTF(L_GEN_ERROR,"malloc failed in cEcmInfo::AddData()");
-  return (data!=0);
+  return res;
+}
+
+const unsigned char *cEcmInfo::GetCaDescr(int *l) const
+{
+  if(l) *l=caDescrLen;
+  return caDescr;
+}
+
+void cEcmInfo::SetDataIdx(int idx)
+{
+  dataIdx=idx;
+}
+
+const unsigned char *cEcmInfo::Data(void) const
+{
+  return (dataIdx>=0 && caDescr && caDescrLen>dataIdx) ? &caDescr[dataIdx] : 0;
 }
 
 void cEcmInfo::SetName(const char *Name)
