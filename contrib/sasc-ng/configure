@@ -174,9 +174,10 @@ if test "x$ffdecsa_opt" != "xno"; then
    else
      FLAGS=$ffdecsa_flags
    fi
+   FFdecsaDIR="../../FFdecsa"
    TMPOUT="${TMPDIR}/FFdecsa/out"
    mkdir "${TMPDIR}/FFdecsa"
-   cp FFdecsa/*.c FFdecsa/*.h FFdecsa/Makefile "${TMPDIR}/FFdecsa/"
+   cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
    echo "Trying various FFdecsa optimizations..."
    for var in ${FFDECSA_MODES}; do
      make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
