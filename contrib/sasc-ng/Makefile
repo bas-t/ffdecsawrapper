@@ -98,10 +98,7 @@ else
 endif
 
 link-FFdecsa:
-	@(cd FFdecsa; \
-          for i in `find ../../../FFdecsa/ -maxdepth 1 -type f -name Makefile -or -iname "*.h" -or -iname "*.c"`; \
-            do ln -sf $$i `basename $$i`; \
-          done)
+	@bash ./makelinks.sh FFdecsa FFdecsa
 
 FFdecsa/FFdecsa.o: link-FFdecsa
 	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
