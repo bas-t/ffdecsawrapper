@@ -136,7 +136,7 @@ void cSystem::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysI
     case 0x01: // Seca style
       for(int p=2; p<len; p+=15) {
         cEcmInfo *n=new cEcmInfo(name,WORD(data,p,0x1FFF),sysId,WORD(data,p+2,0xFFFF));
-        if(data[p+4]==0xFF) n->AddData(&data[p+5],10);
+        if(data[p+4]==0xFF) n->SetDataIdx(p+5);
         ecms->Add(n);
         }
       break;
