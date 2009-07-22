@@ -29,4 +29,4 @@ bspatch:	bspatch.c
 	gcc -O3 -o $@ $< -lbz2
 
 clean:
-	@-rm cccam_ca.so bsdiff bspatch
+	@-rm -f cccam_ca.so bsdiff bspatch
