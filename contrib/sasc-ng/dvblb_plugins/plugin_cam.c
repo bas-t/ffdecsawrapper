@@ -87,19 +87,6 @@ extern void update_keys(int, unsigned char, int, unsigned char *, int);
 extern void SetCAMPrint(const char *_plugin_name, unsigned int plugin_id, unsigned int _print_level, unsigned int *_log_level);
 const char *cPlugin::ConfigDirectory(const char *PluginName) {return opt_camdir;}
 
-int GetCaDescriptors(int Source, int Transponder, int ServiceId,
-                     const int *CaSystemIds, int BufSize, uchar *Data,
-                     bool &StreamFlag) {
-  cChannel *ch;
-  for(ch=Channels.First(); ch; ch=Channels.Next(ch)) {
-    if(ch->Sid() == ServiceId) {
-       return ch->GetPMTBuf(Data);
-    }
-  }
-//  printf("Transfering %d bytes\n", pmtlen);
-  return 0;
-}
-
 static int init_sc(void) {
   sc=(cPlugin *)VDRPluginCreator();
 
@@ -157,7 +144,7 @@ void cam_del_pid(struct sc_data *sc_data, struct cam_epid *cam_epid) {
       *(epidptr++) = cam_epid1->epid;
   }
   *epidptr = 0;
-  sc_data->cam->AddPrg(cam_epid->sid,epidlist);
+  sc_data->cam->AddPrg(cam_epid->sid,epidlist,0,0);
   //PrepareScLink(&link, sc_data->dev, OP_DELPID);
   //link.data.pids.pid=cam_epid->epid;
   //link.data.pids.type=cam_epid->type;
@@ -320,7 +307,6 @@ void process_cam(struct msg *msg, unsigned int priority)
   memset(dpid, 0, sizeof(int)*MAXDPIDS);
   ch = new cChannel();
 
-  ch->SetPMTBuf(sidmsg->ca, sidmsg->calen);
   ch->SetId(0, 1, sidmsg->sid, 0);
   //set source type to Satellite.  Use orbit and E/W data
   int source = 0x8000 | (BCD2INT(sidmsg->nit.orbit) & 0x7ff) | ((int)sidmsg->nit.is_east << 19);
@@ -364,7 +350,7 @@ void process_cam(struct msg *msg, unsigned int priority)
     //DoScLinkOp(sc, &link);
   }
   *epidptr = 0;
-  sc_data->cam->AddPrg(sidmsg->sid,epidlist);
+  sc_data->cam->AddPrg(sidmsg->sid,epidlist,sidmsg->ca,sidmsg->calen);
   free_sidmsg(sidmsg);
 }
 

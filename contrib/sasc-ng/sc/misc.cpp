@@ -51,18 +51,6 @@ cChannel::cChannel() {
   source=1;
   sid=1;
   groupSep=0;
-  pmtlen = 0;
 }
 cChannel::~cChannel() {
 }
-
-void cChannel::SetPMTBuf(const unsigned char *buf, int len)
-{
-  memcpy(pmtbuf, buf, len);
-  pmtlen = len;
-}
-int cChannel::GetPMTBuf(unsigned char *buf) {
-  memcpy(buf, pmtbuf, pmtlen);
-  return pmtlen;
-}
-

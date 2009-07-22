@@ -217,11 +217,6 @@ public:
   void SetCaDescriptors(int Level);
   void SetLinkChannels(cLinkChannels *LinkChannels);
   void SetRefChannel(cChannel *RefChannel);
-  void SetPMTBuf(const unsigned char *buf, int len);
-  int  GetPMTBuf(unsigned char *buf);
-private:
-  int pmtlen;
-  unsigned char pmtbuf[4096];
   };
 
 class cChannels : public cRwLock, public cConfig<cChannel> {
