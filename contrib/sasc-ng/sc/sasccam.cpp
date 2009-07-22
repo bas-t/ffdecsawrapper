@@ -37,15 +37,7 @@ public:
   ~cSascDvbDevice() {};
   bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   bool SetCaPid(ca_pid_t *ca_pid);
-  bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
   };
-
-bool cSascDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  *c++ = 0x0101;
-  *c = 0;
-  return true;
-}
 
 extern void _SetCaDescr(int adapter, ca_descr_t *ca_descr);
 bool cSascDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
@@ -79,12 +71,13 @@ void sascCam::Stop()
 {
   cam->Stop();
 }
-void sascCam::AddPrg(int sid, int *epid)
+void sascCam::AddPrg(int sid, int *epid, const unsigned char *pmt, int pmtlen)
 {
   int i = 0;
   if(! epid)
     return;
   cPrg *prg=new cPrg(sid, 1); 
+  if(pmt) prg->caDescr.Set(pmt,pmtlen);
   while(epid[i]) {
     cPrgPid *pid=new cPrgPid(5, epid[i++]);
     prg->pids.Add(pid);
