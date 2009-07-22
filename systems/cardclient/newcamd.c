@@ -323,7 +323,7 @@ int cCardClientNewCamd::ReceiveMessage(cNetSocket *so, unsigned char *data, bool
       case COMMTYPE_CLIENT:
         if(netMsgId!=WORD(netbuf,2,0xFFFF)) {
           PRINTF(L_CC_NEWCAMD,"bad msgid %04x != %04x ",netMsgId,WORD(netbuf,2,0xFFFF));
-          return -1;
+          return -2;
           }
         break;
       default:
@@ -479,7 +479,10 @@ bool cCardClientNewCamd::ProcessECM(const cEcmInfo *ecm, const unsigned char *da
   InitCustomData(&cd,(unsigned short)ecm->prgId,0);
   if(!SendMessage(&so,data,SCT_LEN(data),true,&cd)) return false;
   unsigned char buffer[CWS_NETMSGSIZE];
-  switch(ReceiveMessage(&so,buffer,true)) {
+  int n;
+  while((n=ReceiveMessage(&so,buffer,true))==-2)
+    PRINTF(L_CC_NEWCAMD,"msg ID sync error. Retrying...");
+  switch(n) {
     case 19: // ecm was decoded
       // check for zero cw, as newcs doesn't send both cw's every time
       if(!CheckNull(buffer+3+0,8)) memcpy(cw+0,buffer+3+0,8);
@@ -489,7 +492,7 @@ bool cCardClientNewCamd::ProcessECM(const cEcmInfo *ecm, const unsigned char *da
       PRINTF(L_CC_ECM,"%s: card was not able to decode the channel",name);
       break;
     default:
-      PRINTF(L_CC_NEWCAMD,"warning an unexpected error occurred");
+      PRINTF(L_CC_NEWCAMD,"unexpected server response (code %d)",n);
       break;
     }
   return false;
@@ -507,7 +510,13 @@ bool cCardClientNewCamd::ProcessEMM(int caSys, const unsigned char *data)
         if(id>0) {
           if(SendMessage(&so,data,len,true,0)) {
             unsigned char buffer[CWS_NETMSGSIZE];
-            ReceiveMessage(&so,buffer,true);
+            len=ReceiveMessage(&so,buffer,true);
+            if(len>=3) {
+              if(!(buffer[1]&0x10))
+                PRINTF(L_CC_EMM,"EMM rejected by card");
+              }
+            else
+              PRINTF(L_CC_NEWCAMD,"unexpected server response (code %d)",len);
             }
           msEMM.Cache(id,true,0);
           }
