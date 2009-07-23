@@ -1091,13 +1091,13 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
         if(mode==3 && sync)
           cam->WriteCW(filterCwIndex,lastCw,true);
         }
-      if(!(prg.caDescr==filterCaDescr)) {
-        filterCaDescr.Set(&prg.caDescr);
-        ecmUpd=true;
+      if(mode<triggerMode) mode=triggerMode;
+      }
+    if(!(prg.caDescr==filterCaDescr)) {
+      filterCaDescr.Set(&prg.caDescr);
+      ecmUpd=true;
 //XXX
 PRINTF(L_CORE_ECM,"%s: new caDescr",id);
-        }
-      if(mode<triggerMode) mode=triggerMode;
       }
     triggerMode=-1;
     }
