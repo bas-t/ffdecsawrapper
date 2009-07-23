@@ -56,7 +56,6 @@
 #define LOG_COUNT           3 // stop logging after X complete ECM cycles
 #define CHAIN_HOLD     120000 // min. time to hold a logger chain
 #define ECM_DATA_TIME    6000 // time to wait for ECM data updates
-#define ECM_UPD_TIME   120000 // delay between ECM data updates
 #define MAX_ECM_IDLE   300000 // delay before an idle handler can be removed
 #define MAX_ECM_HOLD    15000 // delay before an idle handler stops processing
 #define CAID_TIME      300000 // time between caid scans
@@ -890,7 +889,7 @@ private:
   int filterCwIndex, filterSource, filterTransponder, filterSid;
   cCaDescr filterCaDescr;
   unsigned char lastCw[16];
-  bool sync, noKey, trigger;
+  bool sync, noKey, trigger, ecmUpd;
   int triggerMode;
   int mode, count;
   cTimeMs lastsync, startecm, resendTime;
@@ -902,7 +901,6 @@ private:
   cSimpleList<cEcmPri> ecmPriList;
   cEcmInfo *ecm;
   cEcmPri *ecmPri;
-  cTimeMs ecmUpdTime;
   //
   int dolog;
   //
@@ -940,7 +938,7 @@ cEcmHandler::cEcmHandler(cCam *Cam, int CardNum, int cwindex)
   cardNum=CardNum;
   cwIndex=cwindex;
   sys=0; filter=0; ecm=0; ecmPri=0; mode=-1;
-  trigger=false; triggerMode=-1;
+  trigger=ecmUpd=false; triggerMode=-1;
   filterSource=filterTransponder=0; filterCwIndex=-1; filterSid=-1;
   id=bprintf("%d.%d",cardNum,cwindex);
 }
@@ -1095,7 +1093,9 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
         }
       if(!(prg.caDescr==filterCaDescr)) {
         filterCaDescr.Set(&prg.caDescr);
-        //XXX do we need to trigger something here??
+        ecmUpd=true;
+//XXX
+PRINTF(L_CORE_ECM,"%s: new caDescr",id);
         }
       if(mode<triggerMode) mode=triggerMode;
       }
@@ -1331,16 +1331,14 @@ void cEcmHandler::StopEcm(void)
 
 bool cEcmHandler::UpdateEcm(void)
 {
-  if(!ecm->Data() || ecmUpdTime.TimedOut()) {
+  if(ecmUpd) {
     bool log=dolog;
     dolog=(sys && sys->NeedsData() && ecm->Data()==0);
     if(dolog) PRINTF(L_CORE_ECM,"%s: try to update ecm extra data",id);
     ParseCAInfo(ecm->caId);
-    ecmUpdTime.Set(ECM_UPD_TIME);
     dolog=log;
-    if(!ecm->Data()) return false;
     }
-  return true;
+  return ecm->Data()!=0;
 }
 
 cEcmInfo *cEcmHandler::JumpEcm(void)
@@ -1353,7 +1351,7 @@ cEcmInfo *cEcmHandler::JumpEcm(void)
   else ecmPri=ecmPriList.Next(ecmPri);
   if(ecmPri) {
     if(ecmPri->ecm!=ecm) {
-      StopEcm(); ecmUpdTime.Set();
+      StopEcm();
       ecm=ecmPri->ecm;
       filter->Start(ecm->ecm_pid,ecm->ecm_table,0xfe,0,false);
       cam->LogEcmStatus(ecm,true);
@@ -1399,6 +1397,7 @@ void cEcmHandler::EcmFail(void)
 
 void cEcmHandler::ParseCAInfo(int SysId)
 {
+  ecmUpd=false;
   int len;
   const unsigned char *buff=filterCaDescr.Get(len);
   if(buff && len>0) {
@@ -1455,8 +1454,6 @@ void cEcmHandler::ParseCAInfo(int SysId)
         }
       }
     }
-  else if(len<0)
-    PRINTF(L_CORE_ECM,"%s: CA parse buffer overflow",id);
   if(SysId==0xFFFF) {
     for(cEcmPri *ep=ecmPriList.First(); ep; ep=ecmPriList.Next(ep))
       PRINTF(L_CORE_ECMPROC,"%s: ecmPriList pri=%d ident=%04x caid=%04x pid=%04x",id,ep->pri,ep->sysIdent,ep->ecm->caId,ep->ecm->ecm_pid);
