@@ -125,7 +125,7 @@ private:
   cAuxSrv aux;
 #endif
   //
-  void MakePrime(BIGNUM *n, unsigned char *residues);
+  void MakePrime(unsigned char *residues, bool strong);
 protected:
   virtual bool Map(int f, unsigned char *data, int l);
   };
@@ -157,13 +157,27 @@ const int cMap0101::tim3b[][17] = {
   { 14668,15091,15519,15947,16370,16798,17221,17654,18082,18505,18933,19356,19784,20212,20640,21068,21491 },
   };
 
-void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
+void cMap0101::MakePrime(unsigned char *residues, bool strong)
 {
   bool isPrime;
-  cycles+=1290;
+  AddMapCycles(strong?462:258);
+  BN_copy(D,B);
+  AddMapCycles(240);
+  BN_zero(A);
+  AddMapCycles(41);
+  BN_set_word(A,2);
+  A.SetPos(1);
+  AddMapCycles(12);
+  for(int i=2; i<=8; i++) { A.SetPos(i); AddMapCycles(9); }
+  A.SetPos(0);
+  AddMapCycles(8);
+  if(strong) D.GetLE(residues+53,8);
+  unsigned int counts[3] = { 0 };
+  bool first=true;
   do {
-    cycles+=1465;
-    BN_add_word(n,2);
+    counts[0]++;;
+    BN_add_word(B,2);
+    if(first) { first=false; AddMapCycles(1600); }
     isPrime=true;
     for(int i=0; i<53; i++) {
       residues[i]+=2;
@@ -171,12 +185,13 @@ void cMap0101::MakePrime(BIGNUM *n, unsigned char *residues)
       unsigned char denom=primes[i];
       if(num>denom) {
         unsigned char r=0;
-        while(denom>=r) { cycles+=1; r=(r<<1)|((num&0x80)>>7); num<<=1; }
+        while(denom>=r) { counts[1]++; r=(r<<1)|((num&0x80)>>7); num<<=1; }
         }
       residues[i]%=primes[i];
-      if(residues[i]==0) { cycles+=13; isPrime=false; }
+      if(residues[i]==0) { counts[2]++; isPrime=false; }
       }
     } while(!isPrime);
+  cycles=1290+1465*counts[0]+counts[1]+13*counts[2];
 }
 
 bool cMap0101::Map(int f, unsigned char *data, int l)
@@ -190,46 +205,21 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       cycles=898;
       break;
     case 0x22:
-// START INCOMPLETE FIX
-      BN_zero(B);
-      BN_set_bit(B,80);
-      AddMapCycles(644);
-      BN_zero(B);
-      BN_set_bit(B,96);
-      AddMapCycles(76);
-// END INCOMPLETE FIX
       if(BN_is_zero(D)) { cycles=639-6; break; }
       l&=0x1fff;
+      AddMapCycles(376);
+      BN_zero(B);
+      AddMapCycles(l>=(BN_num_bits(D)-1)/64*64 ? 244 : 210);
       BN_one(B);
+      B.SetPos(1);
+      AddMapCycles(17);
+      for(int i=2; i<=8; i++) { B.SetPos(i); AddMapCycles(9); }
+      AddMapCycles(44);
       BN_mod_lshift(B,B,l,D,ctx);
-      if(l<64)
-        cycles=927+(l&7)*9;
-      else {
-        div_t val=div(l-64,2046);
-        int j=16*((val.rem+1)/2) + (val.rem>4?val.rem-7:val.rem-12)/4;
-        cycles=1086 + j - ((j-2)%5) + 16923*val.quot - ((4*val.quot-2)%5);
-        }
       break;
     case 0x23:
-// START FIX
-      {
-      cBN s,x,y;
-      BN_copy(s,D);
-      BN_rshift(s,s,64+ 1 *8);
-      BN_lshift(s,s,64);
-      BN_copy(x,D);
-      BN_mask_bits(x,64);
-      BN_copy(y,D);
-      BN_rshift(y,y,64);
-      BN_mask_bits(y,1*8);
-      BN_lshift(y,y,128-1*8);
-      BN_copy(D,s);
-      BN_add(D,D,x);
-      BN_add(D,D,y);
-      }
-      BN_zero(B);
-      BN_set_bit(B,88);
-// END FIX
+      AddMapCycles(169);
+      IMonInit0();
       break;
     case 0x25:
       AddMapCycles(254);
@@ -243,8 +233,8 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       {
       BN_add(B,B,C);
       bool b=BN_is_bit_set(B,wordsize<<6);
-      if(data) data[0]=b;
       if(b) BN_mask_bits(B,wordsize<<6);
+      if(data) data[0]=b;
       cycles=501+(8*wordsize+3)/5*5-6;
       break; 
       }
@@ -256,45 +246,51 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       break;
       }
     case 0x2e:
-// START INCOMPLETE FIX
-      H.GetLE(data,16);
-      BN_rshift(H,H,64);
-      BN_lshift(H,H,64);
-      BN_add(H,J,H);
-      BN_rshift(H,H,1<<3);
-      BN_copy(J,H);
-      BN_mask_bits(J,64);
-      cycles=864;
-// END INCOMPLETE FIX
-      break;
     case 0x2F:
-// START INCOMPLETE FIX
-      H.GetLE(data,16);
-      BN_rshift(H,H,64);
-      BN_lshift(H,H,64);
-      BN_add(H,H,J);
-      BN_rshift(J,H,8);
-      BN_mask_bits(J,64);
-      cycles=808;
-// END INCOMPLETE FIX
+      if(l<=0) { cycles+=4; l=wordsize; }
+      else if(l>17) { cycles+=5; l=17; }
+      scalar.GetLE(data,l<<3);
+      AddMapCycles(617+30*wordsize);
+      for(int i=0; i<l; i++) {
+       if(i&1) {
+         unsigned char buf[8];
+         J.PutLE(buf,8);
+         AddMapCycles(10);
+         for(int j=0; j<8; j++) {
+           buf[j]=data[i*8+j];
+           J.GetLE(buf,8);
+           J.SetPos(j+1);
+           AddMapCycles(14);
+           }
+         J.SetPos(0);
+         AddMapCycles(12);
+         }
+       else
+         AddMapCycles(114);
+       }
+      AddMapCycles(3);
+      BN_mul(D,scalar,B,ctx);
+      if(f&1) BN_add(D,D,C);
+      BN_rshift(C,D,l<<6);
+      BN_mask_bits(D,l<<6);
+      D.Commit(l);
+      BN_mask_bits(C,wordsize<<6);
       break;
     case 0x30:
     case 0x31:
       BN_sqr(D,B,ctx);
-      BN_rshift(J,B,((wordsize+1)/2)*128-64);
-      BN_mask_bits(J,64);
       if((f&1)) BN_add(D,D,C);
       BN_rshift(C,D,wordsize<<6);
-      BN_mask_bits(C,wordsize<<6);
-      BN_mask_bits(D,wordsize<<6);
+      BN_rshift(J,B,((wordsize+1)/2)*128-64);
+      BN_mask_bits(J,64);
       break;
     case 0x32:
+      AddMapCycles(1000);
       l=min(34,l);
       if(!BN_is_zero(D)) {
-        A.GetLE(data,l<<3);
-        BN_div(C,B,A,D,ctx);
+        scalar.GetLE(data,l<<3);
+        BN_div(C,B,scalar,D,ctx);
         BN_rshift(A,C,17*64);
-        BN_mask_bits(C,17*64);
         A.Commit(17);
         C.Commit(17);
         }
@@ -307,48 +303,44 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       AddMapCycles(102);
       MonFin(B,D);
       break;
-    case 0x3a:
-// START INCOMPLETE FIX (this map is normaly in nagra2.c)
-      AddMapCycles(192);
-      IMonInit();
-      MonMul(B,A,B);
-      //MonMul(B,A,B);
-      BN_zero(B);
-// END INCOMPLETE FIX
-      break;
     case 0x3b:
       AddMapCycles(441);
       IMakeJ();
-// START FIX
-      AddMapCycles(327);
-      BN_zero(B);
-      BN_set_bit(B,104);
-      AddMapCycles(46-373);
-// END FIX
+      AddMapCycles(46);
       IMonInit0(wordsize*60+4*l);
-      I.GetLE(data,l<<3);
-      MonMul(B,I,B,l);
+      scalar.GetLE(data,l<<3);
+      MonMul(B,scalar,B,l);
       cycles=tim3b[wordsize-1][l-1]-6;
       break;
     case 0x3d:
-// START INCOMPLETE FIX
-      D.GetLE(data,l<<3);
-      MakeJ0(J,D,C);
-      BN_rshift(A,A,64);
-      BN_mask_bits(A,64);
-      BN_lshift(A,A,64);
-      BN_add(C,A,C);
-      //MonMul0(C,B,B,C,D,J,0);
-// END INCOMPLETE FIX
+      AddMapCycles(652);
+      D.GetLE(data,wordsize<<3);
+      AddMapCycles(514);
+      IMakeJ();
+      AddMapCycles(35);
+      MonMul0(C,B,B,C,D,J,wordsize);
+      AddMapCycles(143);
+      BN_copy(A,B);
+      AddMapCycles(73);
+      MonExpNeg();
+      MonMul(B,A,B);
+      BN_zero(C);
+      cycles+=rand()%(wordsize*20000)+2000;
       break;
     case 0x3c:
     case 0x3e:
+    case 0x46:
       {
-      if(sl==0) cycles+=4;
-      if(l>wordsize) { l=wordsize; cycles+=l>17 ? 9:4; }
-      cBN scalar;
+      if(f==0x46) l=1; else l=sl;
+      if(l<=0) { l=wordsize; cycles+=4; }
+      else if(l>wordsize) { l=wordsize; cycles+=l>17 ? 9:4; }
       scalar.GetLE(data,l<<3);
-      AddMapCycles(441);
+      int sbits=BN_num_bits(scalar);
+      cycles+=3848+((sbits-1)/8)*650 - 11;
+      int msb=data[(sbits-1)/8];
+      for(int i=7; i>=1; --i) if(msb&(1<<i)) { cycles+=i*75-15; break; }
+      for(int i=0; i<sbits; ++i) if(BN_is_bit_set(scalar,i)) cycles+=88;
+      AddMapCycles(f==0x46 ? 400:441);
       if(BN_is_zero(scalar) || BN_num_bits(D)<=1) {
         IMakeJ();
         if(BN_num_bits(D)==1 || !BN_is_zero(scalar)) BN_zero(B);
@@ -360,21 +352,10 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         MonMul0(B,A,B,C,D,J,0);
         if(f==0x3c) AddMapCycles(2200+(rand()%(wordsize*2000)));
         MonFin(B,D);
-        MonExp(scalar);
         }
       BN_zero(C);
-      int sbits=BN_num_bits(scalar);
-      cycles+=3848+((sbits-1)/8)*650 - 11;
-      int msb=data[(sbits-1)/8];
-      for(int i=7; i>=1; --i) if(msb&(1<<i)) { cycles+=i*75-15; break; }
-      for(int i=0; i<sbits; ++i) if(BN_is_bit_set(scalar,i)) cycles+=88;
-      break;
+      if(f==0x46) cycles-=37;
       }
-    case 0x46:
-// START INCOMPLETE FIX
-      AddMapCycles(328);
-      IMonInit();
-// END INCOMPLETE FIX
       break;
     case 0x4d:
       if(-0x018000==l)
@@ -385,18 +366,12 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         }
       BN_set_bit(B,0);
       for(int i=0; i<53; i++) data[i]=BN_mod_word(B,primes[i]);
+      BN_copy(A,B);
+      BN_zero(C); BN_zero(D); BN_zero(J);
       break;
     case 0x4e:
-// START INCOMPLETE FIX
-      //MakePrime(B,data);
-      BN_copy(D,B);
-// END INCOMPLETE FIX
-      break;
     case 0x4f:
-// START INCOMPLETE FIX
-      BN_set_word(A,2);
-      BN_add(B,B,A);
-// END INCOMPLETE FIX
+      MakePrime(data,f==0x4f);
       break;
     case 0x57:
 #ifdef HAS_AUXSRV
@@ -406,7 +381,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       }
 #endif
       {
-      cBN a, b, x, y, scalar;
+      cBN a, b, x, y;
       if(l<2 || l>4) l=4;
       WS_START(l);
       l<<=3;
@@ -423,6 +398,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
           BN_zero(Px);
           BN_copy(Py,y);
           BN_zero(Qz);
+          MakeJ0(J,D);
           }
         else {
           CurveInit(a);
@@ -450,7 +426,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
                 BN_mask_bits(Px,32);
                 BN_lshift(b,Qz,32);
                 BN_add(Px,Px,b);
-                BN_mask_bits(Px,128);
+                BN_mask_bits(Px,l<<3);
                 AddP(0);
                 }
               }
@@ -462,6 +438,7 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
         BN_copy(Px,x);
         BN_copy(Py,y);
         BN_zero(Qz);
+        MakeJ0(J,D);
         }
       memset(data,0,0x40);
       Px.PutLE(&data[0x00],l);
@@ -554,7 +531,7 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
 
   unsigned char keyNr=(algo>>5)&0x01;
   unsigned char mecmCode[256];
-  GetMem(mecmAddr[keyNr],mecmCode,256,0x80);
+  GetMem(mecmAddr[keyNr],mecmCode,sizeof(mecmCode),0x80);
   cPlainKey *pk;
   unsigned char ideaKey[16];
   if(!(pk=keys.FindKey('N',mecmKeyId,keyNr,sizeof(ideaKey)))) {
@@ -563,11 +540,7 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     }
   pk->Get(ideaKey);
   idea.SetEncKey(ideaKey,&ks);
-  for(int i=0x100-8; i>=8; i-=8) {
-    idea.Encrypt(mecmCode+i,8,mecmCode+i,&ks,0);
-    xxor(mecmCode+i,8,mecmCode+i,mecmCode+i-8);
-    }
-  idea.Encrypt(mecmCode,8,mecmCode,&ks,0);
+  idea.Decrypt(mecmCode,sizeof(mecmCode),&ks,0);
   HEXDUMP(L_SYS_RAWECM,mecmCode,sizeof(mecmCode),"decrypted MECM code");
   // check signature
   unsigned char data[256];
@@ -576,8 +549,8 @@ bool cN2Prov0101::Algo(int algo, const unsigned char *hd, unsigned char *hw)
   SHA1(data,sizeof(data)-8,data);
   RotateBytes(data,20);
   if(memcmp(data,mecmCode,8)) {
-     PRINTF(L_SYS_ECM,"%04X: MECM %02x decrypt signature failed",id,keyNr);
-     return false;
+    PRINTF(L_SYS_ECM,"%04X: MECM %02x decrypt signature failed",id,keyNr);
+    return false;
     }
 
   memcpy(hw,hd,seedSize);
@@ -722,7 +695,7 @@ bool cN2Prov0101::ProcessMap(int f)
       DoMap(f);
       break;
     case 0x22:
-      DoMap(f,tmp,(Get(0x48)<<16)|(Get(0x4a)<<8)|Get(0x49));
+      DoMap(f,0,(Get(0x4a)<<8)|Get(0x49));
       break;
     case 0x29:
     case 0x2a:
@@ -752,27 +725,36 @@ bool cN2Prov0101::ProcessMap(int f)
     case 0x38:
     case 0x3a:
     case 0x43:
-    case 0x4f:
       DoMap(f);
       break;
     case 0x44:
     case 0x45:
       GetMem(0x400,tmp,64,0);
+      GetMem(0x440,tmp+64,28,0);
       DoMap(f,tmp,l);
-      SetMem(0x440,tmp,20,0);
-      break; 
+      SetMem(0x400,tmp,64,0);
+      SetMem(0x440,tmp+64,28,0);
+      break;
     case 0x46:
       GetMem(HILO(0x44),tmp,8,0);
-      DoMap(f,tmp,l);
+      DoMap(f,tmp);
       break;
     case 0x4d:
-      DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x49)<<8)|Get(0x4a)));
-      SetMem(0x400,tmp,53,0);
+      DoMap(f,tmp,-((Get(0x48)<<16)|(Get(0x4a)<<8)|Get(0x49)));
+      if(*tmp==0xff)
+        Set(0x4b,0x00);
+      else {
+        Set(0x4b,*tmp);
+        SetMem(0x400,tmp+1,wordsize*8>53?wordsize*8:53,0x00);
+        }
       break;
     case 0x4e:
-      GetMem(0x400,tmp,53,0);
+    case 0x4f:
+      GetMem(0x400,tmp+1,53,0);
+      if(f==0x4f) GetMem(HILO(0x44),tmp+54,8,0);
       DoMap(f,tmp);
-      SetMem(0x400,tmp,53,0);
+      Set(0x4b,*tmp);
+      SetMem(0x400,tmp+1,53,0);
       break;
     case 0x57:
       addr=HILO(0x46);
@@ -1001,9 +983,9 @@ void cN2Prov0101::TimerHandler(unsigned int num)
 {
   if(hwMapper) {
     int mask=hwMapper->AddCycles(num);
+    if(mask) DisableTimers(13);
     for(int t=0; mask; mask>>=1,t++)
       if(mask&1) {
-        DisableTimers(11);
         if(t==2) {
           PRINTF(L_SYS_EMU,"0101: Timer interrupt %u @ %04x",t,GetPc());
           RaiseException(9);

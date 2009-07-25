@@ -140,15 +140,16 @@ void cMapEeprom::Set(unsigned short ea, unsigned char val)
 
 #define PAGEOFF(ea,s) (((ea)&0x8000) ? pageMap[s]:0)
 
-c6805::c6805(void) {
+c6805::c6805(void)
+{
   cc.c=0; cc.z=0; cc.n=0; cc.i=0; cc.h=0; cc.v=1;
   pc=0; a=0; x=0; y=0; cr=dr=0; sp=spHi=0x100; spLow=0xC0;
   hasReadHandler=hasWriteHandler=false;
   exptBase=0x4000;
+  ResetCycles();
   ClearExceptions();
   ClearBreakpoints();
   InitMapper();
-  ResetCycles();
   memset(stats,0,sizeof(stats));
   loglb=new cLineBuff(128);
 }
@@ -324,7 +325,7 @@ void c6805::RaiseException(int num)
 
 void c6805::ClearExceptions(void)
 {
-  exptPending=false; timerDisable=0;
+  exptPending=false; exptReady=true; timerDisable=0;
   for(int i=0; i<EXPT_MAX; i++) expt[i]=false;
 }
 
@@ -430,7 +431,7 @@ int c6805::Run(int max_count)
 
   int count=0;
   while (1) {
-    if(exptPending && !cc.i) {
+    if(exptPending && exptReady) {
       exptPending=false;
       for(int i=0; i<EXPT_MAX; ++i)
         if(expt[i]) {
@@ -438,9 +439,11 @@ int c6805::Run(int max_count)
           expt[i]=false;
           pushpc(); push(x); push(a); pushc(); cc.i=1;
           pc=exptBase+4*i;
+          timerDisable=0;
           break;
           }
       }
+    exptReady=!cc.i;
     Stepper();
     if(sp<spLow) {
       PRINTF(L_SYS_EMU,"stack overflow (count=%d)",count);
@@ -489,8 +492,10 @@ int c6805::Run(int max_count)
           case 0x22: case 0x23: case 0x24: case 0x25:
           case 0x26: case 0x27:
             vbra=true; break;
-          case 0x75:
           case 0x8D:
+            cycles++;
+            // fall through
+          case 0x75:
           case 0xC0: case 0xC1: case 0xC2: case 0xC3:
           case 0xC4: case 0xC5: case 0xC6: case 0xC7:
           case 0xC8: case 0xC9: case 0xCA: case 0xCB:
