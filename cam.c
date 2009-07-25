@@ -56,7 +56,6 @@
 #define LOG_COUNT           3 // stop logging after X complete ECM cycles
 #define CHAIN_HOLD     120000 // min. time to hold a logger chain
 #define ECM_DATA_TIME    6000 // time to wait for ECM data updates
-#define ECM_UPD_TIME   120000 // delay between ECM data updates
 #define MAX_ECM_IDLE   300000 // delay before an idle handler can be removed
 #define MAX_ECM_HOLD    15000 // delay before an idle handler stops processing
 #define CAID_TIME      300000 // time between caid scans
@@ -599,12 +598,13 @@ bool cEcmData::Parse(const char *buf)
   char Name[64];
   int nu=0, num;
   Name[0]=0;
-  if(sscanf(buf,"%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d%n",&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,&ecm_pid,&ecm_table,&nu,&num)>=9) {
+  if(sscanf(buf,"%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d/%d%n",&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,&ecm_pid,&ecm_table,&nu,&dataIdx,&num)>=9) {
     SetName(Name);
     const char *line=buf+num;
     if(nu>0 && *line++==':') {
       unsigned char *dat=AUTOMEM(nu);
-      if(GetHex(line,dat,nu,true)==nu) AddData(dat,nu);
+      if(GetHex(line,dat,nu,true)==nu && dat[0]==0x09 && dat[1]==nu-2)
+        AddCaDescr(dat,nu);
       }
     return true;
     }
@@ -614,9 +614,9 @@ bool cEcmData::Parse(const char *buf)
 cString cEcmData::ToString(bool hide)
 {
   char *str;
-  if(data) {
-    str=AUTOARRAY(char,dataLen*2+2);
-    sprintf(str,":%d:%s",dataLen,HexStr(str,data,dataLen));
+  if(caDescr) {
+    str=AUTOARRAY(char,caDescrLen*2+16);
+    sprintf(str,":%d/%d:%s",caDescrLen,dataIdx,HexStr(str,caDescr,caDescrLen));
     }
   else {
     str=AUTOARRAY(char,4);
@@ -652,7 +652,7 @@ void cEcmCache::New(cEcmInfo *e)
       dat->SetName(e->name);
       Modified();
       }
-    if(dat->Update(e))
+    if(dat->AddCaDescr(e))
       Modified();
     }
   ListUnlock();
@@ -717,6 +717,153 @@ bool cEcmCache::ParseLinePlain(const char *line)
   return false;
 }
 
+// -- cCaDescr -----------------------------------------------------------------
+
+cCaDescr::cCaDescr(void)
+{
+  descr=0; len=0;
+}
+
+cCaDescr::cCaDescr(const cCaDescr &cd)
+{
+  descr=0; len=0;
+  Set(cd.descr,cd.len);
+}
+
+cCaDescr::~cCaDescr()
+{
+  Clear();
+}
+
+const unsigned char *cCaDescr::Get(int &l) const
+{
+  l=len;
+  return descr;
+}
+
+void cCaDescr::Set(const cCaDescr *d)
+{
+  Set(d->descr,d->len);
+}
+
+void cCaDescr::Set(const unsigned char *de, int l)
+{
+  Clear();
+  if(l) {
+    descr=MALLOC(unsigned char,l);
+    if(descr) {
+      memcpy(descr,de,l);
+      len=l;
+      }
+    }
+}
+
+void cCaDescr::Clear(void)
+{
+  free(descr); descr=0; len=0;
+}
+
+void cCaDescr::Join(const cCaDescr *cd, bool rev)
+{
+  if(cd->descr) {
+    int l=len+cd->len;
+    unsigned char *m=MALLOC(unsigned char,l);
+    if(m) {
+      if(!rev) {
+        if(descr) memcpy(m,descr,len);
+        memcpy(m+len,cd->descr,cd->len);
+        }
+      else {
+        memcpy(m,cd->descr,cd->len);
+        if(descr) memcpy(m+cd->len,descr,len);
+        }
+      Clear();
+      descr=m; len=l;
+      }
+    }
+}
+
+bool cCaDescr::operator== (const cCaDescr &cd) const
+{
+  return len==cd.len && (len==0 || memcmp(descr,cd.descr,len)==0);
+}
+
+// -- cPrg ---------------------------------------------------------------------
+
+cPrg::cPrg(void)
+{
+  Setup();
+}
+
+cPrg::cPrg(int Sid, bool IsUpdate)
+{
+  Setup();
+  sid=Sid; isUpdate=IsUpdate;
+}
+
+void cPrg::Setup(void)
+{
+  sid=-1; source=-1; transponder=-1;
+  isUpdate=pidCaDescr=false;
+}
+
+bool cPrg::SimplifyCaDescr(void)
+{
+//XXX
+{
+PRINTF(L_CORE_PIDS,"SimplyCa entry pidCa=%d",HasPidCaDescr());
+const unsigned char *d;
+int l;
+d=caDescr.Get(l);
+if(d) LDUMP(L_CORE_PIDS,d,l,"prgca:");
+else PRINTF(L_CORE_PIDS,"prgca: <empty>");
+for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid)) {
+  d=pid->caDescr.Get(l);
+  if(d) LDUMP(L_CORE_PIDS,d,l,"pidca %04x:",pid->pid);
+  else PRINTF(L_CORE_PIDS,"pidca %04x: <empty>",pid->pid);
+  }
+}
+//XXX
+
+  if(HasPidCaDescr()) {
+    bool equal=true;
+    if(pids.Count()>1) {
+      cPrgPid *pid0=pids.First();
+      for(cPrgPid *pid1=pids.Next(pid0); pid1; pid1=pids.Next(pid1))
+        if(!(pid0->caDescr==pid1->caDescr)) { equal=false; break; }
+      }
+    if(equal) {
+      cPrgPid *pid=pids.First();
+      caDescr.Join(&pid->caDescr);
+      for(; pid; pid=pids.Next(pid)) pid->caDescr.Clear();
+      SetPidCaDescr(false);
+      }
+    }
+  if(HasPidCaDescr()) {
+    for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
+      pid->caDescr.Join(&caDescr,true);
+    caDescr.Clear();
+    }
+
+//XXX
+{
+PRINTF(L_CORE_PIDS,"SimplyCa exit pidCa=%d",HasPidCaDescr());
+const unsigned char *d;
+int l;
+d=caDescr.Get(l);
+if(d) LDUMP(L_CORE_PIDS,d,l,"prgca:");
+else PRINTF(L_CORE_PIDS,"prgca: <empty>");
+for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid)) {
+  d=pid->caDescr.Get(l);
+  if(d) LDUMP(L_CORE_PIDS,d,l,"pidca %04x:",pid->pid);
+  else PRINTF(L_CORE_PIDS,"pidca %04x: <empty>",pid->pid);
+  }
+}
+//XXX
+
+  return HasPidCaDescr();
+}
+
 // -- cEcmSys ------------------------------------------------------------------
 
 class cEcmPri : public cSimpleItem {
@@ -735,14 +882,14 @@ private:
   cTimeMs idleTime;
   //
   cMutex dataMutex;
-  int sid;
-  cSimpleList<cPrgPid> pids;
+  cPrg prg;
   //
   cSystem *sys;
   cPidFilter *filter;
   int filterCwIndex, filterSource, filterTransponder, filterSid;
+  cCaDescr filterCaDescr;
   unsigned char lastCw[16];
-  bool sync, noKey, trigger;
+  bool sync, noKey, trigger, ecmUpd;
   int triggerMode;
   int mode, count;
   cTimeMs lastsync, startecm, resendTime;
@@ -754,7 +901,6 @@ private:
   cSimpleList<cEcmPri> ecmPriList;
   cEcmInfo *ecm;
   cEcmPri *ecmPri;
-  cTimeMs ecmUpdTime;
   //
   int dolog;
   //
@@ -774,12 +920,12 @@ public:
   cEcmHandler(cCam *Cam, int CardNum, int cwindex);
   virtual ~cEcmHandler();
   void Stop(void);
-  void SetPrg(cPrg *prg);
+  void SetPrg(cPrg *Prg);
   void ShiftCwIndex(int cwindex);
   char *CurrentKeyStr(void) const;
   bool IsRemoveable(void);
   bool IsIdle(void);
-  int Sid(void) const { return sid; }
+  int Sid(void) const { return prg.sid; }
   int CwIndex(void) const { return cwIndex; }
   const char *Id(void) const { return id; }
   };
@@ -791,8 +937,8 @@ cEcmHandler::cEcmHandler(cCam *Cam, int CardNum, int cwindex)
   cam=Cam;
   cardNum=CardNum;
   cwIndex=cwindex;
-  sys=0; filter=0; ecm=0; ecmPri=0; mode=-1; sid=-1;
-  trigger=false; triggerMode=-1;
+  sys=0; filter=0; ecm=0; ecmPri=0; mode=-1;
+  trigger=ecmUpd=false; triggerMode=-1;
   filterSource=filterTransponder=0; filterCwIndex=-1; filterSid=-1;
   id=bprintf("%d.%d",cardNum,cwindex);
 }
@@ -810,7 +956,7 @@ cEcmHandler::~cEcmHandler()
 bool cEcmHandler::IsIdle(void)
 {
   dataMutex.Lock();
-  int n=pids.Count();
+  int n=prg.pids.Count();
   dataMutex.Unlock();
   return n==0;
 }
@@ -823,11 +969,11 @@ bool cEcmHandler::IsRemoveable(void)
 void cEcmHandler::Stop(void)
 {
   dataMutex.Lock();
-  if(!IsIdle() || sid!=-1) {
+  if(!IsIdle() || prg.sid!=-1) {
     PRINTF(L_CORE_ECM,"%s: stop",id);
-    sid=-1;
+    prg.sid=-1;
     idleTime.Set();
-    pids.Clear();
+    prg.pids.Clear();
     trigger=true;
     }
   dataMutex.Unlock();
@@ -843,61 +989,69 @@ void cEcmHandler::ShiftCwIndex(int cwindex)
     dataMutex.Lock();
     trigger=true;
     cwIndex=cwindex;
-    for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-      cam->SetCWIndex(pid->Pid(),cwIndex);
+    for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+      cam->SetCWIndex(pid->pid,cwIndex);
     dataMutex.Unlock();
     if(filter) filter->Wakeup();
     }
 }
 
-void cEcmHandler::SetPrg(cPrg *prg)
+void cEcmHandler::SetPrg(cPrg *Prg)
 {
   dataMutex.Lock();
   bool wasIdle=IsIdle();
-  if(prg->Prg()!=sid) {
-    PRINTF(L_CORE_ECM,"%s: setting new SID %d",id,prg->Prg());
-    sid=prg->Prg();
+  if(Prg->sid!=prg.sid) {
+    PRINTF(L_CORE_ECM,"%s: setting new SID %d",id,Prg->sid);
+    prg.sid=Prg->sid;
+    prg.source=Prg->source;
+    prg.transponder=Prg->transponder;
     idleTime.Set();
-    pids.Clear();
+    prg.pids.Clear();
     trigger=true;
     }
+  if(!(prg.caDescr==Prg->caDescr)) {
+    prg.caDescr.Set(&Prg->caDescr);
+    trigger=true;
+    }
+  if(Prg->HasPidCaDescr())
+    PRINTF(L_GEN_DEBUG,"internal: pid specific caDescr not supported at this point (sid=%d)",Prg->sid);
   LBSTART(L_CORE_PIDS);
   LBPUT("%s: pids on entry",id);
-  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-    LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+  for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+    LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
 
-  for(cPrgPid *pid=pids.First(); pid;) {
+  for(cPrgPid *pid=prg.pids.First(); pid;) {
     cPrgPid *npid;
-    for(npid=prg->pids.First(); npid; npid=prg->pids.Next(npid)) {
-      if(pid->Pid()==npid->Pid()) {
+    for(npid=Prg->pids.First(); npid; npid=Prg->pids.Next(npid)) {
+      if(pid->pid==npid->pid) {
         npid->Proc(true);
         break;
         }
       }
     if(!npid) {
-      npid=pids.Next(pid);
-      pids.Del(pid);
+      npid=prg.pids.Next(pid);
+      prg.pids.Del(pid);
       pid=npid;
       }
-    else pid=pids.Next(pid);
+    else pid=prg.pids.Next(pid);
     }
   LBSTART(L_CORE_PIDS);
   LBPUT("%s: pids after delete",id);
-  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-    LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+  for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+    LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
-  for(cPrgPid *npid=prg->pids.First(); npid; npid=prg->pids.Next(npid)) {
+  for(cPrgPid *npid=Prg->pids.First(); npid; npid=Prg->pids.Next(npid)) {
     if(!npid->Proc()) {
-      cPrgPid *pid=new cPrgPid(npid->Type(),npid->Pid());
-      pids.Add(pid);
-      cam->SetCWIndex(pid->Pid(),cwIndex);
+      cPrgPid *pid=new cPrgPid(npid->type,npid->pid);
+      prg.pids.Add(pid);
+      cam->SetCWIndex(pid->pid,cwIndex);
       }
     }
   LBSTART(L_CORE_PIDS);
   LBPUT("%s: pids after add",id);
-  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-    LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+  for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+    LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
   if(!IsIdle()) {
     trigger=true;
@@ -922,12 +1076,12 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
   dataMutex.Lock();
   if(trigger) {
     PRINTF(L_CORE_ECM,"%s: triggered SID %d/%d idx %d/%d mode %d/%d %s",
-      id,filterSid,sid,filterCwIndex,cwIndex,mode,triggerMode,(mode==3 && sync)?"sync":"-");
+      id,filterSid,prg.sid,filterCwIndex,cwIndex,mode,triggerMode,(mode==3 && sync)?"sync":"-");
     trigger=false;
-    if(filterSid!=sid) {
-      filterSid=sid;
-      filterSource=cam->Source();
-      filterTransponder=cam->Transponder();
+    if(filterSid!=prg.sid) {
+      filterSid=prg.sid;
+      filterSource=prg.source;
+      filterTransponder=prg.transponder;
       filterCwIndex=cwIndex;
       noKey=true; mode=0;
       }
@@ -938,6 +1092,12 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
           cam->WriteCW(filterCwIndex,lastCw,true);
         }
       if(mode<triggerMode) mode=triggerMode;
+      }
+    if(!(prg.caDescr==filterCaDescr)) {
+      filterCaDescr.Set(&prg.caDescr);
+      ecmUpd=true;
+//XXX
+PRINTF(L_CORE_ECM,"%s: new caDescr",id);
       }
     triggerMode=-1;
     }
@@ -1175,16 +1335,14 @@ void cEcmHandler::StopEcm(void)
 
 bool cEcmHandler::UpdateEcm(void)
 {
-  if(!ecm->Data() || ecmUpdTime.TimedOut()) {
+  if(ecmUpd) {
     bool log=dolog;
     dolog=(sys && sys->NeedsData() && ecm->Data()==0);
     if(dolog) PRINTF(L_CORE_ECM,"%s: try to update ecm extra data",id);
     ParseCAInfo(ecm->caId);
-    ecmUpdTime.Set(ECM_UPD_TIME);
     dolog=log;
-    if(!ecm->Data()) return false;
     }
-  return true;
+  return ecm->Data()!=0;
 }
 
 cEcmInfo *cEcmHandler::JumpEcm(void)
@@ -1197,7 +1355,7 @@ cEcmInfo *cEcmHandler::JumpEcm(void)
   else ecmPri=ecmPriList.Next(ecmPri);
   if(ecmPri) {
     if(ecmPri->ecm!=ecm) {
-      StopEcm(); ecmUpdTime.Set();
+      StopEcm();
       ecm=ecmPri->ecm;
       filter->Start(ecm->ecm_pid,ecm->ecm_table,0xfe,0,false);
       cam->LogEcmStatus(ecm,true);
@@ -1243,27 +1401,17 @@ void cEcmHandler::EcmFail(void)
 
 void cEcmHandler::ParseCAInfo(int SysId)
 {
-  unsigned char buff[2048];
-  caid_t casys[MAXCAIDS+1];
-  if(SysId==0xFFFF) {
-    if(!cam->GetPrgCaids(filterSource,filterTransponder,filterSid,casys)) {
-      PRINTF(L_CORE_ECM,"%s: no CAIDs for SID %d",id,sid);
-      return;
-      }
-    }
-  else {
-    casys[0]=SysId;
-    casys[1]=0;
-    }
-  bool streamFlag;
-  int len=GetCaDescriptors(filterSource,filterTransponder,filterSid,casys,sizeof(buff),buff,streamFlag);
-  if(len>0) {
-    if(dolog) PRINTF(L_CORE_ECM,"%s: got CaDescriptors for SID %d (len=%d)",id,sid,len);
+  ecmUpd=false;
+  int len;
+  const unsigned char *buff=filterCaDescr.Get(len);
+  if(buff && len>0) {
+    if(dolog) PRINTF(L_CORE_ECM,"%s: CA descriptors for SID %d (len=%d)",id,filterSid,len);
     HEXDUMP(L_HEX_PMT,buff,len,"PMT");
     for(int index=0; index<len; index+=buff[index+1]+2) {
       if(buff[index]==0x09) {
-        if(dolog) LDUMP(L_CORE_ECM,&buff[index+2],buff[index+1],"%s: descriptor",id);
         int sysId=WORD(buff,index+2,0xFFFF);
+        if(SysId!=0xFFFF && sysId!=SysId) continue;
+        if(dolog) LDUMP(L_CORE_ECM,&buff[index+2],buff[index+1],"%s: descriptor",id);
         int sysPri=0;
         cSystem *sys;
         while((sys=cSystems::FindBySysId(sysId,!cam->IsSoftCSA(filterCwIndex==0),sysPri))) {
@@ -1275,6 +1423,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
             cEcmInfo *n;
             while((n=ecms.First())) {
               ecms.Del(n,false);
+              n->AddCaDescr(&buff[index],buff[index+1]+2);
               overrides.UpdateEcm(n,dolog);
               LBSTARTF(L_CORE_ECM);
               if(dolog) LBPUT("%s: found %04x(%04x) (%s) id %04x with ecm %x/%x ",id,n->caId,n->emmCaId,n->name,n->provId,n->ecm_pid,n->ecm_table);
@@ -1282,9 +1431,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
               while(e) {
                 if(e->ecm_pid==n->ecm_pid) {
                   if(e->caId==n->caId && e->provId==n->provId) {
-                    if(n->Data()) {
-                      if(e->Update(n) && dolog) LBPUT("(updated) ");
-                      }
+                    if(e->AddCaDescr(n) && dolog) LBPUT("(updated) ");
                     if(dolog) LBPUT("(already present)");
                     delete n; n=0;
                     break;
@@ -1298,7 +1445,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
                 }
               if(n) {
                 if(dolog) LBPUT("(new)");
-                n->SetSource(sid,filterSource,filterTransponder);
+                n->SetSource(filterSid,filterSource,filterTransponder);
                 ecmList.Add(n);
                 AddEcmPri(n);
                 }
@@ -1311,8 +1458,6 @@ void cEcmHandler::ParseCAInfo(int SysId)
         }
       }
     }
-  else if(len<0)
-    PRINTF(L_CORE_ECM,"%s: CA parse buffer overflow",id);
   if(SysId==0xFFFF) {
     for(cEcmPri *ep=ecmPriList.First(); ep; ep=ecmPriList.Next(ep))
       PRINTF(L_CORE_ECMPROC,"%s: ecmPriList pri=%d ident=%04x caid=%04x pid=%04x",id,ep->pri,ep->sysIdent,ep->ecm->caId,ep->ecm->ecm_pid);
@@ -1387,23 +1532,33 @@ void cCam::AddPrg(cPrg *prg)
   cMutexLock lock(this);
   bool islive=false;
   for(cPrgPid *pid=prg->pids.First(); pid; pid=prg->pids.Next(pid))
-    if(pid->Pid()==liveVpid || pid->Pid()==liveApid) {
+    if(pid->pid==liveVpid || pid->pid==liveApid) {
       islive=true;
       break;
       }
   bool needZero=!IsSoftCSA(islive) && (islive || !ScSetup.ConcurrentFF);
   bool noshift=IsSoftCSA(true) || (prg->IsUpdate() && prg->pids.Count()==0);
-  PRINTF(L_CORE_PIDS,"%d: %s SID %d (zero=%d noshift=%d)",cardNum,prg->IsUpdate()?"update":"add",prg->Prg(),needZero,noshift);
+  PRINTF(L_CORE_PIDS,"%d: %s SID %d (zero=%d noshift=%d)",cardNum,prg->IsUpdate()?"update":"add",prg->sid,needZero,noshift);
   if(prg->pids.Count()>0) {
     LBSTART(L_CORE_PIDS);
     LBPUT("%d: pids",cardNum);
     for(cPrgPid *pid=prg->pids.First(); pid; pid=prg->pids.Next(pid))
-      LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+      LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
     LBEND();
     }
-  cEcmHandler *handler=GetHandler(prg->Prg(),needZero,noshift);
+  if(prg->pids.Count()>0 && prg->SimplifyCaDescr()) {
+    PRINTF(L_GEN_WARN,"Stream specific caDescr (aka split-ecm) cannot be handled yet (SID %d)",prg->sid);
+    // take first caDescr and ignore the rest....
+    cPrgPid *pid=prg->pids.First();
+    prg->caDescr.Set(&pid->caDescr);
+    for(; pid; pid=prg->pids.Next(pid)) pid->caDescr.Clear();
+    prg->SetPidCaDescr(false);
+    }
+  cEcmHandler *handler=GetHandler(prg->sid,needZero,noshift);
   if(handler) {
-    PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->Prg(),handler->Id(),handler->IsIdle(),handler->CwIndex());
+    PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->sid,handler->Id(),handler->IsIdle(),handler->CwIndex());
+    prg->source=source;
+    prg->transponder=transponder;
     handler->SetPrg(prg);
     }
 }
@@ -1449,11 +1604,6 @@ void cCam::HouseKeeping(void)
     delete hookman; hookman=0;
     delete logger; logger=0;
     }
-}
-
-bool cCam::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  return device->GetPrgCaids(source,transponder,prg,c);
 }
 
 void cCam::LogStartup(void)
@@ -2019,6 +2169,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
         LBPUT("/%x",dlen);
         if(ilen>0 && dlen>=ilen) {
           ci_cmd=data[0];
+          prg->caDescr.Set(&data[1],ilen-1);
           LBPUT(" ci_cmd(G)=%02x",ci_cmd);
           }
         data+=ilen; dlen-=ilen;
@@ -2031,6 +2182,8 @@ void cScCamSlot::Process(const unsigned char *data, int len)
           LBPUT("/%x",dlen);
           if(ilen>0 && dlen>=ilen) {
             ci_cmd=data[0];
+            pid->caDescr.Set(&data[1],ilen-1);
+            prg->SetPidCaDescr(true);
             LBPUT(" ci_cmd(S)=%x",ci_cmd);
             }
           data+=ilen; dlen-=ilen;
@@ -2042,20 +2195,20 @@ void cScCamSlot::Process(const unsigned char *data, int len)
           b[3]=0x90;
           b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
           b[7]=0x9f; b[8]=0x80; b[9]=0x33; // AOT_CA_PMT_REPLY
-          b[11]=prg->Prg()<<8;
-          b[12]=prg->Prg()&0xff;
+          b[11]=prg->sid<<8;
+          b[12]=prg->sid&0xff;
           b[13]=0x00;
           b[14]=0x81; 	// CA_ENABLE
           b[10]=4; b[1]=4+9; a[0]=4+11; Put(a,4+12);
           PRINTF(L_CORE_CI,"%d.%d answer to query",cardIndex,slot);
           }
-        if(prg->Prg()!=0) {
+        if(prg->sid!=0) {
           if(ci_cmd==0x04) {
             PRINTF(L_CORE_CI,"%d.%d stop decrypt",cardIndex,slot);
             ciadapter->CamStop();
             }
           if(ci_cmd==0x01 || (ci_cmd==-1 && (ca_lm==0x04 || ca_lm==0x05))) {
-            PRINTF(L_CORE_CI,"%d.%d set CAM decrypt (prg %d)",cardIndex,slot,prg->Prg());
+            PRINTF(L_CORE_CI,"%d.%d set CAM decrypt (prg %d)",cardIndex,slot,prg->sid);
             ciadapter->CamAddPrg(prg);
             }
           }
@@ -2579,7 +2732,6 @@ cScDvbDevice::cScDvbDevice(int n, int cafd)
 #if APIVERSNUM >= 10500
   ciadapter=0; hwciadapter=0;
 #endif
-  memset(lrucaid,0,sizeof(lrucaid));
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
   softcsa=(fd_ca<0);
 }
@@ -2762,44 +2914,10 @@ bool cScDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 
 bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 {
-  lruMutex.Lock();
-  int i=FindLRUPrg(Channel->Source(),Channel->Transponder(),Channel->Sid());
-  if(i<0) i=MAX_LRU_CAID-1;
-  if(i>0) memmove(&lrucaid[1],&lrucaid[0],sizeof(struct LruCaid)*i);
-#if APIVERSNUM >= 10500
-  const caid_t *c=Channel->Caids();
-  for(i=0; i<MAXCAIDS && *c; i++) lrucaid[0].caids[i]=*c++;
-  lrucaid[0].caids[i]=0;
-#else
-  for(i=0; i<=MAXCAIDS; i++) if((lrucaid[0].caids[i]=Channel->Ca(i))==0) break;
-#endif
-  lrucaid[0].src=Channel->Source();
-  lrucaid[0].tr=Channel->Transponder();
-  lrucaid[0].prg=Channel->Sid();
-  lruMutex.Unlock();
   if(cam) cam->Tune(Channel);
   bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
   if(ret && cam) cam->PostTune();
   return ret;
-}
-
-bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  cMutexLock lock(&lruMutex);
-  int i=FindLRUPrg(source,transponder,prg);
-  if(i>=0) {
-    for(int j=0; j<MAXCAIDS && lrucaid[i].caids[j]; j++) *c++=lrucaid[i].caids[j];
-    *c=0;
-    return true;
-    }
-  return false;
-}
-
-int cScDvbDevice::FindLRUPrg(int source, int transponder, int prg)
-{
-  for(int i=0; i<MAX_LRU_CAID; i++)
-    if(lrucaid[i].src==source && lrucaid[i].tr==transponder && lrucaid[i].prg==prg) return i;
-  return -1;
 }
 
 #if APIVERSNUM < 10500
@@ -3016,11 +3134,6 @@ void cScDvbDevice::Capture(void)
 bool cScDvbDevice::Initialize(void)
 {
   return true;
-}
-
-bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  return false;
 }
 
 bool cScDvbDevice::SoftCSA(bool live)

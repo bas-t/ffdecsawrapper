@@ -1,0 +1,28 @@
+DVB Loopback Driver
+Version 0.0.1
+Alan Nisota
+
+test_read application:
+The test_read application forwards all read/write/ioctl/poll commands from a dvbloopback adapter to a real dvb adapter.
+It works as follows:
+  a request on loopadapter/<dev>0 comes in
+  the dvbloopback driver sends SIGIO to test_read
+  the signal handleing thread in test_read polls all loopadapter/*1 devices and
+      signals the relevant threads that new data is available via SIGALRM
+  the relevant thread reads data from loopadapter/<dev>1
+  this data is formatted as ioctl-cmd,file-descriptor,data
+    if 'ioctl-cmd' is '0' then it is a read/write/open/close/or poll command
+      and data is formatted as a fake ioctl
+    otherwise it is a real ioctl with relevant data-structure
+ 
+    the file-descriptor is a unique tag representing the file-descriptor to
+      query, but IS NOT the same as a file-descriptor returned by open
+
+  for the fake-ioctl, the relevant command is sent to the real dvb-adapter
+  for an ioctl, an ioctl is sent to the real dvb-adapter.
+
+  Any returned data, along with the return status is sent back to the
+    dvbloopback driver via an ioctl call.
+  The dvbloopback driver returns the relevant data to loopadapter/<dev>0
+
+
