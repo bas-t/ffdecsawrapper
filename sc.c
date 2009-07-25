@@ -971,6 +971,7 @@ void cScSetup::Check(void)
   PRINTF(L_CORE_LOAD,"** Local systems %stake priority over cached remote",LocalPriority?"":"DON'T ");
   PRINTF(L_CORE_LOAD,"** Concurrent FF recordings are %sallowed",ConcurrentFF?"":"NOT ");
   PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital audio",ForceTransfer?"F":"DON'T f");
+  PRINTF(L_CORE_LOAD,"** ECM cache is set to %s",EcmCache ? (EcmCache==1?"READ-ONLY":"DISABLED"):"enabled");
   LBSTART(L_CORE_LOAD);
   LBPUT("** ScCaps are"); for(int i=0; i<MAXSCCAPS ; i++) LBPUT(" %d",ScCaps[i]);
   LBFLUSH();

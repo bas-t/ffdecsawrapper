@@ -97,6 +97,7 @@ bool cN2Prov0501::Algo(int algo, const unsigned char *hd, unsigned char *hw)
     DoMap(EXPORT_C,hw+0x20);
     DoMap(0x43);
     DoMap(0x44,hw);
+    memcpy(hw,hw+64,20);
     hw[0]&=7;
     DoMap(EXPORT_B,hw+3);
     memset(hw+3+0x20,0,128-(3+0x20));

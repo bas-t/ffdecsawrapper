@@ -56,7 +56,7 @@ extern char auxPassword[250];
 class cMapReg {
 private:
   cBN fullreg, reg, tmp;
-  int wordsize, maxwordsize, *defwordsize;
+  int wordsize, maxwordsize, *defwordsize, &pos;
   //
   int DefWordSize() const { return defwordsize ? *defwordsize:DEF_WORDSIZE; }
   int OpWordSize(int wsize) const { int sz=wsize>0 ? wsize:DefWordSize(); return sz>maxwordsize ? maxwordsize:sz; }
@@ -68,7 +68,7 @@ protected:
   void SetMaxWordSize(int max) { maxwordsize=max; }
   void SetDefWordSize(int *_defwordsize) { defwordsize=_defwordsize; }
 public:
-  cMapReg(int *_defwordsize=0, int _maxwordsize=DEF_MAXWORDSIZE);
+  cMapReg(int &_pos, int *_defwordsize=0, int _maxwordsize=DEF_MAXWORDSIZE);
   operator BIGNUM* () { return Value(); }
   BIGNUM *operator->() { return Value(); }
   BIGNUM *Value(int wsize=0, bool mask=false);
@@ -78,6 +78,7 @@ public:
   void PutLE(unsigned char *out, int n=0);
   void Set(BIGNUM *val, int wsize);
   void Clear(int wsize);
+  void SetPos(int _pos) { pos=_pos; }
   };
 
 // ----------------------------------------------------------------
@@ -90,8 +91,9 @@ private:
   cBN x, y, s;
   int words;
 protected:
-  int wordsize;
-  cMapReg A, B, C, D, J, I, H;
+  int wordsize, regpos;
+  cMapReg A, B, C, D, J, I;
+  cBN H, scalar;
   cBNctx ctx;
   SHA_CTX sctx;
   // stateless
@@ -186,16 +188,23 @@ public:
 
 class cN2Timer {
 private:
-  int ctrl, divisor, cycles, remainder, latch, nr;
+  int ctrl, latch, nr, delayInterrupt;
+  unsigned char val;
+  unsigned int cycles, intrCycles;
+  double divisor, invDivisor;
+  bool timerBugged;
   enum { tmCONTINUOUS=0x01, tmRUNNING=0x02, tmINTERRUPT=0x04, tmMASK=0xFF, tmLATCHED=0x100 };
   //
   bool Running(void) { return ctrl&tmRUNNING; }
+  bool InterruptSet(void) { return ctrl&tmINTERRUPT; }
   void Stop(void);
+  double GetDivisor(void);
+  void Update(void);
 public:
   cN2Timer(void);
   bool AddCycles(unsigned int count);
-  unsigned int Cycles(void) { return cycles; }
-  unsigned char Ctrl(void) { return ctrl&tmMASK; }
+  unsigned int Cycles(void);
+  unsigned char Ctrl(void);
   void Ctrl(unsigned char c);
   unsigned char Latch(void) { return latch&0xFF; }
   void Latch(unsigned char val);

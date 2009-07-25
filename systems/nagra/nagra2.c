@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "system.h"
 #include "opts.h"
@@ -34,43 +35,96 @@
 
 cN2Timer::cN2Timer(void)
 {
-  cycles=0; ctrl=0; divisor=1; remainder=-1; latch=0xFF;
+  cycles=intrCycles=delayInterrupt=0; ctrl=0; val=0; divisor=0; invDivisor=0; latch=0xFF;
+  timerBugged=false;
 }
 
 bool cN2Timer::AddCycles(unsigned int count)
 {
-  bool irq=false;
   if(Running()) {
-    bool stop=false;
-    remainder+=count;
-    if(remainder>=divisor) {
-      cycles-=remainder/divisor;
-      remainder%=divisor;
-      }
-    if(cycles<0 || (cycles==0 && remainder>=2))
-      stop=true;
-    if(ctrl&tmCONTINUOUS) {
-      while(cycles<0) cycles+=latch+1;
-      }
-    else if(stop) {
-      PRINTF(L_SYS_EMU,"n2timer %d: timer stop (cycles=%d remainder=%d)",nr,cycles,remainder);
-      cycles=0;
-      Stop();
-      }
-    if((ctrl&tmINTERRUPT) && stop) {
-      PRINTF(L_SYS_EMU,"n2timer %d: IRQ triggered",nr);
-      irq=true;
+    cycles+=count;
+    if(!delayInterrupt && InterruptSet() && cycles>=intrCycles) {
+      delayInterrupt=intrCycles-cycles+3;
+      if(delayInterrupt<0) delayInterrupt=count; else delayInterrupt+=count;
+      intrCycles=0;
+      if((ctrl&tmCONTINUOUS)) Update();
       }
     }
-  return irq;
+  if(delayInterrupt) {
+    delayInterrupt-=count;
+    if(delayInterrupt<0) delayInterrupt=0;
+    if(!delayInterrupt) {
+      Update();
+      return true;
+      }
+    }
+  return false;
+}
+
+double cN2Timer::GetDivisor(void)
+{
+  int prescalar=((ctrl&0x38)>>3)+1;
+  double divisor=pow(4.0,prescalar);
+  double multiplier;
+  // multipliers for 0 and 2 aren't correct yet
+  switch((ctrl&0xc0)>>6) {
+    case 0: multiplier=10.3f;  break;
+    case 1: multiplier= 1.0f;  break;
+    case 2: multiplier=6.375f; break;
+    default:multiplier=0;
+    }
+  return divisor*multiplier;
+}
+
+void cN2Timer::Update(void)
+{
+  int rlatch=latch;
+  if(divisor) {
+    if(timerBugged && cycles>=0x100*divisor) {
+      timerBugged=false;
+      cycles-=0x101*divisor;
+      }
+    if(timerBugged) rlatch=0x100;
+
+    int v=cycles*invDivisor;
+    if(ctrl&tmCONTINUOUS) {
+      val=rlatch-(v % (rlatch+1));
+      if(InterruptSet() && val==0)
+        intrCycles = cycles + (unsigned int)((val?val:latch)*divisor);
+      }
+    else {
+      // one-shot
+      if(v>=rlatch) {
+        val=0;
+        if(Running() && ((cycles-2)*invDivisor)>=rlatch) Stop();
+        }
+      else
+        val=rlatch-v;
+      }
+    }
+  else val=0;
+}
+
+unsigned int cN2Timer::Cycles(void)
+{
+  if(Running()) Update();
+  PRINTF(L_SYS_EMU,"n2timer %d: read %u %02x %02x = %02x",nr,cycles,ctrl&0xff,latch&0xff,val);
+  return val;
+}
+
+unsigned char cN2Timer::Ctrl(void)
+{
+  if(Running()) Update();
+  return ctrl;
 }
 
 void cN2Timer::Latch(unsigned char val)
 {
   if(!Running()) {
     latch=val; if(latch==0) latch=0x100;
-    cycles=latch; remainder=0;
+    cycles=0;
     ctrl|=tmLATCHED;
+    timerBugged=false;
     }
 }
 
@@ -80,19 +134,30 @@ void cN2Timer::Ctrl(unsigned char val)
     ctrl=(ctrl&~tmRUNNING) | (val&tmRUNNING);
     if(!Running()) {
       Stop();
-      PRINTF(L_SYS_EMU,"n2timer %d: stopped cycles=%x ctrl=%x",nr,cycles,ctrl);
+      --cycles;
+      Update();
+      PRINTF(L_SYS_EMU,"n2timer %d: stopped cycles=%d (%02x) ctrl=%02x latch=%02x\n",nr,cycles,val,ctrl,latch&0xff);
       }
     }
   else {
     ctrl=(ctrl&~tmMASK) | (val&tmMASK);
+    divisor=GetDivisor();
+    if(divisor) invDivisor=1.0/divisor;
     if(Running()) {
-      if((ctrl&0xc0)==0x40) divisor=1 << (2 *(1 + ((ctrl & 0x38) >> 3)));
-      else divisor=4; // This is wrong, but we haven't figured the right value out yet
-      if(divisor<=0) divisor=1; // sanity
-      if(!(ctrl&tmLATCHED)) cycles=(unsigned int)(cycles-1)&0xFF;
-      PRINTF(L_SYS_EMU,"n2timer %d: started latch=%x div=%d cycles=%x ctrl=%x",nr,latch,divisor,cycles,ctrl);
-      remainder=-1;
-      if(!(ctrl&tmCONTINUOUS) && cycles==0) ctrl&=~tmRUNNING;
+      if(!(ctrl&tmLATCHED) && divisor>0) {
+        if(this->val==0) {
+          timerBugged=true;
+          cycles=(unsigned int)divisor;
+          }
+        else {
+          cycles=(unsigned int)(((timerBugged?0x100:latch)-this->val+1) * divisor);
+          }
+        }
+      if((ctrl&tmINTERRUPT)) {
+        intrCycles=cycles+(unsigned int)((timerBugged?0x101:this->val?this->val:latch)*divisor);
+        if(nr==2) PRINTF(L_SYS_EMU,"n2timer %d: set for %u cycles (%02x %02x)",nr,intrCycles-cycles,Latch(),ctrl&0xff);
+        }
+      ctrl&=~tmLATCHED;
       }
     }
 }
@@ -100,6 +165,7 @@ void cN2Timer::Ctrl(unsigned char val)
 void cN2Timer::Stop(void)
 {
   ctrl&=~(tmRUNNING|tmLATCHED);
+  if(delayInterrupt>=3) delayInterrupt=0;
 }
 
 // -- cN2CRC -------------------------------------------------------------------
@@ -287,7 +353,8 @@ bool cN2Emu::Init(int id, int romv)
 
 // -- cMapReg ------------------------------------------------------------------
 
-cMapReg::cMapReg(int *_defwordsize, int _maxwordsize)
+cMapReg::cMapReg(int &_pos, int *_defwordsize, int _maxwordsize)
+:pos(_pos)
 {
   SetDefWordSize(_defwordsize);
   SetMaxWordSize(_maxwordsize);
@@ -357,6 +424,7 @@ void cMapReg::GetLE(const unsigned char *in, int n)
   if(wordsize>wsize) Commit();
   reg.GetLE(in,wsize*8);
   Commit(wsize);
+  pos=0;
 }
 
 void cMapReg::PutLE(unsigned char *out, int n)
@@ -364,6 +432,14 @@ void cMapReg::PutLE(unsigned char *out, int n)
   int wsize=OpWordSize(n<=0?n:(n+7)/8);
   Commit();
   fullreg.PutLE(out,wsize*8);
+  if(pos&7) {
+    int s=pos/8*8;
+    for(int i=0; i<(pos&7); i++) {
+      unsigned char c=out[s];
+      memmove(out+s,out+s+1,7);
+      out[s+7]=c;
+      }
+    }
 }
 
 void cMapReg::Set(BIGNUM *val, int wsize)
@@ -392,9 +468,10 @@ void cMapReg::Clear(int wsize)
 // -- cMapMath -----------------------------------------------------------------
 
 cMapMath::cMapMath(void)
-:A(&wordsize),B(&wordsize),C(&wordsize),D(&wordsize),J(0,1),I(&wordsize)
+:A(regpos,&wordsize),B(regpos,&wordsize),C(regpos,&wordsize),D(regpos,&wordsize),J(regpos,0,1),I(regpos,&wordsize)
 {
   wordsize=DEF_WORDSIZE; words=-1;
+  regpos=0;
 }
 
 bool cMapMath::ModAdd(BIGNUM *r, BIGNUM *a, BIGNUM *b, BIGNUM *d)
@@ -539,27 +616,39 @@ void cMapCore::IMakeJ(void)
 
 void cMapCore::IMonInit0(int bits)
 {
-  AddMapCycles(132+(wordsize*8+3)/5*5);
-  if(BN_num_bits(D)>1) AddMapCycles(54);
+  AddMapCycles(114+(wordsize*8+3)/5*5);
+  D.SetPos(2);
+  AddMapCycles(18);
+  if(BN_num_bits(D)>1)
+    for(int i=3; i<=8; i++) {
+      D.SetPos(i);
+      AddMapCycles(9);
+      }
+  D.SetPos(0);
   if(!BN_is_zero(D)) {
     AddMapCycles(54);
     BN_zero(I);
     BN_set_bit(I,bits ? bits : 68*wordsize);
     BN_zero(B);
-    AddMapCycles(141+(wordsize*8+3)/5*5);
-    //BN_set_bit(B,64*(wordsize-1));
-    // TEMP or not?
-    BN_set_bit(B,64*(wordsize-1)+bits);
-    AddMapCycles(92+72*wordsize);
+    AddMapCycles(157+(wordsize*8+3)/5*5+72*(wordsize-1));
+    BN_set_bit(B,64*(wordsize-1));
+    B.SetPos(8*(wordsize-1)+1);
+    AddMapCycles(17);
+    for(int i=8*(wordsize-1)+2; i<=8*wordsize; i++) {
+      B.SetPos(i);
+      AddMapCycles(9);
+      }
+    B.SetPos(0);
+    AddMapCycles(68);
     BN_mod(B,I,D,ctx);
     AddMapCycles(639);
     }
-  AddMapCycles(52);
-  for(int i=0; i<4; i++) {
-    MonMul0(B,B,B,C,D,J,0);
-    AddMapCycles(96+6*(i>0));
-    MonFin(B,D);
-    }
+   AddMapCycles(52);
+   for(int i=0; i<4; i++) {
+     MonMul0(B,B,B,C,D,J,0);
+     AddMapCycles(96+6*(i>0));
+     MonFin(B,D);
+     }
 }
 
 void cMapCore::IMonInit(int bits)
@@ -571,10 +660,12 @@ void cMapCore::IMonInit(int bits)
 void cMapCore::MonInit(int bits)
 {
   // Calculate J0 & H montgomery elements in J and B
-  MakeJ0(J,D);
-  BN_zero(I);
-  BN_set_bit(I,bits ? bits : 68*wordsize);
-  BN_mod(B,I,D,ctx);
+  MakeJ0(J,D,C);
+  if(!BN_is_zero(D)) {
+    BN_zero(I);
+    BN_set_bit(I,bits ? bits : 68*wordsize);
+    BN_mod(B,I,D,ctx);
+    }
   for(int i=0; i<4; i++) MonMul(B,B,B);
 }
 
@@ -592,7 +683,13 @@ void cMapCore::MonExp(BIGNUM *scalar)
 
 void cMapCore::MonExpNeg(void)
 {
-  if(BN_is_zero(D)) { BN_set_word(A,1); return; }
+  if(BN_is_zero(D) || BN_is_word(D,2)) {
+    BN_one(A);
+    if(!BN_is_zero(D)) BN_zero(B);
+    return;
+    }
+  int bits=0;
+  for(int i=BN_num_bits(D)-1; i>=0; i--) if(BN_is_bit_set(D,i)) bits++;
   BN_copy(e,D);
   BN_mask_bits(e,8);		// check LSB
   unsigned int n=BN_get_word(e);
@@ -600,19 +697,15 @@ void cMapCore::MonExpNeg(void)
   if(n) BN_sub_word(e,0x02);	// N -2
   else  BN_add_word(e,0xFE);	// N + 254 ('carryless' -2)
   BN_copy(A,B);
-  for(int i=BN_num_bits(e)-2; i>-1; i--) {
+  for(int i=BN_num_bits(e)-2+(bits==1 && BN_num_bits(D)<=8); i>-1; i--) {
     MonMul(B,B,B);
     if(BN_is_bit_set(e,i)) MonMul(B,A,B);
     }
-  if(BN_is_bit_set(D,0)) {
-    int i;
-    for(i=BN_num_bits(D)-2; i>0; i--) if(BN_is_bit_set(D,i)) break;
-    if(i<=0) {
-      MonMul(B,B,B);
-      MonMul(B,A,B);
-      }
+  if(bits==2 && BN_is_bit_set(D,0)) {
+    MonMul(B,B,B);
+    MonMul(B,A,B);
     }
-  BN_set_word(A,1);
+  BN_one(A);
   MonMul(B,A,B);
 }
 
@@ -747,7 +840,7 @@ void cMapCore::DoMap(int f, unsigned char *data, int l)
   interrupted=false; interruptible=true;
   try {
     if(!Map(f,data,l) && !MapGeneric(f,data,l))
-      PRINTF(L_SYS_MAP,"%04x: unsupported call %02x",mapid,f);
+      PRINTF(L_SYS_MAP,"%04x: unsupported map call %02x",mapid,f);
     if(cycles) {
       unsigned int elapsed=CpuCycles()-startcycles;
       if(cycles>elapsed) AddMapCycles(cycles-elapsed);
@@ -789,7 +882,7 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
     case IMPORT_LAST:
       if(l>16) { l=1; cycles+=5; }
       else if(l<=0) l=1;
-      cycles=656+160*l-6;
+      cycles+=656+160*l-6;
       regs[last]->GetLE(data,(last==0?1:l)<<3);
       break;
 
@@ -804,14 +897,14 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
     case EXPORT_D:
       if(l>17) { l=17; cycles+=5; }
       else if(l<=0) { l=wordsize; cycles+=4; }
-      cycles=778+160*l-6;
+      cycles+=778+160*l-6;
       last=f-EXPORT_J;
       regs[last]->PutLE(data,l<<3);
       break;
     case EXPORT_LAST:
       if(l>16) { l=1; cycles+=5; }
       else if(l<=0) l=1;
-      cycles=668+160*l-6;
+      cycles+=668+160*l-6;
       regs[last]->PutLE(data,(last==0?1:l)<<3);
       break;
 
@@ -853,32 +946,68 @@ bool cMapCore::MapGeneric(int f, unsigned char *data, int l)
       AddMapCycles(f==0x39?433:192);
       IMonInit();
       if(f==0x39) {
-        I.GetLE(data,wordsize<<3);
-        MonMul(B,I,B);
+        scalar.GetLE(data,wordsize<<3);
+        MonMul(B,scalar,B);
         }
       else
         MonMul(B,A,B);
+      AddMapCycles(137);
       MonMul(B,A,B);
       break;
     case 0x43: // init SHA1
-      SHA1_Init(&sctx);
-      break;
     case 0x44: // add 64 bytes to SHA1 buffer
-      RotateBytes(data,64);
-      SHA1_Update(&sctx,data,64);
-      BYTE4_LE(data   ,sctx.h4);
-      BYTE4_LE(data+4 ,sctx.h3);
-      BYTE4_LE(data+8 ,sctx.h2);
-      BYTE4_LE(data+12,sctx.h1);
-      BYTE4_LE(data+16,sctx.h0);
-      break;
-    case 0x45: // add wordsize bytes to SHA1 buffer and finalize SHA result
-      if(dl) {
-        if(dl>1) RotateBytes(data,dl);
-        SHA1_Update(&sctx,data,dl);
+      if(f==0x43) {
+        l=0;
+        SHA1_Init(&sctx);
+        cycles=885;
         }
-      SHA1_Final(data,&sctx);
-      RotateBytes(data,20);
+      else {
+        l=64;
+        RotateBytes(data,l);
+        sctx.h4=UINT32_LE(data+l+0x00);
+        sctx.h3=UINT32_LE(data+l+0x04);
+        sctx.h2=UINT32_LE(data+l+0x08);
+        sctx.h1=UINT32_LE(data+l+0x0c);
+        sctx.h0=UINT32_LE(data+l+0x10);
+        sctx.Nl=UINT32_LE(data+l+0x14);
+        sctx.Nh=UINT32_LE(data+l+0x18);
+        sctx.num=0;
+        SHA1_Update(&sctx,data,l);
+        memset(data,0,l);
+        cycles=65309;
+        }
+      if(data) {
+        BYTE4_LE(data+l+0x00,sctx.h4);
+        BYTE4_LE(data+l+0x04,sctx.h3);
+        BYTE4_LE(data+l+0x08,sctx.h2);
+        BYTE4_LE(data+l+0x0c,sctx.h1);
+        BYTE4_LE(data+l+0x10,sctx.h0);
+        BYTE4_LE(data+l+0x14,sctx.Nl);
+        BYTE4_LE(data+l+0x18,sctx.Nh);
+        }
+      break;
+    case 0x45: // add l bytes to SHA1 buffer and finalize SHA result
+      if(l<=0 || l>64)
+        cycles=465+5*(l>64);
+      else {
+        sctx.h4=UINT32_LE(data+0x40);
+        sctx.h3=UINT32_LE(data+0x44);
+        sctx.h2=UINT32_LE(data+0x48);
+        sctx.h1=UINT32_LE(data+0x4c);
+        sctx.h0=UINT32_LE(data+0x50);
+        sctx.Nl=UINT32_LE(data+0x54);
+        sctx.Nh=UINT32_LE(data+0x58);
+        sctx.Nl&=~0xff;
+        sctx.num=0;
+        if(l>1) RotateBytes(data,l);
+        SHA1_Update(&sctx,data,l);
+        SHA1_Final(data+0x40,&sctx);
+        RotateBytes(data+0x40,20);
+        BYTE4_LE(data+0x54,sctx.Nl);
+        BYTE4_LE(data+0x58,sctx.Nh);
+        memset(data,0,64);
+        cycles=65519+(64-l)*12+(l>=56)*64681-16*(l==64);
+        }
       break;
     default:
       return false;
@@ -1323,7 +1452,7 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
   if(emmP) emmP->PostDecrypt(false);
 
   HEXDUMP(L_SYS_RAWEMM,emmdata,cmdLen,"Nagra2 RAWEMM");
-  id=(emmdata[8]<<8)+emmdata[9];
+  if(buffer[0]==0x82) id=(emmdata[8]<<8)+emmdata[9];
   LBSTARTF(L_SYS_EMM);
   bool contFail=false;
   for(int i=8+2+4+4; i<cmdLen-22; ) {
@@ -1399,12 +1528,19 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
           }
         break;
         }
+      case 0xA0: i+=5; break;                   // CamID target update
+      case 0xA3: i+=4; break;                   // Cam group target update
       case 0xA4: i+=emmdata[i+1]+2+4; break;	// conditional (always no match assumed for now)
-      case 0xA6: i+=15; break;
+      case 0xA6:                                // updates tier/blackout
+        if(emmdata[i+4]==0xFD && emmdata[i+5]==0x98) i+=(emmdata[i+1]+emmdata[i+3]+4);
+        else i+=15;
+        break;
       case 0xAA: i+=emmdata[i+1]+5; break;
       case 0xAD: i+=emmdata[i+1]+2; break;
       case 0xA2:
-      case 0xAE: i+=11;break;
+      case 0xAE: i+=11; break;
+      case 0x01: i+=3; break;
+      case 0x10: i+=18; break;
       case 0x12: i+=emmdata[i+1]+2; break;      // create tier
       case 0x20: i+=19; break;                  // modify tier
       case 0x9F: i+=6; break;
@@ -1425,6 +1561,10 @@ void cSystemNagra2::ProcessEMM(int pid, int caid, unsigned char *buffer)
           }
         break;
         }
+      case 0x13:
+      case 0x14:
+      case 0x15:
+      case 0x85:
       case 0xE1:
       case 0xE2:
       case 0x00: i=cmdLen; break;		// end of processing

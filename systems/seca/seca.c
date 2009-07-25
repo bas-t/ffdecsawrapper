@@ -1105,6 +1105,60 @@ void cSeca2ProvPL::ChainTableXor(unsigned char *data, unsigned short index)
   for(int i=0; i<8; i++) data[i]^=T1[index++];
 }
 
+// -- Spain ---------------------------------------------------------------------
+
+class cSeca2ProvSPA : public cSeca2Prov {
+protected:
+  virtual void ChainTableXor(unsigned char *data, unsigned short index);
+public:
+  cSeca2ProvSPA(unsigned short Id);
+  };
+
+static const unsigned short IdsSPA[] = { 0x64,0x66,0x67,0 };
+
+static cSeca2ProvLinkReg<cSeca2ProvSPA> staticLinkSPA(IdsSPA);
+
+static const struct ProvData provDataSPA = {
+  0x64,16895,16895,0x96,0x69, { 2, 2, 2, 2, 2, 2, 2, 2 }
+  };
+
+static const struct Perm ptSPA[MAX_PERMS] = {
+    { // 1
+    { 3, 2, 4, 3, 3, 4, 4, 2 },
+    { 4, 4, 3, 3, 2, 2, 4, 4 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 }
+  },{ // 2
+    { 2, 3, 4, 3, 2, 4, 3, 2 },
+    { 4, 3, 2, 3, 4, 2, 4, 3 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 }
+  },{ // 3
+  },{ // 4
+  },{ // 5
+  },{ // 6
+  },{ // 7
+  },{ // 8
+  },{ // 9
+    { 3, 3, 4, 4, 3, 3, 2, 2 },
+    { 3, 3, 2, 2, 3, 3, 2, 2 },
+    { 2, 3, 4, 1, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 }
+  },{ // 10
+  } };
+
+cSeca2ProvSPA::cSeca2ProvSPA(unsigned short Id)
+:cSeca2Prov(Id)
+{
+  pData=&provDataSPA; perm=ptSPA;
+}
+
+void cSeca2ProvSPA::ChainTableXor(unsigned char *data, unsigned short index)
+{
+  const unsigned char *T1=MT();
+  for(int i=0; i<8; i++) data[i]^=T1[index++];
+}
+
 // -- cSystemSeca ---------------------------------------------------------------
 
 class cSystemSeca : public cSystem, private cSeca {

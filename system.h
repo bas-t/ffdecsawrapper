@@ -174,8 +174,8 @@ private:
 public:
   static int Provides(const unsigned short *SysIds, bool ff);
   static cSystem *FindBySysId(unsigned short SysId, bool ff, int oldPri);
-  static cSystem *FindBySysName(unsigned short SysId, bool ff, const char *Name);
   static int FindIdentBySysId(unsigned short SysId, bool ff, int &Pri);
+  static int FindIdentBySysName(unsigned short SysId, bool ff, const char *Name, int &Pri);
   static cSystem *FindBySysIdent(int ident);
   static bool Init(const char *cfgdir);
   static void Clean(void);

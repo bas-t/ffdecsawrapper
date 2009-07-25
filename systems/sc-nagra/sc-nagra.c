@@ -32,11 +32,10 @@
 
 SCAPIVERSTAG();
 
-#define SYSTEM_NAGRA         0x1801
+#define SYSTEM_NAGRA         0x1800
 
 #define SYSTEM_NAME          "SC-Nagra"
 #define SYSTEM_PRI           -5
-#define SYSTEM_CAN_HANDLE(x) ((x)==SYSTEM_NAGRA)
 
 #define SC_NAME "Nagra"
 #define SC_ID   MAKE_SC_ID('N','a','g','r')
@@ -85,7 +84,7 @@ cSystemLinkScNagra::cSystemLinkScNagra(void)
 
 bool cSystemLinkScNagra::CanHandle(unsigned short SysId)
 {
-  return smartcards.HaveCard(SC_ID) && SYSTEM_CAN_HANDLE(SysId);
+  return smartcards.HaveCard(SC_ID) && ((SysId&SYSTEM_MASK)==SYSTEM_NAGRA && (SysId&0xFF)>0);
 }
 
 // -- cCamCryptNagra ------------------------------------------------------------------

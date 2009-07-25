@@ -341,13 +341,6 @@ cSystemLink *cSystems::FindByIdent(int ident)
   return 0;
 }
 
-cSystem *cSystems::FindBySysName(unsigned short SysId, bool ff, const char *Name)
-{
-  cSystemLink *sl=FindByName(Name);
-  if(sl && (!ff || !sl->noFF) && !ScSetup.Ignore(SysId) && sl->CanHandle(SysId)) return sl->Create();
-  return 0;
-}
-
 cSystem *cSystems::FindBySysId(unsigned short SysId, bool ff, int oldPri)
 {
   if(!ScSetup.Ignore(SysId)) {
@@ -362,6 +355,18 @@ int cSystems::FindIdentBySysId(unsigned short SysId, bool ff, int &Pri)
   if(!ScSetup.Ignore(SysId)) {
     cSystemLink *csl=FindById(SysId,ff,Pri);
     if(csl) {
+      Pri=csl->pri;
+      return csl->sysIdent;
+      }
+    }
+  return 0;
+}
+
+int cSystems::FindIdentBySysName(unsigned short SysId, bool ff, const char *Name, int &Pri)
+{
+  if(!ScSetup.Ignore(SysId)) {
+    cSystemLink *csl=FindByName(Name);
+    if(csl && (!ff || !csl->noFF) && csl->CanHandle(SysId)) {
       Pri=csl->pri;
       return csl->sysIdent;
       }

@@ -1297,7 +1297,11 @@ cEcmInfo *cEcmHandler::NewEcm(void)
 void cEcmHandler::AddEcmPri(cEcmInfo *n)
 {
   int ident, pri=0;
-  while((ident=cSystems::FindIdentBySysId(n->caId,!cam->IsSoftCSA(filterCwIndex==0),pri))>0) {
+  while(1) {
+    if(!n->Cached()) ident=cSystems::FindIdentBySysId(n->caId,!cam->IsSoftCSA(filterCwIndex==0),pri);
+    else ident=(pri==0) ? cSystems::FindIdentBySysName(n->caId,!cam->IsSoftCSA(filterCwIndex==0),n->name,pri) : 0;
+    if(ident<=0) break;
+
     cEcmPri *ep=new cEcmPri;
     if(ep) {
       ep->ecm=n; 
