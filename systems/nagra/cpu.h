@@ -109,7 +109,7 @@ private:
   int pageMap[256];
   bool indirect;
   unsigned int clockcycles;
-  bool exptPending, expt[EXPT_MAX];
+  bool exptPending, exptReady, expt[EXPT_MAX];
   int timerDisable;
   //
   void InitMapper(void);
