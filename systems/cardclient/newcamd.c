@@ -172,7 +172,7 @@ private:
   unsigned char configKey[14];
   unsigned short netMsgId;
   int caId, protoVers, cdLen;
-  bool emmProcessing;
+  bool emmProcessing, loginOK;
   char username[USERLEN], password[PASSWDLEN];
   //
   void InitVars(void);
@@ -221,10 +221,12 @@ void cCardClientNewCamd::InitProtoVers(int vers)
     default:  protoVers=520; cdLen=4; break;
     }
   PRINTF(L_CC_NEWCAMD,"now using protocol version %d (cdLen=%d)",protoVers,cdLen);
+  loginOK=false;
 }
 
 bool cCardClientNewCamd::NextProto(void)
 {
+  if(loginOK) return false;
   switch(protoVers) {
     case 525: InitProtoVers(520); break;
     default:  return false;
@@ -466,6 +468,7 @@ bool cCardClientNewCamd::Login(void)
     if(emmProcessing && !emmAllowed)
       PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);
     }
+  loginOK=true;
   return true;
 }
 
