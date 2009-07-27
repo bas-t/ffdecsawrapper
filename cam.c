@@ -2731,6 +2731,8 @@ cScDvbDevice::cScDvbDevice(int n, int cafd)
   decsa=0; tsBuffer=0; cam=0; fullts=false;
 #if APIVERSNUM >= 10500
   ciadapter=0; hwciadapter=0;
+#else
+  memset(lrucaid,0,sizeof(lrucaid));
 #endif
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
   softcsa=(fd_ca<0);
@@ -2914,6 +2916,17 @@ bool cScDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 
 bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 {
+#if APIVERSNUM < 10500
+  lruMutex.Lock();
+  int i=FindLRUPrg(Channel->Source(),Channel->Transponder(),Channel->Sid());
+  if(i<0) i=MAX_LRU_CAID-1;
+  if(i>0) memmove(&lrucaid[1],&lrucaid[0],sizeof(struct LruCaid)*i);
+  for(i=0; i<=MAXCAIDS; i++) if((lrucaid[0].caids[i]=Channel->Ca(i))==0) break;
+  lrucaid[0].src=Channel->Source();
+  lrucaid[0].tr=Channel->Transponder();
+  lrucaid[0].prg=Channel->Sid();
+  lruMutex.Unlock();
+#endif
   if(cam) cam->Tune(Channel);
   bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
   if(ret && cam) cam->PostTune();
@@ -2937,6 +2950,25 @@ bool cScDvbDevice::CiAllowConcurrent(void) const
   return softcsa || ScSetup.ConcurrentFF>0;
 }
 
+bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
+{
+  cMutexLock lock(&lruMutex);
+  int i=FindLRUPrg(source,transponder,prg);
+  if(i>=0) {
+    for(int j=0; j<MAXCAIDS && lrucaid[i].caids[j]; j++) *c++=lrucaid[i].caids[j];
+    *c=0;
+    return true;
+    }
+  return false;
+}
+
+int cScDvbDevice::FindLRUPrg(int source, int transponder, int prg)
+{
+  for(int i=0; i<MAX_LRU_CAID; i++)
+    if(lrucaid[i].src==source && lrucaid[i].tr==transponder && lrucaid[i].prg==prg) return i;
+  return -1;
+}
+
 void cScDvbDevice::CiStartDecrypting(void)
 {
   if(cam) {
@@ -2945,9 +2977,21 @@ void cScDvbDevice::CiStartDecrypting(void)
       if(p->modified) {
         cPrg *prg=new cPrg(p->programNumber,cam->HasPrg(p->programNumber));
         if(prg) {
+          bool haspid=false;
           for(cCiCaPidData *q=p->pidList.First(); q; q=p->pidList.Next(q)) {
-            if(q->active)
+            if(q->active) {
               prg->pids.Add(new cPrgPid(q->streamType,q->pid));
+              haspid=true;
+              }
+            }
+          if(haspid) {
+            caid_t casys[MAXCAIDS+1];
+            if(GetPrgCaids(ciSource,ciTransponder,p->programNumber,casys)) {
+              unsigned char buff[2048];
+              bool streamflag;
+              int len=GetCaDescriptors(ciSource,ciTransponder,p->programNumber,casys,sizeof(buff),buff,streamflag);
+              if(len>0) prg->caDescr.Set(buff,len);
+              }
             }
           prgList.Add(prg);
           }

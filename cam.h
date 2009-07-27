@@ -90,7 +90,7 @@ public:
 
 // ----------------------------------------------------------------
 
-class cPrg {
+class cPrg : public cSimpleItem {
 private:
   bool isUpdate, pidCaDescr;
   //
@@ -187,6 +187,18 @@ private:
   void EarlyShutdown(void);
   bool ScActive(void);
 #endif //SASC
+  //
+#if APIVERSNUM < 10500
+#define MAX_LRU_CAID 10
+  struct LruCaid {
+    int src, tr, prg;
+    caid_t caids[MAXCAIDS+1];
+    } lrucaid[MAX_LRU_CAID];
+  cMutex lruMutex;
+  //
+  int FindLRUPrg(int source, int transponder, int prg);
+  bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
+#endif
 protected:
 #ifndef SASC
 #if APIVERSNUM >= 10500
