@@ -358,7 +358,7 @@ bool cCardClientCCcam2::packet_analyzer(cccam_crypt_block *block, unsigned char 
         int handler=(data[0+4]&0xff)<<24 | (data[1+4]&0xff)<<16 | (data[2+4]&0xff)<<8 | (data[3+4]&0xff);
         for(cHandlerItem *hv=handlers->handlerList.First(); hv; hv=handlers->handlerList.Next(hv)) {
           if(hv->GetHandlerID()==handler) handlers->handlerList.Del(hv);
-          PRINTF(L_CC_CCCAM,"REMOVE handler %08x caid: %04x provider: %06x",hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
+          PRINTF(L_CC_CCCAM2,"REMOVE handler %08x caid: %04x provider: %06x",hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
           }
         break;
         }
@@ -369,26 +369,26 @@ bool cCardClientCCcam2::packet_analyzer(cccam_crypt_block *block, unsigned char 
         int provider_counts=data[20+4]&0xff;
         int uphops=data[10+4];
         int maxdown=data[11+4];
-        PRINTF(L_CC_CCCAM,"handler %08x serial %s uphops %d maxdown %d",handler,HexStr(str,data+12+4,8),uphops,maxdown);
+        PRINTF(L_CC_CCCAM2,"handler %08x serial %s uphops %d maxdown %d",handler,HexStr(str,data+12+4,8),uphops,maxdown);
         for(int i=0; i<provider_counts; i++) {
           int provider=(data[21+4+i*7]&0xff)<<16 | (data[22+4+i*7]&0xff)<<8 | (data[23+4+i*7]&0xff);
           cHandlerItem *n=new cHandlerItem(handler,caid,provider);
           handlers->handlerList.Add(n);
-          PRINTF(L_CC_CCCAM,"ADD handler %08x caid: %04x provider: %06x",handler,caid,provider);
+          PRINTF(L_CC_CCCAM2,"ADD handler %08x caid: %04x provider: %06x",handler,caid,provider);
           }
         getcards=true;
         break;
         }
       case 8:
-        PRINTF(L_CC_CCCAM,"Server NodeId %s",HexStr(str,data+wp,8));
+        PRINTF(L_CC_CCCAM2,"Server NodeId %s",HexStr(str,data+wp,8));
         wp+=8;
-        PRINTF(L_CC_CCCAM,"Server Version: %s",data+wp);
+        PRINTF(L_CC_CCCAM2,"Server Version: %s",data+wp);
         wp+=32;
-        PRINTF(L_CC_CCCAM,"Builder Version: %s",data+wp);
+        PRINTF(L_CC_CCCAM2,"Builder Version: %s",data+wp);
         break;
       case 0xff:
       case 0xfe:
-        PRINTF(L_CC_CCCAM,"cccam can't decode this ecm");
+        PRINTF(L_CC_CCCAM2,"cccam can't decode this ecm");
         card.NewCw(cwdata,false);
         break;
       default:
@@ -458,7 +458,7 @@ bool cCardClientCCcam2::Login(void)
   while((len=so.Read(buffer,sizeof(buffer),-1))>0) {
     if(server_packet_count>0) {
       cccam_decrypt(&client_decrypt_state,buffer,buffer,len);
-      HEXDUMP(L_CC_CCCAM,buffer,len,"Receive Messages");
+      HEXDUMP(L_CC_CCCAM2,buffer,len,"Receive Messages");
       }
     if(login_completed) {
       packet_analyzer(&client_decrypt_state,buffer,len);
@@ -471,7 +471,7 @@ bool cCardClientCCcam2::Login(void)
       case 0:
         if(len!=16) return false;
         if(!check_connect_checksum(buffer,len)) return false;
-        PRINTF(L_CC_CCCAM,"Receive Message CheckSum correct");
+        PRINTF(L_CC_CCCAM2,"Receive Message CheckSum correct");
         cccam_xor(buffer,len);
 
         SHA_CTX ctx;
@@ -484,19 +484,19 @@ bool cCardClientCCcam2::Login(void)
         cccam_init_crypt(&client_encrypt_state,buffer,16);
         cccam_encrypt(&client_encrypt_state,hash,hash,20);
 
-        HEXDUMP(L_CC_CCCAM,hash,20,"Send Messages");
+        HEXDUMP(L_CC_CCCAM2,hash,20,"Send Messages");
         cccam_encrypt(&client_encrypt_state,hash,response,20);
         so.Write(response,20);
         bzero(response,20);
         bzero(sendbuff,20);
         strcpy((char *)response,username);
-        HEXDUMP(L_CC_CCCAM,response,20,"Send UserName Messages");
+        HEXDUMP(L_CC_CCCAM2,response,20,"Send UserName Messages");
         cccam_encrypt(&client_encrypt_state,response,sendbuff,20);
         so.Write(sendbuff,20);
         bzero(response,20);
         bzero(sendbuff,20);
         strcpy((char *)response,password);
-        HEXDUMP(L_CC_CCCAM,response,20,"Password");
+        HEXDUMP(L_CC_CCCAM2,response,20,"Password");
         cccam_encrypt(&client_encrypt_state,response,sendbuff,strlen(password));
         bzero(sendbuff,20);
         cccam_encrypt(&client_encrypt_state,(unsigned char *)str,sendbuff,6);
@@ -572,11 +572,11 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     buffer[ECM_HANDLER_POS+2]=(shareid>>8) & 0xFF;
     buffer[ECM_HANDLER_POS+3]=shareid & 0xFF;
     PRINTF(L_CC_CORE,"%d: Try Server HandlerID %x",cardnum,shareid);
-    HEXDUMP(L_CC_CCCAM,buffer,ecm_len,"%d: Send ECM Messages",cardnum);
+    HEXDUMP(L_CC_CCCAM2,buffer,ecm_len,"%d: Send ECM Messages",cardnum);
     cccam_encrypt(&client_encrypt_state,buffer,netbuff,ecm_len);
     so.Write(netbuff,ecm_len);
     if(c->GetCw(cw)) {
-      PRINTF(L_CC_CCCAM,"%d: got CW",cardnum);
+      PRINTF(L_CC_CCCAM2,"%d: got CW",cardnum);
       return true;
       }
     }
@@ -596,7 +596,7 @@ void cCardClientCCcam2::Action(void)
     int len=so.Read(recvbuff,sizeof(recvbuff),0);
     if(len>0) {
       cccam_decrypt(&client_decrypt_state,recvbuff,recvbuff,len);
-      HEXDUMP(L_CC_CCCAM,recvbuff,len,"Receive Messages");
+      HEXDUMP(L_CC_CCCAM2,recvbuff,len,"Receive Messages");
       packet_analyzer(&client_decrypt_state,recvbuff,len);
       }
     }

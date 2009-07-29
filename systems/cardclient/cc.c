@@ -41,10 +41,10 @@ SCAPIVERSTAG();
 static const struct LogModule lm_cc = {
   (LMOD_ENABLE|L_CC_ALL)&LOPT_MASK,
   (LMOD_ENABLE|L_CC_CORE|L_CC_LOGIN|L_CC_ECM|L_CC_EMM|L_CC_CAMD|L_CC_CAMD35|
-   L_CC_RDGD|L_CC_NEWCAMD|L_CC_GBOX|L_CC_CCCAM)&LOPT_MASK,
+   L_CC_RDGD|L_CC_NEWCAMD|L_CC_GBOX|L_CC_CCCAM|L_CC_CCCAM2)&LOPT_MASK,
   "cardclient",
   { "core","login","ecm","emm","camd","camd35","camd35extra","radegast",
-    "newcamd","gbox","cccam" }
+    "newcamd","gbox","cccam","cccam2" }
   };
 ADD_MODULE(L_CC,lm_cc)
 
