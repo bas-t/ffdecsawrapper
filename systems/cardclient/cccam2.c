@@ -19,16 +19,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
 #include <algorithm>
-#include <sys/socket.h>
-#include <sys/un.h>
 
 #include <openssl/sha.h>
 
 #include "cc.h"
 #include "network.h"
+
+#define SHAREID(x) ((*(x+0)<<24) | (*(x+1)<<16) | (*(x+2)<<8) | *(x+3))
 
 typedef unsigned char node_id[8];
 
@@ -43,7 +42,7 @@ struct cccam_crypt_block {
 
 class cHandlerItem : public cSimpleItem {
   private:
-    int handlerid,caid,provid;
+    int handlerid, caid, provid;
   public:
     cHandlerItem(int Handlerid, int Caid, int Provid);
     int GetHandlerID(void) const { return handlerid; };
@@ -151,7 +150,7 @@ private:
   node_id nodeid;
   int server_packet_count;
   bool login_completed;
-  struct cccam_crypt_block client_encrypt_state,client_decrypt_state;
+  struct cccam_crypt_block client_encrypt_state, client_decrypt_state;
   unsigned char buffer[3072];
   unsigned char recvbuff[3072];
   unsigned char netbuff[1024];
@@ -335,7 +334,6 @@ bool cCardClientCCcam2::packet_analyzer(cccam_crypt_block *block, unsigned char 
   if(length<4) return false;
   int cccam_command=data[1];
   int packet_len=((data[2]&0xff)<<8) | ((data[3]&0xff));
-  int wp=4;
   char str[32];
   if(packet_len+4>length) return false;
   if(packet_len>=0) {
@@ -355,7 +353,7 @@ bool cCardClientCCcam2::packet_analyzer(cccam_crypt_block *block, unsigned char 
         }
       case 4:
         {
-        int handler=(data[0+4]&0xff)<<24 | (data[1+4]&0xff)<<16 | (data[2+4]&0xff)<<8 | (data[3+4]&0xff);
+        int handler=SHAREID(&data[4]);
         for(cHandlerItem *hv=handlers->handlerList.First(); hv; hv=handlers->handlerList.Next(hv)) {
           if(hv->GetHandlerID()==handler) handlers->handlerList.Del(hv);
           PRINTF(L_CC_CCCAM2,"REMOVE handler %08x caid: %04x provider: %06x",hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
@@ -364,14 +362,14 @@ bool cCardClientCCcam2::packet_analyzer(cccam_crypt_block *block, unsigned char 
         }
       case 7:
         {
-        int caid=(data[8+4]&0xff)<< 8 | (data[9+4]&0xff);
-        int handler=(data[0+4]&0xff)<<24 | (data[1+4]&0xff)<<16 | (data[2+4]&0xff)<<8 | (data[3+4]&0xff);
-        int provider_counts=data[20+4]&0xff;
+        int caid=(data[8+4]<<8) | data[9+4];
+        int handler=SHAREID(&data[4]);
+        int provider_counts=data[20+4];
         int uphops=data[10+4];
         int maxdown=data[11+4];
         PRINTF(L_CC_CCCAM2,"handler %08x serial %s uphops %d maxdown %d",handler,HexStr(str,data+12+4,8),uphops,maxdown);
         for(int i=0; i<provider_counts; i++) {
-          int provider=(data[21+4+i*7]&0xff)<<16 | (data[22+4+i*7]&0xff)<<8 | (data[23+4+i*7]&0xff);
+          int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
           cHandlerItem *n=new cHandlerItem(handler,caid,provider);
           handlers->handlerList.Add(n);
           PRINTF(L_CC_CCCAM2,"ADD handler %08x caid: %04x provider: %06x",handler,caid,provider);
@@ -380,15 +378,13 @@ bool cCardClientCCcam2::packet_analyzer(cccam_crypt_block *block, unsigned char 
         break;
         }
       case 8:
-        PRINTF(L_CC_CCCAM2,"Server NodeId %s",HexStr(str,data+wp,8));
-        wp+=8;
-        PRINTF(L_CC_CCCAM2,"Server Version: %s",data+wp);
-        wp+=32;
-        PRINTF(L_CC_CCCAM2,"Builder Version: %s",data+wp);
+        LDUMP(L_CC_CCCAM2,data+4,8,"Server NodeId: ");
+        PRINTF(L_CC_CCCAM2,"Server Version: %s",data+4+8);
+        PRINTF(L_CC_CCCAM2,"Builder Version: %s",data+4+8+32);
         break;
       case 0xff:
       case 0xfe:
-        PRINTF(L_CC_CCCAM2,"cccam can't decode this ecm");
+        PRINTF(L_CC_CCCAM2,"server can't decode this ecm");
         card.NewCw(cwdata,false);
         break;
       default:
@@ -480,7 +476,7 @@ bool cCardClientCCcam2::Login(void)
         SHA1_Final(hash,&ctx);
 
         cccam_init_crypt(&client_decrypt_state,hash,20);
-        cccam_decrypt(&client_decrypt_state,buffer, buffer,16);
+        cccam_decrypt(&client_decrypt_state,buffer,buffer,16);
         cccam_init_crypt(&client_encrypt_state,buffer,16);
         cccam_encrypt(&client_encrypt_state,hash,hash,20);
 
@@ -553,24 +549,24 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   memcpy(buffer+sizeof(ecm_head),data,SCT_LEN(data));
   int ecm_len=sizeof(ecm_head)+SCT_LEN(data);
   buffer[CCCAM_COMMAND_POS]=1;
-  buffer[CCCAM_LEN_POS]=((ecm_len-4) >>8) & 0xff;
-  buffer[CCCAM_LEN_POS+1]=(ecm_len-4) & 0xff;
-  buffer[ECM_CAID_POS]=(ecm->caId >> 8) & 0xFF;
-  buffer[ECM_CAID_POS+1]=ecm->caId & 0xFF;
-  buffer[ECM_PROVIDER_POS]=(ecm->provId >>16) & 0xFF;
-  buffer[ECM_PROVIDER_POS+1]=(ecm->provId >>8) & 0xFF;
-  buffer[ECM_PROVIDER_POS+2]=ecm->provId & 0xFF;
-  buffer[ECM_SID_POS]=(ecm->prgId >> 8) & 0xFF;
-  buffer[ECM_SID_POS+1]=ecm->prgId & 0xFF;
+  buffer[CCCAM_LEN_POS]=(ecm_len-4)>>8;
+  buffer[CCCAM_LEN_POS+1]=ecm_len-4;
+  buffer[ECM_CAID_POS]=ecm->caId>>8;
+  buffer[ECM_CAID_POS+1]=ecm->caId;
+  buffer[ECM_PROVIDER_POS]=ecm->provId>>16;
+  buffer[ECM_PROVIDER_POS+1]=ecm->provId>>8;
+  buffer[ECM_PROVIDER_POS+2]=ecm->provId;
+  buffer[ECM_SID_POS]=ecm->prgId>>8;
+  buffer[ECM_SID_POS+1]=ecm->prgId;
   buffer[ECM_LEN_POS]=SCT_LEN(data);
   if(handlers->GetHandlers(ecm->caId,ecm->provId)<1) return false;
   for(cHandlerItem *hv=handlers->currentList.First(); hv; hv=handlers->currentList.Next(hv)) {
     shareid=hv->GetHandlerID();
     if(shareid==0) return false;
-    buffer[ECM_HANDLER_POS]=(shareid>>24) & 0xFF;
-    buffer[ECM_HANDLER_POS+1]=(shareid>>16) & 0xFF;
-    buffer[ECM_HANDLER_POS+2]=(shareid>>8) & 0xFF;
-    buffer[ECM_HANDLER_POS+3]=shareid & 0xFF;
+    buffer[ECM_HANDLER_POS]=shareid>>24;
+    buffer[ECM_HANDLER_POS+1]=shareid>>16;
+    buffer[ECM_HANDLER_POS+2]=shareid>>8;
+    buffer[ECM_HANDLER_POS+3]=shareid;
     PRINTF(L_CC_CORE,"%d: Try Server HandlerID %x",cardnum,shareid);
     HEXDUMP(L_CC_CCCAM2,buffer,ecm_len,"%d: Send ECM Messages",cardnum);
     cccam_encrypt(&client_encrypt_state,buffer,netbuff,ecm_len);
