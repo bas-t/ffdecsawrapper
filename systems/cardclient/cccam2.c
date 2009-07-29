@@ -59,9 +59,42 @@ cHandlerItem::cHandlerItem(int Handlerid, int Caid, int Provid)
 }
 
 class cHandlers {
+   private:
+      bool CurListExist(int Handlerid);
    public:
       cSimpleList<cHandlerItem>  cHandlerList;
+      cSimpleList<cHandlerItem>  cCurrentList;
+      int GetHandlers(int Caid, int Provid);
 };
+
+
+bool cHandlers::CurListExist(int Handlerid) {
+   for(cHandlerItem *cv=cCurrentList.First(); cv; cv=cCurrentList.Next(cv)) {
+      if(cv->GetHandlerID()==Handlerid) return true;
+   }
+   return false;
+}
+
+int cHandlers::GetHandlers(int Caid, int Provid) {
+   cCurrentList.Clear();
+   for (cHandlerItem *hv=cHandlerList.First(); hv; hv=cHandlerList.Next(hv)) {
+      switch(Caid>>8){
+         case 5: //viaccess
+            if( hv->GetCaID()==Caid && hv->GetProvID()==Provid && !CurListExist(hv->GetHandlerID()) )  {
+               cHandlerItem *e=new cHandlerItem(hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
+               cCurrentList.Add(e);
+            }
+            break;
+         default:
+            if( hv->GetCaID()==Caid && !CurListExist(hv->GetHandlerID()) ) {
+               cHandlerItem *e=new cHandlerItem(hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
+               cCurrentList.Add(e);
+            }
+            break;
+      }
+  }
+   return cCurrentList.Count();
+}
 
 // -- cCCcam2Card ---------------------------------------------------------------
 
@@ -547,6 +580,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
   cCCcam2Card *c=&card;
   shareid=0;
+  PRINTF(L_CC_CORE,"%d: Ecm CaID %04x Provider %04x Pid %04x",cardnum,ecm->caId,ecm->provId,ecm->ecm_pid);
   bzero(buffer,sizeof(buffer));
   memcpy(buffer,ecm_head,sizeof(ecm_head));
   memcpy(buffer+sizeof(ecm_head),data,SCT_LEN(data));
@@ -562,33 +596,25 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
    buffer[ECM_SID_POS]=(ecm->prgId >> 8) & 0xFF;
    buffer[ECM_SID_POS+1]=ecm->prgId & 0xFF;
    buffer[ECM_LEN_POS]=SCT_LEN(data);
-   for ( cHandlerItem *hv=handlers->cHandlerList.First(); hv; hv=handlers->cHandlerList.Next(hv))
+   if(handlers->GetHandlers(ecm->caId,ecm->provId) <1) return false;
+   for ( cHandlerItem *hv=handlers->cCurrentList.First(); hv; hv=handlers->cCurrentList.Next(hv))
    {
-      if(ecm->caId >= 0x500 && ecm->caId <= 0x05FF){
-         if(hv->GetCaID()==ecm->caId && hv->GetProvID()==ecm->provId) shareid=hv->GetHandlerID();
-      }
-      else if((ecm->caId >= 0x1800 && ecm->caId <= 0x18FF)
-         || (ecm->caId>= 0x0600 && ecm->caId <= 0x06FF)
-         || (ecm->caId >= 0x0900 && ecm->caId <= 0x09FF)
-         || ecm->caId == 0x0B00){
-         if(hv->GetCaID()==ecm->caId) shareid=hv->GetHandlerID();
-      }else{
-         if(hv->GetCaID()==ecm->caId && hv->GetProvID()==ecm->provId) shareid=hv->GetHandlerID();
+      shareid=hv->GetHandlerID();
+      if(shareid==0) return false;
+      buffer[ECM_HANDLER_POS]=(shareid>>24) & 0xFF;
+      buffer[ECM_HANDLER_POS+1]=(shareid>>16) & 0xFF;
+      buffer[ECM_HANDLER_POS+2]=(shareid>>8) & 0xFF;
+      buffer[ECM_HANDLER_POS+3]=shareid & 0xFF;
+      PRINTF(L_CC_CORE,"%d: Try Server HandlerID %x",cardnum,shareid);
+      HEXDUMP(L_CC_CCCAM,buffer,ecm_len,"%d: Send ECM Messages",cardnum);
+      cccam_encrypt( &client_encrypt_state,buffer,netbuff,ecm_len);
+      so.Write(netbuff,ecm_len);
+     if(c->GetCw(cw)) {
+        return true;
+        PRINTF(L_CC_CCCAM,"%d: got CW",cardnum);
       }
    }
-   PRINTF(L_CC_CORE,"%d: Ecm CaID %04x Provider %04x",cardnum,ecm->caId,ecm->provId);
-   if(shareid==0) return false;
-   buffer[ECM_HANDLER_POS]=(shareid>>24) & 0xFF;
-   buffer[ECM_HANDLER_POS+1]=(shareid>>16) & 0xFF;
-   buffer[ECM_HANDLER_POS+2]=(shareid>>8) & 0xFF;
-   buffer[ECM_HANDLER_POS+3]=shareid & 0xFF;
-   PRINTF(L_CC_CORE,"%d: Find Server HandlerID %x",cardnum,shareid);
-   HEXDUMP(L_CC_CCCAM,buffer,ecm_len,"%d: Send ECM Messages",cardnum);
-   cccam_encrypt( &client_encrypt_state,buffer,netbuff,ecm_len);
-   so.Write(netbuff,ecm_len);
-   if(!c->GetCw(cw)) return false;
-   PRINTF(L_CC_CCCAM,"%d: got CW",cardnum);
-   return true;
+   return false;
 }
 
 bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
@@ -599,8 +625,8 @@ bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
 void cCardClientCCcam2::Action(void)
 {
    while(Running()) {
-              usleep(100);
-      bzero(recvbuff,sizeof(recvbuff));
+     usleep(100);
+     bzero(recvbuff,sizeof(recvbuff));
      int len=so.Read(recvbuff,sizeof(recvbuff),0);
      if(len>0) {
          cccam_decrypt( &client_decrypt_state, recvbuff, recvbuff, len );
