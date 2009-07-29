@@ -17,6 +17,9 @@
 * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
 */
 
+// initialy written by anetwolf anetwolf@hotmail.com
+// based on crypto & protocol information from _silencer
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
