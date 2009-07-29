@@ -92,7 +92,7 @@ private:
   AES_KEY dkey, ekey;
 protected:
   void SetKey(const unsigned char *key);
-  void Decrypt(unsigned char *data, int len) const ;
+  bool Decrypt(unsigned char *data, int len) const ;
   int Encrypt(const unsigned char *data, int len, unsigned char *crypt) const;
 public:
   cAES(void);

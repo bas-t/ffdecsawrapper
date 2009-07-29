@@ -454,7 +454,7 @@ bool cCardViaccess::MatchEMM(const unsigned char *data)
 
 // -- cParseViaccess -----------------------------------------------------------
 
-const unsigned char *cParseViaccess::NanoStart(const unsigned char *data)
+const unsigned char *cParseViaccess::PayloadStart(const unsigned char *data)
 {
   switch(data[0]) {
     case 0x88: return &data[8];
@@ -467,6 +467,16 @@ const unsigned char *cParseViaccess::NanoStart(const unsigned char *data)
   return 0;
 }
 
+const unsigned char *cParseViaccess::NanoStart(const unsigned char *data)
+{
+  const unsigned char *p=PayloadStart(data);
+  switch(data[0]) {
+    case 0x80:
+    case 0x81: if(p && p[0]==0xD2) return p+p[1]+2; // skip TPS
+    }
+  return p;
+}
+
 const unsigned char *cParseViaccess::CheckNano90(const unsigned char *data)
 {
   return CheckNano90FromNano(NanoStart(data));
@@ -474,7 +484,7 @@ const unsigned char *cParseViaccess::CheckNano90(const unsigned char *data)
 
 const unsigned char *cParseViaccess::CheckNano90FromNano(const unsigned char *data)
 {
-  if(data && data[0]==0x90 && data[1]==0x03) return data;
+  if(data && (data[0]==0x90 || data[0]==0x40) && data[1]==0x03) return data;
   return 0;
 }
 
