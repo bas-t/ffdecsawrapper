@@ -20,10 +20,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "system-common.h"
 #include "smartcard.h"
+#include "crypto.h"
 #include "parse.h"
+#include "opts.h"
 #include "misc.h"
 #include "log-sc.h"
 #include "log-core.h"
@@ -50,6 +53,8 @@ static const struct LogModule lm_sc = {
   { L_SC_DEFNAMES }
   };
 ADD_MODULE(L_SC,lm_sc)
+
+static int disableParental=0;
 
 // -- cSystemScViaccess ------------------------------------------------------------------
 
@@ -89,12 +94,96 @@ static cSystemLinkScViaccess staticInit;
 cSystemLinkScViaccess::cSystemLinkScViaccess(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
+  static const char *rat[] = {
+    trNOOP("don't touch"),
+    trNOOP("disable")
+    };
+
+  opts=new cOpts(SYSTEM_NAME,1);
+  opts->Add(new cOptSel("DisableParental",trNOOP("SC-Viaccess: Parental lock"),&disableParental,sizeof(rat)/sizeof(char *),rat));
   Feature.NeedsSmartCard();
 }
 
 bool cSystemLinkScViaccess::CanHandle(unsigned short SysId)
 {
   return smartcards.HaveCard(SC_ID) && SYSTEM_CAN_HANDLE(SysId);
+}
+
+// -- cSmartCardDataViaccess ---------------------------------------------------
+
+enum eDataType { dtPIN, dtAES };
+
+class cSmartCardDataViaccess : public cSmartCardData {
+private:
+  int IdLen(void) const { return 5; }
+public:
+  eDataType type;
+  unsigned char id[5], pin[8], aes[16];
+  //
+  cSmartCardDataViaccess(void);
+  cSmartCardDataViaccess(eDataType Type, unsigned char *Id);
+  virtual bool Parse(const char *line);
+  virtual bool Matches(cSmartCardData *param);
+  };
+
+cSmartCardDataViaccess::cSmartCardDataViaccess(void)
+:cSmartCardData(SC_ID)
+{
+  memset(id,0,sizeof(id));
+}
+
+cSmartCardDataViaccess::cSmartCardDataViaccess(eDataType Type, unsigned char *Id)
+:cSmartCardData(SC_ID)
+{
+  type=Type;
+  memset(id,0,sizeof(id));
+  memcpy(id,Id,IdLen());
+}
+
+bool cSmartCardDataViaccess::Matches(cSmartCardData *param)
+{
+  cSmartCardDataViaccess *cd=(cSmartCardDataViaccess *)param;
+  return cd->type==type && !memcmp(cd->id,id,IdLen());
+}
+
+bool cSmartCardDataViaccess::Parse(const char *line)
+{
+  line=skipspace(line);
+  if(!strncasecmp(line,"PIN",3))       { type=dtPIN; line+=3; }
+  else if(!strncasecmp(line,"AES",3))  { type=dtAES; line+=3; }
+  else {
+    PRINTF(L_CORE_LOAD,"smartcarddataviaccess: format error: datatype");
+    return false;
+    }
+  line=skipspace(line);
+  if(GetHex(line,id,IdLen())!=IdLen()) {
+    PRINTF(L_CORE_LOAD,"smartcarddataviaccess: format error: serial");
+    return false;
+    }
+  line=skipspace(line);
+  if(type==dtPIN) {
+    memset(pin,0,sizeof(pin));
+    int i, shift=4;
+    for(i=0; i<16; i++) {
+      if(!isdigit(*line)) {
+        PRINTF(L_CORE_LOAD,"smartcarddataviaccess: format error: pin");
+        return false;
+        }
+      pin[i]|=(*line++ - '0')<<shift;
+      shift^=4;
+      }
+    i=(i+1)/2; // num bytes
+    memmove(&pin[8-i],pin,i);
+//XXX
+LDUMP(L_CORE_LOAD,pin,sizeof(pin),"smartcarddataviaccess: pin ");
+    }
+  else {
+    if(GetHex(line,aes,16)!=16) {
+      PRINTF(L_CORE_LOAD,"smartcarddataviaccess: format error: aes");
+      return false;
+      }
+    }
+  return true;
 }
 
 // -- cProviderScViaccess ----------------------------------------------------------
@@ -109,9 +198,9 @@ public:
 
 // -- cSmartCardViaccess -----------------------------------------------------------------
 
-class cSmartCardViaccess : public cSmartCard, public cIdSet {
+class cSmartCardViaccess : public cSmartCard, public cIdSet, private cAES {
 private:
-  unsigned char lastId[3];
+  unsigned char ua[5], sa0[4], lastId[3];
   //
   unsigned char GetSW1(void) { return sb[1]; }
   bool CheckKey(cProviderScViaccess *p, const unsigned char keynr);
@@ -181,15 +270,17 @@ bool cSmartCardViaccess::Init(void)
     PRINTF(L_SC_ERROR,"failed to read ua");
     return false;
     }
-  SetCard(new cCardViaccess(&buff[2]));
-  PRINTF(L_SC_INIT,"card UA: %llu",Bin2LongLong(&buff[2],5));
-  infoStr.Printf("Card v.%s UA %010llu\n",ver,Bin2LongLong(&buff[2],5));
+  memcpy(ua,&buff[2],sizeof(ua));
+  SetCard(new cCardViaccess(ua));
+  PRINTF(L_SC_INIT,"card UA: %llu",Bin2LongLong(ua,5));
+  infoStr.Printf("Card v.%s UA %010llu\n",ver,Bin2LongLong(ua,5));
 
   insa4[2]=0x00; // select issuer 0
   if(!IsoWrite(insa4,buff) || !Status()) {
     PRINTF(L_SC_ERROR,"failed to select issuer 0");
     return false;
     }
+  int issuer=0;
   do {
     insc0[4]=0x1a; // show provider properties
     if(!IsoRead(insc0,buff) || !Status()) {
@@ -208,6 +299,7 @@ bool cSmartCardViaccess::Init(void)
       PRINTF(L_SC_ERROR,"failed to read sa");
       return false;
       }
+    if(issuer==0) memcpy(sa0,&buff[2],sizeof(sa0));
     cProviderScViaccess *p=new cProviderScViaccess(&buff[0],&buff2[2]);
     if(p) {
       AddProv(p);
@@ -245,8 +337,30 @@ bool cSmartCardViaccess::Init(void)
       PRINTF(L_SC_ERROR,"failed to select next issuer");
       return false;
       }
+    issuer++;
     } while(GetSW1()==0x00);
   infoStr.Finish();
+
+  if(disableParental) {
+      static unsigned char ins24[] = { 0xca,0x24,0x02,0x00,0x09 };
+      static unsigned char pindt[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0F };
+      cSmartCardDataViaccess cd(dtPIN,ua);
+      cSmartCardDataViaccess *entry=(cSmartCardDataViaccess *)smartcards.FindCardData(&cd);
+      if(entry) {
+        PRINTF(L_SC_INIT,"got PIN from smartcard.conf.");
+        memcpy(&pindt[0],entry->pin,8);
+        if(!IsoWrite(ins24,pindt) || !Status())
+          PRINTF(L_SC_ERROR,"failed to disable parental lock");
+        }
+      else PRINTF(L_SC_INIT,"no PIN available.");
+    }
+  cSmartCardDataViaccess cd(dtAES,ua);
+  cSmartCardDataViaccess *entry=(cSmartCardDataViaccess *)smartcards.FindCardData(&cd);
+  if(entry) {
+    PRINTF(L_SC_INIT,"got AES key from smartcard.conf.");
+    SetKey(entry->aes);
+    }
+
   return true;
 }
 
@@ -281,7 +395,19 @@ bool cSmartCardViaccess::Decode(const cEcmInfo *ecm, const unsigned char *data, 
     if(CheckKey(p,keynr)) {
       if(!SetProvider(cParseViaccess::ProvIdPtr(data))) return false;
 
-      const unsigned char *start=cParseViaccess::NanoStart(data)+5;
+      const unsigned char *start=cParseViaccess::PayloadStart(data);
+      bool hasD2=false;
+      if(start[0]==0xD2) { // TPS alike, TNTSAT/TNTop
+        start+=start[1]+2;
+        hasD2=true;
+        }
+      start+=5;
+
+      const unsigned char *DE04=0;
+      if(start[0]==0xDE && start[1]==0x04) {
+        DE04=start;
+        start+=6;
+        }
       const unsigned char *ecm88Data=start;
       int ecm88Len=SCT_LEN(data)-(start-data);
       int ecmf8Len=0;
@@ -299,19 +425,35 @@ bool cSmartCardViaccess::Decode(const cEcmInfo *ecm, const unsigned char *data, 
       ins88[2]=ecmf8Len?1:0;
       ins88[3]=keynr;
       ins88[4]=ecm88Len;
+      if(DE04) {
+        unsigned char *mem=AUTOMEM(ecm88Len+6);
+        memcpy(mem,DE04,6);
+        memcpy(mem+6,ecm88Data,ecm88Len);
+        ins88[4]+=6;
+        ecm88Data=mem;
+        }
       if(!IsoWrite(ins88,ecm88Data) || !Status()) return false; // request dcw
       unsigned char buff[MAX_LEN];
       if(!IsoRead(insc0,buff) || !Status()) return false; // read dcw
+      unsigned char cwbuff[16];
+      int cwmask=0;
       switch(buff[0]) {
         case 0xe8: // even
-          if(buff[1]==8) { memcpy(cw,buff+2,8); return true; }
+          if(buff[1]==8) { memcpy(cwbuff,buff+2,8); cwmask=1; }
           break;
         case 0xe9: // odd
-          if(buff[1]==8) { memcpy(cw+8,buff+2,8); return true; }
+          if(buff[1]==8) { memcpy(cwbuff+8,buff+2,8); cwmask=2; }
           break;
         case 0xea: // complete
-          if(buff[1]==16) { memcpy(cw,buff+2,16); return true; }
+          if(buff[1]==16) { memcpy(cwbuff,buff+2,16); cwmask=3; }
           break;
+        }
+      if(cwmask) {
+        if(hasD2 && !Decrypt(cwbuff,16))
+          PRINTF(L_SC_ERROR,"no AES key for this card");
+        if(cwmask&1) memcpy(cw,cwbuff,8);
+        if(cwmask&2) memcpy(cw+8,cwbuff+8,8);
+        return true;
         }
       }
     else PRINTF(L_SC_ERROR,"key not found on card");
@@ -324,6 +466,8 @@ bool cSmartCardViaccess::Update(int pid, int caid, const unsigned char *data)
 {
   static unsigned char insf0[] = { 0xca,0xf0,0x00,0x00,0x00 };
   static unsigned char ins18[] = { 0xca,0x18,0x00,0x00,0x00 };
+  static unsigned char insf4[] = { 0xca,0xf4,0x00,0x00,0x00 };
+  static unsigned char ins1c[] = { 0xca,0x1c,0x01,0x00,0x00 };
 
   int updtype;
   cAssembleData ad(data);
@@ -332,21 +476,82 @@ bool cSmartCardViaccess::Update(int pid, int caid, const unsigned char *data)
       const unsigned char *start=cParseViaccess::NanoStart(data);
       int nanolen=SCT_LEN(data)-(start-data);
 
-      if(start && start[0]==0x90 && start[1]==0x03 && nanolen>=5 && SetProvider(&start[2])) {
-        insf0[3]=ins18[3]=cParseViaccess::KeyNrFromNano(start);
-        start+=5; nanolen-=5;
-
-        int n;
-        if(start[0]==0x9e && nanolen>=(n=start[1]+2)) {
-          insf0[4]=n;
-          if(!IsoWrite(insf0,start) || !Status()) continue;
-          start+=n; nanolen-=n;
+      if(start && nanolen>=5) {
+        const unsigned char *nano81=0, *nano91=0, *nano92=0, *nano9e=0, *nanof0=0;
+        unsigned char *nanos18=AUTOMEM(nanolen+10);
+        bool provOK=false;
+        int len18=0, keynr=0;
+        
+        while(nanolen>0) {
+          switch(start[0]) {
+            case 0x90:
+              if(SetProvider(&start[2])) {
+                provOK=true;
+                keynr=cParseViaccess::KeyNrFromNano(start);
+                }
+              break;
+            case 0x9E: // ADF
+              if(!nano91) { // not crypted
+                unsigned char custwp=sa0[3];
+                const unsigned char *afd=&start[2];
+                if(!(afd[31-custwp/8] & (1<<(custwp&7)))) { // not for this card
+                  provOK=false; nanolen=0; // skip, next assemble data
+                  break;
+                  }
+                }
+              nano9e=start;
+              break;
+            case 0x81: nano81=start; break;
+            case 0x91: nano91=start; break;
+            case 0x92: nano92=start; break;
+            case 0xF0: nanof0=start; break;
+            default:
+              {
+              int l=start[1]+2;
+              memcpy(nanos18+len18,start,l);
+              len18+=l;
+              }
+            }
+          int l=start[1]+2;
+          start+=l; nanolen-=l;
           }
 
-        if(nanolen>0) {
-          ins18[2]=updtype>0 ? updtype-1 : updtype;
-          ins18[4]=nanolen;
-          if(IsoWrite(ins18,start)) Status();
+        if(provOK && nanof0) {
+          unsigned char buff[MAX_LEN*2];
+          if(nano9e) {
+            int l9e=nano9e[1]+2;
+            if(!nano91) {
+              insf0[3]=keynr;
+              insf0[4]=l9e;
+              if(!IsoWrite(insf0,nano9e) || !Status()) continue;
+              }
+            else {
+              int l91=nano91[1]+2;
+              insf4[3]=keynr;
+              insf4[4]=l91+l9e;
+              memcpy(buff,nano91,l91);
+              memcpy(buff+l91,nano9e,l9e);
+              if(!IsoWrite(insf4,buff) || !Status()) continue;
+              }
+            }
+          if(!nano92) {
+            int lf0=nanof0[1]+2;
+            ins18[2]=updtype>0 ? updtype-1 : updtype;
+            ins18[3]=keynr;
+            ins18[4]=len18+lf0;
+            memcpy(buff,nanos18,len18);
+            memcpy(buff+len18,nanof0,lf0);
+            if(IsoWrite(ins18,buff)) Status();
+            }
+          else if(nano81) {
+            int l92=nano92[1]+2, l81=nano81[1]+2, lf0=nanof0[1]+2;
+            ins1c[3]=keynr;
+            ins1c[4]=l92+l81+lf0;
+            memcpy(buff,nano92,l92);
+            memcpy(buff+l92,nano81,l81);
+            memcpy(buff+l92+l81,nanof0,lf0);
+            if(IsoWrite(ins1c,buff)) Status();
+            }
           }
         }
       }

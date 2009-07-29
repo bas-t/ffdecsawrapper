@@ -378,7 +378,7 @@ void cSystemViaccess::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned sh
 
 bool cSystemViaccess::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
 {
-  unsigned char *nanos=(unsigned char *)cParseViaccess::NanoStart(data);
+  unsigned char *nanos=(unsigned char *)cParseViaccess::PayloadStart(data);
   int len=SCT_LEN(data)-(nanos-data);
 
   bool mayHaveTps=false;

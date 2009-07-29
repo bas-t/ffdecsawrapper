@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2008-12-22 18:52+0100\n"
+"POT-Creation-Date: 2009-07-27 03:33-0400\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -225,6 +225,9 @@ msgstr "SC-Seca: mise à jour EMM"
 
 msgid "SC-Seca: activate PPV"
 msgstr "SC-Seca: activer les PPV"
+
+msgid "SC-Viaccess: Parental lock"
+msgstr ""
 
 msgid "stream"
 msgstr ""

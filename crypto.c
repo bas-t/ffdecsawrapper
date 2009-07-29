@@ -408,8 +408,11 @@ int cAES::Encrypt(const unsigned char *data, int len, unsigned char *crypt) cons
   return -1;
 }
 
-void cAES::Decrypt(unsigned char *data, int len) const
+bool cAES::Decrypt(unsigned char *data, int len) const
 {
-  if(active)
+  if(active) {
     for(int i=0; i<len; i+=16) AES_decrypt(data+i,data+i,(const AES_KEY *)&dkey);
+    return true;
+    }
+  return false;
 }
