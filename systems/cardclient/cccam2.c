@@ -21,9 +21,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
+#include <algorithm>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <boost/scoped_array.hpp>
 #include <openssl/sha.h>
 #include "cc.h"
 #include "network.h"
@@ -435,11 +435,16 @@ bool cCardClientCCcam2::Login(void)
       0x32,0x38,0x39,0x32,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
       0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
    };
-   boost::scoped_array<unsigned char> do_not_overwrite( new unsigned char[20] );
-   boost::scoped_array<unsigned char> response( new unsigned char[20] );
-   boost::scoped_array<unsigned char> sendbuff( new unsigned char[20] );
-   boost::scoped_array<unsigned char> hash(new unsigned char[20]);
+        unsigned char do_not_overwrite[20];
+        unsigned char response[20];
+        unsigned char sendbuff[20];
+        unsigned char hash[20];
+
   cMutexLock lock(this);
+  bzero(do_not_overwrite,sizeof(do_not_overwrite));
+  bzero(response,sizeof(response));
+  bzero(sendbuff,sizeof(sendbuff));
+  bzero(hash,sizeof(hash));
   login_completed=false;
   getcards=false;
   server_packet_count=0;
@@ -468,30 +473,30 @@ bool cCardClientCCcam2::Login(void)
            SHA_CTX ctx;
            SHA1_Init( &ctx );
             SHA1_Update( &ctx, buffer, len);
-            SHA1_Final( hash.get(),&ctx );
+            SHA1_Final( hash,&ctx );
 
-            cccam_init_crypt( &client_decrypt_state, hash.get(), 20 );
+            cccam_init_crypt( &client_decrypt_state, hash, 20 );
             cccam_decrypt( &client_decrypt_state, buffer, buffer, 16 );
             cccam_init_crypt( &client_encrypt_state, buffer, 16 );
-            cccam_encrypt( &client_encrypt_state, hash.get(), hash.get(), 20 );
+            cccam_encrypt( &client_encrypt_state, hash, hash, 20 );
 
-            HEXDUMP(L_CC_CCCAM,hash.get(),20,"Send Messages");
-            cccam_encrypt( &client_encrypt_state, hash.get(), response.get(), 20 );
-            so.Write(response.get(),20);
-            bzero(response.get(),20);
-            bzero(sendbuff.get(),20);
-            strcpy(reinterpret_cast<char*>(response.get()),username);
-            HEXDUMP(L_CC_CCCAM,response.get(),20,"Send UserName Messages");
-            cccam_encrypt( &client_encrypt_state, response.get(), sendbuff.get(), 20 );
-           so.Write(sendbuff.get(),20);
-           bzero(response.get(),20);
-            bzero(sendbuff.get(),20);
-            strcpy(reinterpret_cast<char*>(response.get()),password);
-            HEXDUMP(L_CC_CCCAM,response.get(),20,"Password");
-            cccam_encrypt( &client_encrypt_state, response.get(), sendbuff.get(), strlen(password));
-            bzero(sendbuff.get(),20);
-            cccam_encrypt( &client_encrypt_state,reinterpret_cast<const unsigned char*>(str), sendbuff.get(), 6 );
-            so.Write(sendbuff.get(),6);
+            HEXDUMP(L_CC_CCCAM,hash,20,"Send Messages");
+            cccam_encrypt( &client_encrypt_state, hash, response, 20 );
+            so.Write(response,20);
+            bzero(response,20);
+            bzero(sendbuff,20);
+            strcpy(reinterpret_cast<char*>(response),username);
+            HEXDUMP(L_CC_CCCAM,response,20,"Send UserName Messages");
+            cccam_encrypt( &client_encrypt_state, response, sendbuff, 20 );
+           so.Write(sendbuff,20);
+           bzero(response,20);
+            bzero(sendbuff,20);
+            strcpy(reinterpret_cast<char*>(response),password);
+            HEXDUMP(L_CC_CCCAM,response,20,"Password");
+            cccam_encrypt( &client_encrypt_state, response, sendbuff, strlen(password));
+            bzero(sendbuff,20);
+            cccam_encrypt( &client_encrypt_state,reinterpret_cast<const unsigned char*>(str), sendbuff, 6 );
+            so.Write(sendbuff,6);
             break;
          case 1:
             if (len < 20) break;
