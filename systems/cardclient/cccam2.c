@@ -156,63 +156,67 @@ unsigned int cCCcamCrypt::ShiftRightAndFill(unsigned int value, unsigned int fil
   return (value>>places) | ((((1<<places)-1)&fill)<<(32-places));
 }
 
-// -- cHandlerItem -------------------------------------------------------------
+// -- cShare -------------------------------------------------------------------
 
-class cHandlerItem : public cSimpleItem {
-  private:
-    int handlerid, caid, provid;
-  public:
-    cHandlerItem(int Handlerid, int Caid, int Provid);
-    int GetHandlerID(void) const { return handlerid; };
-    int GetCaID(void) const { return caid;};
-    int GetProvID(void) const { return provid; };
+class cShare : public cSimpleItem {
+private:
+  int shareid, caid, provid;
+public:
+  cShare(int Shareid, int Caid, int Provid);
+  cShare(const cShare *s);
+  int ShareID(void) const { return shareid; };
+  int CaID(void) const { return caid;};
+  int ProvID(void) const { return provid; };
   };
 
-cHandlerItem::cHandlerItem(int Handlerid, int Caid, int Provid)
+cShare::cShare(int Shareid, int Caid, int Provid)
 {
-  handlerid=Handlerid;
+  shareid=Shareid;
   caid=Caid;
   provid=Provid;
 }
 
-// -- cHandlers ----------------------------------------------------------------
+cShare::cShare(const cShare *s)
+{
+  shareid=s->shareid;
+  caid=s->caid;
+  provid=s->provid;
+}
 
-class cHandlers {
-  private:
-    bool CurListExist(int Handlerid);
-  public:
-    cSimpleList<cHandlerItem> handlerList, currentList;
-    //
-    int GetHandlers(int Caid, int Provid);
+// -- cShares ------------------------------------------------------------------
+
+class cShares : public cMutex, public cSimpleList<cShare> {
+private:
+  bool Exists(int shareid);
+public:
+  int GetShares(int caid, int provid, cShares *ss);
   };
 
-bool cHandlers::CurListExist(int Handlerid)
+bool cShares::Exists(int shareid)
 {
-  for(cHandlerItem *cv=currentList.First(); cv; cv=currentList.Next(cv))
-    if(cv->GetHandlerID()==Handlerid) return true;
+  for(cShare *s=First(); s; s=Next(s))
+    if(s->ShareID()==shareid) return true;
   return false;
 }
 
-int cHandlers::GetHandlers(int Caid, int Provid)
+int cShares::GetShares(int caid, int provid, cShares *ss)
 {
-  currentList.Clear();
-  for(cHandlerItem *hv=handlerList.First(); hv; hv=handlerList.Next(hv)) {
-    switch(Caid>>8) {
+  Clear();
+  ss->Lock();
+  for(cShare *s=ss->First(); s; s=ss->Next(s)) {
+    switch(caid>>8) {
       case 5: // viaccess
-        if(hv->GetCaID()==Caid && hv->GetProvID()==Provid && !CurListExist(hv->GetHandlerID()))  {
-          cHandlerItem *e=new cHandlerItem(hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
-          currentList.Add(e);
-          }
+        if(s->CaID()==caid && s->ProvID()==provid && !Exists(s->ShareID()))
+          Add(new cShare(s));
          break;
       default:
-        if(hv->GetCaID()==Caid && !CurListExist(hv->GetHandlerID()) ){
-          cHandlerItem *e=new cHandlerItem(hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
-          currentList.Add(e);
-          }
+        if(s->CaID()==caid && !Exists(s->ShareID()))
+          Add(new cShare(s));
         break;
       }
     }
-  return currentList.Count();
+  ss->Unlock();  
+  return Count();
 }
 
 // -- cCCcam2Card ---------------------------------------------------------------
@@ -264,7 +268,7 @@ class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
   cCCcamCrypt encr, decr;
   cCCcam2Card card;
-  cHandlers *handlers;
+  cShares shares;
   cNetSocket so;
   node_id nodeid;
   int server_packet_count;
@@ -301,7 +305,6 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
   bzero(nodeid,sizeof(nodeid));
   bzero(buffer,sizeof(buffer));
   bzero(cwdata,sizeof(cwdata));
-  handlers=new cHandlers;
   shareid=0;
   getcards=false;
 }
@@ -336,26 +339,32 @@ bool cCardClientCCcam2::packet_analyzer(unsigned char *data, int length)
         }
       case 4:
         {
-        int handler=SHAREID(&data[4]);
-        for(cHandlerItem *hv=handlers->handlerList.First(); hv; hv=handlers->handlerList.Next(hv)) {
-          if(hv->GetHandlerID()==handler) handlers->handlerList.Del(hv);
-          PRINTF(L_CC_CCCAM2,"REMOVE handler %08x caid: %04x provider: %06x",hv->GetHandlerID(),hv->GetCaID(),hv->GetProvID());
+        int shareid=SHAREID(&data[4]);
+        shares.Lock();
+        for(cShare *s=shares.First(); s; s=shares.Next(s)) {
+          if(s->ShareID()==shareid) {
+            PRINTF(L_CC_CCCAM2,"REMOVE share %08x caid: %04x provider: %06x",s->ShareID(),s->CaID(),s->ProvID());
+            shares.Del(s);
+            break;
+            }
           }
+        shares.Unlock();  
         break;
         }
       case 7:
         {
         int caid=(data[8+4]<<8) | data[9+4];
-        int handler=SHAREID(&data[4]);
+        int shareid=SHAREID(&data[4]);
         int provider_counts=data[20+4];
         int uphops=data[10+4];
         int maxdown=data[11+4];
-        PRINTF(L_CC_CCCAM2,"handler %08x serial %s uphops %d maxdown %d",handler,HexStr(str,data+12+4,8),uphops,maxdown);
+        PRINTF(L_CC_CCCAM2,"share %08x serial %s uphops %d maxdown %d",shareid,HexStr(str,data+12+4,8),uphops,maxdown);
         for(int i=0; i<provider_counts; i++) {
           int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
-          cHandlerItem *n=new cHandlerItem(handler,caid,provider);
-          handlers->handlerList.Add(n);
-          PRINTF(L_CC_CCCAM2,"ADD handler %08x caid: %04x provider: %06x",handler,caid,provider);
+          shares.Lock();
+          shares.Add(new cShare(shareid,caid,provider));
+          shares.Unlock();
+          PRINTF(L_CC_CCCAM2,"ADD share %08x caid: %04x provider: %06x",shareid,caid,provider);
           }
         getcards=true;
         break;
@@ -427,6 +436,9 @@ bool cCardClientCCcam2::Login(void)
   bzero(response,sizeof(response));
   bzero(sendbuff,sizeof(sendbuff));
   bzero(hash,sizeof(hash));
+  shares.Lock();
+  shares.Clear();
+  shares.Unlock();
   login_completed=false;
   getcards=false;
   server_packet_count=0;
@@ -541,10 +553,11 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   buffer[ECM_SID_POS]=ecm->prgId>>8;
   buffer[ECM_SID_POS+1]=ecm->prgId;
   buffer[ECM_LEN_POS]=SCT_LEN(data);
-  if(handlers->GetHandlers(ecm->caId,ecm->provId)<1) return false;
-  for(cHandlerItem *hv=handlers->currentList.First(); hv; hv=handlers->currentList.Next(hv)) {
-    shareid=hv->GetHandlerID();
-    if(shareid==0) return false;
+  cShares curr;
+  if(curr.GetShares(ecm->caId,ecm->provId,&shares)<1) return false;
+  for(cShare *s=curr.First(); s; s=curr.Next(s)) {
+    shareid=s->ShareID();
+    if(shareid==0) continue;
     buffer[ECM_HANDLER_POS]=shareid>>24;
     buffer[ECM_HANDLER_POS+1]=shareid>>16;
     buffer[ECM_HANDLER_POS+2]=shareid>>8;
