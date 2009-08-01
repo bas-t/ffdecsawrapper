@@ -598,7 +598,7 @@ bool cEcmData::Parse(const char *buf)
   char Name[64];
   int nu=0, num;
   Name[0]=0;
-  if(sscanf(buf,"%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d/%d%n",&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,&ecm_pid,&ecm_table,&nu,&dataIdx,&num)>=9) {
+  if(sscanf(buf,"%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d/%d%n",&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,&ecm_pid,&ecm_table,&nu,&dataIdx,&num)>=11) {
     SetName(Name);
     const char *line=buf+num;
     if(nu>0 && *line++==':') {
@@ -616,7 +616,8 @@ cString cEcmData::ToString(bool hide)
   char *str;
   if(caDescr) {
     str=AUTOARRAY(char,caDescrLen*2+16);
-    sprintf(str,":%d/%d:%s",caDescrLen,dataIdx,HexStr(str,caDescr,caDescrLen));
+    int q=sprintf(str,":%d/%d:",caDescrLen,dataIdx);
+    HexStr(str+q,caDescr,caDescrLen);
     }
   else {
     str=AUTOARRAY(char,4);
