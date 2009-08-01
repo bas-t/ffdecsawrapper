@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <algorithm>
 
 #include <openssl/sha.h>
 
@@ -31,8 +30,6 @@
 #include "network.h"
 
 #define SHAREID(x) ((*(x+0)<<24) | (*(x+1)<<16) | (*(x+2)<<8) | *(x+3))
-
-typedef unsigned char node_id[8];
 
 static const char *cccamstr="CCcam";
 
@@ -44,61 +41,56 @@ private:
   unsigned char state, counter, sum;
   //
   static unsigned int ShiftRightAndFill(unsigned int value, unsigned int fill, unsigned int places);
+  static void Swap(unsigned char *p1, unsigned char *p2);
 public:
-  int Init(const unsigned char *key, int length);
-  int Decrypt(const unsigned char *in, unsigned char *out, int length);
-  int Encrypt(const unsigned char *in, unsigned char *out, int length);
-  static void ScrambleDcw(unsigned char *data, unsigned int length, node_id nodeid, unsigned int shareid);
+  void Init(const unsigned char *key, int length);
+  void Decrypt(const unsigned char *in, unsigned char *out, int length);
+  void Encrypt(const unsigned char *in, unsigned char *out, int length);
+  static void ScrambleDcw(unsigned char *data, unsigned int length, const unsigned char *nodeid, unsigned int shareid);
   static bool DcwChecksum(const unsigned char *data);
   static bool CheckConnectChecksum(const unsigned char *data, int length);
   static void Xor(unsigned char *data, int length);
   };
 
-int cCCcamCrypt::Init(const unsigned char *key, int length)
+void cCCcamCrypt::Init(const unsigned char *key, int length)
 {
-  counter=0; sum=0;
   for(int pos=0; pos<=255; pos++) keytable[pos]=pos;
   int result=0;
-  unsigned char *it=keytable, prev_char=0, curr_char=0;
+  unsigned char curr_char=0;
   for(int pos=0; pos<=255; pos++) {
-    curr_char=keytable[pos] + *(key+result);
-    curr_char+=prev_char;
-    prev_char=curr_char;
-    std::swap(*it++,*(keytable+curr_char));
+    curr_char+=keytable[pos] + key[result];
+    Swap(keytable+pos,keytable+curr_char);
     result=(result+1)%length;
     }
-  state=*key;
-  return result;
+  state=key[0]; counter=0; sum=0;
 }
 
-int cCCcamCrypt::Decrypt(const unsigned char *in, unsigned char *out, int length)
+void cCCcamCrypt::Decrypt(const unsigned char *in, unsigned char *out, int length)
 {
   for(int pos=0; pos<length; pos++) {
-    unsigned char in_xor=*(in+pos)^state;
-    unsigned char key_sum=sum+*(keytable+ ++counter);
-    sum+=*(keytable+counter);
-    std::swap(*(keytable+counter),*(keytable+key_sum));
-    unsigned char out_xor=in_xor^*(keytable + (unsigned char)(*(keytable+key_sum)+*(keytable+counter)));
-    *(out+pos)=out_xor;
-    state^=out_xor;
+    sum+=keytable[++counter];
+    Swap(keytable+counter,keytable+sum);
+    out[pos]=in[pos] ^ state ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
+    state^=out[pos];
     }
-  return length;
 }
 
-int cCCcamCrypt::Encrypt(const unsigned char *in, unsigned char *out, int length)
+void cCCcamCrypt::Encrypt(const unsigned char *in, unsigned char *out, int length)
 {
-  for(int pos=0; pos < length; pos++) {
-    unsigned char key_sum=sum + *(keytable+ ++counter);
-    sum+=*(keytable+counter);
-    std::swap(*(keytable+counter),*(keytable+key_sum));
-    unsigned char nstate=*(in+pos)^*(keytable  + (unsigned char)(*(keytable+key_sum) + *(keytable+counter)));
-    *(out+pos)=state^nstate;
-    state^=*(in+pos);
+  for(int pos=0; pos<length; pos++) {
+    sum+=keytable[++counter];
+    Swap(keytable+counter,keytable+sum);
+    state^=in[pos];
+    out[pos]=state ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
     }
-  return length;
 }
 
-void cCCcamCrypt::ScrambleDcw(unsigned char *data, unsigned int length, node_id nodeid, unsigned int shareid)
+void cCCcamCrypt::Swap(unsigned char *p1, unsigned char *p2)
+{
+  unsigned char tmp=*p1; *p1=*p2; *p2=tmp;
+}
+
+void cCCcamCrypt::ScrambleDcw(unsigned char *data, unsigned int length, const unsigned char *nodeid, unsigned int shareid)
 {
   int s=0;
   int nodeid_high=(nodeid[0]<<24)|(nodeid[1]<<16)|(nodeid[2]<<8)|nodeid[3];
@@ -219,69 +211,24 @@ int cShares::GetShares(int caid, int provid, cShares *ss)
   return Count();
 }
 
-// -- cCCcam2Card ---------------------------------------------------------------
-
-class cCCcam2Card : public cMutex {
-  private:
-    bool newcw;
-    unsigned char cw[16];
-    cCondVar cwwait;
-  public:
-    cCCcam2Card(void);
-    bool GetCw(unsigned char *Cw);
-    void NewCw(const unsigned char *Cw, bool result);
-  };
-
-cCCcam2Card::cCCcam2Card(void)
-{
-  newcw=false;
-}
-
-void cCCcam2Card::NewCw(const unsigned char *Cw, bool result)
-{
-  cMutexLock lock(this);
-  if(result) {
-    newcw=true;
-    memcpy(cw,Cw,sizeof(cw));
-    }
-  else {
-    newcw=false;
-    }
-  cwwait.Broadcast();
-}
-
-bool cCCcam2Card::GetCw(unsigned char *Cw)
-{
-  cMutexLock lock(this);
-  if(!newcw) cwwait.Wait(*this);
-  if(newcw) {
-    memcpy(Cw,cw,sizeof(cw));
-    newcw=false;
-    return true;
-    }
-  return false;
-}
-
 // -- cCardClientCCcam2 ---------------------------------------------------------
 
 class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
   cCCcamCrypt encr, decr;
-  cCCcam2Card card;
   cShares shares;
   cNetSocket so;
-  node_id nodeid;
-  int server_packet_count;
-  bool login_completed;
-  unsigned char buffer[3072];
-  unsigned char recvbuff[3072];
-  unsigned char netbuff[1024];
+  unsigned char nodeid[8];
   int shareid;
-  unsigned char cwdata[16];
-  char username[20], password[20];
-  bool getcards;
+  char username[21], password[21];
   //
-  bool packet_analyzer(unsigned char *data, int length);
+  bool newcw;
+  unsigned char cw[16];
+  cMutex cwmutex;
+  cCondVar cwwait;
+  //
+  void Logout(void);
+  void PacketAnalyzer(const unsigned char *data, int length);
 protected:
   virtual bool Login(void);
   virtual void Action(void);
@@ -297,44 +244,37 @@ static cCardClientLinkReg<cCardClientCCcam2> __ncd("cccam2");
 
 cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
-,cThread("CCcam listener")
-,so(DEFAULT_CONNECT_TIMEOUT,20,DEFAULT_IDLE_TIMEOUT)
+,cThread("CCcam2 listener")
+,so(DEFAULT_CONNECT_TIMEOUT,2,600)
 {
-  server_packet_count=0;
-  login_completed=false;
-  bzero(nodeid,sizeof(nodeid));
-  bzero(buffer,sizeof(buffer));
-  bzero(cwdata,sizeof(cwdata));
-  shareid=0;
-  getcards=false;
+  shareid=0; newcw=false;
 }
 
 cCardClientCCcam2::~cCardClientCCcam2()
 {
-  so.Disconnect();
-  Cancel(3);
+  Logout();
 }
 
-bool cCardClientCCcam2::packet_analyzer(unsigned char *data, int length)
+void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
 {
-  if(length<4) return false;
-  int cccam_command=data[1];
-  int packet_len=((data[2]&0xff)<<8) | ((data[3]&0xff));
-  char str[32];
-  if(packet_len+4>length) return false;
-  if(packet_len>=0) {
-    switch(cccam_command) {
-      case 0:
-        break;
+  while(length>4) {
+    int cmdlen=(data[2]<<8)+data[3];
+    if(cmdlen<=0 || cmdlen+4>length) break;
+    switch(data[1]) {
       case 1:
         {
+        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x",shareid);
         unsigned char tempcw[16];
         memcpy(tempcw,data+4,16);
         cCCcamCrypt::ScrambleDcw(tempcw,16,nodeid,shareid);
-        if(cCCcamCrypt::DcwChecksum(tempcw)) memcpy(cwdata,tempcw,16);
-        card.NewCw(cwdata,true);
-        unsigned char temp[16];
-        decr.Decrypt(tempcw,temp,16);
+        if(cCCcamCrypt::DcwChecksum(tempcw)) {
+          cwmutex.Lock();
+          newcw=true;
+          memcpy(cw,tempcw,16);
+          cwwait.Broadcast();
+          cwmutex.Unlock();
+          }
+        decr.Decrypt(tempcw,tempcw,16);
         break;
         }
       case 4:
@@ -348,7 +288,7 @@ bool cCardClientCCcam2::packet_analyzer(unsigned char *data, int length)
             break;
             }
           }
-        shares.Unlock();  
+        shares.Unlock();
         break;
         }
       case 7:
@@ -358,6 +298,7 @@ bool cCardClientCCcam2::packet_analyzer(unsigned char *data, int length)
         int provider_counts=data[20+4];
         int uphops=data[10+4];
         int maxdown=data[11+4];
+        char str[32];
         PRINTF(L_CC_CCCAM2,"share %08x serial %s uphops %d maxdown %d",shareid,HexStr(str,data+12+4,8),uphops,maxdown);
         for(int i=0; i<provider_counts; i++) {
           int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
@@ -366,7 +307,6 @@ bool cCardClientCCcam2::packet_analyzer(unsigned char *data, int length)
           shares.Unlock();
           PRINTF(L_CC_CCCAM2,"ADD share %08x caid: %04x provider: %06x",shareid,caid,provider);
           }
-        getcards=true;
         break;
         }
       case 8:
@@ -377,36 +317,104 @@ bool cCardClientCCcam2::packet_analyzer(unsigned char *data, int length)
       case 0xff:
       case 0xfe:
         PRINTF(L_CC_CCCAM2,"server can't decode this ecm");
-        card.NewCw(cwdata,false);
+        cwmutex.Lock();
+        newcw=false;
+        cwwait.Broadcast();
+        cwmutex.Unlock();
         break;
       default:
+        PRINTF(L_CC_CCCAM2,"got unhandled cmd %x",data[1]);
         break;
       }
+    data+=cmdlen+4; length-=cmdlen+4;
     }
-  if((packet_len+4)<length) packet_analyzer(data+4+packet_len,length-4-packet_len);
-  return true;
 }
 
 bool cCardClientCCcam2::Init(const char *config)
 {
   cMutexLock lock(this);
   int num=0;
-  int randomfd=open("/dev/urandom",O_RDONLY|O_NONBLOCK);
-  if(randomfd<0) return false;
-  int len=read(randomfd,nodeid,sizeof(nodeid));
-  close(randomfd);
-  if(len!=sizeof(nodeid)) return false;
   if(!ParseStdConfig(config,&num)
-     || sscanf(&config[num],":%40[^:]:%40[^:]",username,password)!=2 ) return false;
-  char str[32];
-  PRINTF(L_CC_CORE,"%s: username=%s password=%s nodeid=%s",name,username,password,HexStr(str,nodeid,sizeof(nodeid)));
+     || sscanf(&config[num],":%20[^:]:%20[^:]",username,password)!=2 ) return false;
+  PRINTF(L_CC_CORE,"%s: username=%s password=%s",name,username,password);
+  for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
+  LDUMP(L_CC_CCCAM2,nodeid,sizeof(nodeid),"NODEID:");
   return Immediate() ? Login() : true;
+}
+
+void cCardClientCCcam2::Logout(void)
+{
+  Cancel(3);
+  so.Disconnect();
+  so.SetQuietLog(true);
 }
 
 bool cCardClientCCcam2::Login(void)
 {
+  Logout();
+  shares.Lock();
+  shares.Clear();
+  shares.Unlock();
+  if(!so.Connect(hostname,port)) return false;
+
+  unsigned char buffer[512];
+  int len;
+  if((len=so.Read(buffer,sizeof(buffer),10000))<=0) {
+    PRINTF(L_CC_CCCAM2,"no welcome from server");
+    return false;
+    }
+  HEXDUMP(L_CC_CCCAM2,buffer,len,"welcome answer:");
+  if(len!=16 || !cCCcamCrypt::CheckConnectChecksum(buffer,len)) {
+    PRINTF(L_CC_CCCAM2,"bad welcome from server");
+    return false;
+    }
+  PRINTF(L_CC_CCCAM2,"welcome checksum correct");
+
+  cCCcamCrypt::Xor(buffer,len);
+  unsigned char buff2[64];
+  SHA1(buffer,len,buff2);
+  decr.Init(buff2,20);
+  decr.Decrypt(buffer,buffer,16);
+  encr.Init(buffer,16);
+  encr.Encrypt(buff2,buff2,20);
+
+  HEXDUMP(L_CC_CCCAM2,buff2,20,"welcome response:");
+  encr.Encrypt(buff2,buffer,20);
+  if(so.Write(buffer,20)!=20) {
+    PRINTF(L_CC_CCCAM2,"failed to send welcome response");
+    return false;
+    }
+
+  strcpy((char *)buff2,username);
+  HEXDUMP(L_CC_CCCAM2,buff2,20,"send username:");
+  encr.Encrypt(buff2,buffer,20);
+  if(so.Write(buffer,20)!=20) {
+    PRINTF(L_CC_CCCAM2,"failed to send username");
+    return false;
+    }
+
+  encr.Encrypt((unsigned char *)password,buffer,strlen(password));
+  encr.Encrypt((unsigned char *)cccamstr,buffer,6);
+  if(so.Write(buffer,6)!=6) {
+    PRINTF(L_CC_CCCAM2,"failed to send password hash");
+    return false;
+    }
+
+  if((len=so.Read(buffer,sizeof(buffer),6000))<=0) {
+    PRINTF(L_CC_CCCAM2,"no login answer from server");
+    return false;
+    }
+  decr.Decrypt(buffer,buffer,len);
+  HEXDUMP(L_CC_CCCAM2,buffer,len,"login answer:");
+
+  if(len<20 || strcmp(cccamstr,(char *)buffer)!=0) {
+    PRINTF(L_CC_CCCAM2,"login failed");
+    return false;
+    }
+  PRINTF(L_CC_LOGIN,"CCcam login succeed");
+
   static unsigned char clientinfo[] = {
-    0x00,
+    0x00, 
     //CCcam command
     0x00,
     //packet length
@@ -425,95 +433,24 @@ bool cCardClientCCcam2::Login(void)
     0x32,0x38,0x39,0x32,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
     };
-
-  unsigned char do_not_overwrite[20];
-  unsigned char response[20];
-  unsigned char sendbuff[20];
-  unsigned char hash[20];
-
-  cMutexLock lock(this);
-  bzero(do_not_overwrite,sizeof(do_not_overwrite));
-  bzero(response,sizeof(response));
-  bzero(sendbuff,sizeof(sendbuff));
-  bzero(hash,sizeof(hash));
-  shares.Lock();
-  shares.Clear();
-  shares.Unlock();
-  login_completed=false;
-  getcards=false;
-  server_packet_count=0;
-  int len=0;
-  so.Disconnect();
-  if(!so.Connect(hostname,port)) return false;
-  while((len=so.Read(buffer,sizeof(buffer),-1))>0) {
-    if(server_packet_count>0) {
-      decr.Decrypt(buffer,buffer,len);
-      HEXDUMP(L_CC_CCCAM2,buffer,len,"Receive Messages");
-      }
-    if(login_completed) {
-      packet_analyzer(buffer,len);
-      if(getcards) {
-        Start();
-        return true;
-        }
-      }
-    switch(server_packet_count) {
-      case 0:
-        if(len!=16) return false;
-        if(!cCCcamCrypt::CheckConnectChecksum(buffer,len)) return false;
-        PRINTF(L_CC_CCCAM2,"Receive Message CheckSum correct");
-        cCCcamCrypt::Xor(buffer,len);
-
-        SHA_CTX ctx;
-        SHA1_Init(&ctx);
-        SHA1_Update(&ctx,buffer,len);
-        SHA1_Final(hash,&ctx);
-
-        decr.Init(hash,20);
-        decr.Decrypt(buffer,buffer,16);
-        encr.Init(buffer,16);
-        encr.Encrypt(hash,hash,20);
-
-        HEXDUMP(L_CC_CCCAM2,hash,20,"Send Messages");
-        encr.Encrypt(hash,response,20);
-        so.Write(response,20);
-        bzero(response,20);
-        bzero(sendbuff,20);
-        strcpy((char *)response,username);
-        HEXDUMP(L_CC_CCCAM2,response,20,"Send UserName Messages");
-        encr.Encrypt(response,sendbuff,20);
-        so.Write(sendbuff,20);
-        bzero(response,20);
-        bzero(sendbuff,20);
-        strcpy((char *)response,password);
-        HEXDUMP(L_CC_CCCAM2,response,20,"Password");
-        encr.Encrypt(response,sendbuff,strlen(password));
-        bzero(sendbuff,20);
-        encr.Encrypt((unsigned char *)cccamstr,sendbuff,6);
-        so.Write(sendbuff,6);
-        break;
-      case 1:
-        if(len<20) break;
-        if(strcmp(cccamstr,(char *)buffer)==0) {
-          login_completed=true;
-          PRINTF(L_CC_CORE,"CCcam login Success!");
-          strcpy((char *)clientinfo+USERNAME_POS,username);
-          strcpy((char *)clientinfo+VERSION_POS,"vdr-sc");
-          memcpy(clientinfo+NODEID_POS,nodeid,8);
-          bzero(netbuff,sizeof(netbuff));
-          encr.Encrypt(clientinfo,netbuff,sizeof(clientinfo));
-          so.Write(netbuff,sizeof(clientinfo));
-          }
-        else return false;
-        break;
-      }
-    server_packet_count++;
+  strcpy((char *)clientinfo+USERNAME_POS,username);
+  strcpy((char *)clientinfo+VERSION_POS,"vdr-sc");
+  memcpy(clientinfo+NODEID_POS,nodeid,8);
+  HEXDUMP(L_CC_CCCAM2,clientinfo,sizeof(clientinfo),"send clientinfo:");
+  encr.Encrypt(clientinfo,buffer,sizeof(clientinfo));
+  if(so.Write(buffer,sizeof(clientinfo))!=sizeof(clientinfo)) {
+    PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
+    return false;
     }
-  return false;
+  Start();
+  return true;
 }
 
-bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)
+bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum)
 {
+  cMutexLock lock(this);
+  if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
+
   static const unsigned char ecm_head[] = {
     0x00,
 #define CCCAM_COMMAND_POS 1
@@ -533,15 +470,12 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     0x00,
 #define ECM_DATA_POS 17
     };
-  cMutexLock lock(this);
-  if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
-  cCCcam2Card *c=&card;
-  shareid=0;
-  PRINTF(L_CC_CORE,"%d: Ecm CaID %04x Provider %04x Pid %04x",cardnum,ecm->caId,ecm->provId,ecm->ecm_pid);
-  bzero(buffer,sizeof(buffer));
+  PRINTF(L_CC_CCCAM2,"ECM caid %04x prov %04x pid %04x",ecm->caId,ecm->provId,ecm->ecm_pid);
+  int ecm_len=sizeof(ecm_head)+SCT_LEN(data);
+  unsigned char *buffer=AUTOMEM(ecm_len);
+  unsigned char *netbuff=AUTOMEM(ecm_len);
   memcpy(buffer,ecm_head,sizeof(ecm_head));
   memcpy(buffer+sizeof(ecm_head),data,SCT_LEN(data));
-  int ecm_len=sizeof(ecm_head)+SCT_LEN(data);
   buffer[CCCAM_COMMAND_POS]=1;
   buffer[CCCAM_LEN_POS]=(ecm_len-4)>>8;
   buffer[CCCAM_LEN_POS+1]=ecm_len-4;
@@ -556,20 +490,27 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   cShares curr;
   if(curr.GetShares(ecm->caId,ecm->provId,&shares)<1) return false;
   for(cShare *s=curr.First(); s; s=curr.Next(s)) {
-    shareid=s->ShareID();
-    if(shareid==0) continue;
+    if((shareid=s->ShareID())==0) continue;
     buffer[ECM_HANDLER_POS]=shareid>>24;
     buffer[ECM_HANDLER_POS+1]=shareid>>16;
     buffer[ECM_HANDLER_POS+2]=shareid>>8;
     buffer[ECM_HANDLER_POS+3]=shareid;
-    PRINTF(L_CC_CORE,"%d: Try Server HandlerID %x",cardnum,shareid);
-    HEXDUMP(L_CC_CCCAM2,buffer,ecm_len,"%d: Send ECM Messages",cardnum);
+    PRINTF(L_CC_CCCAM2,"now try shareid %08x",shareid);
+    HEXDUMP(L_CC_CCCAM2,buffer,ecm_len,"send ecm:");
     encr.Encrypt(buffer,netbuff,ecm_len);
     so.Write(netbuff,ecm_len);
-    if(c->GetCw(cw)) {
-      PRINTF(L_CC_CCCAM2,"%d: got CW",cardnum);
-      return true;
+    cwmutex.Lock();
+    newcw=false;
+    if(cwwait.TimedWait(cwmutex,7000)) {
+      if(newcw) {
+        memcpy(Cw,cw,16);
+        cwmutex.Unlock();
+        PRINTF(L_CC_CCCAM2,"got CW");
+        return true;
+        }
       }
+    else PRINTF(L_CC_CCCAM2,"getting CW timedout");
+    cwmutex.Unlock();
     }
   return false;
 }
@@ -581,14 +522,13 @@ bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
 
 void cCardClientCCcam2::Action(void)
 {
-  while(Running()) {
-    usleep(100);
-    bzero(recvbuff,sizeof(recvbuff));
-    int len=so.Read(recvbuff,sizeof(recvbuff),0);
+  while(Running() && so.Connected()) {
+    unsigned char recvbuff[1024];
+    int len=so.Read(recvbuff,sizeof(recvbuff));
     if(len>0) {
       decr.Decrypt(recvbuff,recvbuff,len);
-      HEXDUMP(L_CC_CCCAM2,recvbuff,len,"Receive Messages");
-      packet_analyzer(recvbuff,len);
+      HEXDUMP(L_CC_CCCAM2,recvbuff,len,"msg in:");
+      PacketAnalyzer(recvbuff,len);
       }
     }
 }
