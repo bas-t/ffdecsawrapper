@@ -466,7 +466,7 @@ bool cCardClientCCcam2::Login(void)
     PRINTF(L_CC_CCCAM2,"no welcome from server");
     return false;
     }
-  HEXDUMP(L_CC_CCCAM2,buffer,len,"welcome answer:");
+  LDUMP(L_CC_CCCAM2,buffer,len,"welcome answer:");
   if(len!=16 || !cCCcamCrypt::CheckConnectChecksum(buffer,len)) {
     PRINTF(L_CC_CCCAM2,"bad welcome from server");
     return false;
@@ -481,7 +481,7 @@ bool cCardClientCCcam2::Login(void)
   encr.Init(buffer,16);
   encr.Encrypt(buff2,buff2,20);
 
-  HEXDUMP(L_CC_CCCAM2,buff2,20,"welcome response:");
+  LDUMP(L_CC_CCCAM2,buff2,20,"welcome response:");
   encr.Encrypt(buff2,buffer,20);
   if(so.Write(buffer,20)!=20) {
     PRINTF(L_CC_CCCAM2,"failed to send welcome response");
@@ -489,7 +489,7 @@ bool cCardClientCCcam2::Login(void)
     }
 
   strcpy((char *)buff2,username);
-  HEXDUMP(L_CC_CCCAM2,buff2,20,"send username:");
+  LDUMP(L_CC_CCCAM2,buff2,20,"send username:");
   encr.Encrypt(buff2,buffer,20);
   if(so.Write(buffer,20)!=20) {
     PRINTF(L_CC_CCCAM2,"failed to send username");
@@ -508,7 +508,7 @@ bool cCardClientCCcam2::Login(void)
     return false;
     }
   decr.Decrypt(buffer,buffer,len);
-  HEXDUMP(L_CC_CCCAM2,buffer,len,"login answer:");
+  LDUMP(L_CC_CCCAM2,buffer,len,"login answer:");
 
   if(len<20 || strcmp(cccamstr,(char *)buffer)!=0) {
     PRINTF(L_CC_CCCAM2,"login failed");
@@ -539,7 +539,7 @@ bool cCardClientCCcam2::Login(void)
   strcpy((char *)clientinfo+USERNAME_POS,username);
   strcpy((char *)clientinfo+VERSION_POS,"vdr-sc");
   memcpy(clientinfo+NODEID_POS,nodeid,8);
-  HEXDUMP(L_CC_CCCAM2,clientinfo,sizeof(clientinfo),"send clientinfo:");
+  LDUMP(L_CC_CCCAM2,clientinfo,sizeof(clientinfo),"send clientinfo:");
   encr.Encrypt(clientinfo,buffer,sizeof(clientinfo));
   if(so.Write(buffer,sizeof(clientinfo))!=sizeof(clientinfo)) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
