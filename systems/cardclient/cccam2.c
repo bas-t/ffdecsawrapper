@@ -406,7 +406,7 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         int provider_counts=data[20+4];
         int uphops=data[10+4];
         int maxdown=data[11+4];
-        LDUMP(L_CC_CCCAM2,data+12+4,8,"share %08x serial ",shareid);
+        LDUMP(L_CC_CCCAM2,data+12+4,8,"share %08x serial",shareid);
         PRINTF(L_CC_CCCAM2,"share %08x uphops %d maxdown %d",shareid,uphops,maxdown);
         for(int i=0; i<provider_counts; i++) {
           int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
@@ -597,12 +597,12 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   buffer[ECM_LEN_POS]=SCT_LEN(data);
   cShares curr;
   if(curr.GetShares(ecm,&shares)<1) return false;
-  LBSTART(L_CC_CCCAM2);
-  LBPUT("share try list for pid %04x",ecm->ecm_pid);
-  time_t now=time(0);
-  for(cShare *s=curr.First(); s; s=curr.Next(s))
-    LBPUT("shareid %08x hops %d last %d: caid %04x prov %x",s->ShareID(),s->Hops(),(int)(s->Last()>0?s->Last()-now:-1),s->CaID(),s->ProvID());
-  LBEND();
+  if(LOG(L_CC_CCCAM2)) {
+    PRINTF(L_CC_CCCAM2,"share try list for pid %04x",ecm->ecm_pid);
+    time_t now=time(0);
+    for(cShare *s=curr.First(); s; s=curr.Next(s))
+      PRINTF(L_CC_CCCAM2,"shareid %08x hops %d last %d: caid %04x prov %x",s->ShareID(),s->Hops(),(int)(s->Last()>0?s->Last()-now:-1),s->CaID(),s->ProvID());
+    }
   for(cShare *s=curr.First(); s; s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
     buffer[ECM_SHAREID_POS]=shareid>>24;
@@ -610,7 +610,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     buffer[ECM_SHAREID_POS+2]=shareid>>8;
     buffer[ECM_SHAREID_POS+3]=shareid;
     PRINTF(L_CC_CCCAM2,"now try shareid %08x",shareid);
-    HEXDUMP(L_CC_CCCAM2,buffer,ecm_len,"send ecm:");
+    LDUMP(L_CC_CCCAM2,buffer,ecm_len,"send ecm:");
     encr.Encrypt(buffer,netbuff,ecm_len);
     if(so.Write(netbuff,ecm_len)!=ecm_len) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
@@ -643,7 +643,7 @@ void cCardClientCCcam2::Action(void)
     int len=so.Read(recvbuff,sizeof(recvbuff));
     if(len>0) {
       decr.Decrypt(recvbuff,recvbuff,len);
-      HEXDUMP(L_CC_CCCAM2,recvbuff,len,"msg in:");
+      LDUMP(L_CC_CCCAM2,recvbuff,len,"msg in:");
       PacketAnalyzer(recvbuff,len);
       }
     }
