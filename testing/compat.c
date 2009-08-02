@@ -195,7 +195,7 @@ const char *cOpt::FullName(const char *PreStr)
 {
   if(PreStr) {
     free(fullname);
-    asprintf(&fullname,"%s.%s",PreStr,name);
+    fullname=bprintf("%s.%s",PreStr,name);
     return fullname;
     }
   else return name;

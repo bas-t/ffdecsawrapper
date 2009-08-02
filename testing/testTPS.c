@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
       int size=ftell(f);
       fseek(f,0,SEEK_SET);
       unsigned char *data=(unsigned char *)malloc(size);
-      fread(data,1,size,f);
+      if(fread(data,1,size,f)<=0) ;
       fclose(f);
       printf("read %d bytes from %s\n",size,argv[3]);
 
