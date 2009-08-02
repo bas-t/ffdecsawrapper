@@ -389,12 +389,13 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         {
         int shareid=SHAREID(&data[4]);
         shares.Lock();
-        for(cShare *s=shares.First(); s; s=shares.Next(s)) {
+        for(cShare *s=shares.First(); s;) {
+          cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
             PRINTF(L_CC_CCCAM2,"REMOVE share %08x caid: %04x provider: %06x",s->ShareID(),s->CaID(),s->ProvID());
             shares.Del(s);
-            break;
             }
+          s=n;
           }
         shares.Unlock();
         break;
