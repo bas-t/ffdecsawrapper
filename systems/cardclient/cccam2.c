@@ -80,8 +80,8 @@ void cCCcamCrypt::Encrypt(const unsigned char *in, unsigned char *out, int lengt
   for(int pos=0; pos<length; pos++) {
     sum+=keytable[++counter];
     Swap(keytable+counter,keytable+sum);
+    out[pos]=in[pos] ^ state ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
     state^=in[pos];
-    out[pos]=state ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
     }
 }
 
@@ -488,6 +488,7 @@ bool cCardClientCCcam2::Login(void)
     return false;
     }
 
+  memset(buff2,0,20);
   strcpy((char *)buff2,username);
   LDUMP(L_CC_CCCAM2,buff2,20,"send username:");
   encr.Encrypt(buff2,buffer,20);
