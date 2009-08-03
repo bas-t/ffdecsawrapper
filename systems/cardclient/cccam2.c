@@ -477,11 +477,13 @@ bool cCardClientCCcam2::Login(void)
   int len;
   if((len=so.Read(buffer,sizeof(buffer),10000))<=0) {
     PRINTF(L_CC_CCCAM2,"no welcome from server");
+    Logout();
     return false;
     }
   LDUMP(L_CC_CCCAM2,buffer,len,"welcome answer:");
   if(len!=16 || !cCCcamCrypt::CheckConnectChecksum(buffer,len)) {
     PRINTF(L_CC_CCCAM2,"bad welcome from server");
+    Logout();
     return false;
     }
   PRINTF(L_CC_CCCAM2,"welcome checksum correct");
@@ -498,6 +500,7 @@ bool cCardClientCCcam2::Login(void)
   encr.Encrypt(buff2,buffer,20);
   if(so.Write(buffer,20)!=20) {
     PRINTF(L_CC_CCCAM2,"failed to send welcome response");
+    Logout();
     return false;
     }
 
@@ -507,6 +510,7 @@ bool cCardClientCCcam2::Login(void)
   encr.Encrypt(buff2,buffer,20);
   if(so.Write(buffer,20)!=20) {
     PRINTF(L_CC_CCCAM2,"failed to send username");
+    Logout();
     return false;
     }
 
@@ -514,11 +518,13 @@ bool cCardClientCCcam2::Login(void)
   encr.Encrypt((unsigned char *)cccamstr,buffer,6);
   if(so.Write(buffer,6)!=6) {
     PRINTF(L_CC_CCCAM2,"failed to send password hash");
+    Logout();
     return false;
     }
 
   if((len=so.Read(buffer,sizeof(buffer),6000))<=0) {
     PRINTF(L_CC_CCCAM2,"no login answer from server");
+    Logout();
     return false;
     }
   decr.Decrypt(buffer,buffer,len);
@@ -526,6 +532,7 @@ bool cCardClientCCcam2::Login(void)
 
   if(len<20 || strcmp(cccamstr,(char *)buffer)!=0) {
     PRINTF(L_CC_CCCAM2,"login failed");
+    Logout();
     return false;
     }
   PRINTF(L_CC_LOGIN,"CCcam login succeed");
@@ -557,6 +564,7 @@ bool cCardClientCCcam2::Login(void)
   encr.Encrypt(clientinfo,buffer,sizeof(clientinfo));
   if(so.Write(buffer,sizeof(clientinfo))!=sizeof(clientinfo)) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
+    Logout();
     return false;
     }
   Start();
@@ -566,7 +574,8 @@ bool cCardClientCCcam2::Login(void)
 bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum)
 {
   cMutexLock lock(this);
-  if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
+  if(!so.Connected() && !Login()) { Logout(); return false; }
+  if(!CanHandle(ecm->caId)) return false;
 
   static const unsigned char ecm_head[] = {
     0x00,
@@ -625,7 +634,8 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     encr.Encrypt(buffer,netbuff,ecm_len);
     if(so.Write(netbuff,ecm_len)!=ecm_len) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
-      continue;
+      Logout();
+      break;
       }
     cwmutex.Lock();
     newcw=false;
