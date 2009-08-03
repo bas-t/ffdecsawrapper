@@ -195,7 +195,7 @@ cEcmShare *cEcmShares::Find(const cEcmInfo *ecm)
 int cEcmShares::FindShare(const cEcmInfo *ecm)
 {
   cEcmShare *e=Find(ecm);
-  PRINTF(L_CC_CCCAM2,"shareid %08x for %04x/%x/%x",e ? e->shareid:0,ecm->ecm_pid,ecm->source,ecm->transponder);
+  if(e) PRINTF(L_CC_CCCAM2,"shareid %08x for %04x/%x/%x",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder);
   return e ? e->shareid:0;
 }
 
@@ -216,14 +216,16 @@ void cEcmShares::AddShare(const cEcmInfo *ecm, int id)
 
 // -- cShare -------------------------------------------------------------------
 
+#define STDLAG 4000
+#define MAXLAG 7000
+
 class cShares;
 
 class cShare : public cSimpleItem {
 friend class cShares;
 private:
   int shareid, caid, provid;
-  int hops;
-  time_t last;
+  int hops, lag;
   bool success;
 public:
   cShare(int Shareid, int Caid, int Provid, int Hops);
@@ -233,7 +235,8 @@ public:
   int CaID(void) const { return caid;};
   int ProvID(void) const { return provid; };
   int Hops(void) const { return hops; };
-  time_t Last(void) const { return last; };
+  int Lag(void) const { return lag; };
+  bool Success(void) const { return success; }
   };
 
 cShare::cShare(int Shareid, int Caid, int Provid, int Hops)
@@ -242,7 +245,7 @@ cShare::cShare(int Shareid, int Caid, int Provid, int Hops)
   caid=Caid;
   provid=Provid;
   hops=Hops;
-  last=0; success=false;
+  lag=STDLAG; success=false;
 }
 
 cShare::cShare(const cShare *s)
@@ -251,7 +254,7 @@ cShare::cShare(const cShare *s)
   caid=s->caid;
   provid=s->provid;
   hops=s->hops;
-  last=s->last;
+  lag=s->lag;
   success=s->success;
 }
 
@@ -259,10 +262,10 @@ bool cShare::Compare(const cShare *s) const
 {
   // successfull is better ;)
   if(s->success!=success) return s->success;
+  // lower lag is better
+  if(s->lag!=lag) return s->lag<lag;
   // lower hops is better
-  if(s->hops!=hops) return s->hops<hops;
-  // later (higher) last is better
-  return s->last>last;
+  return s->hops<hops;
 }
 
 // -- cShares ------------------------------------------------------------------
@@ -272,7 +275,7 @@ private:
   cShare *Find(int shareid);
 public:
   int GetShares(const cEcmInfo *ecm, cShares *ss);
-  void SetLast(int shareid, time_t last);
+  void SetLag(int shareid, int lag);
   };
 
 cShare *cShares::Find(int shareid)
@@ -282,11 +285,11 @@ cShare *cShares::Find(int shareid)
   return 0;
 }
 
-void cShares::SetLast(int shareid, time_t last)
+void cShares::SetLag(int shareid, int lag)
 {
   Lock();
   cShare *s=Find(shareid);
-  if(s) s->last=last;
+  if(s) s->lag=min(lag,MAXLAG);
   Unlock();
 }
 
@@ -364,7 +367,10 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
 {
   while(length>4) {
     int cmdlen=(data[2]<<8)+data[3];
-    if(cmdlen<=0 || cmdlen+4>length) break;
+    if(cmdlen<=0 || cmdlen+4>length) {
+      PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",cmdlen,length);
+      break;
+      }
     switch(data[1]) {
       case 1:
         {
@@ -579,7 +585,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     0x00,
 #define ECM_DATA_POS 17
     };
-  PRINTF(L_CC_CCCAM2,"ECM caid %04x prov %04x pid %04x",ecm->caId,ecm->provId,ecm->ecm_pid);
+  PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x pid %04x",cardnum,ecm->caId,ecm->provId,ecm->ecm_pid);
   int ecm_len=sizeof(ecm_head)+SCT_LEN(data);
   unsigned char *buffer=AUTOMEM(ecm_len);
   unsigned char *netbuff=AUTOMEM(ecm_len);
@@ -597,12 +603,14 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   buffer[ECM_SID_POS+1]=ecm->prgId;
   buffer[ECM_LEN_POS]=SCT_LEN(data);
   cShares curr;
-  if(curr.GetShares(ecm,&shares)<1) return false;
+  if(curr.GetShares(ecm,&shares)<1) {
+    PRINTF(L_CC_CCCAM2,"no shares for this ECM");
+    return false;
+    }
   if(LOG(L_CC_CCCAM2)) {
     PRINTF(L_CC_CCCAM2,"share try list for pid %04x",ecm->ecm_pid);
-    time_t now=time(0);
     for(cShare *s=curr.First(); s; s=curr.Next(s))
-      PRINTF(L_CC_CCCAM2,"shareid %08x hops %d last %d: caid %04x prov %x",s->ShareID(),s->Hops(),(int)(s->Last()>0?s->Last()-now:-1),s->CaID(),s->ProvID());
+      PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %d: caid %04x prov %x",s->ShareID(),s->Success()?'*':' ',s->Hops(),s->Lag(),s->CaID(),s->ProvID());
     }
   for(cShare *s=curr.First(); s; s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
@@ -619,18 +627,23 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
       }
     cwmutex.Lock();
     newcw=false;
-    if(cwwait.TimedWait(cwmutex,7000)) {
+    cTimeMs lag;
+    if(cwwait.TimedWait(cwmutex,MAXLAG)) {
+      PRINTF(L_CC_CCCAM2,"wait returned after %lld",lag.Elapsed());
       if(newcw) {
         memcpy(Cw,cw,16);
         cwmutex.Unlock();
-        shares.SetLast(shareid,time(0));
         ecmshares.AddShare(ecm,shareid);
         PRINTF(L_CC_CCCAM2,"got CW");
         return true;
         }
       else PRINTF(L_CC_CCCAM2,"no CW from this share");
       }
-    else PRINTF(L_CC_CCCAM2,"getting CW timedout");
+    else {
+      PRINTF(L_CC_CCCAM2,"getting CW timedout");
+      PRINTF(L_CC_CCCAM2,"wait timed out after %lld",lag.Elapsed());
+      }
+    shares.SetLag(shareid,lag.Elapsed());
     cwmutex.Unlock();
     }
   PRINTF(L_CC_ECM,"%s: unable to decode the channel",name);
