@@ -28,6 +28,7 @@
 
 #include "cc.h"
 #include "network.h"
+#include "helper.h"
 
 #define SHAREID(x) ((*(x+0)<<24) | (*(x+1)<<16) | (*(x+2)<<8) | *(x+3))
 
@@ -289,7 +290,11 @@ void cShares::SetLag(int shareid, int lag)
 {
   Lock();
   cShare *s=Find(shareid);
-  if(s) s->lag=min(lag,MAXLAG);
+  if(s) {
+    lag=min(lag,MAXLAG);
+    if(s->lag==STDLAG) s->lag=(STDLAG+lag)/2;
+    else s->lag=(3*s->lag+lag)/4;
+    }
   Unlock();
 }
 
@@ -365,12 +370,8 @@ cCardClientCCcam2::~cCardClientCCcam2()
 
 void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
 {
-  while(length>4) {
-    int cmdlen=(data[2]<<8)+data[3];
-    if(cmdlen<=0 || cmdlen+4>length) {
-      PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",cmdlen,length);
-      break;
-      }
+  int cmdlen=UINT16_BE(&data[2]);
+  if(cmdlen>0 && cmdlen+4<=length) {
     switch(data[1]) {
       case 1:
         {
@@ -440,8 +441,9 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         PRINTF(L_CC_CCCAM2,"got unhandled cmd %x",data[1]);
         break;
       }
-    data+=cmdlen+4; length-=cmdlen+4;
     }
+  else
+    PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",cmdlen,length);
 }
 
 bool cCardClientCCcam2::Init(const char *config)
@@ -652,13 +654,24 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
 
 void cCardClientCCcam2::Action(void)
 {
+  int cnt=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
-    int len=so.Read(recvbuff,sizeof(recvbuff));
+    int len=so.Read(recvbuff+cnt,sizeof(recvbuff)-cnt);
     if(len>0) {
-      decr.Decrypt(recvbuff,recvbuff,len);
-      LDUMP(L_CC_CCCAM2,recvbuff,len,"msg in:");
-      PacketAnalyzer(recvbuff,len);
+      decr.Decrypt(recvbuff+cnt,recvbuff+cnt,len);
+      HEXDUMP(L_CC_CCCAM2,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
+      cnt+=len;
       }
-    }
+    int proc=0;
+    while(proc+4<=cnt) {
+      int l=UINT16_BE(recvbuff+proc+2)+4;
+      if(proc+l>cnt) break;
+      LDUMP(L_CC_CCCAM2,recvbuff+proc,l,"msg in:");
+      PacketAnalyzer(recvbuff+proc,l);
+      proc+=l;
+      }
+    cnt-=proc;
+    memmove(recvbuff,recvbuff+proc,cnt);
+   }
 }
