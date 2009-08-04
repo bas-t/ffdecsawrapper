@@ -336,7 +336,8 @@ int cNetSocket::Select(bool forRead, int timeout)
     fd_set fds;
     FD_ZERO(&fds); FD_SET(sd,&fds);
     struct timeval tv;
-    tv.tv_sec=timeout; tv.tv_usec=0;
+    if(timeout&MSTIMEOUT) { tv.tv_sec=0; tv.tv_usec=(timeout&~MSTIMEOUT)*1000; }
+    else { tv.tv_sec=timeout; tv.tv_usec=0; }
     int r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
     if(r>0) return 1;
     else if(r<0) {
@@ -344,7 +345,7 @@ int cNetSocket::Select(bool forRead, int timeout)
       return -1;
       }
     else {
-      if(timeout>0 && !quietlog) PRINTF(L_CORE_NET,"socket: select timed out (%d secs)",timeout);
+      if(timeout>0 && !quietlog) PRINTF(L_CORE_NET,"socket: select timed out (%d %s)",timeout&~MSTIMEOUT,(timeout&MSTIMEOUT)?"ms":"secs");
       return 0;
       }
     }
