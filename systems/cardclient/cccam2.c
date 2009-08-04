@@ -378,7 +378,7 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x",shareid);
         unsigned char tempcw[16];
         memcpy(tempcw,data+4,16);
-        LDUMP(L_CC_CCCAM2,tempcw,16,"scrambled CW");
+        LDUMP(L_CC_CCCAM2,tempcw,16,"scrambled    CW");
         cCCcamCrypt::ScrambleDcw(tempcw,16,nodeid,shareid);
         LDUMP(L_CC_CCCAM2,tempcw,16,"un-scrambled CW");
         if(cCCcamCrypt::DcwChecksum(tempcw)) {
@@ -426,7 +426,7 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         break;
         }
       case 8:
-        PRINTF(L_CC_LOGIN,"%s: server vers: %s builder version: %s",name,data+4+8,data+4+8+32);
+        PRINTF(L_CC_LOGIN,"%s: server version %s build %s",name,data+4+8,data+4+8+32);
         LDUMP(L_CC_LOGIN,data+4,8,"%s: server nodeid:",name);
         break;
       case 0xff:
@@ -475,7 +475,7 @@ bool cCardClientCCcam2::Login(void)
 
   unsigned char buffer[512];
   int len;
-  if((len=so.Read(buffer,sizeof(buffer),10000))<=0) {
+  if((len=so.Read(buffer,sizeof(buffer),10))<=0) {
     PRINTF(L_CC_CCCAM2,"no welcome from server");
     Logout();
     return false;
@@ -522,7 +522,7 @@ bool cCardClientCCcam2::Login(void)
     return false;
     }
 
-  if((len=so.Read(buffer,sizeof(buffer),6000))<=0) {
+  if((len=so.Read(buffer,sizeof(buffer),6))<=0) {
     PRINTF(L_CC_CCCAM2,"no login answer from server");
     Logout();
     return false;
@@ -621,7 +621,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   if(LOG(L_CC_CCCAM2)) {
     PRINTF(L_CC_CCCAM2,"share try list for pid %04x",ecm->ecm_pid);
     for(cShare *s=curr.First(); s; s=curr.Next(s))
-      PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %d: caid %04x prov %x",s->ShareID(),s->Success()?'*':' ',s->Hops(),s->Lag(),s->CaID(),s->ProvID());
+      PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %4d: caid %04x prov %x",s->ShareID(),s->Success()?'*':' ',s->Hops(),s->Lag(),s->CaID(),s->ProvID());
     }
   for(cShare *s=curr.First(); s; s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
@@ -632,11 +632,13 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     PRINTF(L_CC_CCCAM2,"now try shareid %08x",shareid);
     LDUMP(L_CC_CCCAM2,buffer,ecm_len,"send ecm:");
     encr.Encrypt(buffer,netbuff,ecm_len);
+PRINTF(L_CC_CCCAM2,"encrypted...");
     if(so.Write(netbuff,ecm_len)!=ecm_len) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
       Logout();
       break;
       }
+PRINTF(L_CC_CCCAM2,"ecm written...");
     cwmutex.Lock();
     newcw=false;
     cTimeMs lag;
@@ -667,7 +669,7 @@ void cCardClientCCcam2::Action(void)
   int cnt=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
-    int len=so.Read(recvbuff+cnt,sizeof(recvbuff)-cnt);
+    int len=so.Read(recvbuff+cnt,sizeof(recvbuff)-cnt,MSTIMEOUT|200);
     if(len>0) {
       decr.Decrypt(recvbuff+cnt,recvbuff+cnt,len);
       HEXDUMP(L_CC_CCCAM2,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
@@ -683,5 +685,6 @@ void cCardClientCCcam2::Action(void)
       }
     cnt-=proc;
     memmove(recvbuff,recvbuff+proc,cnt);
-   }
+    usleep(10);
+    }
 }
