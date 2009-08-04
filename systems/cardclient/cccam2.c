@@ -196,7 +196,7 @@ cEcmShare *cEcmShares::Find(const cEcmInfo *ecm)
 int cEcmShares::FindShare(const cEcmInfo *ecm)
 {
   cEcmShare *e=Find(ecm);
-  if(e) PRINTF(L_CC_CCCAM2,"shareid %08x for %04x/%x/%x",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder);
+  if(e) PRINTF(L_CC_CCCAM2,"shareid %08x succeeded %04x/%x/%x",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder);
   return e ? e->shareid:0;
 }
 
@@ -217,7 +217,7 @@ void cEcmShares::AddShare(const cEcmInfo *ecm, int id)
 
 // -- cShare -------------------------------------------------------------------
 
-#define STDLAG 4000
+#define STDLAG 1000
 #define MAXLAG 7000
 
 class cShares;
@@ -262,7 +262,7 @@ cShare::cShare(const cShare *s)
 bool cShare::Compare(const cShare *s) const
 {
   // successfull is better ;)
-  if(s->success!=success) return s->success;
+//  if(s->success!=success) return s->success;
   // lower lag is better
   if(s->lag!=lag) return s->lag<lag;
   // lower hops is better
@@ -643,7 +643,9 @@ PRINTF(L_CC_CCCAM2,"ecm written...");
     newcw=false;
     cTimeMs lag;
     if(cwwait.TimedWait(cwmutex,MAXLAG)) {
-      PRINTF(L_CC_CCCAM2,"wait returned after %lld",lag.Elapsed());
+      uint64_t l=lag.Elapsed();
+      shares.SetLag(shareid,l);
+      PRINTF(L_CC_CCCAM2,"wait returned after %lld",l);
       if(newcw) {
         memcpy(Cw,cw,16);
         cwmutex.Unlock();
@@ -654,10 +656,10 @@ PRINTF(L_CC_CCCAM2,"ecm written...");
       else PRINTF(L_CC_CCCAM2,"no CW from this share");
       }
     else {
-      PRINTF(L_CC_CCCAM2,"getting CW timedout");
-      PRINTF(L_CC_CCCAM2,"wait timed out after %lld",lag.Elapsed());
+      uint64_t l=lag.Elapsed();
+      shares.SetLag(shareid,l);
+      PRINTF(L_CC_CCCAM2,"getting CW timed out after %lld",l);
       }
-    shares.SetLag(shareid,lag.Elapsed());
     cwmutex.Unlock();
     }
   PRINTF(L_CC_ECM,"%s: unable to decode the channel",name);
