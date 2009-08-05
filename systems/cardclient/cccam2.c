@@ -371,8 +371,10 @@ cCardClientCCcam2::~cCardClientCCcam2()
 void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
 {
   int cmdlen=UINT16_BE(&data[2]);
-  if(cmdlen>0 && cmdlen+4<=length) {
+  if(cmdlen+4<=length) {
     switch(data[1]) {
+      case 0:
+        break;
       case 1:
         {
         PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x",shareid);
