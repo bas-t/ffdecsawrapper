@@ -161,6 +161,7 @@ friend class cEcmShares;
 private:
   int source, transponder, pid;
   int shareid;
+  int status;
 public:
   cEcmShare(const cEcmInfo *ecm, int id);
   };
@@ -171,49 +172,57 @@ cEcmShare::cEcmShare(const cEcmInfo *ecm, int id)
   source=ecm->source;
   transponder=ecm->transponder;
   shareid=id;
+  status=0;
 }
 
 // -- cEcmShares ---------------------------------------------------------------
 
 class cEcmShares : public cSimpleList<cEcmShare> {
 private:
-  cEcmShare *Find(const cEcmInfo *ecm);
+  cEcmShare *Find(const cEcmInfo *ecm, int id);
 public:
-  int FindShare(const cEcmInfo *ecm);
-  void AddShare(const cEcmInfo *ecm, int id);
+  int FindStatus(const cEcmInfo *ecm, int id);
+  void AddStatus(const cEcmInfo *ecm, int id, int status);
   };
 
 static cEcmShares ecmshares;
 
-cEcmShare *cEcmShares::Find(const cEcmInfo *ecm)
+cEcmShare *cEcmShares::Find(const cEcmInfo *ecm, int id)
 {
   for(cEcmShare *e=First(); e; e=Next(e))
-    if(e->pid==ecm->ecm_pid && e->source==ecm->source && e->transponder==ecm->transponder)
+    if(e->shareid==id && e->pid==ecm->ecm_pid && e->source==ecm->source && e->transponder==ecm->transponder)
       return e;
   return 0;
 }
 
-int cEcmShares::FindShare(const cEcmInfo *ecm)
+int cEcmShares::FindStatus(const cEcmInfo *ecm, int id)
 {
-  cEcmShare *e=Find(ecm);
-  if(e) PRINTF(L_CC_CCCAM2,"shareid %08x succeeded %04x/%x/%x",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder);
-  return e ? e->shareid:0;
+  cEcmShare *e=Find(ecm,id);
+  if(e) {
+    PRINTF(L_CC_CCCAM2,"shareid %08x for %04x/%x/%x status %d",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder,e->status);
+    return e->status;
+    }
+  return 0;
 }
 
-void cEcmShares::AddShare(const cEcmInfo *ecm, int id)
+void cEcmShares::AddStatus(const cEcmInfo *ecm, int id, int status)
 {
-  cEcmShare *e=Find(ecm);
-  if(e) {
-    if(e->shareid!=id) {
-      e->shareid=id;
-      PRINTF(L_CC_CCCAM2,"update shareid %08x for %04x/%x/%x",id,ecm->ecm_pid,ecm->source,ecm->transponder);
-      }
+  cEcmShare *e=Find(ecm,id);
+  const char *t="updated";
+  if(!e) {
+    Add((e=new cEcmShare(ecm,id)));
+    t="added";
     }
-  else {
-    Add(new cEcmShare(ecm,id));
-    PRINTF(L_CC_CCCAM2,"added shareid %08x for %04x/%x/%x",id,ecm->ecm_pid,ecm->source,ecm->transponder);
-    }
+  PRINTF(L_CC_CCCAM2,"%s shareid %08x for %04x/%x/%x status %d",t,id,ecm->ecm_pid,ecm->source,ecm->transponder,status);
+  e->status=status;
 }
+
+// -- cShareProv ---------------------------------------------------------------
+
+class cShareProv : public cSimpleItem {
+public:
+  int provid;
+  };
 
 // -- cShare -------------------------------------------------------------------
 
@@ -225,44 +234,73 @@ class cShares;
 class cShare : public cSimpleItem {
 friend class cShares;
 private:
-  int shareid, caid, provid;
+  int shareid, caid;
+  cSimpleList<cShareProv> prov;
   int hops, lag;
-  bool success;
+  int status;
 public:
-  cShare(int Shareid, int Caid, int Provid, int Hops);
+  cShare(int Shareid, int Caid, int Hops);
   cShare(const cShare *s);
+  bool UsesProv(void) const;
+  bool HasProv(int provid) const;
+  void AddProv(int provid);
   bool Compare(const cShare *s) const;
   int ShareID(void) const { return shareid; };
   int CaID(void) const { return caid;};
-  int ProvID(void) const { return provid; };
   int Hops(void) const { return hops; };
   int Lag(void) const { return lag; };
-  bool Success(void) const { return success; }
+  int Status(void) const { return status; }
   };
 
-cShare::cShare(int Shareid, int Caid, int Provid, int Hops)
+cShare::cShare(int Shareid, int Caid, int Hops)
 {
   shareid=Shareid;
   caid=Caid;
-  provid=Provid;
   hops=Hops;
-  lag=STDLAG; success=false;
+  lag=STDLAG; status=0;
 }
 
 cShare::cShare(const cShare *s)
 {
   shareid=s->shareid;
   caid=s->caid;
-  provid=s->provid;
   hops=s->hops;
   lag=s->lag;
-  success=s->success;
+  status=s->status;
+}
+
+bool cShare::UsesProv(void) const
+{
+  switch(caid>>8) {
+    case 0x01:
+    case 0x05:
+    case 0x0d:
+      return true;
+    default:
+      return false;
+    }
+}
+
+bool cShare::HasProv(int provid) const
+{
+  for(cShareProv *sp=prov.First(); sp; sp=prov.Next(sp))
+    if(sp->provid==provid) return true;
+  return false;
+}
+
+void cShare::AddProv(int provid)
+{
+  if(!HasProv(provid)) {
+    cShareProv *sp=new cShareProv;
+    sp->provid=provid;
+    prov.Add(sp);
+    }
 }
 
 bool cShare::Compare(const cShare *s) const
 {
-  // successfull is better ;)
-//  if(s->success!=success) return s->success;
+  // success or untried is better ;)
+  if(s->status*status<0) return s->status>=0;
   // lower lag is better
   if(s->lag!=lag) return s->lag<lag;
   // lower hops is better
@@ -302,12 +340,11 @@ int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
 {
   Lock();
   Clear();
-  int oldid=ecmshares.FindShare(ecm);
   ss->Lock();
   for(cShare *s=ss->First(); s; s=ss->Next(s)) {
-    if(s->caid==ecm->caId && ((ecm->caId>>8)!=0x05 || s->provid==ecm->provId) && !Find(s->shareid)) {
+    if(s->caid==ecm->caId && (!s->UsesProv() || s->HasProv(ecm->provId)) && !Find(s->shareid)) {
       cShare *n=new cShare(s);
-      if(n->shareid==oldid) n->success=true;
+      n->status=ecmshares.FindStatus(ecm,n->shareid);
       // keep the list sorted
       cShare *l=0;
       for(cShare *t=First(); t; t=Next(t)) {
@@ -401,7 +438,7 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         for(cShare *s=shares.First(); s;) {
           cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
-            PRINTF(L_CC_CCCAM2,"REMOVE share %08x caid: %04x provider: %06x",s->ShareID(),s->CaID(),s->ProvID());
+            PRINTF(L_CC_CCCAM2,"REMOVE share %08x caid: %04x",s->ShareID(),s->CaID());
             shares.Del(s);
             }
           s=n;
@@ -416,15 +453,18 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         int provider_counts=data[20+4];
         int uphops=data[10+4];
         int maxdown=data[11+4];
-        LDUMP(L_CC_CCCAM2,data+12+4,8,"share %08x serial",shareid);
-        PRINTF(L_CC_CCCAM2,"share %08x uphops %d maxdown %d",shareid,uphops,maxdown);
+        cShare *s=new cShare(shareid,caid,uphops);
+        LBSTARTF(L_CC_CCCAM2);
+        LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,uphops,maxdown,caid);
+        for(int i=0; i<8; i++) LBPUT("%02x",data[12+4+i]);
+        if(provider_counts>0) LBPUT(" prov");
         for(int i=0; i<provider_counts; i++) {
           int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
-          shares.Lock();
-          shares.Add(new cShare(shareid,caid,provider,uphops));
-          shares.Unlock();
-          PRINTF(L_CC_CCCAM2,"ADD share %08x caid: %04x provider: %06x",shareid,caid,provider);
+          s->AddProv(provider);
+          LBPUT(" %06x",provider);
           }
+        LBEND();
+        shares.Lock(); shares.Add(s); shares.Unlock();
         break;
         }
       case 8:
@@ -623,7 +663,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   if(LOG(L_CC_CCCAM2)) {
     PRINTF(L_CC_CCCAM2,"share try list for pid %04x",ecm->ecm_pid);
     for(cShare *s=curr.First(); s; s=curr.Next(s))
-      PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %4d: caid %04x prov %x",s->ShareID(),s->Success()?'*':' ',s->Hops(),s->Lag(),s->CaID(),s->ProvID());
+      PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %4d: caid %04x",s->ShareID(),s->Status()>0?'+':(s->Status()<0?'-':' '),s->Hops(),s->Lag(),s->CaID());
     }
   for(cShare *s=curr.First(); s; s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
@@ -651,7 +691,7 @@ PRINTF(L_CC_CCCAM2,"ecm written...");
       if(newcw) {
         memcpy(Cw,cw,16);
         cwmutex.Unlock();
-        ecmshares.AddShare(ecm,shareid);
+        ecmshares.AddStatus(ecm,shareid,1);
         PRINTF(L_CC_CCCAM2,"got CW");
         return true;
         }
@@ -662,6 +702,7 @@ PRINTF(L_CC_CCCAM2,"ecm written...");
       shares.SetLag(shareid,l);
       PRINTF(L_CC_CCCAM2,"getting CW timed out after %lld",l);
       }
+    ecmshares.AddStatus(ecm,shareid,-1);
     cwmutex.Unlock();
     }
   PRINTF(L_CC_ECM,"%s: unable to decode the channel",name);
