@@ -227,7 +227,7 @@ public:
 // -- cShare -------------------------------------------------------------------
 
 #define STDLAG 1000
-#define MAXLAG 7000
+#define MAXLAG 5000
 
 class cShares;
 
@@ -363,6 +363,8 @@ int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
 }
 
 // -- cCardClientCCcam2 ---------------------------------------------------------
+
+#define MAX_ECM_TIME (MAXLAG*3+2000) // ms
 
 class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
@@ -665,7 +667,8 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     for(cShare *s=curr.First(); s; s=curr.Next(s))
       PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %4d: caid %04x",s->ShareID(),s->Status()>0?'+':(s->Status()<0?'-':' '),s->Hops(),s->Lag(),s->CaID());
     }
-  for(cShare *s=curr.First(); s; s=curr.Next(s)) {
+  cTimeMs max(MAX_ECM_TIME);
+  for(cShare *s=curr.First(); s && !max.TimedOut(); s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
     buffer[ECM_SHAREID_POS]=shareid>>24;
     buffer[ECM_SHAREID_POS+1]=shareid>>16;
