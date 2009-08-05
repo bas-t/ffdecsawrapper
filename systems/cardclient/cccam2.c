@@ -459,11 +459,13 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         LBSTARTF(L_CC_CCCAM2);
         LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,uphops,maxdown,caid);
         for(int i=0; i<8; i++) LBPUT("%02x",data[12+4+i]);
-        if(provider_counts>0) LBPUT(" prov");
-        for(int i=0; i<provider_counts; i++) {
-          int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
-          s->AddProv(provider);
-          LBPUT(" %06x",provider);
+        if(s->UsesProv() && provider_counts>0) {
+          LBPUT(" prov");
+          for(int i=0; i<provider_counts; i++) {
+            int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
+            s->AddProv(provider);
+            LBPUT(" %06x",provider);
+            }
           }
         LBEND();
         shares.Lock(); shares.Add(s); shares.Unlock();
