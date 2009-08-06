@@ -120,10 +120,18 @@ void cCCcamCrypt::ScrambleDcw(unsigned char *data, unsigned int length, const un
 
 bool cCCcamCrypt::DcwChecksum(const unsigned char *data)
 {
-  return ((data[0]+data[1]+data[2])&0xff)==data[3] &&
-         ((data[4]+data[5]+data[6])&0xff)==data[7] &&
-         ((data[8]+data[9]+data[10])&0xff)==data[11] &&
-         ((data[12]+data[13]+data[14])&0xff)==data[15];
+  bool res=true;
+  if(((data[0]+data[1]+data[2])&0xff)!=data[3] ||
+     ((data[4]+data[5]+data[6])&0xff)!=data[7]) {
+    res=false;
+    PRINTF(L_CC_CCCAM2,"warning: even CW checksum failed");
+    }
+  if(((data[8]+data[9]+data[10])&0xff)!=data[11] ||
+     ((data[12]+data[13]+data[14])&0xff)!=data[15]) {
+    res=false;
+    PRINTF(L_CC_CCCAM2,"warning: odd CW checksum failed");
+    }
+  return res;
 }
 
 bool cCCcamCrypt::CheckConnectChecksum(const unsigned char *data, int length)
@@ -422,14 +430,13 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         LDUMP(L_CC_CCCAM2,tempcw,16,"scrambled    CW");
         cCCcamCrypt::ScrambleDcw(tempcw,16,nodeid,shareid);
         LDUMP(L_CC_CCCAM2,tempcw,16,"un-scrambled CW");
-        if(cCCcamCrypt::DcwChecksum(tempcw)) {
-          cwmutex.Lock();
-          newcw=true;
-          memcpy(cw,tempcw,16);
-          cwwait.Broadcast();
-          cwmutex.Unlock();
-          }
-        else PRINTF(L_CC_CCCAM2,"CW checksum failed");
+        cCCcamCrypt::DcwChecksum(tempcw);
+        cwmutex.Lock();
+        newcw=true;
+        if(!CheckNull(tempcw+0,8)) memcpy(cw+0,tempcw+0,8);
+        if(!CheckNull(tempcw+8,8)) memcpy(cw+8,tempcw+8,8);
+        cwwait.Broadcast();
+        cwmutex.Unlock();
         decr.Decrypt(tempcw,tempcw,16);
         break;
         }
