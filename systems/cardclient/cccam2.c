@@ -375,7 +375,7 @@ int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
 struct CmdHeader {
   unsigned char flags, cmd;
   unsigned short cmdlen; // BE
-  };
+  } __attribute__((packed));
 
 #define SETCMDLEN(h,l) BYTE2_BE(&(h)->cmdlen,(l)-4)
 #define CMDLEN(h)      (UINT16_BE(&(h)->cmdlen)+4)
@@ -386,13 +386,13 @@ struct ClientInfo {
   unsigned char nodeid[8];
   unsigned char wantemus;
   char version[32], build[32];
-  };
+  } __attribute__((packed));
 
 struct ServerInfo {
   struct CmdHeader header;
   unsigned char nodeid[8];
   char version[32], build[32];
-  };
+  } __attribute__((packed));
 
 struct EcmRequest {
   struct CmdHeader header;
@@ -402,17 +402,17 @@ struct EcmRequest {
   unsigned short sid;   // BE
   unsigned char datalen;
   unsigned char data[0];
-  };
+  } __attribute__((packed));
 
 struct DcwAnswer {
   struct CmdHeader header;
   unsigned char cw[16];
-  };
+  } __attribute__((packed));
 
 struct DelShare {
   struct CmdHeader header;
   unsigned int shareid;  // BE
-  };
+  } __attribute__((packed));
 
 struct AddShare {
   struct CmdHeader header;
@@ -421,7 +421,7 @@ struct AddShare {
   unsigned short caid;   // BE
   unsigned char uphops, maxdown;
   unsigned char cardserial[8];
-  };
+  } __attribute__((packed));
 
 struct ProvInfo {
   unsigned char count;
@@ -429,12 +429,12 @@ struct ProvInfo {
     unsigned char provid[3];
     unsigned char info[4];
     } prov[0];
-  };
+  } __attribute__((packed));
 
 struct NodeInfo {
   unsigned char count;
   unsigned char nodeid[0][8];
-  };
+  } __attribute__((packed));
 
 // -- cCardClientCCcam2 ---------------------------------------------------------
 
