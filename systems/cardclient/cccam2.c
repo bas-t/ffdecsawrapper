@@ -309,7 +309,7 @@ void cShare::AddProv(int provid)
 bool cShare::Compare(const cShare *s) const
 {
   // success or untried is better ;)
-  if(s->status*status<0) return s->status>=0;
+  if((s->status<0)!=(status<0)) return s->status>=0;
   // lower lag is better
   if(s->lag!=lag) return s->lag<lag;
   // lower hops is better
