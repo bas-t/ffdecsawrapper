@@ -124,12 +124,12 @@ bool cCCcamCrypt::DcwChecksum(const unsigned char *data)
   if(((data[0]+data[1]+data[2])&0xff)!=data[3] ||
      ((data[4]+data[5]+data[6])&0xff)!=data[7]) {
     res=false;
-    PRINTF(L_CC_CCCAM2,"warning: even CW checksum failed");
+    PRINTF(L_CC_CCCAM2EX,"warning: even CW checksum failed");
     }
   if(((data[8]+data[9]+data[10])&0xff)!=data[11] ||
      ((data[12]+data[13]+data[14])&0xff)!=data[15]) {
     res=false;
-    PRINTF(L_CC_CCCAM2,"warning: odd CW checksum failed");
+    PRINTF(L_CC_CCCAM2EX,"warning: odd CW checksum failed");
     }
   return res;
 }
@@ -208,7 +208,7 @@ int cEcmShares::FindStatus(const cEcmInfo *ecm, int id)
 {
   cEcmShare *e=Find(ecm,id);
   if(e) {
-    PRINTF(L_CC_CCCAM2,"shareid %08x for %04x/%x/%x status %d",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder,e->status);
+    PRINTF(L_CC_CCCAM2SH,"shareid %08x for %04x/%x/%x status %d",e->shareid,ecm->ecm_pid,ecm->source,ecm->transponder,e->status);
     return e->status;
     }
   return 0;
@@ -222,7 +222,7 @@ void cEcmShares::AddStatus(const cEcmInfo *ecm, int id, int status)
     Add((e=new cEcmShare(ecm,id)));
     t="added";
     }
-  PRINTF(L_CC_CCCAM2,"%s shareid %08x for %04x/%x/%x status %d",t,id,ecm->ecm_pid,ecm->source,ecm->transponder,status);
+  PRINTF(L_CC_CCCAM2SH,"%s shareid %08x for %04x/%x/%x status %d",t,id,ecm->ecm_pid,ecm->source,ecm->transponder,status);
   e->status=status;
 }
 
@@ -428,9 +428,9 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x",shareid);
         unsigned char tempcw[16];
         memcpy(tempcw,data+4,16);
-        LDUMP(L_CC_CCCAM2,tempcw,16,"scrambled    CW");
+        LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
         cCCcamCrypt::ScrambleDcw(tempcw,16,nodeid,shareid);
-        LDUMP(L_CC_CCCAM2,tempcw,16,"un-scrambled CW");
+        LDUMP(L_CC_CCCAM2DT,tempcw,16,"un-scrambled CW");
         cCCcamCrypt::DcwChecksum(tempcw);
         cwmutex.Lock();
         newcw=true;
@@ -448,7 +448,7 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         for(cShare *s=shares.First(); s;) {
           cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
-            PRINTF(L_CC_CCCAM2,"REMOVE share %08x caid: %04x",s->ShareID(),s->CaID());
+            PRINTF(L_CC_CCCAM2SH,"REMOVE share %08x caid: %04x",s->ShareID(),s->CaID());
             shares.Del(s);
             }
           s=n;
@@ -464,7 +464,7 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         int uphops=data[10+4];
         int maxdown=data[11+4];
         cShare *s=new cShare(shareid,caid,uphops);
-        LBSTARTF(L_CC_CCCAM2);
+        LBSTARTF(L_CC_CCCAM2SH);
         LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,uphops,maxdown,caid);
         for(int i=0; i<8; i++) LBPUT("%02x",data[12+4+i]);
         if(s->UsesProv() && provider_counts>0) {
@@ -534,13 +534,13 @@ bool cCardClientCCcam2::Login(void)
     Logout();
     return false;
     }
-  LDUMP(L_CC_CCCAM2,buffer,len,"welcome answer:");
+  LDUMP(L_CC_CCCAM2DT,buffer,len,"welcome answer:");
   if(len!=16 || !cCCcamCrypt::CheckConnectChecksum(buffer,len)) {
     PRINTF(L_CC_CCCAM2,"bad welcome from server");
     Logout();
     return false;
     }
-  PRINTF(L_CC_CCCAM2,"welcome checksum correct");
+  PRINTF(L_CC_CCCAM2EX,"welcome checksum correct");
 
   cCCcamCrypt::Xor(buffer,len);
   unsigned char buff2[64];
@@ -550,7 +550,7 @@ bool cCardClientCCcam2::Login(void)
   encr.Init(buffer,16);
   encr.Encrypt(buff2,buff2,20);
 
-  LDUMP(L_CC_CCCAM2,buff2,20,"welcome response:");
+  LDUMP(L_CC_CCCAM2DT,buff2,20,"welcome response:");
   encr.Encrypt(buff2,buffer,20);
   if(so.Write(buffer,20)!=20) {
     PRINTF(L_CC_CCCAM2,"failed to send welcome response");
@@ -560,7 +560,7 @@ bool cCardClientCCcam2::Login(void)
 
   memset(buff2,0,20);
   strcpy((char *)buff2,username);
-  LDUMP(L_CC_CCCAM2,buff2,20,"send username:");
+  LDUMP(L_CC_CCCAM2DT,buff2,20,"send username:");
   encr.Encrypt(buff2,buffer,20);
   if(so.Write(buffer,20)!=20) {
     PRINTF(L_CC_CCCAM2,"failed to send username");
@@ -582,7 +582,7 @@ bool cCardClientCCcam2::Login(void)
     return false;
     }
   decr.Decrypt(buffer,buffer,len);
-  LDUMP(L_CC_CCCAM2,buffer,len,"login answer:");
+  LDUMP(L_CC_CCCAM2DT,buffer,len,"login answer:");
 
   if(len<20 || strcmp(cccamstr,(char *)buffer)!=0) {
     PRINTF(L_CC_CCCAM2,"login failed");
@@ -614,7 +614,7 @@ bool cCardClientCCcam2::Login(void)
   strcpy((char *)clientinfo+USERNAME_POS,username);
   strcpy((char *)clientinfo+VERSION_POS,"vdr-sc");
   memcpy(clientinfo+NODEID_POS,nodeid,8);
-  LDUMP(L_CC_CCCAM2,clientinfo,sizeof(clientinfo),"send clientinfo:");
+  LDUMP(L_CC_CCCAM2DT,clientinfo,sizeof(clientinfo),"send clientinfo:");
   encr.Encrypt(clientinfo,buffer,sizeof(clientinfo));
   if(so.Write(buffer,sizeof(clientinfo))!=sizeof(clientinfo)) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
@@ -672,10 +672,10 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     PRINTF(L_CC_CCCAM2,"no shares for this ECM");
     return false;
     }
-  if(LOG(L_CC_CCCAM2)) {
-    PRINTF(L_CC_CCCAM2,"share try list for pid %04x",ecm->ecm_pid);
+  if(LOG(L_CC_CCCAM2SH)) {
+    PRINTF(L_CC_CCCAM2SH,"share try list for caid %04x prov %06x pid %04x",ecm->caId,ecm->provId,ecm->ecm_pid);
     for(cShare *s=curr.First(); s; s=curr.Next(s))
-      PRINTF(L_CC_CCCAM2,"shareid %08x %c hops %d lag %4d: caid %04x",s->ShareID(),s->Status()>0?'+':(s->Status()<0?'-':' '),s->Hops(),s->Lag(),s->CaID());
+      PRINTF(L_CC_CCCAM2SH,"shareid %08x hops %d %c lag %4d",s->ShareID(),s->Hops(),s->Status()>0?'+':(s->Status()<0?'-':' '),s->Lag());
     }
   cTimeMs max(MAX_ECM_TIME);
   for(cShare *s=curr.First(); s && !max.TimedOut(); s=curr.Next(s)) {
@@ -684,23 +684,21 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     buffer[ECM_SHAREID_POS+1]=shareid>>16;
     buffer[ECM_SHAREID_POS+2]=shareid>>8;
     buffer[ECM_SHAREID_POS+3]=shareid;
-    PRINTF(L_CC_CCCAM2,"now try shareid %08x",shareid);
-    LDUMP(L_CC_CCCAM2,buffer,ecm_len,"send ecm:");
+    PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
+    LDUMP(L_CC_CCCAM2DT,buffer,ecm_len,"send ecm:");
     encr.Encrypt(buffer,netbuff,ecm_len);
-PRINTF(L_CC_CCCAM2,"encrypted...");
     if(so.Write(netbuff,ecm_len)!=ecm_len) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
       Logout();
       break;
       }
-PRINTF(L_CC_CCCAM2,"ecm written...");
     cwmutex.Lock();
     newcw=false;
     cTimeMs lag;
     if(cwwait.TimedWait(cwmutex,MAXLAG)) {
       uint64_t l=lag.Elapsed();
       shares.SetLag(shareid,l);
-      PRINTF(L_CC_CCCAM2,"wait returned after %lld",l);
+      PRINTF(L_CC_CCCAM2EX,"wait returned after %lld",l);
       if(newcw) {
         memcpy(Cw,cw,16);
         cwmutex.Unlock();
@@ -708,12 +706,12 @@ PRINTF(L_CC_CCCAM2,"ecm written...");
         PRINTF(L_CC_CCCAM2,"got CW");
         return true;
         }
-      else PRINTF(L_CC_CCCAM2,"no CW from this share");
+      else PRINTF(L_CC_CCCAM2EX,"no CW from this share");
       }
     else {
       uint64_t l=lag.Elapsed();
       shares.SetLag(shareid,l);
-      PRINTF(L_CC_CCCAM2,"getting CW timed out after %lld",l);
+      PRINTF(L_CC_CCCAM2EX,"getting CW timed out after %lld",l);
       }
     ecmshares.AddStatus(ecm,shareid,-1);
     cwmutex.Unlock();
@@ -730,14 +728,14 @@ void cCardClientCCcam2::Action(void)
     int len=so.Read(recvbuff+cnt,sizeof(recvbuff)-cnt,MSTIMEOUT|200);
     if(len>0) {
       decr.Decrypt(recvbuff+cnt,recvbuff+cnt,len);
-      HEXDUMP(L_CC_CCCAM2,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
+      HEXDUMP(L_CC_CCCAM2DT,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
       cnt+=len;
       }
     int proc=0;
     while(proc+4<=cnt) {
       int l=UINT16_BE(recvbuff+proc+2)+4;
       if(proc+l>cnt) break;
-      LDUMP(L_CC_CCCAM2,recvbuff+proc,l,"msg in:");
+      LDUMP(L_CC_CCCAM2DT,recvbuff+proc,l,"msg in:");
       PacketAnalyzer(recvbuff+proc,l);
       proc+=l;
       }
