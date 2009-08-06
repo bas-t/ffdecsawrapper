@@ -29,8 +29,7 @@
 #include "cc.h"
 #include "network.h"
 #include "helper.h"
-
-#define SHAREID(x) ((*(x+0)<<24) | (*(x+1)<<16) | (*(x+2)<<8) | *(x+3))
+#include "version.h"
 
 static const char *cccamstr="CCcam";
 
@@ -371,6 +370,72 @@ int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
   return Count();
 }
 
+// -- CCcam protocol structs ---------------------------------------------------
+
+struct CmdHeader {
+  unsigned char flags, cmd;
+  unsigned short cmdlen; // BE
+  };
+
+#define SETCMDLEN(h,l) BYTE2_BE(&(h)->cmdlen,(l)-4)
+#define CMDLEN(h)      (UINT16_BE(&(h)->cmdlen)+4)
+
+struct ClientInfo {
+  struct CmdHeader header;
+  char username[20];
+  unsigned char nodeid[8];
+  unsigned char wantemus;
+  char version[32], build[32];
+  };
+
+struct ServerInfo {
+  struct CmdHeader header;
+  unsigned char nodeid[8];
+  char version[32], build[32];
+  };
+
+struct EcmRequest {
+  struct CmdHeader header;
+  unsigned short caid;  // BE
+  unsigned int provid;  // BE
+  unsigned int shareid; // BE
+  unsigned short sid;   // BE
+  unsigned char datalen;
+  unsigned char data[0];
+  };
+
+struct DcwAnswer {
+  struct CmdHeader header;
+  unsigned char cw[16];
+  };
+
+struct DelShare {
+  struct CmdHeader header;
+  unsigned int shareid;  // BE
+  };
+
+struct AddShare {
+  struct CmdHeader header;
+  unsigned int shareid;  // BE
+  unsigned int remoteid; // BE
+  unsigned short caid;   // BE
+  unsigned char uphops, maxdown;
+  unsigned char cardserial[8];
+  };
+
+struct ProvInfo {
+  unsigned char count;
+  struct {
+    unsigned char provid[3];
+    unsigned char info[4];
+    } prov[0];
+  };
+
+struct NodeInfo {
+  unsigned char count;
+  unsigned char nodeid[0][8];
+  };
+
 // -- cCardClientCCcam2 ---------------------------------------------------------
 
 #define MAX_ECM_TIME 3000 // ms
@@ -390,7 +455,7 @@ private:
   cCondVar cwwait;
   //
   void Logout(void);
-  void PacketAnalyzer(const unsigned char *data, int length);
+  void PacketAnalyzer(const struct CmdHeader *hdr, int length);
 protected:
   virtual bool Login(void);
   virtual void Action(void);
@@ -416,18 +481,18 @@ cCardClientCCcam2::~cCardClientCCcam2()
   Logout();
 }
 
-void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
+void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
 {
-  int cmdlen=UINT16_BE(&data[2]);
-  if(cmdlen+4<=length) {
-    switch(data[1]) {
+  if(CMDLEN(hdr)<=length) {
+    switch(hdr->cmd) {
       case 0:
         break;
       case 1:
         {
+        struct DcwAnswer *dcw=(struct DcwAnswer *)hdr;
         PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x",shareid);
         unsigned char tempcw[16];
-        memcpy(tempcw,data+4,16);
+        memcpy(tempcw,dcw->cw,16);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
         cCCcamCrypt::ScrambleDcw(tempcw,16,nodeid,shareid);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"un-scrambled CW");
@@ -443,7 +508,8 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         }
       case 4:
         {
-        int shareid=SHAREID(&data[4]);
+        struct DelShare *del=(struct DelShare *)hdr;
+        int shareid=UINT32_BE(&del->shareid);
         shares.Lock();
         for(cShare *s=shares.First(); s;) {
           cShare *n=shares.Next(s);
@@ -458,19 +524,18 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         }
       case 7:
         {
-        int caid=(data[8+4]<<8) | data[9+4];
-        int shareid=SHAREID(&data[4]);
-        int provider_counts=data[20+4];
-        int uphops=data[10+4];
-        int maxdown=data[11+4];
-        cShare *s=new cShare(shareid,caid,uphops);
+        struct AddShare *add=(struct AddShare *)hdr;
+        int caid=UINT16_BE(&add->caid);
+        int shareid=UINT32_BE(&add->shareid);
+        cShare *s=new cShare(shareid,caid,add->uphops);
         LBSTARTF(L_CC_CCCAM2SH);
-        LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,uphops,maxdown,caid);
-        for(int i=0; i<8; i++) LBPUT("%02x",data[12+4+i]);
-        if(s->UsesProv() && provider_counts>0) {
+        LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,add->uphops,add->maxdown,caid);
+        for(int i=0; i<8; i++) LBPUT("%02x",add->cardserial[i]);
+        struct ProvInfo *prov=(struct ProvInfo *)(add+1);
+        if(s->UsesProv() && prov->count>0) {
           LBPUT(" prov");
-          for(int i=0; i<provider_counts; i++) {
-            int provider=(data[21+4+i*7]<<16) | (data[22+4+i*7]<<8) | data[23+4+i*7];
+          for(int i=0; i<prov->count; i++) {
+            int provider=UINT32_BE(prov->prov[i].provid-1)&0xFFFFFF;
             s->AddProv(provider);
             LBPUT(" %06x",provider);
             }
@@ -480,9 +545,12 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         break;
         }
       case 8:
-        PRINTF(L_CC_LOGIN,"%s: server version %s build %s",name,data+4+8,data+4+8+32);
-        LDUMP(L_CC_LOGIN,data+4,8,"%s: server nodeid:",name);
+        {
+        struct ServerInfo *srv=(struct ServerInfo *)hdr;
+        PRINTF(L_CC_LOGIN,"%s: server version %s build %s",name,srv->version,srv->build);
+        LDUMP(L_CC_LOGIN,srv->nodeid,sizeof(srv->nodeid),"%s: server nodeid:",name);
         break;
+        }
       case 0xff:
       case 0xfe:
         PRINTF(L_CC_CCCAM2,"server can't decode this ecm");
@@ -492,12 +560,12 @@ void cCardClientCCcam2::PacketAnalyzer(const unsigned char *data, int length)
         cwmutex.Unlock();
         break;
       default:
-        PRINTF(L_CC_CCCAM2,"got unhandled cmd %x",data[1]);
+        PRINTF(L_CC_CCCAM2,"got unhandled cmd %x",hdr->cmd);
         break;
       }
     }
   else
-    PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",cmdlen,length);
+    PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",CMDLEN(hdr),length);
 }
 
 bool cCardClientCCcam2::Init(const char *config)
@@ -591,32 +659,17 @@ bool cCardClientCCcam2::Login(void)
     }
   PRINTF(L_CC_LOGIN,"CCcam login succeed");
 
-  static unsigned char clientinfo[] = {
-    0x00, 
-    //CCcam command
-    0x00,
-    //packet length
-    0x00,0x5D,
-#define USERNAME_POS 4
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,
-#define NODEID_POS 24
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-#define WANTEMU_POS 32
-    0x00,
-#define VERSION_POS 33
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-#define BUILDERNUM_POS 65
-    0x32,0x38,0x39,0x32,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-    };
-  strcpy((char *)clientinfo+USERNAME_POS,username);
-  strcpy((char *)clientinfo+VERSION_POS,"vdr-sc");
-  memcpy(clientinfo+NODEID_POS,nodeid,8);
-  LDUMP(L_CC_CCCAM2DT,clientinfo,sizeof(clientinfo),"send clientinfo:");
-  encr.Encrypt(clientinfo,buffer,sizeof(clientinfo));
-  if(so.Write(buffer,sizeof(clientinfo))!=sizeof(clientinfo)) {
+  struct ClientInfo clt;
+  memset(&clt,0,sizeof(clt));
+  clt.header.cmd=0;
+  SETCMDLEN(&clt.header,sizeof(clt));
+  strcpy(clt.username,username);
+  snprintf(clt.version,sizeof(clt.version),"vdr-sc %s",ScVersion);
+  strcpy(clt.build,"2892");
+  memcpy(clt.nodeid,nodeid,8);
+  LDUMP(L_CC_CCCAM2DT,&clt,sizeof(clt),"send clientinfo:");
+  encr.Encrypt((unsigned char*)&clt,buffer,sizeof(clt));
+  if(so.Write(buffer,sizeof(clt))!=sizeof(clt)) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
     Logout();
     return false;
@@ -630,43 +683,22 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   cMutexLock lock(this);
   if(!so.Connected() && !Login()) { Logout(); return false; }
   if(!CanHandle(ecm->caId)) return false;
-
-  static const unsigned char ecm_head[] = {
-    0x00,
-#define CCCAM_COMMAND_POS 1
-    0x01,
-#define CCCAM_LEN_POS 2
-    0x00,0x00,
-#define ECM_CAID_POS 4
-    0x00,0x00,
-    0x00,
-#define ECM_PROVIDER_POS 7
-    0x00,0x00,0x00,
-#define ECM_SHAREID_POS 10
-    0x00,0x00,0x00,0x00,
-#define ECM_SID_POS 14
-    0x00,0x00,
-#define ECM_LEN_POS 16
-    0x00,
-#define ECM_DATA_POS 17
-    };
   PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x pid %04x",cardnum,ecm->caId,ecm->provId,ecm->ecm_pid);
-  int ecm_len=sizeof(ecm_head)+SCT_LEN(data);
-  unsigned char *buffer=AUTOMEM(ecm_len);
-  unsigned char *netbuff=AUTOMEM(ecm_len);
-  memcpy(buffer,ecm_head,sizeof(ecm_head));
-  memcpy(buffer+sizeof(ecm_head),data,SCT_LEN(data));
-  buffer[CCCAM_COMMAND_POS]=1;
-  buffer[CCCAM_LEN_POS]=(ecm_len-4)>>8;
-  buffer[CCCAM_LEN_POS+1]=ecm_len-4;
-  buffer[ECM_CAID_POS]=ecm->caId>>8;
-  buffer[ECM_CAID_POS+1]=ecm->caId;
-  buffer[ECM_PROVIDER_POS]=ecm->provId>>16;
-  buffer[ECM_PROVIDER_POS+1]=ecm->provId>>8;
-  buffer[ECM_PROVIDER_POS+2]=ecm->provId;
-  buffer[ECM_SID_POS]=ecm->prgId>>8;
-  buffer[ECM_SID_POS+1]=ecm->prgId;
-  buffer[ECM_LEN_POS]=SCT_LEN(data);
+  int sctlen=SCT_LEN(data);
+  if(sctlen>=256) {
+    PRINTF(L_CC_CCCAM2,"ECM data length >=256 not supported by CCcam");
+    return false;
+    }
+  int ecm_len=sizeof(struct EcmRequest)+sctlen;
+  struct EcmRequest *req=(struct EcmRequest *)AUTOMEM(ecm_len);
+  memset(req,0,sizeof(struct EcmRequest));
+  memcpy(req+1,data,sctlen);
+  req->header.cmd=1;
+  SETCMDLEN(&req->header,ecm_len);
+  BYTE2_BE(&req->caid,ecm->caId);
+  BYTE4_BE(&req->provid,ecm->provId);
+  BYTE2_BE(&req->sid,ecm->prgId);
+  req->datalen=sctlen;
   cShares curr;
   if(curr.GetShares(ecm,&shares)<1) {
     PRINTF(L_CC_CCCAM2,"no shares for this ECM");
@@ -677,16 +709,14 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     for(cShare *s=curr.First(); s; s=curr.Next(s))
       PRINTF(L_CC_CCCAM2SH,"shareid %08x hops %d %c lag %4d",s->ShareID(),s->Hops(),s->Status()>0?'+':(s->Status()<0?'-':' '),s->Lag());
     }
+  unsigned char *netbuff=AUTOMEM(ecm_len);
   cTimeMs max(MAX_ECM_TIME);
   for(cShare *s=curr.First(); s && !max.TimedOut(); s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
-    buffer[ECM_SHAREID_POS]=shareid>>24;
-    buffer[ECM_SHAREID_POS+1]=shareid>>16;
-    buffer[ECM_SHAREID_POS+2]=shareid>>8;
-    buffer[ECM_SHAREID_POS+3]=shareid;
+    BYTE4_BE(&req->shareid,shareid);
     PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
-    LDUMP(L_CC_CCCAM2DT,buffer,ecm_len,"send ecm:");
-    encr.Encrypt(buffer,netbuff,ecm_len);
+    LDUMP(L_CC_CCCAM2DT,req,ecm_len,"send ecm:");
+    encr.Encrypt((unsigned char *)req,netbuff,ecm_len);
     if(so.Write(netbuff,ecm_len)!=ecm_len) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
       Logout();
@@ -733,10 +763,11 @@ void cCardClientCCcam2::Action(void)
       }
     int proc=0;
     while(proc+4<=cnt) {
-      int l=UINT16_BE(recvbuff+proc+2)+4;
+      struct CmdHeader *hdr=(struct CmdHeader *)(recvbuff+proc);
+      int l=CMDLEN(hdr);
       if(proc+l>cnt) break;
-      LDUMP(L_CC_CCCAM2DT,recvbuff+proc,l,"msg in:");
-      PacketAnalyzer(recvbuff+proc,l);
+      LDUMP(L_CC_CCCAM2DT,hdr,l,"msg in:");
+      PacketAnalyzer(hdr,l);
       proc+=l;
       }
     cnt-=proc;
