@@ -373,7 +373,7 @@ int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
 
 // -- cCardClientCCcam2 ---------------------------------------------------------
 
-#define MAX_ECM_TIME (MAXLAG*3+2000) // ms
+#define MAX_ECM_TIME 3000 // ms
 
 class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
