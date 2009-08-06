@@ -138,8 +138,9 @@ bool cCCcamCrypt::CheckConnectChecksum(const unsigned char *data, int length)
 {
   if(length==16) {
     bool valid=true;
-    for(int i=0; i<4; i++)
-      if(((data[i+0]+data[i+4]+data[i+8])&0xFF)!=data[i+12]) valid=false;
+    // CCcam 2.1.2 don't use connect checksum
+    //for(int i=0; i<4; i++)
+    //  if(((data[i+0]+data[i+4]+data[i+8])&0xFF)!=data[i+12]) valid=false;
     return valid;
     }
   return false;
