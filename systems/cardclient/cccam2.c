@@ -547,20 +547,20 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
       case 8:
         {
         struct ServerInfo *srv=(struct ServerInfo *)hdr;
-        PRINTF(L_CC_LOGIN,"%s: server version %s build %s",name,srv->version,srv->build);
-        LDUMP(L_CC_LOGIN,srv->nodeid,sizeof(srv->nodeid),"%s: server nodeid:",name);
+        LDUMP(L_CC_LOGIN,srv->nodeid,sizeof(srv->nodeid),"%s: server version %s build %s nodeid",name,srv->version,srv->build);
         break;
         }
       case 0xff:
       case 0xfe:
-        PRINTF(L_CC_CCCAM2,"server can't decode this ecm");
+        if(hdr->cmd==0xfe) PRINTF(L_CC_CCCAM2,"share not found on server");
+        else PRINTF(L_CC_CCCAM2,"server can't decode this ecm");
         cwmutex.Lock();
         newcw=false;
         cwwait.Broadcast();
         cwmutex.Unlock();
         break;
       default:
-        PRINTF(L_CC_CCCAM2,"got unhandled cmd %x",hdr->cmd);
+        LDUMP(L_CC_CCCAM2,hdr,length,"got unhandled cmd %x:",hdr->cmd);
         break;
       }
     }
@@ -683,7 +683,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   cMutexLock lock(this);
   if(!so.Connected() && !Login()) { Logout(); return false; }
   if(!CanHandle(ecm->caId)) return false;
-  PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x pid %04x",cardnum,ecm->caId,ecm->provId,ecm->ecm_pid);
+  PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x sid %04x pid %04x",cardnum,ecm->caId,ecm->provId,ecm->prgId,ecm->ecm_pid);
   int sctlen=SCT_LEN(data);
   if(sctlen>=256) {
     PRINTF(L_CC_CCCAM2,"ECM data length >=256 not supported by CCcam");
