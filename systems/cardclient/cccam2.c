@@ -40,13 +40,12 @@ private:
   unsigned char keytable[256];
   unsigned char state, counter, sum;
   //
-  static unsigned int ShiftRightAndFill(unsigned int value, unsigned int fill, unsigned int places);
   static void Swap(unsigned char *p1, unsigned char *p2);
 public:
   void Init(const unsigned char *key, int length);
   void Decrypt(const unsigned char *in, unsigned char *out, int length);
   void Encrypt(const unsigned char *in, unsigned char *out, int length);
-  static void ScrambleDcw(unsigned char *data, unsigned int length, const unsigned char *nodeid, unsigned int shareid);
+  static void ScrambleDcw(unsigned char *data, const unsigned char *nodeid, unsigned int shareid);
   static bool DcwChecksum(const unsigned char *data);
   static bool CheckConnectChecksum(const unsigned char *data, int length);
   static void Xor(unsigned char *data, int length);
@@ -94,26 +93,14 @@ void cCCcamCrypt::Swap(unsigned char *p1, unsigned char *p2)
   unsigned char tmp=*p1; *p1=*p2; *p2=tmp;
 }
 
-void cCCcamCrypt::ScrambleDcw(unsigned char *data, unsigned int length, const unsigned char *nodeid, unsigned int shareid)
+void cCCcamCrypt::ScrambleDcw(unsigned char *data, const unsigned char *nodeid, unsigned int shareid)
 {
-  int s=0;
-  int nodeid_high=(nodeid[0]<<24)|(nodeid[1]<<16)|(nodeid[2]<<8)|nodeid[3];
-  int nodeid_low =(nodeid[4]<<24)|(nodeid[5]<<16)|(nodeid[6]<<8)|nodeid[7];
-  for(unsigned int i=0; i<length; i++) {
-    // cNible index, 0..4..8
-    int nible_index=i+s;
-    // Shift one nible to the right for high and low nodeid
-    // Make sure the first shift is an signed one (sar on intel), else you get wrong results! 
-    int high=nodeid_high>>nible_index;
-    int low=ShiftRightAndFill(nodeid_low,nodeid_high,nible_index);
-    // After 8 nibles or 32 bits use bits from high, based on signed flag it will be 0x00 or 0xFF 
-    if(nible_index&32) low=high&0xFF;
-    char final=*(data+i)^(low&0xFF);
-    // Odd index inverts final
-    if(i&0x01) final=~final;
-    // Result
-    *(data+i)=((shareid>>(2*(i&0xFF)))&0xFF)^final;
-    s+=3;
+  long long n=bswap_64(*(long long *)nodeid);
+  for(unsigned int i=0; i<16; i++) {
+    char final=data[i]^(n&0xFF);
+    if(i&1) final=~final;
+    data[i]=final^(shareid&0xFF);
+    n>>=4; shareid>>=2;
     }
 }
 
@@ -153,11 +140,6 @@ void cCCcamCrypt::Xor(unsigned char *data, int length)
       if(index<=5) data[0]^=cccamstr[index];
       data++;
       }
-}
-
-unsigned int cCCcamCrypt::ShiftRightAndFill(unsigned int value, unsigned int fill, unsigned int places)
-{
-  return (value>>places) | ((((1<<places)-1)&fill)<<(32-places));
 }
 
 // -- cEcmShare ----------------------------------------------------------------
@@ -494,7 +476,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         unsigned char tempcw[16];
         memcpy(tempcw,dcw->cw,16);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
-        cCCcamCrypt::ScrambleDcw(tempcw,16,nodeid,shareid);
+        cCCcamCrypt::ScrambleDcw(tempcw,nodeid,shareid);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"un-scrambled CW");
         cCCcamCrypt::DcwChecksum(tempcw);
         cwmutex.Lock();
