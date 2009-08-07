@@ -299,7 +299,7 @@ bool cShare::Compare(const cShare *s) const
 
 // -- cShares ------------------------------------------------------------------
 
-class cShares : public cMutex, public cSimpleList<cShare> {
+class cShares : public cRwLock, public cSimpleList<cShare> {
 private:
   cShare *Find(int shareid);
 public:
@@ -316,7 +316,7 @@ cShare *cShares::Find(int shareid)
 
 void cShares::SetLag(int shareid, int lag)
 {
-  Lock();
+  Lock(false);
   cShare *s=Find(shareid);
   if(s) {
     lag=min(lag,MAXLAG);
@@ -328,9 +328,9 @@ void cShares::SetLag(int shareid, int lag)
 
 int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
 {
-  Lock();
+  Lock(true);
   Clear();
-  ss->Lock();
+  ss->Lock(false);
   for(cShare *s=ss->First(); s; s=ss->Next(s)) {
     if(s->caid==ecm->caId && (!s->UsesProv() || s->HasProv(ecm->provId)) && !Find(s->shareid)) {
       cShare *n=new cShare(s);
@@ -430,6 +430,7 @@ private:
   unsigned char nodeid[8];
   int shareid;
   char username[21], password[21];
+  bool login;
   //
   bool newcw;
   unsigned char cw[16];
@@ -445,6 +446,7 @@ public:
   cCardClientCCcam2(const char *Name);
   ~cCardClientCCcam2();
   virtual bool Init(const char *CfgDir);
+  virtual bool CanHandle(unsigned short SysId);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   };
 
@@ -455,7 +457,7 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 ,cThread("CCcam2 listener")
 ,so(DEFAULT_CONNECT_TIMEOUT,2,600)
 {
-  shareid=0; newcw=false;
+  shareid=0; newcw=login=false;
 }
 
 cCardClientCCcam2::~cCardClientCCcam2()
@@ -492,7 +494,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         {
         struct DelShare *del=(struct DelShare *)hdr;
         int shareid=UINT32_BE(&del->shareid);
-        shares.Lock();
+        shares.Lock(true);
         for(cShare *s=shares.First(); s;) {
           cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
@@ -523,7 +525,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
             }
           }
         LBEND();
-        shares.Lock(); shares.Add(s); shares.Unlock();
+        shares.Lock(true); shares.Add(s); shares.Unlock();
         break;
         }
       case 8:
@@ -550,6 +552,17 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
     PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",CMDLEN(hdr),length);
 }
 
+bool cCardClientCCcam2::CanHandle(unsigned short SysId)
+{
+  if(!login) return cCardClient::CanHandle(SysId);
+  bool res=false;
+  shares.Lock(false);
+  for(cShare *s=shares.First(); s; s=shares.Next(s))
+    if(s->CaID()==SysId) { res=true; break; }
+  shares.Unlock();
+  return res;
+}
+
 bool cCardClientCCcam2::Init(const char *config)
 {
   cMutexLock lock(this);
@@ -564,6 +577,7 @@ bool cCardClientCCcam2::Init(const char *config)
 
 void cCardClientCCcam2::Logout(void)
 {
+  login=false;
   Cancel(3);
   so.Disconnect();
 }
@@ -571,7 +585,7 @@ void cCardClientCCcam2::Logout(void)
 bool cCardClientCCcam2::Login(void)
 {
   Logout();
-  shares.Lock();
+  shares.Lock(true);
   shares.Clear();
   shares.Unlock();
   if(!so.Connect(hostname,port)) return false;
@@ -656,6 +670,7 @@ bool cCardClientCCcam2::Login(void)
     Logout();
     return false;
     }
+  login=true;
   Start();
   return true;
 }
