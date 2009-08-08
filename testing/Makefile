@@ -3,10 +3,6 @@
 
 VDRDIR = ../../../..
 
-### Allow user defined options to overwrite defaults:
-
--include $(VDRDIR)/Make.config
-
 ### The C++ compiler and options:
 
 CXX      ?= g++
@@ -14,11 +10,20 @@ CXXFLAGS ?= -g -march=pentium3 -O2 -Wall -Woverloaded-virtual
 
 ### Includes and Defines
 
+INCLUDES = -I.. -I$(VDRDIR)/include
+DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOURCE
+
+### Allow user defined options to overwrite defaults:
+
+-include $(VDRDIR)/Make.config
+-include ../Make.config
+
+### The version number of VDR (taken from VDR's "config.h"):
+
 APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 
-INCLUDES = -I.. -I$(VDRDIR)/include
-DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOURCE
+### The object files (add further files here):
 
 OBJS = misc.o log.o override.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
 SHAREDOBJS = compat.o $(VDRDIR)/tools.o $(VDRDIR)/thread.o

@@ -30,6 +30,8 @@
 #define DEFAULT_READWRITE_TIMEOUT 3
 #define DEFAULT_IDLE_TIMEOUT      120
 
+#define MSTIMEOUT 0x800000
+
 extern const char *netscript;
 extern int netTimeout;
 
