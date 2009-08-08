@@ -214,6 +214,7 @@ public:
 
 class cParseViaccess {
 public:
+  static const unsigned char *PayloadStart(const unsigned char *data);
   static const unsigned char *NanoStart(const unsigned char *data);
   static const unsigned char *CheckNano90(const unsigned char *data);
   static const unsigned char *CheckNano90FromNano(const unsigned char *data);

@@ -55,7 +55,26 @@ cryptoworks: UCPK 0102030405 001122334455667788990011223344556677889900112233445
 ; cryptoworks: PIN serial pin
 cryptoworks: PIN 0102030405 1234
 
+; Viaccess
 ;
+; serial - serial number (UA) identifying the card
+; pin    - pin number to disable parental rating (up to 16 digits)
+; aes    - AES key for postprocessing CW, 16 bytes = 32 chars
+;
+; viaccess: PIN serial pin
+viaccess: PIN 0102030405 1234
+;
+; viaccess: AES serial aes
+viaccess: AES 0102030405 00112233445566778899001122334455
+
+; Conax
+;
+; serial - serial number identifying the card
+; pin    - pin number to disable parental rating
+;
+; conax: PIN serial pin
+conax: PIN 01020304050607 1234
+
 ; Irdeto/Betacrypt
 ;
 ; RSA certificate for camkey challenge

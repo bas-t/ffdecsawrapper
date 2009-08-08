@@ -62,7 +62,6 @@ static const struct LogModule lm_sc = {
 ADD_MODULE(L_SC,lm_sc)
 
 static int blocker=0;
-static int ppv=false;
 
 // -- cSystemScSeca ---------------------------------------------------------------
 
@@ -99,11 +98,8 @@ static cSystemLinkScSeca staticInit;
 cSystemLinkScSeca::cSystemLinkScSeca(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
-  opts=new cOpts(SYSTEM_NAME,2);
+  opts=new cOpts(SYSTEM_NAME,1);
   opts->Add(new cOptSel("Blocker",trNOOP("SC-Seca: EMM updates"),&blocker,sizeof(block)/sizeof(char *),block));
-  cOpt *opt=new cOptBool("Ppv",trNOOP("SC-Seca: activate PPV"),&ppv);
-  if(opt) opt->Persistant(false);
-  opts->Add(opt);
   Feature.NeedsSmartCard();
 }
 
@@ -293,24 +289,26 @@ bool cSmartCardSeca::Decode(const cEcmInfo *ecm, const unsigned char *data, unsi
 {
   static unsigned char ins3c[] = { 0xC1,0x3c,0x00,0x00,0x00 }; // coding cw
   static unsigned char ins3a[] = { 0xC1,0x3a,0x00,0x00,0x10 }; // decoding cw    
-  static unsigned char ins30[] = { 0xC1,0x30,0x00,0x02,0x09 }; // view ppv (active bx record)
+  static unsigned char ins30[] = { 0xC1,0x30,0x00,0x02,0x09 };
   static unsigned char ins30data[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF }; 
 
   cProviderScSeca *p=(cProviderScSeca *)FindProv(data);
   if(p && ecm->Data()) {
     PRINTF(L_SC_PROC,"provider 0x%04x index %d '%.16s' (expires %s)",cParseSeca::ProvId(data),p->index,p->name,Date(p->date));
     if(CheckAccess(ecm->Data(),p)) {
-      if(ppv) {
-        PRINTF(L_SC_PROC,"activating PPV");
-        if(IsoWrite(ins30,ins30data)) Status();
-        ppv=false;
-        }
       const unsigned char *payload;
       ins3c[2]=p->index | (cParseSeca::SysMode(data) & 0xF0);
       ins3c[3]=cParseSeca::KeyNr(data);
       ins3c[4]=cParseSeca::Payload(data,&payload);
-      if(IsoWrite(ins3c,payload) && Status() &&
-         IsoRead(ins3a,cw) && Status()) return true;
+      if(IsoWrite(ins3c,payload)) {
+        bool r;
+        if(sb[0]==0x90 && sb[1]==0x1A) // need to use token
+          r=IsoWrite(ins30,ins30data) && Status() && IsoWrite(ins3c,payload) && Status();
+        else
+          r=Status();
+        if(r && IsoRead(ins3a,cw) && Status())
+          return true;
+        }
       }
     else PRINTF(L_SC_ERROR,"update your subscription to view this channel");
     }
