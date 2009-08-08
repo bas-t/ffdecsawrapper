@@ -19,12 +19,14 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "system-common.h"
 #include "smartcard.h"
 #include "parse.h"
 #include "misc.h"
 #include "log-sc.h"
+#include "log-core.h"
 #include "version.h"
 
 SCAPIVERSTAG();
@@ -49,7 +51,7 @@ static const struct LogModule lm_sc = {
   };
 ADD_MODULE(L_SC,lm_sc)
 
-// -- cSystemScConax ------------------------------------------------------------------
+// -- cSystemScConax -----------------------------------------------------------
 
 class cSystemScConax : public cSystemScCore {
 public:
@@ -62,7 +64,7 @@ cSystemScConax::cSystemScConax(void)
   hasLogger=true;
 }
 
-// -- cSystemLinkScConax --------------------------------------------------------------
+// -- cSystemLinkScConax -------------------------------------------------------
 
 class cSystemLinkScConax : public cSystemLink {
 public:
@@ -90,7 +92,70 @@ bool cSystemLinkScConax::CanHandle(unsigned short SysId)
   return res;
 }
 
-// -- cSmartCardConax -----------------------------------------------------------------
+// -- cSmartCardDataConax ---------------------------------------------------
+
+enum eDataType { dtPIN };
+
+class cSmartCardDataConax : public cSmartCardData {
+private:
+  int IdLen(void) const { return 7; }
+public:
+  eDataType type;
+  unsigned char id[7], pin[4];
+  //
+  cSmartCardDataConax(void);
+  cSmartCardDataConax(eDataType Type, unsigned char *Id);
+  virtual bool Parse(const char *line);
+  virtual bool Matches(cSmartCardData *param);
+  };
+
+cSmartCardDataConax::cSmartCardDataConax(void)
+:cSmartCardData(SC_ID)
+{
+  memset(id,0,sizeof(id));
+}
+
+cSmartCardDataConax::cSmartCardDataConax(eDataType Type, unsigned char *Id)
+:cSmartCardData(SC_ID)
+{
+  type=Type;
+  memset(id,0,sizeof(id));
+  memcpy(id,Id,IdLen());
+}
+
+bool cSmartCardDataConax::Matches(cSmartCardData *param)
+{
+  cSmartCardDataConax *cd=(cSmartCardDataConax *)param;
+  return cd->type==type && !memcmp(cd->id,id,IdLen());
+}
+
+bool cSmartCardDataConax::Parse(const char *line)
+{
+  line=skipspace(line);
+  if(!strncasecmp(line,"PIN",3)) { type=dtPIN; line+=3; }
+  else {
+    PRINTF(L_CORE_LOAD,"smartcarddataconax: format error: datatype");
+    return false;
+    }
+  line=skipspace(line);
+  if(GetHex(line,id,IdLen())!=IdLen()) {
+    PRINTF(L_CORE_LOAD,"smartcarddataconax: format error: serial");
+    return false;
+    }
+  line=skipspace(line);
+  if(type==dtPIN) {
+    for(int i=0; i<4; i++) {
+      if(!isdigit(*line)) {
+        PRINTF(L_CORE_LOAD,"smartcarddataconax: format error: pin");
+        return false;
+        }
+      pin[i]=*line++;
+      }
+    }
+  return true;
+}
+
+// -- cSmartCardConax ----------------------------------------------------------
 
 #define STDENTTAG 0x32
 #define PPVENTTAG 0x39
@@ -106,6 +171,7 @@ class cSmartCardConax : public cSmartCard, private cProviders {
 private:
   int sysId, cardVer, currency;
   bool emmInitDone;
+  unsigned char ua[ADDR_SIZE];
   //
   int GetLen(void);
 public:
@@ -137,6 +203,7 @@ cSmartCardConax::cSmartCardConax(void)
 {
   sysId=0; cardVer=0; currency=0;
   emmInitDone=false;
+  memset(ua,0,sizeof(ua));
 }
 
 bool cSmartCardConax::CanHandle(unsigned short SysId)
@@ -264,6 +331,8 @@ bool cSmartCardConax::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
 {
   static unsigned char insa2[] = { 0xDD,0xA2,0x00,0x00,0x00 };
   static unsigned char insca[] = { 0xDD,0xCA,0x00,0x00,0x00 };
+  static unsigned char insc8[] = { 0xDD,0xC8,0x00,0x00,0x07 };
+  static unsigned char insc8data[] = { 0x1D,0x05,0x01,0x00,0x00,0x00,0x00 };
 
   int l;
   if((l=CheckSctLen(data,3))<=0) return false;
@@ -290,6 +359,30 @@ bool cSmartCardConax::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
               }
             }
           break;
+        case 0x31:
+          {
+          if(buff[i+1]==0x02 && (buff[i+2]==0x00 || buff[i+2]==0x40) && buff[i+3]==0x00)
+            break;
+          // PIN required
+          cSmartCardDataConax cd(dtPIN,ua);
+          cSmartCardDataConax *entry=(cSmartCardDataConax *)smartcards.FindCardData(&cd);
+          if(entry) {
+            memcpy(&insc8data[3],entry->pin,4);
+            if(!IsoWrite(insc8,insc8data) || !Status()) {
+              PRINTF(L_SC_ERROR,"failed to send PIN");
+              return false;
+              }
+            // resend ECM request
+            if(!IsoWrite(insa2,buff) || !Status() || GetLen()<=0) return false;
+            gotIdx=0;
+            l=0; continue; // abort loop
+            }
+          else {
+            PRINTF(L_SC_ERROR,"no PIN available");
+            return false;
+            }
+          break;
+          }
         }
       }
     } while((l=GetLen())>0);
@@ -299,10 +392,11 @@ bool cSmartCardConax::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
 
 bool cSmartCardConax::Update(int pid, int caid, const unsigned char *data)
 {
-  static unsigned char ins82[] = { 0xdd,0x82,0x00,0x00,0x10 };
   static unsigned char ins84[] = { 0xdd,0x84,0x00,0x00,0x00 };
   static unsigned char insca[] = { 0xdd,0xca,0x00,0x00,0x00 };
-  static unsigned char ins82Data[] = { 0x11,0x0e,0x01,0xb0,0x0f,0xff,0xff,0xdd,0x00,0x00,0x09,0x04,0x0b,0x00,0x00,0x00 };
+  static unsigned char ins82[] = { 0xdd,0x82,0x00,0x00,0x11 };
+  static unsigned char ins82Data[] = { 0x11,0x0f,0x01,0xb0,0x0f,0xff,0xff,0xfb,0x00,0x00,0x09,0x04,0x0b,0x00,0x00,0x00,0x2b };
+
   unsigned char buff[MAX_LEN];
 
   if(!emmInitDone) {
@@ -321,6 +415,25 @@ bool cSmartCardConax::Update(int pid, int caid, const unsigned char *data)
     LBPUT("set filter");
     Clear();
     for(int i=2; i<l; i+=buff[i+1]+2) {
+/*
+  from oscam.
+  Actually we should differentiate between card and provider, but I would need
+  some data dumps to be sure to not break others (e.g. newcamd), because
+  our code assumes ua & sa is both 7 bytes long,
+  but oscam has 6 for ua and 4 for sa !!
+
+      case 0x09: // provider id
+		reader[ridx].prid[j][2]=cta_res[i+4];
+		reader[ridx].prid[j][3]=cta_res[i+5];
+		break;
+      case 0x23: // ua/sa
+		if ( cta_res[i+5] != 0x00) {
+			 memcpy(reader[ridx].hexserial, &cta_res[i+3], 6);
+		}else{
+			 memcpy(reader[ridx].sa[j], &cta_res[i+5], 4);
+		}
+		break;
+*/
       if(buff[i]==0x23) { // Card Address
         if(buff[i+1]==ADDR_SIZE) {
           AddProv(new cProviderConax(&buff[i+2]));

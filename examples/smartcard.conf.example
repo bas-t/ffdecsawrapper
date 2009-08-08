@@ -67,6 +67,14 @@ viaccess: PIN 0102030405 1234
 ; viaccess: AES serial aes
 viaccess: AES 0102030405 00112233445566778899001122334455
 
+; Conax
+;
+; serial - serial number identifying the card
+; pin    - pin number to disable parental rating
+;
+; conax: PIN serial pin
+conax: PIN 01020304050607 1234
+
 ; Irdeto/Betacrypt
 ;
 ; RSA certificate for camkey challenge
