@@ -70,6 +70,7 @@ protected:
   virtual int RecvMsg(cNetSocket *so, unsigned char *data, int len, int to=-1);
   virtual bool Login(void) { return false; }
   bool Immediate(void);
+  void CaidsChanged(void);
 public:
   cCardClient(const char *Name);
   virtual bool Init(const char *config)=0;

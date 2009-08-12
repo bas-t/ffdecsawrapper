@@ -278,7 +278,9 @@ void cCardClientCamd33::HandleEMMRequest(const unsigned char *buff, int len)
 {
   if(len>=13 && buff[0]==0 && !CheckNull(buff,len) && memcmp(buff,lastEmmReq,13)) {
     emmProcessing=false;
-    CAID=buff[1]*256+buff[2];
+    int c=buff[1]*256+buff[2];
+    if(c!=CAID) CaidsChanged();
+    CAID=c;
     ResetIdSet();
     switch(CAID>>8) {
       case 0x17:
@@ -362,6 +364,7 @@ bool cCardClientBuffy::Login(void)
     if(caid==0xFFFF) break;
     if(caid) CAIDs[numCAIDs++]=caid;
     }
+  CaidsChanged();
   LBSTART(L_CC_LOGIN);
   LBPUT("%s: CAIDs ",name);
   for(int i=0; i<numCAIDs && CAIDs[i]; i++) LBPUT("%04X ",CAIDs[i]);
@@ -586,6 +589,7 @@ void cCardClientCamd35::HandleEMMRequest(const struct CmdBlock *cb)
 
     if(!emmAllowed) PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);
     emmProcessing=true;
+    CaidsChanged();
     }
 }
 

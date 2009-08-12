@@ -1064,6 +1064,14 @@ bool cSoftCAM::TriggerHook(int CardNum, int id)
   return dev && dev->Cam() && dev->Cam()->TriggerHook(id);
 }
 
+void cSoftCAM::CaidsChanged(void)
+{
+  for(int n=cDevice::NumDevices(); --n>=0;) {
+    cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
+    if(dev) dev->CaidsChanged();
+    }
+}
+
 // --- cScHousekeeper ----------------------------------------------------------
 
 class cScHousekeeper : public cThread {

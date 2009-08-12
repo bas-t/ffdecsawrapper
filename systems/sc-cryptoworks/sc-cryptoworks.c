@@ -223,7 +223,7 @@ cSmartCardCryptoworks::cSmartCardCryptoworks(void)
 {
   static const unsigned char cwexp[] = { 0x01,0x00,0x01 };
   BN_bin2bn(cwexp,sizeof(cwexp),exp);
-  ucpkValid=false;
+  caid=0; ucpkValid=false;
 }
 
 int cSmartCardCryptoworks::GetLen(void)
@@ -285,7 +285,9 @@ bool cSmartCardCryptoworks::Init(void)
     return false;
     }
   memcpy(Caid,&buff[2],2);
-  caid=buff[2]*256+buff[3];
+  int c=buff[2]*256+buff[3];
+  if(c!=caid) CaidsChanged();
+  caid=c;
   if(ReadRecord(buff,0x80)<7) {
     PRINTF(L_SC_ERROR,"reading record 2f01/80 failed");
     return false;
