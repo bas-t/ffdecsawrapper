@@ -215,7 +215,8 @@ bool cCardClientRadegast::Login(void)
   else PRINTF(L_CC_RDGD,"no server hello, assuming old mode");
   if(emmProcessing && !emmAllowed) 
     PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);
-  return true; 
+  CaidsChanged();
+  return true;
 }
 
 bool cCardClientRadegast::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum)

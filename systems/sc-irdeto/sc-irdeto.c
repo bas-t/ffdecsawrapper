@@ -399,7 +399,9 @@ static const struct CardConfig cardCfg = {
 
 cSmartCardIrdeto::cSmartCardIrdeto(void)
 :cSmartCard(&cardCfg,msgs)
-{}
+{
+  ACS=0; caId=0; numProv=0;
+}
 
 bool cSmartCardIrdeto::Init(void)
 {
@@ -419,7 +421,9 @@ bool cSmartCardIrdeto::Init(void)
     return false;
     }
   ACS=buff[8]*256+buff[9];
-  caId=buff[13]*256+buff[14];
+  int c=buff[13]*256+buff[14];
+  if(c!=caId) CaidsChanged();
+  caId=c;
   memcpy(coco,&buff[21],3); coco[3]=0;
   PRINTF(L_SC_INIT,"ACS Version %04x, CAID %04x, CoCo %s",ACS,caId,coco);
   snprintf(idStr,sizeof(idStr),"%s (ACS %x)",SC_NAME,ACS);

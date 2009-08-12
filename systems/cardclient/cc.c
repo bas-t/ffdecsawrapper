@@ -25,6 +25,7 @@
 
 #include "system.h"
 #include "cc.h"
+#include "sc.h"
 #include "network.h"
 #include "misc.h"
 #include "opts.h"
@@ -63,6 +64,11 @@ cCardClient::cCardClient(const char *Name)
 bool cCardClient::Immediate(void)
 {
   return immediate;
+}
+
+void cCardClient::CaidsChanged(void)
+{
+  cSoftCAM::CaidsChanged();
 }
 
 bool cCardClient::ParseStdConfig(const char *config, int *num)

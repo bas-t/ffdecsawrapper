@@ -305,6 +305,7 @@ private:
 public:
   int GetShares(const cEcmInfo *ecm, cShares *ss);
   void SetLag(int shareid, int lag);
+  bool HasCaid(int caid);
   };
 
 cShare *cShares::Find(int shareid)
@@ -324,6 +325,13 @@ void cShares::SetLag(int shareid, int lag)
     else s->lag=(3*s->lag+lag)/4;
     }
   Unlock();
+}
+
+bool cShares::HasCaid(int caid)
+{
+  for(cShare *s=First(); s; s=Next(s))
+    if(s->CaID()==caid) return true;
+  return false;
 }
 
 int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
@@ -499,7 +507,9 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
           cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
             PRINTF(L_CC_CCCAM2SH,"REMOVE share %08x caid: %04x",s->ShareID(),s->CaID());
+            int caid=s->CaID();
             shares.Del(s);
+            if(!shares.HasCaid(caid)) CaidsChanged();
             }
           s=n;
           }
@@ -511,6 +521,9 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         struct AddShare *add=(struct AddShare *)hdr;
         int caid=UINT16_BE(&add->caid);
         int shareid=UINT32_BE(&add->shareid);
+        shares.Lock(false);
+        if(!shares.HasCaid(caid)) CaidsChanged();
+        shares.Unlock();
         cShare *s=new cShare(shareid,caid,add->uphops);
         LBSTARTF(L_CC_CCCAM2SH);
         LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,add->uphops,add->maxdown,caid);

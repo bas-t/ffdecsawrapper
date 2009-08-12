@@ -235,6 +235,7 @@ public:
   void DumpAV7110(void);
   cCam *Cam(void) { return cam; }
   bool SoftCSA(bool live);
+  void CaidsChanged(void);
   };
 
 #endif // ___CAM_H

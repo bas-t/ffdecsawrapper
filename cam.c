@@ -58,7 +58,6 @@
 #define ECM_DATA_TIME    6000 // time to wait for ECM data updates
 #define MAX_ECM_IDLE   300000 // delay before an idle handler can be removed
 #define MAX_ECM_HOLD    15000 // delay before an idle handler stops processing
-#define CAID_TIME      300000 // time between caid scans
 
 #define ECMCACHE_FILE "ecm.cache"
 
@@ -865,7 +864,7 @@ for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid)) {
   return HasPidCaDescr();
 }
 
-// -- cEcmSys ------------------------------------------------------------------
+// -- cEcmPri ------------------------------------------------------------------
 
 class cEcmPri : public cSimpleItem {
 public:
@@ -1973,6 +1972,9 @@ void cChannelList::Purge(int caid, bool fullch)
 
 // -- cScCiAdapter -------------------------------------------------------------
 
+#define CAID_TIME      300000 // time between caid scans
+#define TRIGGER_TIME    10000 // min. time between caid scan trigger
+
 #define TDPU_SIZE_INDICATOR 0x80
 
 struct TPDU {
@@ -1994,10 +1996,11 @@ private:
   cRingBufferLinear *rb;
   cScCamSlot *slots[MAX_CI_SLOTS];
   //
-  cTimeMs caidTimer;
+  cTimeMs caidTimer, triggerTimer;
   int version[MAX_CI_SLOTS];
   caid_t caids[MAX_CI_SLOTS][MAX_CI_SLOT_CAIDS+1];
   int tcid;
+  bool rebuildcaids;
   //
   cTimeMs readTimer, writeTimer;
   //
@@ -2015,6 +2018,7 @@ public:
   void CamAddPrg(cPrg *prg);
   bool CamSoftCSA(void);
   int GetCaids(int slot, unsigned short *Caids, int max);
+  void CaidsChanged(void);
   };
 
 // -- cScCamSlot ---------------------------------------------------------------
@@ -2224,7 +2228,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
 cScCiAdapter::cScCiAdapter(cDevice *Device, int CardIndex, cCam *Cam)
 {
   device=Device; cardIndex=CardIndex; cam=Cam;
-  tcid=0;
+  tcid=0; rebuildcaids=false;
   memset(version,0,sizeof(version));
   memset(slots,0,sizeof(slots));
   SetDescription("SC-CI adapter on device %d",cardIndex);
@@ -2283,9 +2287,14 @@ int cScCiAdapter::GetCaids(int slot, unsigned short *Caids, int max)
   return version[slot];
 }
 
+void cScCiAdapter::CaidsChanged(void)
+{
+  rebuildcaids=true;
+}
+
 void cScCiAdapter::BuildCaids(bool force)
 {
-  if(caidTimer.TimedOut() || force) {
+  if(caidTimer.TimedOut() || force || (rebuildcaids && triggerTimer.TimedOut())) {
     PRINTF(L_CORE_CAIDS,"%d: building caid lists",cardIndex);
     cChannelList list(cardIndex);
     Channels.Lock(false);
@@ -2329,6 +2338,8 @@ void cScCiAdapter::BuildCaids(bool force)
     ciMutex.Unlock();
 
     caidTimer.Set(CAID_TIME);
+    triggerTimer.Set(TRIGGER_TIME);
+    rebuildcaids=false;
     }
 }
 
@@ -3048,6 +3059,14 @@ bool cScDvbDevice::SoftCSA(bool live)
   return softcsa && (!fullts || !live);
 }
 
+void cScDvbDevice::CaidsChanged(void)
+{
+#if APIVERSNUM >= 10500
+  if(ciadapter) ciadapter->CaidsChanged();
+  PRINTF(L_CORE_CAIDS,"caid list rebuild triggered");
+#endif
+}
+
 bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   if(!softcsa || (fullts && ca_descr->index==0)) {
@@ -3180,6 +3199,9 @@ bool cScDvbDevice::Initialize(void)
 {
   return true;
 }
+
+void cScDvbDevice::CaidsChanged(void)
+{}
 
 bool cScDvbDevice::SoftCSA(bool live)
 {
