@@ -264,7 +264,6 @@ bool cShare::UsesProv(void) const
   switch(caid>>8) {
     case 0x01:
     case 0x05:
-    case 0x0d:
       return true;
     default:
       return false;
