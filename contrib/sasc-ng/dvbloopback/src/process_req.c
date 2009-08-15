@@ -117,6 +117,7 @@ void *poll_loop(void * parm)
       ioctl(pc->virtfd, DVBLB_CMD_ASYNC, &msg);
     }
   }
+  return NULL;
 }
 
 static cmdret_t do_cmd(struct list_head *list, struct parser_cmds *pc,
