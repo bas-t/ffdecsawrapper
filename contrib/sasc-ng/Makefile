@@ -16,7 +16,7 @@ ifdef DVB_DIR
   DVB_MOD_DIR = DVB_DIR=$(DVB_DIR)
 endif
 
-DEFINES += -DRELEASE_VERSION=\"$(VERSION)\"
+DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module -I/lib/modules/$(shell uname -r)/build/include
 LBDIR = dvbloopback/src
 SCDIR = sc/PLUGINS/src/$(SCVER)
