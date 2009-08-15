@@ -40,7 +40,7 @@ H_FILES = FFdecsa.h parallel_generic.h parallel_std_def.h fftable.h \
 all: FFdecsa.o
 
 %.o: %.c
-	$(COMPILER) $(FLAGS) -c $<
+	$(COMPILER) $(FLAGS) -DPARALLEL_MODE=$(PARALLEL_MODE) -c $<
 
 FFdecsa_test:	FFdecsa_test.o FFdecsa.o
 	$(COMPILER) $(FLAGS) -o FFdecsa_test FFdecsa_test.o FFdecsa.o
