@@ -27,12 +27,6 @@
 
 // -----------------------------------------------------------------------------
 
-void SetSctLen(unsigned char *data, int len)
-{
-  data[1]=(len>>8) | 0x70;
-  data[2]=len & 0xFF;
-}
-
 static void SortNanos(unsigned char *dest, const unsigned char *src, int len)
 {
   int w=0, c=-1;

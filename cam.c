@@ -1167,6 +1167,10 @@ PRINTF(L_CORE_ECM,"%s: new caDescr",id);
       if(data && len>0) {
         HEXDUMP(L_HEX_ECM,data,len,"ECM sys 0x%04x id 0x%02x pid 0x%04x",ecm->caId,ecm->provId,filter->Pid());
         if(SCT_LEN(data)==len) {
+          if(ecm->rewriter) {
+            ecm->rewriter->Rewrite(data,len);
+            HEXDUMP(L_HEX_ECM,data,len,"rewritten to");
+            }
           LDUMP(L_CORE_ECMPROC,data,16,"%s: ECM",id);
           int n;
           if(!(n=sys->CheckECM(ecm,data,sync))) {

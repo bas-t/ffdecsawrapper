@@ -24,10 +24,6 @@
 
 // ----------------------------------------------------------------
 
-void SetSctLen(unsigned char *data, int len);
-
-// ----------------------------------------------------------------
-
 class cAssSct : public cSimpleItem {
 private:
   const unsigned char *data;

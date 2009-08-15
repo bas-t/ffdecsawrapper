@@ -44,6 +44,32 @@ public:
 
 // ----------------------------------------------------------------
 
+class cRewriter {
+private:
+  unsigned char *mem;
+  int mlen;
+protected:
+  const char *name;
+  int id;
+  //
+  unsigned char *Alloc(int len);
+public:
+  cRewriter(const char *Name, int Id);
+  virtual ~cRewriter();
+  virtual bool Rewrite(unsigned char *&data, int &len)=0;
+  int Id(void) const { return id; }
+  };
+
+// ----------------------------------------------------------------
+
+class cRewriters {
+public:
+  static cRewriter *CreateById(int id);
+  static int GetIdByName(const char *name);
+  };
+
+// ----------------------------------------------------------------
+
 class cOverride : public cStructItem, public cValidityRange {
 protected:
   int type;
@@ -57,7 +83,7 @@ public:
 
 class cOverrides : public cStructList<cOverride> {
 protected:
-  cOverride *Find(int type, int caid, int source, int freq, cOverride *ov=0);
+  cOverride *Find(int type, int caid, int source, int transponder, cOverride *ov=0);
   virtual cOverride *ParseLine(char *line);
 public:
   cOverrides(void);

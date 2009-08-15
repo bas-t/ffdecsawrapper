@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 
 #include "data.h"
+#include "override.h"
 #include "misc.h"
 #include "scsetup.h"
 #include "log-core.h"
@@ -589,6 +590,8 @@ cEcmInfo::cEcmInfo(const cEcmInfo *e)
   prgId=e->prgId;
   source=e->source;
   transponder=e->transponder;
+  if((rewriterId=e->rewriterId)>0)
+    rewriter=cRewriters::CreateById(rewriterId);
 }
 
 cEcmInfo::cEcmInfo(const char *Name, int Pid, int CaId, int ProvId)
@@ -603,6 +606,7 @@ cEcmInfo::~cEcmInfo()
 {
   ClearCaDescr();
   free(name);
+  delete rewriter;
 }
 
 void cEcmInfo::Setup(void)
@@ -611,6 +615,7 @@ void cEcmInfo::Setup(void)
   name=0; caDescr=0; caDescrLen=0; dataIdx=-1;
   prgId=source=transponder=-1;
   ecm_table=0x80; emmCaId=0;
+  rewriter=0; rewriterId=0;
 }
 
 bool cEcmInfo::Compare(const cEcmInfo *e)
