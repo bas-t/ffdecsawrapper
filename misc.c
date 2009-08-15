@@ -126,6 +126,12 @@ bool CheckFF(const unsigned char *data, int len)
   return true;
 }
 
+void SetSctLen(unsigned char *data, int len)
+{
+  data[1]=(len>>8) | 0x70;
+  data[2]=len & 0xFF;
+}
+
 unsigned char XorSum(const unsigned char *mem, int len)
 {
   unsigned char cs=0;

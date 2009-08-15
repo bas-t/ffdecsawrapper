@@ -29,6 +29,7 @@ class cStructLoaders;
 class cLoaders;
 class cPidFilter;
 class cPlainKeys;
+class cRewriter;
 
 // ----------------------------------------------------------------
 
@@ -231,6 +232,8 @@ public:
   int ecm_pid, ecm_table;
   int caId, provId, emmCaId;
   int prgId, source, transponder;
+  cRewriter *rewriter;
+  int rewriterId;
   //
   cEcmInfo(void);
   cEcmInfo(const cEcmInfo *e);

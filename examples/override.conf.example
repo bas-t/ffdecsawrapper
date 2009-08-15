@@ -81,3 +81,13 @@ emmcaid:{1234::}1801      # BEV
 ;
 emmtable:{1816:S61.5W-S148W:}83:84 # DISH N3
 emmtable:{1815:S82W-S91W:}83:84    # BEV N3
+
+;
+; Define caid tunneling for ECM messages (with optional data rewriting)
+;
+; format:
+; tunnel:{caid[-caid]:[src[-src]]:[freq[-freq]]}newcaid[:rewriter]
+;
+;
+; examples:
+; tunnel:{1833:S19.2E:}1702:nagra-beta
