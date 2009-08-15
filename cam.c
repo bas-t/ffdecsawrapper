@@ -1974,6 +1974,83 @@ void cChannelList::Purge(int caid, bool fullch)
     }
 }
 
+// -- cCiFrame -----------------------------------------------------------------
+
+class cCiFrame {
+private:
+  unsigned char *mem;
+  int len, alen, glen;
+public:
+  cCiFrame(void);
+  ~cCiFrame();
+  unsigned char *GetBuff(int l);
+  void Put(cRingBufferLinear *rb);
+  unsigned char *Get(cRingBufferLinear *rb, int &l);
+  void Del(cRingBufferLinear *rb);
+  };
+
+cCiFrame::cCiFrame(void)
+{
+  mem=0; len=alen=glen=0;
+}
+
+cCiFrame::~cCiFrame()
+{
+  free(mem);
+}
+
+unsigned char *cCiFrame::GetBuff(int l)
+{
+  if(!mem || l>alen) {
+    free(mem); mem=0; alen=0;
+    mem=MALLOC(unsigned char,l+2);
+    if(mem) {
+      mem+=2;
+      alen=l;
+      }
+    }
+  len=l;
+  if(!mem)
+    PRINTF(L_GEN_DEBUG,"internal: ci-frame alloc failed");
+  return mem;
+}
+
+void cCiFrame::Put(cRingBufferLinear *rb)
+{
+  if(rb && mem) {
+    *((short *)(mem-2))=len;
+    rb->Put(mem-2,len+2);
+    }
+}
+
+unsigned char *cCiFrame::Get(cRingBufferLinear *rb, int &l)
+{
+  if(rb) {
+    int c;
+    unsigned char *data=rb->Get(c);
+    if(data) {
+      if(c>2) {
+        int s=*((short *)data);
+        if(c>=s+2) {
+          l=glen=s;
+          return data+2;
+          }
+        }
+      LDUMP(L_GEN_DEBUG,data,c,"internal: ci rb frame sync got=%d avail=%d -",c,rb->Available());
+      rb->Clear();
+      }
+    }
+  return 0;
+}
+
+void cCiFrame::Del(cRingBufferLinear *rb)
+{
+  if(rb && glen) {
+    rb->Del(glen+2);
+    glen=0;
+    }
+}
+
 // -- cScCiAdapter -------------------------------------------------------------
 
 #define CAID_TIME      300000 // time between caid scans
@@ -1999,6 +2076,7 @@ private:
   int cardIndex;
   cRingBufferLinear *rb;
   cScCamSlot *slots[MAX_CI_SLOTS];
+  cCiFrame frame;
   //
   cTimeMs caidTimer, triggerTimer;
   int version[MAX_CI_SLOTS];
@@ -2039,9 +2117,10 @@ private:
   bool reset, doReply;
   cTimeMs resetTimer;
   eModuleStatus lastStatus;
+  cCiFrame frame;
   //
   int GetLength(const unsigned char * &data);
-  void CaInfo(unsigned char *b, int tcid, int cid);
+  void CaInfo(int tcid, int cid);
   bool Check(void);
 public:
   cScCamSlot(cScCiAdapter *ca, int CardIndex, int Slot);
@@ -2052,7 +2131,7 @@ public:
 
 cScCamSlot::cScCamSlot(cScCiAdapter *ca, int CardIndex, int Slot)
 :cCamSlot(ca)
-,cRingBufferLinear(KILOBYTE(2),5+1,false,"SC-CI slot answer")
+,cRingBufferLinear(KILOBYTE(4),5+1,false,"SC-CI slot answer")
 ,checkTimer(-SLOT_CAID_CHECK-1000)
 {
   ciadapter=ca; cardIndex=CardIndex; slot=Slot;
@@ -2118,12 +2197,13 @@ int cScCamSlot::GetLength(const unsigned char * &data)
   return len;
 }
 
-void cScCamSlot::CaInfo(unsigned char *b, int tcid, int cid)
+void cScCamSlot::CaInfo(int tcid, int cid)
 {
-  unsigned char *p=b;
-  *p++=0xa0;
   int n=9;
   for(int i=0; caids[i]; i++) n+=2;
+  unsigned char *p;
+  if(!(p=frame.GetBuff(n))) return;
+  *p++=0xa0;
   if(n<TDPU_SIZE_INDICATOR) *p++=n;
   else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
   *p++=tcid;
@@ -2132,9 +2212,7 @@ void cScCamSlot::CaInfo(unsigned char *b, int tcid, int cid)
   *p++=0x9f; *p++=0x80;   *p++=0x31; // AOT_CA_INFO
   *p++=n-9;
   for(int i=0; caids[i]; i++) { *p++=caids[i]>>8; *p++=caids[i]&0xff; }
-  n=(p-b);
-  if(n>255) PRINTF(L_GEN_DEBUG,"internal: sc-camslot %d.%d ca-info length exceed %d",cardIndex,slot,n);
-  b[-1]=n; Put(b-1,n+1);
+  frame.Put(this);
   PRINTF(L_CORE_CI,"%d.%d sending CA info",cardIndex,slot);
 }
 
@@ -2149,8 +2227,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
   int tcid=data[0];
 
-  unsigned char a[128], *b=&a[1];
-  if(Check()) CaInfo(b,tcid,0x01);
+  if(Check()) CaInfo(tcid,0x01);
 
   if(dlen<8 || data[1]!=0x90) return;
   int cid=(data[3]<<8)+data[4];
@@ -2163,7 +2240,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
   switch(tag) {
     case 0x9f8030: // AOT_CA_INFO_ENQ
-      CaInfo(b,tcid,cid);
+      CaInfo(tcid,cid);
       break;
     
     case 0x9f8032: // AOT_CA_PMT
@@ -2200,16 +2277,20 @@ void cScCamSlot::Process(const unsigned char *data, int len)
         LBEND();
         PRINTF(L_CORE_CI,"%d.%d got CA pmt ciCmd=%d caLm=%d",cardIndex,slot,ci_cmd,ca_lm);
         if(doReply && (ci_cmd==0x03 || (ci_cmd==0x01 && ca_lm==0x03))) {
-          b[0]=0xa0; b[2]=tcid;
-          b[3]=0x90;
-          b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
-          b[7]=0x9f; b[8]=0x80; b[9]=0x33; // AOT_CA_PMT_REPLY
-          b[11]=prg->sid<<8;
-          b[12]=prg->sid&0xff;
-          b[13]=0x00;
-          b[14]=0x81; 	// CA_ENABLE
-          b[10]=4; b[1]=4+9; a[0]=4+11; Put(a,4+12);
-          PRINTF(L_CORE_CI,"%d.%d answer to query",cardIndex,slot);
+          unsigned char *b;
+          if((b=frame.GetBuff(4+11))) {
+            b[0]=0xa0; b[2]=tcid;
+            b[3]=0x90;
+            b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
+            b[7]=0x9f; b[8]=0x80; b[9]=0x33; // AOT_CA_PMT_REPLY
+            b[11]=prg->sid<<8;
+            b[12]=prg->sid&0xff;
+            b[13]=0x00;
+            b[14]=0x81; 	// CA_ENABLE
+            b[10]=4; b[1]=4+9;
+            frame.Put(this);
+            PRINTF(L_CORE_CI,"%d.%d answer to query",cardIndex,slot);
+            }
           }
         if(prg->sid!=0) {
           if(ci_cmd==0x04) {
@@ -2236,7 +2317,7 @@ cScCiAdapter::cScCiAdapter(cDevice *Device, int CardIndex, cCam *Cam)
   memset(version,0,sizeof(version));
   memset(slots,0,sizeof(slots));
   SetDescription("SC-CI adapter on device %d",cardIndex);
-  rb=new cRingBufferLinear(KILOBYTE(5),6+1,false,"SC-CI adapter read");
+  rb=new cRingBufferLinear(KILOBYTE(8),6+1,false,"SC-CI adapter read");
   if(rb) {
     rb->SetTimeouts(0,CAM_READ_TIMEOUT);
 /*
@@ -2351,25 +2432,17 @@ int cScCiAdapter::Read(unsigned char *Buffer, int MaxLength)
 {
   cMutexLock lock(&ciMutex);
   if(cam && rb && Buffer && MaxLength>0) {
-    int c;
-    unsigned char *data=rb->Get(c);
+    int s;
+    unsigned char *data=frame.Get(rb,s);
     if(data) {
-      int s=data[0];
-      if(c>=s+1) {
-        c=s>MaxLength ? MaxLength : s;
-        memcpy(Buffer,&data[1],c);
-        if(c<s) { data[c]=s-c; rb->Del(c); }
-        else rb->Del(c+1);
-        if(Buffer[2]!=0x80 || LOG(L_CORE_CIFULL)) {
-          LDUMP(L_CORE_CI,Buffer,c,"%d.%d <-",cardIndex,Buffer[0]);
-          readTimer.Set();
-          }
-        return c;
+      if(s<=MaxLength) memcpy(Buffer,data,s);
+      else PRINTF(L_GEN_DEBUG,"internal: sc-ci %d rb frame size exceeded %d",cardIndex,s);
+      frame.Del(rb);
+      if(Buffer[2]!=0x80 || LOG(L_CORE_CIFULL)) {
+        LDUMP(L_CORE_CI,Buffer,s,"%d.%d <-",cardIndex,Buffer[0]);
+        readTimer.Set();
         }
-      else {
-        LDUMP(L_GEN_DEBUG,data,c,"internal: sc-ci %d rb frame sync got=%d avail=%d -",cardIndex,c,rb->Available());
-        rb->Clear();
-        }
+      return s;
       }
     }
   else cCondWait::SleepMs(CAM_READ_TIMEOUT);
@@ -2380,16 +2453,14 @@ int cScCiAdapter::Read(unsigned char *Buffer, int MaxLength)
   return 0;
 }
 
-#define TPDU(data,slot) do { unsigned char *_d=(data); _d[0]=(slot); _d[1]=tcid; } while(0)
+#define TPDU(data,slot)   do { unsigned char *_d=(data); _d[0]=(slot); _d[1]=tcid; } while(0)
 #define TAG(data,tag,len) do { unsigned char *_d=(data); _d[0]=(tag); _d[1]=(len); } while(0)
-#define SB_TAG(data,sb) do { unsigned char *_d=(data); _d[0]=0x80; _d[1]=0x02; _d[2]=tcid; _d[3]=(sb); } while(0)
-#define PUT_TAG(data,len) do { unsigned char *_d=(data)-1; int _l=(len); _d[0]=_l; if(rb) rb->Put(_d,_l+1); } while(0)
+#define SB_TAG(data,sb)   do { unsigned char *_d=(data); _d[0]=0x80; _d[1]=0x02; _d[2]=tcid; _d[3]=(sb); } while(0)
 
 void cScCiAdapter::Write(const unsigned char *buff, int len)
 {
   cMutexLock lock(&ciMutex);
   if(cam && buff && len>=5) {
-    unsigned char a[256], *b=&a[1];
     struct TPDU *tpdu=(struct TPDU *)buff;
     int slot=tpdu->slot;
     if(buff[2]!=0xA0 || buff[3]>0x01 || LOG(L_CORE_CIFULL))
@@ -2398,44 +2469,50 @@ void cScCiAdapter::Write(const unsigned char *buff, int len)
       switch(tpdu->tag) {
         case 0x81: // T_RCV
           {
-          TPDU(b,slot);
-          int l=2, c;
-          unsigned char *d=slots[slot]->Get(c);
+          int s;
+          unsigned char *d=frame.Get(slots[slot],s);
           if(d) {
-            int s=d[0];
-            if(c>=s) {
-              if(l+s<(int)sizeof(a)-6) {
-                memcpy(&b[l],&d[1],s);
-                l+=s;
-                }
-              else PRINTF(L_GEN_DEBUG,"internal: sc-ci %d a-buff overflow l+s=%d",cardIndex,l+s);
-              slots[slot]->Del(s+1);
+            unsigned char *b;
+            if((b=frame.GetBuff(s+6))) {
+              TPDU(b,slot);
+              memcpy(b+2,d,s);
+              SB_TAG(b+2+s,0x00);
+              frame.Put(rb);
               }
-            else slots[slot]->Del(c);
+            frame.Del(slots[slot]);
             }
-          SB_TAG(&b[l],0x00);
-          PUT_TAG(b,l+4);
           break;
           }
         case 0x82: // T_CREATE_TC
+          {
           tcid=tpdu->data[0];
-          TPDU(b,slot);
-          TAG(&b[2],0x83,0x01); b[4]=tcid;
-          SB_TAG(&b[5],0x00);
-          PUT_TAG(b,9);
+          unsigned char *b;
+          if((b=frame.GetBuff(9))) {
+            TPDU(b,slot);
+            TAG(&b[2],0x83,0x01); b[4]=tcid;
+            SB_TAG(&b[5],0x00);
+            frame.Put(rb);
+            }
 
           static const unsigned char reqCAS[] = { 0xA0,0x07,0x01,0x91,0x04,0x00,0x03,0x00,0x41 };
-          memcpy(b,reqCAS,sizeof(reqCAS));
-          b[2]=tcid;
-          a[0]=sizeof(reqCAS);
-          slots[slot]->Put(a,sizeof(reqCAS)+1);
+          if((b=frame.GetBuff(sizeof(reqCAS)))) {
+            memcpy(b,reqCAS,sizeof(reqCAS));
+            b[2]=tcid;
+            frame.Put(slots[slot]);
+            }
           break;
+          }
         case 0xA0: // T_DATA_LAST
+          {
           slots[slot]->Process(buff,len);
-          TPDU(b,slot);
-          SB_TAG(&b[2],slots[slot]->Available()>0 ? 0x80:0x00);
-          PUT_TAG(b,6);
+          unsigned char *b;
+          if((b=frame.GetBuff(6))) {
+            TPDU(b,slot);
+            SB_TAG(&b[2],slots[slot]->Available()>0 ? 0x80:0x00);
+            frame.Put(rb);
+            }
           break;
+          }
         }
       }
     }
