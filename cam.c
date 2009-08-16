@@ -1976,6 +1976,8 @@ void cChannelList::Purge(int caid, bool fullch)
 
 // -- cCiFrame -----------------------------------------------------------------
 
+#define LEN_OFF 2
+
 class cCiFrame {
 private:
   unsigned char *mem;
@@ -2003,23 +2005,22 @@ unsigned char *cCiFrame::GetBuff(int l)
 {
   if(!mem || l>alen) {
     free(mem); mem=0; alen=0;
-    mem=MALLOC(unsigned char,l+2);
-    if(mem) {
-      mem+=2;
-      alen=l;
-      }
+    mem=MALLOC(unsigned char,l+LEN_OFF);
+    if(mem) alen=l;
     }
   len=l;
-  if(!mem)
+  if(!mem) {
     PRINTF(L_GEN_DEBUG,"internal: ci-frame alloc failed");
-  return mem;
+    return 0;
+    }
+  return mem+LEN_OFF;
 }
 
 void cCiFrame::Put(cRingBufferLinear *rb)
 {
   if(rb && mem) {
-    *((short *)(mem-2))=len;
-    rb->Put(mem-2,len+2);
+    *((short *)mem)=len;
+    rb->Put(mem,len+LEN_OFF);
     }
 }
 
@@ -2029,11 +2030,11 @@ unsigned char *cCiFrame::Get(cRingBufferLinear *rb, int &l)
     int c;
     unsigned char *data=rb->Get(c);
     if(data) {
-      if(c>2) {
+      if(c>LEN_OFF) {
         int s=*((short *)data);
-        if(c>=s+2) {
+        if(c>=s+LEN_OFF) {
           l=glen=s;
-          return data+2;
+          return data+LEN_OFF;
           }
         }
       LDUMP(L_GEN_DEBUG,data,c,"internal: ci rb frame sync got=%d avail=%d -",c,rb->Available());
@@ -2046,7 +2047,7 @@ unsigned char *cCiFrame::Get(cRingBufferLinear *rb, int &l)
 void cCiFrame::Del(cRingBufferLinear *rb)
 {
   if(rb && glen) {
-    rb->Del(glen+2);
+    rb->Del(glen+LEN_OFF);
     glen=0;
     }
 }
