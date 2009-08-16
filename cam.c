@@ -794,6 +794,15 @@ bool cCaDescr::operator== (const cCaDescr &cd) const
   return len==cd.len && (len==0 || memcmp(descr,cd.descr,len)==0);
 }
 
+cString cCaDescr::ToString(void)
+{
+  if(!descr) return "<empty>";
+  char *str=AUTOARRAY(char,len*3+8);
+  int q=sprintf(str,"%02X",descr[0]);
+  for(int i=1; i<len; i++) q+=sprintf(str+q," %02X",descr[i]);
+  return str;
+}
+
 // -- cPrg ---------------------------------------------------------------------
 
 cPrg::cPrg(void)
@@ -813,22 +822,18 @@ void cPrg::Setup(void)
   isUpdate=pidCaDescr=false;
 }
 
+void cPrg::DumpCaDescr(int c)
+{
+  PRINTF(c,"prgca: %s",*caDescr.ToString());
+  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
+    PRINTF(c,"pidca %04x: %s",pid->pid,*pid->caDescr.ToString());
+}
+
 bool cPrg::SimplifyCaDescr(void)
 {
 //XXX
-{
 PRINTF(L_CORE_PIDS,"SimplyCa entry pidCa=%d",HasPidCaDescr());
-const unsigned char *d;
-int l;
-d=caDescr.Get(l);
-if(d) LDUMP(L_CORE_PIDS,d,l,"prgca:");
-else PRINTF(L_CORE_PIDS,"prgca: <empty>");
-for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid)) {
-  d=pid->caDescr.Get(l);
-  if(d) LDUMP(L_CORE_PIDS,d,l,"pidca %04x:",pid->pid);
-  else PRINTF(L_CORE_PIDS,"pidca %04x: <empty>",pid->pid);
-  }
-}
+DumpCaDescr(L_CORE_PIDS);
 //XXX
 
   if(HasPidCaDescr()) {
@@ -852,19 +857,8 @@ for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid)) {
     }
 
 //XXX
-{
 PRINTF(L_CORE_PIDS,"SimplyCa exit pidCa=%d",HasPidCaDescr());
-const unsigned char *d;
-int l;
-d=caDescr.Get(l);
-if(d) LDUMP(L_CORE_PIDS,d,l,"prgca:");
-else PRINTF(L_CORE_PIDS,"prgca: <empty>");
-for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid)) {
-  d=pid->caDescr.Get(l);
-  if(d) LDUMP(L_CORE_PIDS,d,l,"pidca %04x:",pid->pid);
-  else PRINTF(L_CORE_PIDS,"pidca %04x: <empty>",pid->pid);
-  }
-}
+DumpCaDescr(L_CORE_PIDS);
 //XXX
 
   return HasPidCaDescr();
@@ -1015,10 +1009,6 @@ void cEcmHandler::SetPrg(cPrg *Prg)
     prg.pids.Clear();
     trigger=true;
     }
-  if(!(prg.caDescr==Prg->caDescr)) {
-    prg.caDescr.Set(&Prg->caDescr);
-    trigger=true;
-    }
   if(Prg->HasPidCaDescr())
     PRINTF(L_GEN_DEBUG,"internal: pid specific caDescr not supported at this point (sid=%d)",Prg->sid);
   LBSTART(L_CORE_PIDS);
@@ -1060,6 +1050,7 @@ void cEcmHandler::SetPrg(cPrg *Prg)
     LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
   if(!IsIdle()) {
+    if(!(prg.caDescr==Prg->caDescr)) prg.caDescr.Set(&Prg->caDescr);
     trigger=true;
     triggerMode=0;
     if(wasIdle) PRINTF(L_CORE_ECM,"%s: is no longer idle",id);
@@ -1103,7 +1094,7 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
       filterCaDescr.Set(&prg.caDescr);
       ecmUpd=true;
 //XXX
-PRINTF(L_CORE_ECM,"%s: new caDescr",id);
+PRINTF(L_CORE_ECM,"%s: new caDescr: %s",id,*filterCaDescr.ToString());
       }
     triggerMode=-1;
     }
