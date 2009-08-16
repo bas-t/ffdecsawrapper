@@ -72,6 +72,7 @@ public:
   void Clear(void);
   bool operator== (const cCaDescr &arg) const;
   void Join(const cCaDescr *cd, bool rev=false);
+  cString ToString(void);
   };
 
 // ----------------------------------------------------------------
@@ -106,6 +107,7 @@ public:
   bool HasPidCaDescr(void) const { return pidCaDescr; }
   void SetPidCaDescr(bool val) { pidCaDescr=val; }
   bool SimplifyCaDescr(void);
+  void DumpCaDescr(int c);
   };
 
 // ----------------------------------------------------------------
