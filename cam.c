@@ -2200,7 +2200,7 @@ void cScCamSlot::CaInfo(int tcid, int cid)
   int n=9;
   for(int i=0; caids[i]; i++) n+=2;
   unsigned char *p;
-  if(!(p=frame.GetBuff(n))) return;
+  if(!(p=frame.GetBuff(n+(n<TDPU_SIZE_INDICATOR)?2:3))) return;
   *p++=0xa0;
   if(n<TDPU_SIZE_INDICATOR) *p++=n;
   else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
