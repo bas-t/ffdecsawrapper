@@ -584,6 +584,8 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
 
 // -- cEcmData -----------------------------------------------------------------
 
+#define CACHE_VERS 1
+
 class cEcmData : public cEcmInfo {
 public:
   cEcmData(void):cEcmInfo() {}
@@ -595,10 +597,14 @@ public:
 bool cEcmData::Parse(const char *buf)
 {
   char Name[64];
-  int nu=0, num;
+  int nu=0, num, vers=0;
   Name[0]=0;
-  if(sscanf(buf,"%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d/%d%n",&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,&ecm_pid,&ecm_table,&nu,&dataIdx,&num)>=11) {
+  if(sscanf(buf,"V%d:%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d:%d/%d%n",
+             &vers,&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,
+             &ecm_pid,&ecm_table,&rewriterId,&nu,&dataIdx,&num)>=13
+     && vers==CACHE_VERS) {
     SetName(Name);
+    SetRewriter();
     const char *line=buf+num;
     if(nu>0 && *line++==':') {
       unsigned char *dat=AUTOMEM(nu);
@@ -615,16 +621,16 @@ cString cEcmData::ToString(bool hide)
   char *str;
   if(caDescr) {
     str=AUTOARRAY(char,caDescrLen*2+16);
-    int q=sprintf(str,":%d/%d:",caDescrLen,dataIdx);
+    int q=sprintf(str,"%d/%d:",caDescrLen,dataIdx);
     HexStr(str+q,caDescr,caDescrLen);
     }
   else {
-    str=AUTOARRAY(char,4);
-    strcpy(str,":0");
+    str=AUTOARRAY(char,10);
+    sprintf(str,"0/%d:",dataIdx);
     }
-  return cString::sprintf("%d:%x:%x:%s:%x/%x:%x:%x/%x%s",
-                            prgId,source,transponder,name,
-                            caId,emmCaId,provId,ecm_pid,ecm_table,
+  return cString::sprintf("V%d:%d:%x:%x:%s:%x/%x:%x:%x/%x:%d:%s",
+                            CACHE_VERS,prgId,source,transponder,name,
+                            caId,emmCaId,provId,ecm_pid,ecm_table,rewriterId,
                             str);
 }
 
@@ -712,9 +718,9 @@ void cEcmCache::Flush(void)
 bool cEcmCache::ParseLinePlain(const char *line)
 {
   cEcmData *dat=new cEcmData;
-  if(dat && dat->Parse(line) && !Exists(dat)) { Add(dat); return true; }
-  delete dat;
-  return false;
+  if(dat && dat->Parse(line) && !Exists(dat)) Add(dat);
+  else delete dat;
+  return true;
 }
 
 // -- cCaDescr -----------------------------------------------------------------

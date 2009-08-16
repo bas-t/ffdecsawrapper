@@ -590,8 +590,8 @@ cEcmInfo::cEcmInfo(const cEcmInfo *e)
   prgId=e->prgId;
   source=e->source;
   transponder=e->transponder;
-  if((rewriterId=e->rewriterId)>0)
-    rewriter=cRewriters::CreateById(rewriterId);
+  rewriterId=e->rewriterId;
+  SetRewriter();
 }
 
 cEcmInfo::cEcmInfo(const char *Name, int Pid, int CaId, int ProvId)
@@ -642,6 +642,20 @@ bool cEcmInfo::AddCaDescr(const cEcmInfo *e)
   if(e->dataIdx>=0 && (dataIdx<0 || e->dataIdx!=dataIdx)) res=true;
   dataIdx=e->dataIdx;
   return res;
+}
+
+void cEcmInfo::SetRewriter(void)
+{
+  if(rewriterId>0) {
+    if(!rewriter || rewriter->Id()!=rewriterId) {
+      delete rewriter;
+      rewriter=cRewriters::CreateById(rewriterId);
+      }
+    }
+  else {
+    delete rewriter;
+    rewriter=0;
+    }
 }
 
 bool cEcmInfo::AddCaDescr(const unsigned char *descr, int len)

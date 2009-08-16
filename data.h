@@ -248,6 +248,7 @@ public:
   bool AddCaDescr(const cEcmInfo *e);
   bool AddCaDescr(const unsigned char *descr, int len);
   const unsigned char *GetCaDescr(int *l) const;
+  void SetRewriter(void);
   void Fail(bool st) { failed=st; }
   bool Failed(void) const { return failed; }
   void SetCached(void) { cached=true; }
