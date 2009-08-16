@@ -1424,6 +1424,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
             cEcmInfo *n;
             while((n=ecms.First())) {
               ecms.Del(n,false);
+              n->SetSource(filterSid,filterSource,filterTransponder);
               n->AddCaDescr(&buff[index],buff[index+1]+2);
               overrides.UpdateEcm(n,dolog);
               LBSTARTF(L_CORE_ECM);
@@ -1446,7 +1447,6 @@ void cEcmHandler::ParseCAInfo(int SysId)
                 }
               if(n) {
                 if(dolog) LBPUT("(new)");
-                n->SetSource(filterSid,filterSource,filterTransponder);
                 ecmList.Add(n);
                 AddEcmPri(n);
                 }
