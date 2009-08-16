@@ -2000,12 +2000,14 @@ cCiFrame::~cCiFrame()
 
 unsigned char *cCiFrame::GetBuff(int l)
 {
+PRINTF(L_GEN_DEBUG,"getbuff in l=%d alen=%d",l,alen);
   if(!mem || l>alen) {
     free(mem); mem=0; alen=0;
     mem=MALLOC(unsigned char,l+LEN_OFF);
     if(mem) alen=l;
     }
   len=l;
+PRINTF(L_GEN_DEBUG,"getbuff out l=%d alen=%d len=%d mem=%p",l,alen,len,mem);
   if(!mem) {
     PRINTF(L_GEN_DEBUG,"internal: ci-frame alloc failed");
     return 0;
@@ -2016,6 +2018,7 @@ unsigned char *cCiFrame::GetBuff(int l)
 void cCiFrame::Put(cRingBufferLinear *rb)
 {
   if(rb && mem) {
+LDUMP(L_GEN_DEBUG,mem,len+LEN_OFF,"put len=%d",len);
     *((short *)mem)=len;
     rb->Put(mem,len+LEN_OFF);
     }
@@ -2031,6 +2034,8 @@ unsigned char *cCiFrame::Get(cRingBufferLinear *rb, int &l)
         int s=*((short *)data);
         if(c>=s+LEN_OFF) {
           l=glen=s;
+PRINTF(L_GEN_DEBUG,"get out s=%d l=%d glen=%d",s,l,glen);
+LDUMP(L_GEN_DEBUG,mem,s+LEN_OFF,"get out");
           return data+LEN_OFF;
           }
         }
@@ -2200,7 +2205,7 @@ void cScCamSlot::CaInfo(int tcid, int cid)
   int n=9;
   for(int i=0; caids[i]; i++) n+=2;
   unsigned char *p;
-  if(!(p=frame.GetBuff(n+(n<TDPU_SIZE_INDICATOR)?2:3))) return;
+  if(!(p=frame.GetBuff(n+(n<TDPU_SIZE_INDICATOR?2:3)))) return;
   *p++=0xa0;
   if(n<TDPU_SIZE_INDICATOR) *p++=n;
   else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
