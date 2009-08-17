@@ -2000,14 +2000,12 @@ cCiFrame::~cCiFrame()
 
 unsigned char *cCiFrame::GetBuff(int l)
 {
-PRINTF(L_GEN_DEBUG,"getbuff in l=%d alen=%d",l,alen);
   if(!mem || l>alen) {
     free(mem); mem=0; alen=0;
     mem=MALLOC(unsigned char,l+LEN_OFF);
     if(mem) alen=l;
     }
   len=l;
-PRINTF(L_GEN_DEBUG,"getbuff out l=%d alen=%d len=%d mem=%p",l,alen,len,mem);
   if(!mem) {
     PRINTF(L_GEN_DEBUG,"internal: ci-frame alloc failed");
     return 0;
@@ -2018,7 +2016,6 @@ PRINTF(L_GEN_DEBUG,"getbuff out l=%d alen=%d len=%d mem=%p",l,alen,len,mem);
 void cCiFrame::Put(cRingBufferLinear *rb)
 {
   if(rb && mem) {
-LDUMP(L_GEN_DEBUG,mem,len+LEN_OFF,"put len=%d",len);
     *((short *)mem)=len;
     rb->Put(mem,len+LEN_OFF);
     }
@@ -2034,8 +2031,6 @@ unsigned char *cCiFrame::Get(cRingBufferLinear *rb, int &l)
         int s=*((short *)data);
         if(c>=s+LEN_OFF) {
           l=glen=s;
-PRINTF(L_GEN_DEBUG,"get out s=%d l=%d glen=%d",s,l,glen);
-LDUMP(L_GEN_DEBUG,mem,s+LEN_OFF,"get out");
           return data+LEN_OFF;
           }
         }
