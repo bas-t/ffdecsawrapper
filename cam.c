@@ -2487,10 +2487,11 @@ void cScCiAdapter::Write(const unsigned char *buff, int len)
             if((b=frame.GetBuff(s+6))) {
               TPDU(b,slot);
               memcpy(b+2,d,s);
-              SB_TAG(b+2+s,0x00);
+              slotframe->Del(); // delete from rb before Avail()
+              SB_TAG(b+2+s,slotframe->Avail()>0 ? 0x80:0x00);
               frame.Put();
               }
-            slotframe->Del();
+            else slotframe->Del();
             }
           break;
           }
@@ -2498,18 +2499,17 @@ void cScCiAdapter::Write(const unsigned char *buff, int len)
           {
           tcid=tpdu->data[0];
           unsigned char *b;
-          if((b=frame.GetBuff(9))) {
-            TPDU(b,slot);
-            TAG(&b[2],0x83,0x01); b[4]=tcid;
-            SB_TAG(&b[5],0x00);
-            frame.Put();
-            }
-
           static const unsigned char reqCAS[] = { 0xA0,0x07,0x01,0x91,0x04,0x00,0x03,0x00,0x41 };
           if((b=slotframe->GetBuff(sizeof(reqCAS)))) {
             memcpy(b,reqCAS,sizeof(reqCAS));
             b[2]=tcid;
             slotframe->Put();
+            }
+          if((b=frame.GetBuff(9))) {
+            TPDU(b,slot);
+            TAG(&b[2],0x83,0x01); b[4]=tcid;
+            SB_TAG(&b[5],slotframe->Avail()>0 ? 0x80:0x00);
+            frame.Put();
             }
           break;
           }
