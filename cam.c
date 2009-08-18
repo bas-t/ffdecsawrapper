@@ -2264,7 +2264,8 @@ void cScCamSlot::Process(const unsigned char *data, int len)
         LBPUT("/%x",dlen);
         if(ilen>0 && dlen>=ilen) {
           ci_cmd=data[0];
-          prg->caDescr.Set(&data[1],ilen-1);
+          if(ilen>1)
+            prg->caDescr.Set(&data[1],ilen-1);
           LBPUT(" ci_cmd(G)=%02x",ci_cmd);
           }
         data+=ilen; dlen-=ilen;
@@ -2277,8 +2278,10 @@ void cScCamSlot::Process(const unsigned char *data, int len)
           LBPUT("/%x",dlen);
           if(ilen>0 && dlen>=ilen) {
             ci_cmd=data[0];
-            pid->caDescr.Set(&data[1],ilen-1);
-            prg->SetPidCaDescr(true);
+            if(ilen>1) {
+              pid->caDescr.Set(&data[1],ilen-1);
+              prg->SetPidCaDescr(true);
+              }
             LBPUT(" ci_cmd(S)=%x",ci_cmd);
             }
           data+=ilen; dlen-=ilen;
