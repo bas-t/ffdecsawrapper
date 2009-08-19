@@ -201,7 +201,7 @@ cSystemCardClient::cSystemCardClient(void)
 
 bool cSystemCardClient::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
 {
-  cCardClient *startCc=cc;
+  cCardClient *startCc=cc, *oldcc;
   do {
     if(cc) {
       cTimeMs start;
@@ -226,9 +226,10 @@ bool cSystemCardClient::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
         }
       }
     if(!cc) PRINTF(L_CC_CORE,"cc-loop");
+    oldcc=cc;
     cc=staticCcl.FindBySysId(ecm->caId,cc);
     if(cc && cc!=startCc) PRINTF(L_CC_CORE,"now trying client %s (%s:%d)",cc->Name(),cc->hostname,cc->port);
-    } while(cc!=startCc);
+    } while(cc!=startCc && cc!=oldcc);
   return false;
 }
 
