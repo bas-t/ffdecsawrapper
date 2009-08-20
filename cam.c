@@ -1990,7 +1990,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
   int tcid=data[0];
 
-  unsigned char a[128], *b=&a[1];
+  unsigned char a[256], *b=&a[1];
   if(Check()) CaInfo(b,tcid,0x01);
 
   if(dlen<8 || data[1]!=0x90) return;
