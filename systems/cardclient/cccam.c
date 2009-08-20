@@ -227,6 +227,13 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
   cCCcamCard *c=&card[cardnum];
   int timeout=3000;
   if(ecm->ecm_pid!=c->Pid() || !c->Connected()) { // channel change
+    int n;
+    const unsigned char *descr=ecm->GetCaDescr(&n);
+    if(!descr) {
+      PRINTF(L_CC_CCCAM,"%d: no CA descriptor for caid %04x sid %d prov %04x",cardnum,ecm->caId,ecm->prgId,ecm->provId);
+      return false;
+      }
+
     static const unsigned char pmt[] = {
       0x9f,0x80,0x32,0x82,0xFF,0xFF,
       0x01,
@@ -244,7 +251,7 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
 #define PID_POS 27
       0x84,0x02,0xFF,0xFF                                 // pmt pid
       };
-    unsigned char capmt[2048];
+    unsigned char *capmt=AUTOMEM(sizeof(pmt)+n+32);
     memcpy(capmt,pmt,sizeof(pmt));
     int wp=sizeof(pmt);
     int len=wp-LEN_POS-2;
@@ -261,19 +268,7 @@ bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data
     capmt[DMX_POS+3]=cardnum ;
     capmt[PID_POS+2]=ecm->ecm_pid>>8;
     capmt[PID_POS+3]=ecm->ecm_pid&0xFF;
-    bool streamflag=1;
-#if APIVERSNUM >= 10500
-    int casys[2];
-#else
-    unsigned short casys[2];
-#endif
-    casys[0]=ecm->caId;
-    casys[1]=0;
-    int n=GetCaDescriptors(ecm->source,ecm->transponder,ecm->prgId,casys,sizeof(capmt)-wp,&capmt[wp],streamflag);
-    if(n<=0) {
-      PRINTF(L_CC_CCCAM,"%d: no CA descriptor for caid %04x sid %d prov %04x",cardnum,ecm->caId,ecm->prgId,ecm->provId);
-      return false;
-      }
+    memcpy(&capmt[wp],descr,n);
     len+=n; wp+=n;
     capmt[wp++]=0x01;
     capmt[wp++]=0x0f;

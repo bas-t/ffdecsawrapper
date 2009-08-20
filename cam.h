@@ -58,15 +58,34 @@ extern cEcmCache ecmcache;
 
 // ----------------------------------------------------------------
 
+class cCaDescr {
+private:
+  unsigned char *descr;
+  int len;
+public:
+  cCaDescr(void);
+  cCaDescr(const cCaDescr &arg);
+  ~cCaDescr();
+  const unsigned char *Get(int &l) const;
+  void Set(const cCaDescr *d);
+  void Set(const unsigned char *de, int l);
+  void Clear(void);
+  bool operator== (const cCaDescr &arg) const;
+  void Join(const cCaDescr *cd, bool rev=false);
+  cString ToString(void);
+  };
+
+// ----------------------------------------------------------------
+
 class cPrgPid : public cSimpleItem {
 private:
-  int type, pid;
   bool proc;
 public:
+  int type, pid;
+  cCaDescr caDescr;
+  //
   cPrgPid(int Type, int Pid) { type=Type; pid=Pid; proc=false; }
-  int Pid(void) { return pid; }
-  int Type(void) { return type; }
-  bool Proc(void) { return proc; }
+  bool Proc(void) const { return proc; }
   void Proc(bool is) { proc=is; };
   };
 
@@ -74,14 +93,21 @@ public:
 
 class cPrg : public cSimpleItem {
 private:
-  int prg;
-  bool isUpdate;
-public:
-  cSimpleList<cPrgPid> pids;
+  bool isUpdate, pidCaDescr;
   //
-  cPrg(int Prg, bool IsUpdate) { prg=Prg; isUpdate=IsUpdate; }
-  int Prg(void) { return prg; }
-  bool IsUpdate(void) { return isUpdate; }
+  void Setup(void);
+public:
+  int sid, source, transponder;
+  cSimpleList<cPrgPid> pids;
+  cCaDescr caDescr;
+  //
+  cPrg(void);
+  cPrg(int Sid, bool IsUpdate);
+  bool IsUpdate(void) const { return isUpdate; }
+  bool HasPidCaDescr(void) const { return pidCaDescr; }
+  void SetPidCaDescr(bool val) { pidCaDescr=val; }
+  bool SimplifyCaDescr(void);
+  void DumpCaDescr(int c);
   };
 
 // ----------------------------------------------------------------
@@ -122,7 +148,6 @@ public:
   void SetCWIndex(int pid, int index);
   void DumpAV7110(void);
   void LogEcmStatus(const cEcmInfo *ecm, bool on);
-  bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
   void AddHook(cLogHook *hook);
   bool TriggerHook(int id);
   // Plugin API
@@ -137,15 +162,11 @@ public:
   char *CurrentKeyStr(int num);
   //
   bool IsSoftCSA(bool live);
-  int Source(void) { return source; }
-  int Transponder(void) { return transponder; }
   };
 
 void LogStatsDown(void);
 
 // ----------------------------------------------------------------
-
-#define MAX_LRU_CAID 10
 
 class cScDvbDevice : public cDvbDevice {
 private:
@@ -161,19 +182,25 @@ private:
   bool softcsa, fullts;
   cMutex cafdMutex;
   cTimeMs lastDump;
-  struct LruCaid {
-    int src, tr, prg;
-    caid_t caids[MAXCAIDS+1];
-    } lrucaid[MAX_LRU_CAID];
-  cMutex lruMutex;
   static int budget;
   //
 #ifndef SASC
   void LateInit(void);
   void EarlyShutdown(void);
-  int FindLRUPrg(int source, int transponder, int prg);
   bool ScActive(void);
 #endif //SASC
+  //
+#if APIVERSNUM < 10500
+#define MAX_LRU_CAID 10
+  struct LruCaid {
+    int src, tr, prg;
+    caid_t caids[MAXCAIDS+1];
+    } lrucaid[MAX_LRU_CAID];
+  cMutex lruMutex;
+  //
+  int FindLRUPrg(int source, int transponder, int prg);
+  bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
+#endif
 protected:
 #ifndef SASC
 #if APIVERSNUM >= 10500
@@ -210,7 +237,7 @@ public:
   void DumpAV7110(void);
   cCam *Cam(void) { return cam; }
   bool SoftCSA(bool live);
-  virtual bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
+  void CaidsChanged(void);
   };
 
 #endif // ___CAM_H

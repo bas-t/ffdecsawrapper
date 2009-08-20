@@ -56,10 +56,8 @@
 #define LOG_COUNT           3 // stop logging after X complete ECM cycles
 #define CHAIN_HOLD     120000 // min. time to hold a logger chain
 #define ECM_DATA_TIME    6000 // time to wait for ECM data updates
-#define ECM_UPD_TIME   120000 // delay between ECM data updates
 #define MAX_ECM_IDLE   300000 // delay before an idle handler can be removed
 #define MAX_ECM_HOLD    15000 // delay before an idle handler stops processing
-#define CAID_TIME      300000 // time between caid scans
 
 #define ECMCACHE_FILE "ecm.cache"
 
@@ -586,6 +584,8 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
 
 // -- cEcmData -----------------------------------------------------------------
 
+#define CACHE_VERS 1
+
 class cEcmData : public cEcmInfo {
 public:
   cEcmData(void):cEcmInfo() {}
@@ -597,14 +597,19 @@ public:
 bool cEcmData::Parse(const char *buf)
 {
   char Name[64];
-  int nu=0, num;
+  int nu=0, num, vers=0;
   Name[0]=0;
-  if(sscanf(buf,"%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d%n",&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,&ecm_pid,&ecm_table,&nu,&num)>=9) {
+  if(sscanf(buf,"V%d:%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d:%d/%d%n",
+             &vers,&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,
+             &ecm_pid,&ecm_table,&rewriterId,&nu,&dataIdx,&num)>=13
+     && vers==CACHE_VERS) {
     SetName(Name);
+    SetRewriter();
     const char *line=buf+num;
     if(nu>0 && *line++==':') {
       unsigned char *dat=AUTOMEM(nu);
-      if(GetHex(line,dat,nu,true)==nu) AddData(dat,nu);
+      if(GetHex(line,dat,nu,true)==nu && dat[0]==0x09 && dat[1]==nu-2)
+        AddCaDescr(dat,nu);
       }
     return true;
     }
@@ -614,17 +619,18 @@ bool cEcmData::Parse(const char *buf)
 cString cEcmData::ToString(bool hide)
 {
   char *str;
-  if(data) {
-    str=AUTOARRAY(char,dataLen*2+2);
-    sprintf(str,":%d:%s",dataLen,HexStr(str,data,dataLen));
+  if(caDescr) {
+    str=AUTOARRAY(char,caDescrLen*2+16);
+    int q=sprintf(str,"%d/%d:",caDescrLen,dataIdx);
+    HexStr(str+q,caDescr,caDescrLen);
     }
   else {
-    str=AUTOARRAY(char,4);
-    strcpy(str,":0");
+    str=AUTOARRAY(char,10);
+    sprintf(str,"0/%d:",dataIdx);
     }
-  return cString::sprintf("%d:%x:%x:%s:%x/%x:%x:%x/%x%s",
-                            prgId,source,transponder,name,
-                            caId,emmCaId,provId,ecm_pid,ecm_table,
+  return cString::sprintf("V%d:%d:%x:%x:%s:%x/%x:%x:%x/%x:%d:%s",
+                            CACHE_VERS,prgId,source,transponder,name,
+                            caId,emmCaId,provId,ecm_pid,ecm_table,rewriterId,
                             str);
 }
 
@@ -652,7 +658,7 @@ void cEcmCache::New(cEcmInfo *e)
       dat->SetName(e->name);
       Modified();
       }
-    if(dat->Update(e))
+    if(dat->AddCaDescr(e))
       Modified();
     }
   ListUnlock();
@@ -712,12 +718,153 @@ void cEcmCache::Flush(void)
 bool cEcmCache::ParseLinePlain(const char *line)
 {
   cEcmData *dat=new cEcmData;
-  if(dat && dat->Parse(line) && !Exists(dat)) { Add(dat); return true; }
-  delete dat;
-  return false;
+  if(dat && dat->Parse(line) && !Exists(dat)) Add(dat);
+  else delete dat;
+  return true;
 }
 
-// -- cEcmSys ------------------------------------------------------------------
+// -- cCaDescr -----------------------------------------------------------------
+
+cCaDescr::cCaDescr(void)
+{
+  descr=0; len=0;
+}
+
+cCaDescr::cCaDescr(const cCaDescr &cd)
+{
+  descr=0; len=0;
+  Set(cd.descr,cd.len);
+}
+
+cCaDescr::~cCaDescr()
+{
+  Clear();
+}
+
+const unsigned char *cCaDescr::Get(int &l) const
+{
+  l=len;
+  return descr;
+}
+
+void cCaDescr::Set(const cCaDescr *d)
+{
+  Set(d->descr,d->len);
+}
+
+void cCaDescr::Set(const unsigned char *de, int l)
+{
+  Clear();
+  if(l) {
+    descr=MALLOC(unsigned char,l);
+    if(descr) {
+      memcpy(descr,de,l);
+      len=l;
+      }
+    }
+}
+
+void cCaDescr::Clear(void)
+{
+  free(descr); descr=0; len=0;
+}
+
+void cCaDescr::Join(const cCaDescr *cd, bool rev)
+{
+  if(cd->descr) {
+    int l=len+cd->len;
+    unsigned char *m=MALLOC(unsigned char,l);
+    if(m) {
+      if(!rev) {
+        if(descr) memcpy(m,descr,len);
+        memcpy(m+len,cd->descr,cd->len);
+        }
+      else {
+        memcpy(m,cd->descr,cd->len);
+        if(descr) memcpy(m+cd->len,descr,len);
+        }
+      Clear();
+      descr=m; len=l;
+      }
+    }
+}
+
+bool cCaDescr::operator== (const cCaDescr &cd) const
+{
+  return len==cd.len && (len==0 || memcmp(descr,cd.descr,len)==0);
+}
+
+cString cCaDescr::ToString(void)
+{
+  if(!descr) return "<empty>";
+  char *str=AUTOARRAY(char,len*3+8);
+  int q=sprintf(str,"%02X",descr[0]);
+  for(int i=1; i<len; i++) q+=sprintf(str+q," %02X",descr[i]);
+  return str;
+}
+
+// -- cPrg ---------------------------------------------------------------------
+
+cPrg::cPrg(void)
+{
+  Setup();
+}
+
+cPrg::cPrg(int Sid, bool IsUpdate)
+{
+  Setup();
+  sid=Sid; isUpdate=IsUpdate;
+}
+
+void cPrg::Setup(void)
+{
+  sid=-1; source=-1; transponder=-1;
+  isUpdate=pidCaDescr=false;
+}
+
+void cPrg::DumpCaDescr(int c)
+{
+  PRINTF(c,"prgca: %s",*caDescr.ToString());
+  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
+    PRINTF(c,"pidca %04x: %s",pid->pid,*pid->caDescr.ToString());
+}
+
+bool cPrg::SimplifyCaDescr(void)
+{
+//XXX
+PRINTF(L_CORE_PIDS,"SimplyCa entry pidCa=%d",HasPidCaDescr());
+DumpCaDescr(L_CORE_PIDS);
+//XXX
+
+  if(HasPidCaDescr()) {
+    bool equal=true;
+    if(pids.Count()>1) {
+      cPrgPid *pid0=pids.First();
+      for(cPrgPid *pid1=pids.Next(pid0); pid1; pid1=pids.Next(pid1))
+        if(!(pid0->caDescr==pid1->caDescr)) { equal=false; break; }
+      }
+    if(equal) {
+      cPrgPid *pid=pids.First();
+      caDescr.Join(&pid->caDescr);
+      for(; pid; pid=pids.Next(pid)) pid->caDescr.Clear();
+      SetPidCaDescr(false);
+      }
+    }
+  if(HasPidCaDescr()) {
+    for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
+      pid->caDescr.Join(&caDescr,true);
+    caDescr.Clear();
+    }
+
+//XXX
+PRINTF(L_CORE_PIDS,"SimplyCa exit pidCa=%d",HasPidCaDescr());
+DumpCaDescr(L_CORE_PIDS);
+//XXX
+
+  return HasPidCaDescr();
+}
+
+// -- cEcmPri ------------------------------------------------------------------
 
 class cEcmPri : public cSimpleItem {
 public:
@@ -735,14 +882,14 @@ private:
   cTimeMs idleTime;
   //
   cMutex dataMutex;
-  int sid;
-  cSimpleList<cPrgPid> pids;
+  cPrg prg;
   //
   cSystem *sys;
   cPidFilter *filter;
   int filterCwIndex, filterSource, filterTransponder, filterSid;
+  cCaDescr filterCaDescr;
   unsigned char lastCw[16];
-  bool sync, noKey, trigger;
+  bool sync, noKey, trigger, ecmUpd;
   int triggerMode;
   int mode, count;
   cTimeMs lastsync, startecm, resendTime;
@@ -754,7 +901,6 @@ private:
   cSimpleList<cEcmPri> ecmPriList;
   cEcmInfo *ecm;
   cEcmPri *ecmPri;
-  cTimeMs ecmUpdTime;
   //
   int dolog;
   //
@@ -774,12 +920,12 @@ public:
   cEcmHandler(cCam *Cam, int CardNum, int cwindex);
   virtual ~cEcmHandler();
   void Stop(void);
-  void SetPrg(cPrg *prg);
+  void SetPrg(cPrg *Prg);
   void ShiftCwIndex(int cwindex);
   char *CurrentKeyStr(void) const;
   bool IsRemoveable(void);
   bool IsIdle(void);
-  int Sid(void) const { return sid; }
+  int Sid(void) const { return prg.sid; }
   int CwIndex(void) const { return cwIndex; }
   const char *Id(void) const { return id; }
   };
@@ -791,8 +937,8 @@ cEcmHandler::cEcmHandler(cCam *Cam, int CardNum, int cwindex)
   cam=Cam;
   cardNum=CardNum;
   cwIndex=cwindex;
-  sys=0; filter=0; ecm=0; ecmPri=0; mode=-1; sid=-1;
-  trigger=false; triggerMode=-1;
+  sys=0; filter=0; ecm=0; ecmPri=0; mode=-1;
+  trigger=ecmUpd=false; triggerMode=-1;
   filterSource=filterTransponder=0; filterCwIndex=-1; filterSid=-1;
   id=bprintf("%d.%d",cardNum,cwindex);
 }
@@ -810,7 +956,7 @@ cEcmHandler::~cEcmHandler()
 bool cEcmHandler::IsIdle(void)
 {
   dataMutex.Lock();
-  int n=pids.Count();
+  int n=prg.pids.Count();
   dataMutex.Unlock();
   return n==0;
 }
@@ -823,11 +969,11 @@ bool cEcmHandler::IsRemoveable(void)
 void cEcmHandler::Stop(void)
 {
   dataMutex.Lock();
-  if(!IsIdle() || sid!=-1) {
+  if(!IsIdle() || prg.sid!=-1) {
     PRINTF(L_CORE_ECM,"%s: stop",id);
-    sid=-1;
+    prg.sid=-1;
     idleTime.Set();
-    pids.Clear();
+    prg.pids.Clear();
     trigger=true;
     }
   dataMutex.Unlock();
@@ -843,63 +989,68 @@ void cEcmHandler::ShiftCwIndex(int cwindex)
     dataMutex.Lock();
     trigger=true;
     cwIndex=cwindex;
-    for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-      cam->SetCWIndex(pid->Pid(),cwIndex);
+    for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+      cam->SetCWIndex(pid->pid,cwIndex);
     dataMutex.Unlock();
     if(filter) filter->Wakeup();
     }
 }
 
-void cEcmHandler::SetPrg(cPrg *prg)
+void cEcmHandler::SetPrg(cPrg *Prg)
 {
   dataMutex.Lock();
   bool wasIdle=IsIdle();
-  if(prg->Prg()!=sid) {
-    PRINTF(L_CORE_ECM,"%s: setting new SID %d",id,prg->Prg());
-    sid=prg->Prg();
+  if(Prg->sid!=prg.sid) {
+    PRINTF(L_CORE_ECM,"%s: setting new SID %d",id,Prg->sid);
+    prg.sid=Prg->sid;
+    prg.source=Prg->source;
+    prg.transponder=Prg->transponder;
     idleTime.Set();
-    pids.Clear();
+    prg.pids.Clear();
     trigger=true;
     }
+  if(Prg->HasPidCaDescr())
+    PRINTF(L_GEN_DEBUG,"internal: pid specific caDescr not supported at this point (sid=%d)",Prg->sid);
   LBSTART(L_CORE_PIDS);
   LBPUT("%s: pids on entry",id);
-  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-    LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+  for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+    LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
 
-  for(cPrgPid *pid=pids.First(); pid;) {
+  for(cPrgPid *pid=prg.pids.First(); pid;) {
     cPrgPid *npid;
-    for(npid=prg->pids.First(); npid; npid=prg->pids.Next(npid)) {
-      if(pid->Pid()==npid->Pid()) {
+    for(npid=Prg->pids.First(); npid; npid=Prg->pids.Next(npid)) {
+      if(pid->pid==npid->pid) {
         npid->Proc(true);
         break;
         }
       }
     if(!npid) {
-      npid=pids.Next(pid);
-      pids.Del(pid);
+      npid=prg.pids.Next(pid);
+      prg.pids.Del(pid);
       pid=npid;
       }
-    else pid=pids.Next(pid);
+    else pid=prg.pids.Next(pid);
     }
   LBSTART(L_CORE_PIDS);
   LBPUT("%s: pids after delete",id);
-  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-    LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+  for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+    LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
-  for(cPrgPid *npid=prg->pids.First(); npid; npid=prg->pids.Next(npid)) {
+  for(cPrgPid *npid=Prg->pids.First(); npid; npid=Prg->pids.Next(npid)) {
     if(!npid->Proc()) {
-      cPrgPid *pid=new cPrgPid(npid->Type(),npid->Pid());
-      pids.Add(pid);
-      cam->SetCWIndex(pid->Pid(),cwIndex);
+      cPrgPid *pid=new cPrgPid(npid->type,npid->pid);
+      prg.pids.Add(pid);
+      cam->SetCWIndex(pid->pid,cwIndex);
       }
     }
   LBSTART(L_CORE_PIDS);
   LBPUT("%s: pids after add",id);
-  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
-    LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+  for(cPrgPid *pid=prg.pids.First(); pid; pid=prg.pids.Next(pid))
+    LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
   LBEND();
   if(!IsIdle()) {
+    if(!(prg.caDescr==Prg->caDescr)) prg.caDescr.Set(&Prg->caDescr);
     trigger=true;
     triggerMode=0;
     if(wasIdle) PRINTF(L_CORE_ECM,"%s: is no longer idle",id);
@@ -922,12 +1073,12 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
   dataMutex.Lock();
   if(trigger) {
     PRINTF(L_CORE_ECM,"%s: triggered SID %d/%d idx %d/%d mode %d/%d %s",
-      id,filterSid,sid,filterCwIndex,cwIndex,mode,triggerMode,(mode==3 && sync)?"sync":"-");
+      id,filterSid,prg.sid,filterCwIndex,cwIndex,mode,triggerMode,(mode==3 && sync)?"sync":"-");
     trigger=false;
-    if(filterSid!=sid) {
-      filterSid=sid;
-      filterSource=cam->Source();
-      filterTransponder=cam->Transponder();
+    if(filterSid!=prg.sid) {
+      filterSid=prg.sid;
+      filterSource=prg.source;
+      filterTransponder=prg.transponder;
       filterCwIndex=cwIndex;
       noKey=true; mode=0;
       }
@@ -938,6 +1089,12 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
           cam->WriteCW(filterCwIndex,lastCw,true);
         }
       if(mode<triggerMode) mode=triggerMode;
+      }
+    if(!(prg.caDescr==filterCaDescr)) {
+      filterCaDescr.Set(&prg.caDescr);
+      ecmUpd=true;
+//XXX
+PRINTF(L_CORE_ECM,"%s: new caDescr: %s",id,*filterCaDescr.ToString());
       }
     triggerMode=-1;
     }
@@ -1007,6 +1164,10 @@ void cEcmHandler::Process(cPidFilter *filter, unsigned char *data, int len)
       if(data && len>0) {
         HEXDUMP(L_HEX_ECM,data,len,"ECM sys 0x%04x id 0x%02x pid 0x%04x",ecm->caId,ecm->provId,filter->Pid());
         if(SCT_LEN(data)==len) {
+          if(ecm->rewriter) {
+            ecm->rewriter->Rewrite(data,len);
+            HEXDUMP(L_HEX_ECM,data,len,"rewritten to");
+            }
           LDUMP(L_CORE_ECMPROC,data,16,"%s: ECM",id);
           int n;
           if(!(n=sys->CheckECM(ecm,data,sync))) {
@@ -1175,16 +1336,14 @@ void cEcmHandler::StopEcm(void)
 
 bool cEcmHandler::UpdateEcm(void)
 {
-  if(!ecm->Data() || ecmUpdTime.TimedOut()) {
+  if(ecmUpd) {
     bool log=dolog;
     dolog=(sys && sys->NeedsData() && ecm->Data()==0);
     if(dolog) PRINTF(L_CORE_ECM,"%s: try to update ecm extra data",id);
     ParseCAInfo(ecm->caId);
-    ecmUpdTime.Set(ECM_UPD_TIME);
     dolog=log;
-    if(!ecm->Data()) return false;
     }
-  return true;
+  return ecm->Data()!=0;
 }
 
 cEcmInfo *cEcmHandler::JumpEcm(void)
@@ -1197,7 +1356,7 @@ cEcmInfo *cEcmHandler::JumpEcm(void)
   else ecmPri=ecmPriList.Next(ecmPri);
   if(ecmPri) {
     if(ecmPri->ecm!=ecm) {
-      StopEcm(); ecmUpdTime.Set();
+      StopEcm();
       ecm=ecmPri->ecm;
       filter->Start(ecm->ecm_pid,ecm->ecm_table,0xfe,0,false);
       cam->LogEcmStatus(ecm,true);
@@ -1243,27 +1402,17 @@ void cEcmHandler::EcmFail(void)
 
 void cEcmHandler::ParseCAInfo(int SysId)
 {
-  unsigned char buff[2048];
-  caid_t casys[MAXCAIDS+1];
-  if(SysId==0xFFFF) {
-    if(!cam->GetPrgCaids(filterSource,filterTransponder,filterSid,casys)) {
-      PRINTF(L_CORE_ECM,"%s: no CAIDs for SID %d",id,sid);
-      return;
-      }
-    }
-  else {
-    casys[0]=SysId;
-    casys[1]=0;
-    }
-  bool streamFlag;
-  int len=GetCaDescriptors(filterSource,filterTransponder,filterSid,casys,sizeof(buff),buff,streamFlag);
-  if(len>0) {
-    if(dolog) PRINTF(L_CORE_ECM,"%s: got CaDescriptors for SID %d (len=%d)",id,sid,len);
+  ecmUpd=false;
+  int len;
+  const unsigned char *buff=filterCaDescr.Get(len);
+  if(buff && len>0) {
+    if(dolog) PRINTF(L_CORE_ECM,"%s: CA descriptors for SID %d (len=%d)",id,filterSid,len);
     HEXDUMP(L_HEX_PMT,buff,len,"PMT");
     for(int index=0; index<len; index+=buff[index+1]+2) {
       if(buff[index]==0x09) {
-        if(dolog) LDUMP(L_CORE_ECM,&buff[index+2],buff[index+1],"%s: descriptor",id);
         int sysId=WORD(buff,index+2,0xFFFF);
+        if(SysId!=0xFFFF && sysId!=SysId) continue;
+        if(dolog) LDUMP(L_CORE_ECM,&buff[index+2],buff[index+1],"%s: descriptor",id);
         int sysPri=0;
         cSystem *sys;
         while((sys=cSystems::FindBySysId(sysId,!cam->IsSoftCSA(filterCwIndex==0),sysPri))) {
@@ -1275,7 +1424,8 @@ void cEcmHandler::ParseCAInfo(int SysId)
             cEcmInfo *n;
             while((n=ecms.First())) {
               ecms.Del(n,false);
-              n->SetSource(sid,filterSource,filterTransponder);
+              n->SetSource(filterSid,filterSource,filterTransponder);
+              n->AddCaDescr(&buff[index],buff[index+1]+2);
               overrides.UpdateEcm(n,dolog);
               LBSTARTF(L_CORE_ECM);
               if(dolog) LBPUT("%s: found %04x(%04x) (%s) id %04x with ecm %x/%x ",id,n->caId,n->emmCaId,n->name,n->provId,n->ecm_pid,n->ecm_table);
@@ -1283,9 +1433,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
               while(e) {
                 if(e->ecm_pid==n->ecm_pid) {
                   if(e->caId==n->caId && e->provId==n->provId) {
-                    if(n->Data()) {
-                      if(e->Update(n) && dolog) LBPUT("(updated) ");
-                      }
+                    if(e->AddCaDescr(n) && dolog) LBPUT("(updated) ");
                     if(dolog) LBPUT("(already present)");
                     delete n; n=0;
                     break;
@@ -1311,8 +1459,6 @@ void cEcmHandler::ParseCAInfo(int SysId)
         }
       }
     }
-  else if(len<0)
-    PRINTF(L_CORE_ECM,"%s: CA parse buffer overflow",id);
   if(SysId==0xFFFF) {
     for(cEcmPri *ep=ecmPriList.First(); ep; ep=ecmPriList.Next(ep))
       PRINTF(L_CORE_ECMPROC,"%s: ecmPriList pri=%d ident=%04x caid=%04x pid=%04x",id,ep->pri,ep->sysIdent,ep->ecm->caId,ep->ecm->ecm_pid);
@@ -1387,23 +1533,33 @@ void cCam::AddPrg(cPrg *prg)
   cMutexLock lock(this);
   bool islive=false;
   for(cPrgPid *pid=prg->pids.First(); pid; pid=prg->pids.Next(pid))
-    if(pid->Pid()==liveVpid || pid->Pid()==liveApid) {
+    if(pid->pid==liveVpid || pid->pid==liveApid) {
       islive=true;
       break;
       }
   bool needZero=!IsSoftCSA(islive) && (islive || !ScSetup.ConcurrentFF);
   bool noshift=IsSoftCSA(true) || (prg->IsUpdate() && prg->pids.Count()==0);
-  PRINTF(L_CORE_PIDS,"%d: %s SID %d (zero=%d noshift=%d)",cardNum,prg->IsUpdate()?"update":"add",prg->Prg(),needZero,noshift);
+  PRINTF(L_CORE_PIDS,"%d: %s SID %d (zero=%d noshift=%d)",cardNum,prg->IsUpdate()?"update":"add",prg->sid,needZero,noshift);
   if(prg->pids.Count()>0) {
     LBSTART(L_CORE_PIDS);
     LBPUT("%d: pids",cardNum);
     for(cPrgPid *pid=prg->pids.First(); pid; pid=prg->pids.Next(pid))
-      LBPUT(" %s=%04x",TYPENAME(pid->Type()),pid->Pid());
+      LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
     LBEND();
     }
-  cEcmHandler *handler=GetHandler(prg->Prg(),needZero,noshift);
+  if(prg->pids.Count()>0 && prg->SimplifyCaDescr()) {
+    PRINTF(L_GEN_WARN,"Stream specific caDescr (aka split-ecm) cannot be handled yet (SID %d)",prg->sid);
+    // take first caDescr and ignore the rest....
+    cPrgPid *pid=prg->pids.First();
+    prg->caDescr.Set(&pid->caDescr);
+    for(; pid; pid=prg->pids.Next(pid)) pid->caDescr.Clear();
+    prg->SetPidCaDescr(false);
+    }
+  cEcmHandler *handler=GetHandler(prg->sid,needZero,noshift);
   if(handler) {
-    PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->Prg(),handler->Id(),handler->IsIdle(),handler->CwIndex());
+    PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->sid,handler->Id(),handler->IsIdle(),handler->CwIndex());
+    prg->source=source;
+    prg->transponder=transponder;
     handler->SetPrg(prg);
     }
 }
@@ -1449,11 +1605,6 @@ void cCam::HouseKeeping(void)
     delete hookman; hookman=0;
     delete logger; logger=0;
     }
-}
-
-bool cCam::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  return device->GetPrgCaids(source,transponder,prg,c);
 }
 
 void cCam::LogStartup(void)
@@ -1820,7 +1971,96 @@ void cChannelList::Purge(int caid, bool fullch)
     }
 }
 
+// -- cCiFrame -----------------------------------------------------------------
+
+#define LEN_OFF 2
+
+class cCiFrame {
+private:
+  cRingBufferLinear *rb;
+  unsigned char *mem;
+  int len, alen, glen;
+public:
+  cCiFrame(void);
+  ~cCiFrame();
+  void SetRb(cRingBufferLinear *Rb) { rb=Rb; }
+  unsigned char *GetBuff(int l);
+  void Put(void);
+  unsigned char *Get(int &l);
+  void Del(void);
+  int Avail(void);
+  };
+
+cCiFrame::cCiFrame(void)
+{
+  rb=0; mem=0; len=alen=glen=0;
+}
+
+cCiFrame::~cCiFrame()
+{
+  free(mem);
+}
+
+unsigned char *cCiFrame::GetBuff(int l)
+{
+  if(!mem || l>alen) {
+    free(mem); mem=0; alen=0;
+    mem=MALLOC(unsigned char,l+LEN_OFF);
+    if(mem) alen=l;
+    }
+  len=l;
+  if(!mem) {
+    PRINTF(L_GEN_DEBUG,"internal: ci-frame alloc failed");
+    return 0;
+    }
+  return mem+LEN_OFF;
+}
+
+void cCiFrame::Put(void)
+{
+  if(rb && mem) {
+    *((short *)mem)=len;
+    rb->Put(mem,len+LEN_OFF);
+    }
+}
+
+unsigned char *cCiFrame::Get(int &l)
+{
+  if(rb) {
+    int c;
+    unsigned char *data=rb->Get(c);
+    if(data) {
+      if(c>LEN_OFF) {
+        int s=*((short *)data);
+        if(c>=s+LEN_OFF) {
+          l=glen=s;
+          return data+LEN_OFF;
+          }
+        }
+      LDUMP(L_GEN_DEBUG,data,c,"internal: ci rb frame sync got=%d avail=%d -",c,rb->Available());
+      rb->Clear();
+      }
+    }
+  return 0;
+}
+
+int cCiFrame::Avail(void)
+{
+  return rb ? rb->Available() : 0;
+}
+
+void cCiFrame::Del(void)
+{
+  if(rb && glen) {
+    rb->Del(glen+LEN_OFF);
+    glen=0;
+    }
+}
+
 // -- cScCiAdapter -------------------------------------------------------------
+
+#define CAID_TIME      300000 // time between caid scans
+#define TRIGGER_TIME    10000 // min. time between caid scan trigger
 
 #define TDPU_SIZE_INDICATOR 0x80
 
@@ -1842,11 +2082,13 @@ private:
   int cardIndex;
   cRingBufferLinear *rb;
   cScCamSlot *slots[MAX_CI_SLOTS];
+  cCiFrame frame;
   //
-  cTimeMs caidTimer;
+  cTimeMs caidTimer, triggerTimer;
   int version[MAX_CI_SLOTS];
   caid_t caids[MAX_CI_SLOTS][MAX_CI_SLOT_CAIDS+1];
   int tcid;
+  bool rebuildcaids;
   //
   cTimeMs readTimer, writeTimer;
   //
@@ -1864,6 +2106,7 @@ public:
   void CamAddPrg(cPrg *prg);
   bool CamSoftCSA(void);
   int GetCaids(int slot, unsigned short *Caids, int max);
+  void CaidsChanged(void);
   };
 
 // -- cScCamSlot ---------------------------------------------------------------
@@ -1871,7 +2114,7 @@ public:
 #define SLOT_CAID_CHECK 10000
 #define SLOT_RESET_TIME 600
 
-class cScCamSlot : public cCamSlot, public cRingBufferLinear {
+class cScCamSlot : public cCamSlot {
 private:
   cScCiAdapter *ciadapter;
   unsigned short caids[MAX_CI_SLOT_CAIDS+1];
@@ -1880,24 +2123,28 @@ private:
   bool reset, doReply;
   cTimeMs resetTimer;
   eModuleStatus lastStatus;
+  cRingBufferLinear rb;
+  cCiFrame frame;
   //
   int GetLength(const unsigned char * &data);
-  void CaInfo(unsigned char *b, int tcid, int cid);
+  void CaInfo(int tcid, int cid);
   bool Check(void);
 public:
   cScCamSlot(cScCiAdapter *ca, int CardIndex, int Slot);
   void Process(const unsigned char *data, int len);
   eModuleStatus Status(void);
   bool Reset(bool log=true);
+  cCiFrame *Frame(void) { return &frame; }
   };
 
 cScCamSlot::cScCamSlot(cScCiAdapter *ca, int CardIndex, int Slot)
 :cCamSlot(ca)
-,cRingBufferLinear(KILOBYTE(2),5+1,false,"SC-CI slot answer")
 ,checkTimer(-SLOT_CAID_CHECK-1000)
+,rb(KILOBYTE(4),5+1,false,"SC-CI slot answer")
 {
   ciadapter=ca; cardIndex=CardIndex; slot=Slot;
   version=0; caids[0]=0; doReply=false; lastStatus=msReset;
+  frame.SetRb(&rb);
   Reset(false);
 }
 
@@ -1924,7 +2171,7 @@ eModuleStatus cScCamSlot::Status(void)
 bool cScCamSlot::Reset(bool log)
 {
   reset=true; resetTimer.Set(SLOT_RESET_TIME);
-  Clear();
+  rb.Clear();
   if(log) PRINTF(L_CORE_CI,"%d.%d: reset",cardIndex,slot);
   return true;
 }
@@ -1959,12 +2206,13 @@ int cScCamSlot::GetLength(const unsigned char * &data)
   return len;
 }
 
-void cScCamSlot::CaInfo(unsigned char *b, int tcid, int cid)
+void cScCamSlot::CaInfo(int tcid, int cid)
 {
-  unsigned char *p=b;
-  *p++=0xa0;
   int n=9;
   for(int i=0; caids[i]; i++) n+=2;
+  unsigned char *p;
+  if(!(p=frame.GetBuff(n+(n<TDPU_SIZE_INDICATOR?2:3)))) return;
+  *p++=0xa0;
   if(n<TDPU_SIZE_INDICATOR) *p++=n;
   else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
   *p++=tcid;
@@ -1973,9 +2221,7 @@ void cScCamSlot::CaInfo(unsigned char *b, int tcid, int cid)
   *p++=0x9f; *p++=0x80;   *p++=0x31; // AOT_CA_INFO
   *p++=n-9;
   for(int i=0; caids[i]; i++) { *p++=caids[i]>>8; *p++=caids[i]&0xff; }
-  n=(p-b);
-  if(n>255) PRINTF(L_GEN_DEBUG,"internal: sc-camslot %d.%d ca-info length exceed %d",cardIndex,slot,n);
-  b[-1]=n; Put(b-1,n+1);
+  frame.Put();
   PRINTF(L_CORE_CI,"%d.%d sending CA info",cardIndex,slot);
 }
 
@@ -1990,8 +2236,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
   int tcid=data[0];
 
-  unsigned char a[256], *b=&a[1];
-  if(Check()) CaInfo(b,tcid,0x01);
+  if(Check()) CaInfo(tcid,0x01);
 
   if(dlen<8 || data[1]!=0x90) return;
   int cid=(data[3]<<8)+data[4];
@@ -2004,7 +2249,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
   switch(tag) {
     case 0x9f8030: // AOT_CA_INFO_ENQ
-      CaInfo(b,tcid,cid);
+      CaInfo(tcid,cid);
       break;
     
     case 0x9f8032: // AOT_CA_PMT
@@ -2019,6 +2264,8 @@ void cScCamSlot::Process(const unsigned char *data, int len)
         LBPUT("/%x",dlen);
         if(ilen>0 && dlen>=ilen) {
           ci_cmd=data[0];
+          if(ilen>1)
+            prg->caDescr.Set(&data[1],ilen-1);
           LBPUT(" ci_cmd(G)=%02x",ci_cmd);
           }
         data+=ilen; dlen-=ilen;
@@ -2031,6 +2278,10 @@ void cScCamSlot::Process(const unsigned char *data, int len)
           LBPUT("/%x",dlen);
           if(ilen>0 && dlen>=ilen) {
             ci_cmd=data[0];
+            if(ilen>1) {
+              pid->caDescr.Set(&data[1],ilen-1);
+              prg->SetPidCaDescr(true);
+              }
             LBPUT(" ci_cmd(S)=%x",ci_cmd);
             }
           data+=ilen; dlen-=ilen;
@@ -2038,24 +2289,28 @@ void cScCamSlot::Process(const unsigned char *data, int len)
         LBEND();
         PRINTF(L_CORE_CI,"%d.%d got CA pmt ciCmd=%d caLm=%d",cardIndex,slot,ci_cmd,ca_lm);
         if(doReply && (ci_cmd==0x03 || (ci_cmd==0x01 && ca_lm==0x03))) {
-          b[0]=0xa0; b[2]=tcid;
-          b[3]=0x90;
-          b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
-          b[7]=0x9f; b[8]=0x80; b[9]=0x33; // AOT_CA_PMT_REPLY
-          b[11]=prg->Prg()<<8;
-          b[12]=prg->Prg()&0xff;
-          b[13]=0x00;
-          b[14]=0x81; 	// CA_ENABLE
-          b[10]=4; b[1]=4+9; a[0]=4+11; Put(a,4+12);
-          PRINTF(L_CORE_CI,"%d.%d answer to query",cardIndex,slot);
+          unsigned char *b;
+          if((b=frame.GetBuff(4+11))) {
+            b[0]=0xa0; b[2]=tcid;
+            b[3]=0x90;
+            b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
+            b[7]=0x9f; b[8]=0x80; b[9]=0x33; // AOT_CA_PMT_REPLY
+            b[11]=prg->sid<<8;
+            b[12]=prg->sid&0xff;
+            b[13]=0x00;
+            b[14]=0x81; 	// CA_ENABLE
+            b[10]=4; b[1]=4+9;
+            frame.Put();
+            PRINTF(L_CORE_CI,"%d.%d answer to query",cardIndex,slot);
+            }
           }
-        if(prg->Prg()!=0) {
+        if(prg->sid!=0) {
           if(ci_cmd==0x04) {
             PRINTF(L_CORE_CI,"%d.%d stop decrypt",cardIndex,slot);
             ciadapter->CamStop();
             }
           if(ci_cmd==0x01 || (ci_cmd==-1 && (ca_lm==0x04 || ca_lm==0x05))) {
-            PRINTF(L_CORE_CI,"%d.%d set CAM decrypt (prg %d)",cardIndex,slot,prg->Prg());
+            PRINTF(L_CORE_CI,"%d.%d set CAM decrypt (prg %d)",cardIndex,slot,prg->sid);
             ciadapter->CamAddPrg(prg);
             }
           }
@@ -2070,13 +2325,14 @@ void cScCamSlot::Process(const unsigned char *data, int len)
 cScCiAdapter::cScCiAdapter(cDevice *Device, int CardIndex, cCam *Cam)
 {
   device=Device; cardIndex=CardIndex; cam=Cam;
-  tcid=0;
+  tcid=0; rebuildcaids=false;
   memset(version,0,sizeof(version));
   memset(slots,0,sizeof(slots));
   SetDescription("SC-CI adapter on device %d",cardIndex);
-  rb=new cRingBufferLinear(KILOBYTE(5),6+1,false,"SC-CI adapter read");
+  rb=new cRingBufferLinear(KILOBYTE(8),6+1,false,"SC-CI adapter read");
   if(rb) {
     rb->SetTimeouts(0,CAM_READ_TIMEOUT);
+    frame.SetRb(rb);
 /*
     bool spare=true;
     for(int i=0; i<MAX_CI_SLOTS; i++) {
@@ -2129,9 +2385,14 @@ int cScCiAdapter::GetCaids(int slot, unsigned short *Caids, int max)
   return version[slot];
 }
 
+void cScCiAdapter::CaidsChanged(void)
+{
+  rebuildcaids=true;
+}
+
 void cScCiAdapter::BuildCaids(bool force)
 {
-  if(caidTimer.TimedOut() || force) {
+  if(caidTimer.TimedOut() || force || (rebuildcaids && triggerTimer.TimedOut())) {
     PRINTF(L_CORE_CAIDS,"%d: building caid lists",cardIndex);
     cChannelList list(cardIndex);
     Channels.Lock(false);
@@ -2175,6 +2436,8 @@ void cScCiAdapter::BuildCaids(bool force)
     ciMutex.Unlock();
 
     caidTimer.Set(CAID_TIME);
+    triggerTimer.Set(TRIGGER_TIME);
+    rebuildcaids=false;
     }
 }
 
@@ -2182,25 +2445,17 @@ int cScCiAdapter::Read(unsigned char *Buffer, int MaxLength)
 {
   cMutexLock lock(&ciMutex);
   if(cam && rb && Buffer && MaxLength>0) {
-    int c;
-    unsigned char *data=rb->Get(c);
+    int s;
+    unsigned char *data=frame.Get(s);
     if(data) {
-      int s=data[0];
-      if(c>=s+1) {
-        c=s>MaxLength ? MaxLength : s;
-        memcpy(Buffer,&data[1],c);
-        if(c<s) { data[c]=s-c; rb->Del(c); }
-        else rb->Del(c+1);
-        if(Buffer[2]!=0x80 || LOG(L_CORE_CIFULL)) {
-          LDUMP(L_CORE_CI,Buffer,c,"%d.%d <-",cardIndex,Buffer[0]);
-          readTimer.Set();
-          }
-        return c;
+      if(s<=MaxLength) memcpy(Buffer,data,s);
+      else PRINTF(L_GEN_DEBUG,"internal: sc-ci %d rb frame size exceeded %d",cardIndex,s);
+      frame.Del();
+      if(Buffer[2]!=0x80 || LOG(L_CORE_CIFULL)) {
+        LDUMP(L_CORE_CI,Buffer,s,"%d.%d <-",cardIndex,Buffer[0]);
+        readTimer.Set();
         }
-      else {
-        LDUMP(L_GEN_DEBUG,data,c,"internal: sc-ci %d rb frame sync got=%d avail=%d -",cardIndex,c,rb->Available());
-        rb->Clear();
-        }
+      return s;
       }
     }
   else cCondWait::SleepMs(CAM_READ_TIMEOUT);
@@ -2211,62 +2466,67 @@ int cScCiAdapter::Read(unsigned char *Buffer, int MaxLength)
   return 0;
 }
 
-#define TPDU(data,slot) do { unsigned char *_d=(data); _d[0]=(slot); _d[1]=tcid; } while(0)
+#define TPDU(data,slot)   do { unsigned char *_d=(data); _d[0]=(slot); _d[1]=tcid; } while(0)
 #define TAG(data,tag,len) do { unsigned char *_d=(data); _d[0]=(tag); _d[1]=(len); } while(0)
-#define SB_TAG(data,sb) do { unsigned char *_d=(data); _d[0]=0x80; _d[1]=0x02; _d[2]=tcid; _d[3]=(sb); } while(0)
-#define PUT_TAG(data,len) do { unsigned char *_d=(data)-1; int _l=(len); _d[0]=_l; if(rb) rb->Put(_d,_l+1); } while(0)
+#define SB_TAG(data,sb)   do { unsigned char *_d=(data); _d[0]=0x80; _d[1]=0x02; _d[2]=tcid; _d[3]=(sb); } while(0)
 
 void cScCiAdapter::Write(const unsigned char *buff, int len)
 {
   cMutexLock lock(&ciMutex);
   if(cam && buff && len>=5) {
-    unsigned char a[256], *b=&a[1];
     struct TPDU *tpdu=(struct TPDU *)buff;
     int slot=tpdu->slot;
+    cCiFrame *slotframe=slots[slot]->Frame();
     if(buff[2]!=0xA0 || buff[3]>0x01 || LOG(L_CORE_CIFULL))
       LDUMP(L_CORE_CI,buff,len,"%d.%d ->",cardIndex,slot);
     if(slots[slot]) {
       switch(tpdu->tag) {
         case 0x81: // T_RCV
           {
-          TPDU(b,slot);
-          int l=2, c;
-          unsigned char *d=slots[slot]->Get(c);
+          int s;
+          unsigned char *d=slotframe->Get(s);
           if(d) {
-            int s=d[0];
-            if(c>=s) {
-              if(l+s<(int)sizeof(a)-6) {
-                memcpy(&b[l],&d[1],s);
-                l+=s;
-                }
-              else PRINTF(L_GEN_DEBUG,"internal: sc-ci %d a-buff overflow l+s=%d",cardIndex,l+s);
-              slots[slot]->Del(s+1);
+            unsigned char *b;
+            if((b=frame.GetBuff(s+6))) {
+              TPDU(b,slot);
+              memcpy(b+2,d,s);
+              slotframe->Del(); // delete from rb before Avail()
+              SB_TAG(b+2+s,slotframe->Avail()>0 ? 0x80:0x00);
+              frame.Put();
               }
-            else slots[slot]->Del(c);
+            else slotframe->Del();
             }
-          SB_TAG(&b[l],0x00);
-          PUT_TAG(b,l+4);
           break;
           }
         case 0x82: // T_CREATE_TC
+          {
           tcid=tpdu->data[0];
-          TPDU(b,slot);
-          TAG(&b[2],0x83,0x01); b[4]=tcid;
-          SB_TAG(&b[5],0x00);
-          PUT_TAG(b,9);
-
+          unsigned char *b;
           static const unsigned char reqCAS[] = { 0xA0,0x07,0x01,0x91,0x04,0x00,0x03,0x00,0x41 };
-          memcpy(b,reqCAS,sizeof(reqCAS));
-          b[2]=tcid;
-          a[0]=sizeof(reqCAS);
-          slots[slot]->Put(a,sizeof(reqCAS)+1);
+          if((b=slotframe->GetBuff(sizeof(reqCAS)))) {
+            memcpy(b,reqCAS,sizeof(reqCAS));
+            b[2]=tcid;
+            slotframe->Put();
+            }
+          if((b=frame.GetBuff(9))) {
+            TPDU(b,slot);
+            TAG(&b[2],0x83,0x01); b[4]=tcid;
+            SB_TAG(&b[5],slotframe->Avail()>0 ? 0x80:0x00);
+            frame.Put();
+            }
           break;
+          }
         case 0xA0: // T_DATA_LAST
+          {
           slots[slot]->Process(buff,len);
-          TPDU(b,slot);
-          SB_TAG(&b[2],slots[slot]->Available()>0 ? 0x80:0x00);
-          PUT_TAG(b,6);
+          unsigned char *b;
+          if((b=frame.GetBuff(6))) {
+            TPDU(b,slot);
+            SB_TAG(&b[2],slotframe->Avail()>0 ? 0x80:0x00);
+            frame.Put();
+            }
           break;
+          }
         }
       }
     }
@@ -2578,8 +2838,9 @@ cScDvbDevice::cScDvbDevice(int n, int cafd)
   decsa=0; tsBuffer=0; cam=0; fullts=false;
 #if APIVERSNUM >= 10500
   ciadapter=0; hwciadapter=0;
-#endif
+#else
   memset(lrucaid,0,sizeof(lrucaid));
+#endif
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
   softcsa=(fd_ca<0);
 }
@@ -2762,25 +3023,38 @@ bool cScDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 
 bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 {
+#if APIVERSNUM < 10500
   lruMutex.Lock();
   int i=FindLRUPrg(Channel->Source(),Channel->Transponder(),Channel->Sid());
   if(i<0) i=MAX_LRU_CAID-1;
   if(i>0) memmove(&lrucaid[1],&lrucaid[0],sizeof(struct LruCaid)*i);
-#if APIVERSNUM >= 10500
-  const caid_t *c=Channel->Caids();
-  for(i=0; i<MAXCAIDS && *c; i++) lrucaid[0].caids[i]=*c++;
-  lrucaid[0].caids[i]=0;
-#else
   for(i=0; i<=MAXCAIDS; i++) if((lrucaid[0].caids[i]=Channel->Ca(i))==0) break;
-#endif
   lrucaid[0].src=Channel->Source();
   lrucaid[0].tr=Channel->Transponder();
   lrucaid[0].prg=Channel->Sid();
   lruMutex.Unlock();
+#endif
   if(cam) cam->Tune(Channel);
   bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
   if(ret && cam) cam->PostTune();
   return ret;
+}
+
+#if APIVERSNUM < 10500
+int cScDvbDevice::ProvidesCa(const cChannel *Channel) const
+{
+  if(cam && Channel->Ca()>=CA_ENCRYPTED_MIN) {
+    int j;
+    caid_t ids[MAXCAIDS+1];
+    for(j=0; j<=MAXCAIDS; j++) if((ids[j]=Channel->Ca(j))==0) break;
+    if(cSystems::Provides(ids,!softcsa)>0) return 2;
+    }
+  return cDvbDevice::ProvidesCa(Channel);
+}
+
+bool cScDvbDevice::CiAllowConcurrent(void) const
+{
+  return softcsa || ScSetup.ConcurrentFF>0;
 }
 
 bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
@@ -2802,23 +3076,6 @@ int cScDvbDevice::FindLRUPrg(int source, int transponder, int prg)
   return -1;
 }
 
-#if APIVERSNUM < 10500
-int cScDvbDevice::ProvidesCa(const cChannel *Channel) const
-{
-  if(cam && Channel->Ca()>=CA_ENCRYPTED_MIN) {
-    int j;
-    caid_t ids[MAXCAIDS+1];
-    for(j=0; j<=MAXCAIDS; j++) if((ids[j]=Channel->Ca(j))==0) break;
-    if(cSystems::Provides(ids,!softcsa)>0) return 2;
-    }
-  return cDvbDevice::ProvidesCa(Channel);
-}
-
-bool cScDvbDevice::CiAllowConcurrent(void) const
-{
-  return softcsa || ScSetup.ConcurrentFF>0;
-}
-
 void cScDvbDevice::CiStartDecrypting(void)
 {
   if(cam) {
@@ -2827,9 +3084,21 @@ void cScDvbDevice::CiStartDecrypting(void)
       if(p->modified) {
         cPrg *prg=new cPrg(p->programNumber,cam->HasPrg(p->programNumber));
         if(prg) {
+          bool haspid=false;
           for(cCiCaPidData *q=p->pidList.First(); q; q=p->pidList.Next(q)) {
-            if(q->active)
+            if(q->active) {
               prg->pids.Add(new cPrgPid(q->streamType,q->pid));
+              haspid=true;
+              }
+            }
+          if(haspid) {
+            caid_t casys[MAXCAIDS+1];
+            if(GetPrgCaids(ciSource,ciTransponder,p->programNumber,casys)) {
+              unsigned char buff[2048];
+              bool streamflag;
+              int len=GetCaDescriptors(ciSource,ciTransponder,p->programNumber,casys,sizeof(buff),buff,streamflag);
+              if(len>0) prg->caDescr.Set(buff,len);
+              }
             }
           prgList.Add(prg);
           }
@@ -2883,6 +3152,14 @@ bool cScDvbDevice::GetTSPacket(uchar *&Data)
 bool cScDvbDevice::SoftCSA(bool live)
 {
   return softcsa && (!fullts || !live);
+}
+
+void cScDvbDevice::CaidsChanged(void)
+{
+#if APIVERSNUM >= 10500
+  if(ciadapter) ciadapter->CaidsChanged();
+  PRINTF(L_CORE_CAIDS,"caid list rebuild triggered");
+#endif
 }
 
 bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
@@ -3018,10 +3295,8 @@ bool cScDvbDevice::Initialize(void)
   return true;
 }
 
-bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  return false;
-}
+void cScDvbDevice::CaidsChanged(void)
+{}
 
 bool cScDvbDevice::SoftCSA(bool live)
 {

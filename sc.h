@@ -35,6 +35,7 @@ public:
   static void SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on);
   static void AddHook(int CardNum, cLogHook *hook);
   static bool TriggerHook(int CardNum, int id);
+  static void CaidsChanged(void);
   };
 
 #endif // ___SC_H

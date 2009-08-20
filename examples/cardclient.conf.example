@@ -47,10 +47,16 @@ newcamd:hostname:port:emm/caid/mask:username:password:cfgKey
 # machine. For convinience you should choose localhost:8004
 gbox:hostname:port:emm/caid/mask
 #
-# ccam client
+# cccam client (via LD_PRE_LOAD wrapper)
 #
 # NOTE: hostname will be ignore. CCcam must be runnning on the local machine
 # 'socket' is the name of the camd socket file. For multiple cards add %d
 # into the string. This will be replaced with the number 0-3.
 # e.g. /var/emu/chroot%d/tmp/camd.socket
 cccam:hostname:port:emm/caid/mask:socket
+#
+# (the real) cccam client
+#
+# NOTE: this is a real client. You don't need to have CCcam running on local
+# machine.
+cccam2:hostname:port:emm/caid/mask:username:password

@@ -55,8 +55,8 @@ only recent versions support concurrent recording! Recompile the driver, unload
 the modules, install the new ones and reload the DVB driver. If you suffer from
 ARM crashes, add "hw_sections=0" while loading the dvb-ttpci module.
 
-Contrary to older plugin versions you MUST NOT apply any patches to the VDR core
-(neither vdr-sc nor ffdecsa/softcsa).
+Contrary to older plugin versions (before 0.7.0) you MUST NOT apply any patches
+to the VDR core (neither vdr-sc nor ffdecsa/softcsa).
 
 You must have installed the openssl development files. For most distributions
 this means to install openssl-devel package. You should use a openssl package
@@ -99,6 +99,9 @@ rotated.
 How to setup for VDR 1.4.x ?
 ----------------------------
 
+NOTE: support for VDR 1.4.7 is deprecated. As development requires, the support
+will be removed.
+
 Additional to the points mentioned above, you have to patch the VDR core with
 the supplied patch (vdr-1.4.x-sc7.diff). Recompile VDR and use the new binary.
 Patches from older SC releases are not going to work.
@@ -120,7 +123,7 @@ to your VDR plugin lib directory.
 
 Please be aware, that pre-compiled libraries are more or less bound to the hard-
 & software configuration they have been build on. Currently the build system is
-Intel 32bit, gcc 3.2.2, glibc 2.2.5. If your system differs too much, it may be
+Intel 32bit, gcc 4.3.3, glibc 2.9. If your system differs too much, it may be
 impossible to use the pre-compiled libraries.
 
 Obviously, pre-compiled libraries cannot be exchanged between different SC
@@ -161,7 +164,7 @@ To reduce the number of CAIDs SC has to deal with, you should obey some rules:
 -Remove all libsc-* files for encryption system which you don't intend to use
  (e.g. SHL seems pretty useless nowadays).
 -When using a cardclient, be as precise as possible with the CAID/MASK values in
- the cardclient.conf file. Using wide open 0000/0000 is deprecated.
+ the cardclient.conf file. Using wide open 0000/0000 is not recommended.
 -Add CAIDs which you cannot use due to lack of keys to the SC.CaIgnore setting.
 
 
@@ -273,7 +276,8 @@ Cardserver client
 -----------------
 
 The cardclient is a client for several cardservers. Supported cardservers are :
-radegast, newcamd, camd33 (tcp), camd35 (udp), cardd, buffy and aroureos.
+CCcam, gbox, radegast, newcamd, camd33 (tcp), camd35 (udp), cardd, buffy and
+aroureos and servers which are protocol compatible with the mentioned ones.
 
 You can configure as many clients for different servers as you want. The client
 configuration is read from the file "cardclient.conf". Every line in the file
@@ -294,10 +298,6 @@ they are idle too long (normaly after 120 seconds). The network is brought down
 after the last connection has terminated and an additional network timeout has
 expired. The network timeout is configurable with the commandline option -t and
 defaults to 60 seconds, e.g. "-t 120".
-
-The current cardclient implementation is loosely based on the Streamboard
-client (contributed by S.Laurel from the Streamboard), which was included in
-earlier releases.
 
 
 
