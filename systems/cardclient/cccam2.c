@@ -505,7 +505,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         for(cShare *s=shares.First(); s;) {
           cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
-            PRINTF(L_CC_CCCAM2SH,"REMOVE share %08x caid: %04x",s->ShareID(),s->CaID());
+            PRINTF(L_CC_CCCAM2SH,"REMOVE share %08x caid: %04x (count %d)",s->ShareID(),s->CaID(),shares.Count());
             int caid=s->CaID();
             shares.Del(s);
             if(!shares.HasCaid(caid)) CaidsChanged();
