@@ -508,7 +508,7 @@ static const struct CardConfig cardCfgDelay = {
 cSmartCardVideoGuard2::cSmartCardVideoGuard2(void)
 :cSmartCard(&cardCfg,msgs)
 {
-  cmdList=0;
+  cmdList=0; CAID=0;
 }
 
 cSmartCardVideoGuard2::~cSmartCardVideoGuard2(void)
@@ -594,7 +594,9 @@ bool cSmartCardVideoGuard2::Init(void)
     return false;
     }
   
-  CAID=WORD(buff,0x1D,0xFFFF);
+  unsigned int c=WORD(buff,0x1D,0xFFFF);
+  if(c!=CAID) CaidsChanged();
+  CAID=c;
   memcpy(&cardID,&buff[8],4);
   memcpy(&groupID,&buff[8],4); groupID[3]=0;
   SetCard(new cCardNDS(cardID));

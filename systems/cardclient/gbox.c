@@ -89,6 +89,12 @@ bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data,
 
   const int caid=ecm->caId;
   const int pid =ecm->ecm_pid;
+  int n;
+  const unsigned char *descr=ecm->GetCaDescr(&n);
+  if(!descr) {
+    PRINTF(L_CC_GBOX,"no CA descriptor for caid %04x sid %d prov %04x",caid,ecm->prgId,ecm->provId);
+    return false;
+    }
 
   static const unsigned char pmt[] = {
     0x87,
@@ -99,23 +105,11 @@ bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data,
     0xf0,0x00,		// prg info len
     0x02, 0xff,0xec, 0xf0,0x00
     };
-  unsigned char buff[512];
+  unsigned char *buff=AUTOMEM(sizeof(pmt)+8+n);
   memcpy(buff,pmt,sizeof(pmt));
   buff[4]=ecm->prgId >> 8;
   buff[5]=ecm->prgId & 0xFF;
-#if APIVERSNUM >= 10500
-  int casys[2];
-#else
-  unsigned short casys[2];
-#endif
-  casys[0]=caid;
-  casys[1]=0;
-  bool streamFlag;
-  int n=GetCaDescriptors(ecm->source,ecm->transponder,ecm->prgId,casys,sizeof(buff)-sizeof(pmt),&buff[sizeof(pmt)],streamFlag);
-  if(n<=0) {
-    PRINTF(L_CC_GBOX,"no CA descriptor for caid %04x sid %d prov %04x",caid,ecm->prgId,ecm->provId);
-    return false;
-    }
+  memcpy(&buff[sizeof(pmt)],descr,n);
   buff[16]=0xF0 | ((n>>8)&0x0F);
   buff[17]=n & 0xFF;
   SetSctLen(&buff[1],sizeof(pmt)-4+n+4);

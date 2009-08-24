@@ -29,6 +29,7 @@ class cStructLoaders;
 class cLoaders;
 class cPidFilter;
 class cPlainKeys;
+class cRewriter;
 
 // ----------------------------------------------------------------
 
@@ -222,15 +223,17 @@ private:
   //
   void Setup(void);
 protected:
-  int dataLen;
-  unsigned char *data;
+  int caDescrLen, dataIdx;
+  unsigned char *caDescr;
   //
-  void ClearData(void);
+  void ClearCaDescr(void);
 public:
   char *name;
   int ecm_pid, ecm_table;
   int caId, provId, emmCaId;
   int prgId, source, transponder;
+  cRewriter *rewriter;
+  int rewriterId;
   //
   cEcmInfo(void);
   cEcmInfo(const cEcmInfo *e);
@@ -238,11 +241,14 @@ public:
   ~cEcmInfo();
   virtual cString ToString(bool hide=false) { return ""; }
   bool Compare(const cEcmInfo *e);
-  bool Update(const cEcmInfo *e);
   void SetSource(int PrgId, int Source, int Transponder);
   void SetName(const char *Name);
-  bool AddData(const unsigned char *Data, int DataLen);
-  const unsigned char *Data(void) const { return data; }
+  void SetDataIdx(int idx);
+  const unsigned char *Data(void) const;
+  bool AddCaDescr(const cEcmInfo *e);
+  bool AddCaDescr(const unsigned char *descr, int len);
+  const unsigned char *GetCaDescr(int *l) const;
+  void SetRewriter(void);
   void Fail(bool st) { failed=st; }
   bool Failed(void) const { return failed; }
   void SetCached(void) { cached=true; }

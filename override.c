@@ -168,6 +168,7 @@ cString cValidityRange::Print(void)
 #define OV_EMMCAID  2
 #define OV_ECMTABLE 3
 #define OV_EMMTABLE 4
+#define OV_TUNNEL   5
 
 // -- cOverrideCat -------------------------------------------------------------
 
@@ -309,6 +310,129 @@ void cOverrideEmmTable::AddPids(cPids *pids, int pid, int caid)
   LBEND();
 }
 
+// -- cRewriter ----------------------------------------------------------------
+
+cRewriter::cRewriter(const char *Name, int Id)
+{
+  name=Name; id=Id;
+  mem=0; mlen=0;
+}
+
+cRewriter::~cRewriter()
+{
+  free(mem);
+}
+
+unsigned char *cRewriter::Alloc(int len)
+{
+  if(!mem || mlen<len) {
+    free(mem);
+    if(len<256) len=256;
+    mem=MALLOC(unsigned char,len);
+    mlen=len;
+    }
+  if(!mem) PRINTF(L_CORE_OVER,"rewriter %s: failed to alloc rewrite buffer",name);
+  return mem;
+}
+
+// -- cRewriterNagraBeta -------------------------------------------------------
+
+#define RWID_NAGRA_BETA   1001
+#define RWNAME_NAGRA_BETA "nagra-beta"
+
+class cRewriterNagraBeta : public cRewriter {
+public:
+  cRewriterNagraBeta(void);
+  virtual bool Rewrite(unsigned char *&data, int &len);
+  };
+
+cRewriterNagraBeta::cRewriterNagraBeta(void)
+:cRewriter(RWNAME_NAGRA_BETA,RWID_NAGRA_BETA)
+{}
+
+bool cRewriterNagraBeta::Rewrite(unsigned char *&data, int &len)
+{
+  unsigned char *d=Alloc(len+10);
+  if(d) {
+    static const unsigned char tunnel[] = { 0xc9,0x00,0x00,0x00,0x01,0x10,0x10,0x00,0x48,0x12,0x07 };
+    d[0]=data[0];
+    SetSctLen(d,len+10);
+    memcpy(&d[3],tunnel,sizeof(tunnel));
+    memcpy(&d[14],&data[4],len-4);
+    if(len>0x88) { // assume N3
+      d[3]=0xc7; d[11]=0x87;
+      }
+    if(d[0]&0x01) d[12]++;
+
+    data=d; len+=10;
+    return true;
+    }
+  return false;
+}
+
+// -- cRewriters ---------------------------------------------------------------
+
+cRewriter *cRewriters::CreateById(int id)
+{
+  switch(id) {
+    case RWID_NAGRA_BETA: return new cRewriterNagraBeta;
+    default: return 0;
+    }
+}
+
+int cRewriters::GetIdByName(const char *name)
+{
+  if(!strcasecmp(name,RWNAME_NAGRA_BETA)) return RWID_NAGRA_BETA;
+  else return 0;
+}
+
+// -- cOverrideTunnel ----------------------------------------------------------
+
+class cOverrideTunnel : public cOverride {
+private:
+  int caid, rewriterId;
+public:
+  cOverrideTunnel(void) { type=OV_TUNNEL; }
+  virtual bool Parse(char *str);
+  int GetTunnel(int *id, bool log);
+  };
+
+bool cOverrideTunnel::Parse(char *str)
+{
+  bool res=false;
+  if((str=Parse3(str))) {
+    char *name=0;
+    if(sscanf(str,"%x:%a[^:]",&caid,&name)>=1) {
+      char rw[48];
+      if(name) {
+        if((rewriterId=cRewriters::GetIdByName(name))>0) {
+          snprintf(rw,sizeof(rw),"%s(%d)",name,rewriterId);
+          res=true;
+          }
+        else PRINTF(L_CORE_LOAD,"override: REWRITER name error");
+        }
+      else {
+        strcpy(rw,"<none>");
+        rewriterId=0;
+        res=true;
+        }
+      if(res) {
+        PRINTF(L_CORE_OVER,"tunnel: %s - to %04x, rewriter %s",*Print(),caid,rw);
+        }
+      }
+    else PRINTF(L_CORE_LOAD,"override: TUNNEL format error");
+    free(name);
+    }
+  return res;
+}
+
+int cOverrideTunnel::GetTunnel(int *id, bool log)
+{
+  if(log) PRINTF(L_CORE_OVER,"tunnel: to %04x (%d)",caid,rewriterId);
+  if(id) *id=rewriterId;
+  return caid;
+}
+
 // -- cOverrides ---------------------------------------------------------------
 
 cOverrides overrides;
@@ -328,15 +452,16 @@ cOverride *cOverrides::ParseLine(char *line)
     else if(!strncasecmp(line,"emmcaid",7)) ov=new cOverrideEmmCaid;
     else if(!strncasecmp(line,"ecmtable",8)) ov=new cOverrideEcmTable;
     else if(!strncasecmp(line,"emmtable",8)) ov=new cOverrideEmmTable;
+    else if(!strncasecmp(line,"tunnel",6)) ov=new cOverrideTunnel;
     if(ov && !ov->Parse(p)) { delete ov; ov=0; }
     }
   return ov;
 }
 
-cOverride *cOverrides::Find(int type, int caid, int source, int freq, cOverride *ov)
+cOverride *cOverrides::Find(int type, int caid, int source, int transponder, cOverride *ov)
 {
   for(ov=ov?Next(ov):First(); ov; ov=Next(ov))
-    if(ov->Type()==type && ov->Match(caid,source,freq)) break;
+    if(ov->Type()==type && ov->Match(caid,source,transponder%100000)) break;
   return ov;
 }
 
@@ -344,7 +469,7 @@ int cOverrides::GetCat(int source, int transponder, unsigned char *buff, int len
 {
   int n=0;
   ListLock(false);
-  for(cOverride *ov=0; (ov=Find(OV_CAT,-1,source,transponder%100000,ov)) && n<len-32;) {
+  for(cOverride *ov=0; (ov=Find(OV_CAT,-1,source,transponder,ov)) && n<len-32;) {
     cOverrideCat *ovc=dynamic_cast<cOverrideCat *>(ov);
     if(ovc) n+=ovc->GetCatEntry(&buff[n]);
     }
@@ -355,10 +480,17 @@ int cOverrides::GetCat(int source, int transponder, unsigned char *buff, int len
 void cOverrides::UpdateEcm(cEcmInfo *ecm, bool log)
 {
   ListLock(false);
-  cOverrideEcmTable *ovt=dynamic_cast<cOverrideEcmTable *>(Find(OV_ECMTABLE,ecm->caId,ecm->source,ecm->transponder%100000));
+  cOverrideEcmTable *ovt=dynamic_cast<cOverrideEcmTable *>(Find(OV_ECMTABLE,ecm->caId,ecm->source,ecm->transponder));
   if(ovt) ecm->ecm_table=ovt->GetTable(log);
-  cOverrideEmmCaid *ovc=dynamic_cast<cOverrideEmmCaid *>(Find(OV_EMMCAID,ecm->caId,ecm->source,ecm->transponder%100000));
+  cOverrideEmmCaid *ovc=dynamic_cast<cOverrideEmmCaid *>(Find(OV_EMMCAID,ecm->caId,ecm->source,ecm->transponder));
   if(ovc) ecm->emmCaId=ovc->GetCaid(log);
+  cOverrideTunnel *ovu=dynamic_cast<cOverrideTunnel *>(Find(OV_TUNNEL,ecm->caId,ecm->source,ecm->transponder));
+  if(ovu) {
+    if(ecm->emmCaId==0) ecm->emmCaId=ecm->caId;
+    ecm->caId=ovu->GetTunnel(&ecm->rewriterId,log);
+    ecm->provId=0;
+    if(ecm->rewriterId) ecm->rewriter=cRewriters::CreateById(ecm->rewriterId);
+    }
   ListUnlock();
 }
 
@@ -366,7 +498,7 @@ bool cOverrides::AddEmmPids(int caid, int source, int transponder, cPids *pids, 
 {
   bool res=false;
   ListLock(false);
-  cOverrideEmmTable *ovt=dynamic_cast<cOverrideEmmTable *>(Find(OV_EMMTABLE,caid,source,transponder%100000));
+  cOverrideEmmTable *ovt=dynamic_cast<cOverrideEmmTable *>(Find(OV_EMMTABLE,caid,source,transponder));
   if(ovt) {
     ovt->AddPids(pids,pid,caid);
     res=true;

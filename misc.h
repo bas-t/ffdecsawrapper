@@ -50,6 +50,8 @@ int DvbOpen(const char *Name, int n, int Mode, bool ReportError=false);
 const char *HexStr(char *str, const unsigned char *mem, int len);
 #define KeyStr(str,key) HexStr(str,key,8)
 
+void SetSctLen(unsigned char *data, int len);
+
 int GetHex(const char * &line, unsigned char *store, int count, bool fixedLen=true);
 int GetHexAsc(const char * &line, unsigned char *store, int count);
 int GetChar(const char * &line, int *store, int count);

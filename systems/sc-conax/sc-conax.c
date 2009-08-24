@@ -246,7 +246,12 @@ bool cSmartCardConax::Init(void)
   for(int i=0; i<l; i+=buff[i+1]+2) {
     switch(buff[i]) {
       case 0x20: cardVer=buff[i+2]; break;
-      case 0x28: sysId=(buff[i+2]<<8)+buff[i+3]; break;
+      case 0x28: {
+                 int s=(buff[i+2]<<8)+buff[i+3];
+                 if(s!=sysId) CaidsChanged();
+                 sysId=s;
+                 break;
+                 }
       case 0x2f: currency=(buff[i+2]<<8)+buff[i+3]; break;
       }
     }

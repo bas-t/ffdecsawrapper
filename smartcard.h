@@ -127,6 +127,7 @@ protected:
   bool Status(void);
   void NewCardConfig(const struct CardConfig *Cfg);
   int CheckSctLen(const unsigned char *data, int off);
+  void CaidsChanged(void);
 public:
   cSmartCard(const struct CardConfig *Cfg, const struct StatusMsg *Msg);
   virtual ~cSmartCard() {};

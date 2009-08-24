@@ -20,12 +20,12 @@
 #ifndef ___VERSION_H
 #define ___VERSION_H
 
-#define SC_RELEASE "0.9.2"
+#define SC_RELEASE "1.0.0pre"
 
 extern const char *ScVersion;
 
 // SC API version number for loading shared libraries
-#define SCAPIVERS 24
+#define SCAPIVERS 26
 #ifndef STATICBUILD
 #define SCAPIVERSTAG() int ScLibApiVersion=SCAPIVERS
 #else

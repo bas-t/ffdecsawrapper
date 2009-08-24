@@ -37,8 +37,12 @@
 #define L_CC_NEWCAMD  LCLASS(L_CC,0x200)
 #define L_CC_GBOX     LCLASS(L_CC,0x400)
 #define L_CC_CCCAM    LCLASS(L_CC,0x800)
+#define L_CC_CCCAM2   LCLASS(L_CC,0x1000)
+#define L_CC_CCCAM2DT LCLASS(L_CC,0x2000)
+#define L_CC_CCCAM2SH LCLASS(L_CC,0x4000)
+#define L_CC_CCCAM2EX LCLASS(L_CC,0x8000)
 
-#define L_CC_ALL      LALL(L_CC_CCCAM)
+#define L_CC_ALL      LALL(L_CC_CCCAM2EX)
 
 // ----------------------------------------------------------------
 
@@ -66,6 +70,7 @@ protected:
   virtual int RecvMsg(cNetSocket *so, unsigned char *data, int len, int to=-1);
   virtual bool Login(void) { return false; }
   bool Immediate(void);
+  void CaidsChanged(void);
 public:
   cCardClient(const char *Name);
   virtual bool Init(const char *config)=0;

@@ -421,7 +421,9 @@ bool cCardClientNewCamd::Login(void)
 
   if(!CmdSend(&so,MSG_CARD_DATA_REQ) || ReceiveMessage(&so,buffer,false)<=0) return false;
   if(buffer[0] == MSG_CARD_DATA) {
-    caId=(buffer[4]<<8)+buffer[5];
+    int c=(buffer[4]<<8)+buffer[5];
+    if(c!=caId) CaidsChanged();
+    caId=c;
     LBSTARTF(L_CC_LOGIN);
     char str[32], str2[32];
     LBPUT("%s: CaID=%04x admin=%d srvUA=%s",name,caId,buffer[3]==1,HexStr(str,&buffer[6],8));

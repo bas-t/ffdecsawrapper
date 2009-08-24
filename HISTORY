@@ -1,6 +1,20 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
 
+..2009: Version 1.0.0
+- Forked development branch.
+- Now operating like a real CAM. All necessary information are derieved from the
+  CAM messages send by VDR (i.e. no more GetCaDescriptors).
+- Added a real CCcam network client (experimental). CCcam doesn't need to run on
+  localhost. The client name is cccam2, see cardclient.conf.example file.
+- Reworked CA message buffer handling. Removed fixed size buffers and fixed
+  several buffer overflows.
+- Added a copy of opensasc-ng to the contrib directory. In place compile with
+  current vdr-sc/FFdecsa code supported.
+- Support for VDR 1.4.7 is declared deprecated.
+
+------------------------------------------------------------
+
 04.07.2009: Version 0.9.2
 - Restructure of smartcard code. Configuration has been moved to cardslot.conf.
   See cardslot.conf.example file.

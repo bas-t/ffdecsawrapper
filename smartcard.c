@@ -32,6 +32,7 @@
 #include <vdr/thread.h>
 
 #include "smartcard.h"
+#include "sc.h"
 #include "misc.h"
 #include "log-core.h"
 
@@ -1877,6 +1878,11 @@ int cSmartCard::CheckSctLen(const unsigned char *data, int off)
     l=-1;
     }
   return l;
+}
+
+void cSmartCard::CaidsChanged(void)
+{
+  cSoftCAM::CaidsChanged();
 }
 
 // -- cSmartCardLink -----------------------------------------------------------

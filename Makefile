@@ -196,7 +196,7 @@ $(LIBDIR)/libvdr-$(PLUGIN).a: $(OBJS)
 	$(AR) r $@ $(OBJS)
 
 $(FFDECSA): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
-	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT) -DPARALLEL_MODE=$(PARALLEL)" -C $(FFDECSADIR) all
+	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all
 
 $(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
 	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --msgid-bugs-address='<noone@nowhere.org>' -o $@ $^
