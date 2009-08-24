@@ -2127,6 +2127,8 @@ private:
   cCiFrame frame;
   //
   int GetLength(const unsigned char * &data);
+  int LengthSize(int n);
+  void SetSize(int n, unsigned char * &p);
   void CaInfo(int tcid, int cid);
   bool Check(void);
 public:
@@ -2206,20 +2208,32 @@ int cScCamSlot::GetLength(const unsigned char * &data)
   return len;
 }
 
-void cScCamSlot::CaInfo(int tcid, int cid)
+int cScCamSlot::LengthSize(int n)
 {
-  int n=9;
-  for(int i=0; caids[i]; i++) n+=2;
-  unsigned char *p;
-  if(!(p=frame.GetBuff(n+(n<TDPU_SIZE_INDICATOR?2:3)))) return;
-  *p++=0xa0;
+  return n<TDPU_SIZE_INDICATOR?1:3;
+}
+
+void cScCamSlot::SetSize(int n, unsigned char * &p)
+{
   if(n<TDPU_SIZE_INDICATOR) *p++=n;
   else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
+}
+
+void cScCamSlot::CaInfo(int tcid, int cid)
+{
+  int cn=0;
+  for(int i=0; caids[i]; i++) cn+=2;
+  int n=cn+8+LengthSize(cn);
+PRINTF(L_CORE_CI,"n=%d cn=%d",n,cn);
+  unsigned char *p;
+  if(!(p=frame.GetBuff(n+1+LengthSize(n)))) return;
+  *p++=0xa0;
+  SetSize(n,p);
   *p++=tcid;
   *p++=0x90;
   *p++=0x02; *p++=cid>>8; *p++=cid&0xff;
   *p++=0x9f; *p++=0x80;   *p++=0x31; // AOT_CA_INFO
-  *p++=n-9;
+  SetSize(cn,p);
   for(int i=0; caids[i]; i++) { *p++=caids[i]>>8; *p++=caids[i]&0xff; }
   frame.Put();
   PRINTF(L_CORE_CI,"%d.%d sending CA info",cardIndex,slot);
