@@ -103,7 +103,12 @@ endif
 
 ### VDR version dependant
 
-ifneq ($(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi),)
+# test VDR version
+BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
+# test if PlayTsVideo() exists (e.g. TSplay patch)
+BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(VDRDIR)/include/vdr/device.h))
+
+ifneq ($(BYVERS)$(BYTSPL),)
   SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 endif
 
