@@ -1,0 +1,315 @@
+diff -u vdr-1.6.0-2-orig/ci.c vdr/ci.c
+--- vdr-1.6.0-2-orig/ci.c	2009-01-15 16:21:16.000000000 -0500
++++ vdr/ci.c	2009-08-17 05:56:38.000000000 -0400
+@@ -551,6 +551,8 @@
+ 
+ // --- cCiCaPmt --------------------------------------------------------------
+ 
++#define MAXCASYSTEMIDS 64
++
+ // Ca Pmt List Management:
+ 
+ #define CPLM_MORE    0x00
+@@ -574,9 +576,10 @@
+   int length;
+   int esInfoLengthPos;
+   uint8_t capmt[2048]; ///< XXX is there a specified maximum?
+-  int caDescriptorsLength;
+-  uint8_t caDescriptors[2048];
+-  bool streamFlag;
++  int source;
++  int transponder;
++  int programNumber;
++  int caSystemIds[MAXCASYSTEMIDS + 1]; // list is zero terminated!
+   void AddCaDescriptors(int Length, const uint8_t *Data);
+ public:
+   cCiCaPmt(uint8_t CmdId, int Source, int Transponder, int ProgramNumber, const int *CaSystemIds);
+@@ -589,7 +592,17 @@
+ cCiCaPmt::cCiCaPmt(uint8_t CmdId, int Source, int Transponder, int ProgramNumber, const int *CaSystemIds)
+ {
+   cmdId = CmdId;
+-  caDescriptorsLength = GetCaDescriptors(Source, Transponder, ProgramNumber, CaSystemIds, sizeof(caDescriptors), caDescriptors, streamFlag);
++  source = Source;
++  transponder = Transponder;
++  programNumber = ProgramNumber;
++  int i = 0;
++  if (CaSystemIds) {
++     for (; CaSystemIds[i]; i++)
++         caSystemIds[i] = CaSystemIds[i];
++     }
++  caSystemIds[i] = 0;
++  uint8_t caDescriptors[512];
++  int caDescriptorsLength = GetCaDescriptors(source, transponder, programNumber, caSystemIds, sizeof(caDescriptors), caDescriptors, 0);
+   length = 0;
+   capmt[length++] = CPLM_ONLY;
+   capmt[length++] = (ProgramNumber >> 8) & 0xFF;
+@@ -597,8 +610,9 @@
+   capmt[length++] = 0x01; // version_number, current_next_indicator - apparently vn doesn't matter, but cni must be 1
+   esInfoLengthPos = length;
+   capmt[length++] = 0x00; // program_info_length H (at program level)
+-  capmt[length++] = 0x00; // program_info_length L
+-  if (!streamFlag)
++  capmt[length++] = 0x01; // program_info_length L
++  capmt[length++] = cmdId;
++  if (caDescriptorsLength>0)
+      AddCaDescriptors(caDescriptorsLength, caDescriptors);
+ }
+ 
+@@ -610,14 +624,17 @@
+ void cCiCaPmt::AddPid(int Pid, uint8_t StreamType)
+ {
+   if (Pid) {
++     uint8_t caDescriptors[512];
++     int caDescriptorsLength = GetCaDescriptors(source, transponder, programNumber, caSystemIds, sizeof(caDescriptors), caDescriptors, Pid);
+      //XXX buffer overflow check???
+      capmt[length++] = StreamType;
+      capmt[length++] = (Pid >> 8) & 0xFF;
+      capmt[length++] =  Pid       & 0xFF;
+      esInfoLengthPos = length;
+      capmt[length++] = 0x00; // ES_info_length H (at ES level)
+-     capmt[length++] = 0x00; // ES_info_length L
+-     if (streamFlag)
++     capmt[length++] = 0x01; // ES_info_length L
++     capmt[length++] = cmdId;
++     if (caDescriptorsLength>0)
+         AddCaDescriptors(caDescriptorsLength, caDescriptors);
+      }
+ }
+@@ -625,8 +642,7 @@
+ void cCiCaPmt::AddCaDescriptors(int Length, const uint8_t *Data)
+ {
+   if (esInfoLengthPos) {
+-     if (length + Length < int(sizeof(capmt))) {
+-        capmt[length++] = cmdId;
++     if (length + Length <= int(sizeof(capmt))) {
+         memcpy(capmt + length, Data, Length);
+         length += Length;
+         int l = length - esInfoLengthPos - 2;
+@@ -643,8 +659,6 @@
+ 
+ // --- cCiConditionalAccessSupport -------------------------------------------
+ 
+-#define MAXCASYSTEMIDS 64
+-
+ // CA Enable Ids:
+ 
+ #define CAEI_POSSIBLE                  0x01
+diff -u vdr-1.6.0-2-orig/pat.c vdr/pat.c
+--- vdr-1.6.0-2-orig/pat.c	2008-02-08 08:48:30.000000000 -0500
++++ vdr/pat.c	2009-08-17 05:58:14.000000000 -0400
+@@ -21,23 +21,23 @@
+ class cCaDescriptor : public cListObject {
+ private:
+   int caSystem;
+-  bool stream;
++  int esPid;
+   int length;
+   uchar *data;
+ public:
+-  cCaDescriptor(int CaSystem, int CaPid, bool Stream, int Length, const uchar *Data);
++  cCaDescriptor(int CaSystem, int CaPid, int EsPid, int Length, const uchar *Data);
+   virtual ~cCaDescriptor();
+   bool operator== (const cCaDescriptor &arg) const;
+   int CaSystem(void) { return caSystem; }
+-  int Stream(void) { return stream; }
++  int EsPid(void) { return esPid; }
+   int Length(void) const { return length; }
+   const uchar *Data(void) const { return data; }
+   };
+ 
+-cCaDescriptor::cCaDescriptor(int CaSystem, int CaPid, bool Stream, int Length, const uchar *Data)
++cCaDescriptor::cCaDescriptor(int CaSystem, int CaPid, int EsPid, int Length, const uchar *Data)
+ {
+   caSystem = CaSystem;
+-  stream = Stream;
++  esPid = EsPid;
+   length = Length + 6;
+   data = MALLOC(uchar, length);
+   data[0] = SI::CaDescriptorTag;
+@@ -57,7 +57,7 @@
+ 
+ bool cCaDescriptor::operator== (const cCaDescriptor &arg) const
+ {
+-  return length == arg.length && memcmp(data, arg.data, length) == 0;
++  return esPid == arg.esPid && length == arg.length && memcmp(data, arg.data, length) == 0;
+ }
+ 
+ // --- cCaDescriptors --------------------------------------------------------
+@@ -77,8 +77,8 @@
+   bool Is(int Source, int Transponder, int ServiceId);
+   bool Is(cCaDescriptors * CaDescriptors);
+   bool Empty(void) { return caDescriptors.Count() == 0; }
+-  void AddCaDescriptor(SI::CaDescriptor *d, bool Stream);
+-  int GetCaDescriptors(const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag);
++  void AddCaDescriptor(SI::CaDescriptor *d, int EsPid);
++  int GetCaDescriptors(const int *CaSystemIds, int BufSize, uchar *Data, int EsPid);
+   const int *CaIds(void) { return caIds; }
+   };
+ 
+@@ -126,9 +126,9 @@
+      }
+ }
+ 
+-void cCaDescriptors::AddCaDescriptor(SI::CaDescriptor *d, bool Stream)
++void cCaDescriptors::AddCaDescriptor(SI::CaDescriptor *d, int EsPid)
+ {
+-  cCaDescriptor *nca = new cCaDescriptor(d->getCaType(), d->getCaPid(), Stream, d->privateData.getLength(), d->privateData.getData());
++  cCaDescriptor *nca = new cCaDescriptor(d->getCaType(), d->getCaPid(), EsPid, d->privateData.getLength(), d->privateData.getData());
+   for (cCaDescriptor *ca = caDescriptors.First(); ca; ca = caDescriptors.Next(ca)) {
+       if (*ca == *nca) {
+          delete nca;
+@@ -141,28 +141,30 @@
+ #ifdef DEBUG_CA_DESCRIPTORS
+   char buffer[1024];
+   char *q = buffer;
+-  q += sprintf(q, "CAM: %04X %5d %5d %04X %d -", source, transponder, serviceId, d->getCaType(), Stream);
++  q += sprintf(q, "CAM: %04X %5d %5d %04X %04X -", source, transponder, serviceId, d->getCaType(), EsPid);
+   for (int i = 0; i < nca->Length(); i++)
+       q += sprintf(q, " %02X", nca->Data()[i]);
+   dsyslog(buffer);
+ #endif
+ }
+ 
+-int cCaDescriptors::GetCaDescriptors(const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag)
++// EsPid is to select the "type" of CaDescriptor to be returned
++// >0 - CaDescriptor for the particular esPid
++// =0 - common CaDescriptor
++// <0 - all CaDescriptors regardless of type (old default)
++
++int cCaDescriptors::GetCaDescriptors(const int *CaSystemIds, int BufSize, uchar *Data, int EsPid)
+ {
+   if (!CaSystemIds || !*CaSystemIds)
+      return 0;
+   if (BufSize > 0 && Data) {
+      int length = 0;
+-     int IsStream = -1;
+      for (cCaDescriptor *d = caDescriptors.First(); d; d = caDescriptors.Next(d)) {
++       if(EsPid<0 || d->EsPid()==EsPid) {
+          const int *caids = CaSystemIds;
+          do {
+             if (d->CaSystem() == *caids) {
+                if (length + d->Length() <= BufSize) {
+-                  if (IsStream >= 0 && IsStream != d->Stream())
+-                     dsyslog("CAM: different stream flag in CA descriptors");
+-                  IsStream = d->Stream();
+                   memcpy(Data + length, d->Data(), d->Length());
+                   length += d->Length();
+                   }
+@@ -171,7 +173,7 @@
+                }
+             } while (*++caids);
+          }
+-     StreamFlag = IsStream == 1;
++       }
+      return length;
+      }
+   return -1;
+@@ -187,7 +189,7 @@
+       // Returns 0 if this is an already known descriptor,
+       // 1 if it is an all new descriptor with actual contents,
+       // and 2 if an existing descriptor was changed.
+-  int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag);
++  int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, int EsPid);
+   };
+ 
+ int cCaDescriptorHandler::AddCaDescriptors(cCaDescriptors *CaDescriptors)
+@@ -208,22 +210,21 @@
+   return CaDescriptors->Empty() ? 0 : 1;
+ }
+ 
+-int cCaDescriptorHandler::GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag)
++int cCaDescriptorHandler::GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, int EsPid)
+ {
+   cMutexLock MutexLock(&mutex);
+-  StreamFlag = false;
+   for (cCaDescriptors *ca = First(); ca; ca = Next(ca)) {
+       if (ca->Is(Source, Transponder, ServiceId))
+-         return ca->GetCaDescriptors(CaSystemIds, BufSize, Data, StreamFlag);
++         return ca->GetCaDescriptors(CaSystemIds, BufSize, Data, EsPid);
+       }
+   return 0;
+ }
+ 
+ cCaDescriptorHandler CaDescriptorHandler;
+ 
+-int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag)
++int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, int EsPid)
+ {
+-  return CaDescriptorHandler.GetCaDescriptors(Source, Transponder, ServiceId, CaSystemIds, BufSize, Data, StreamFlag);
++  return CaDescriptorHandler.GetCaDescriptors(Source, Transponder, ServiceId, CaSystemIds, BufSize, Data, EsPid);
+ }
+ 
+ // --- cPatFilter ------------------------------------------------------------
+@@ -322,7 +323,7 @@
+         cCaDescriptors *CaDescriptors = new cCaDescriptors(Channel->Source(), Channel->Transponder(), Channel->Sid());
+         // Scan the common loop:
+         for (SI::Loop::Iterator it; (d = (SI::CaDescriptor*)pmt.commonDescriptors.getNext(it, SI::CaDescriptorTag)); ) {
+-            CaDescriptors->AddCaDescriptor(d, false);
++            CaDescriptors->AddCaDescriptor(d, 0);
+             delete d;
+             }
+         // Scan the stream-specific loop:
+@@ -340,16 +341,17 @@
+         int NumDpids = 0;
+         int NumSpids = 0;
+         for (SI::Loop::Iterator it; pmt.streamLoop.getNext(stream, it); ) {
++            int esPid = stream.getPid();
+             switch (stream.getStreamType()) {
+               case 1: // STREAMTYPE_11172_VIDEO
+               case 2: // STREAMTYPE_13818_VIDEO
+-                      Vpid = stream.getPid();
++                      Vpid = esPid;
+                       break;
+               case 3: // STREAMTYPE_11172_AUDIO
+               case 4: // STREAMTYPE_13818_AUDIO
+                       {
+                       if (NumApids < MAXAPIDS) {
+-                         Apids[NumApids] = stream.getPid();
++                         Apids[NumApids] = esPid;
+                          SI::Descriptor *d;
+                          for (SI::Loop::Iterator it; (d = stream.streamDescriptors.getNext(it)); ) {
+                              switch (d->getDescriptorTag()) {
+@@ -388,11 +390,11 @@
+                       for (SI::Loop::Iterator it; (d = stream.streamDescriptors.getNext(it)); ) {
+                           switch (d->getDescriptorTag()) {
+                             case SI::AC3DescriptorTag:
+-                                 dpid = stream.getPid();
++                                 dpid = esPid;
+                                  break;
+                             case SI::SubtitlingDescriptorTag:
+                                  if (NumSpids < MAXSPIDS) {
+-                                    Spids[NumSpids] = stream.getPid();
++                                    Spids[NumSpids] = esPid;
+                                     SI::SubtitlingDescriptor *sd = (SI::SubtitlingDescriptor *)d;
+                                     SI::SubtitlingDescriptor::Subtitling sub;
+                                     char *s = SLangs[NumSpids];
+@@ -411,7 +413,7 @@
+                                     }
+                                  break;
+                             case SI::TeletextDescriptorTag:
+-                                 Tpid = stream.getPid();
++                                 Tpid = esPid;
+                                  break;
+                             case SI::ISO639LanguageDescriptorTag: {
+                                  SI::ISO639LanguageDescriptor *ld = (SI::ISO639LanguageDescriptor *)d;
+@@ -434,7 +436,7 @@
+               //default: printf("PID: %5d %5d %2d %3d %3d\n", pmt.getServiceId(), stream.getPid(), stream.getStreamType(), pmt.getVersionNumber(), Channel->Number());//XXX
+               }
+             for (SI::Loop::Iterator it; (d = (SI::CaDescriptor*)stream.streamDescriptors.getNext(it, SI::CaDescriptorTag)); ) {
+-                CaDescriptors->AddCaDescriptor(d, true);
++                CaDescriptors->AddCaDescriptor(d, esPid);
+                 delete d;
+                 }
+             }
+diff -u vdr-1.6.0-2-orig/pat.h vdr/pat.h
+--- vdr-1.6.0-2-orig/pat.h	2007-01-05 05:42:10.000000000 -0500
++++ vdr/pat.h	2009-06-13 20:17:56.000000000 -0400
+@@ -32,7 +32,7 @@
+   void Trigger(void);
+   };
+ 
+-int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, bool &StreamFlag);
++int GetCaDescriptors(int Source, int Transponder, int ServiceId, const int *CaSystemIds, int BufSize, uchar *Data, int EsPid);
+          ///< Gets all CA descriptors for a given channel.
+          ///< Copies all available CA descriptors for the given Source, Transponder and ServiceId
+          ///< into the provided buffer at Data (at most BufSize bytes). Only those CA descriptors

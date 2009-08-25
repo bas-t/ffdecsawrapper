@@ -125,6 +125,7 @@ typedef unsigned short caid_t;
 #else
 #define MAX_CI_SLOT_CAIDS 16
 #endif
+#define MAX_SPLIT_SID     16
 
 class cCam : private cMutex {
 private:
@@ -134,6 +135,7 @@ private:
   cLogger *logger;
   cHookManager *hookman;
   int source, transponder, liveVpid, liveApid;
+  int splitSid[MAX_SPLIT_SID+1];
   unsigned char indexMap[MAX_CW_IDX], lastCW[MAX_CW_IDX][2*8];
   //
   cEcmHandler *GetHandler(int sid, bool needZero, bool noshift);
