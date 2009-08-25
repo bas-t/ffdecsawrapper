@@ -692,7 +692,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
   cMutexLock lock(this);
   if(!so.Connected() && !Login()) { Logout(); return false; }
   if(!CanHandle(ecm->caId)) return false;
-  PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x sid %04x pid %04x",cardnum,ecm->caId,ecm->provId,ecm->prgId,ecm->ecm_pid);
+  PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x sid %d pid %04x",cardnum,ecm->caId,ecm->provId,ecm->prgId,ecm->ecm_pid);
   int sctlen=SCT_LEN(data);
   if(sctlen>=256) {
     PRINTF(L_CC_CCCAM2,"ECM data length >=256 not supported by CCcam");

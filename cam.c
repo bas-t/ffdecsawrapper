@@ -600,11 +600,12 @@ bool cEcmData::Parse(const char *buf)
   int nu=0, num, vers=0;
   Name[0]=0;
   if(sscanf(buf,"V%d:%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d:%d/%d%n",
-             &vers,&prgId,&source,&transponder,Name,&caId,&emmCaId,&provId,
+             &vers,&grPrgId,&source,&transponder,Name,&caId,&emmCaId,&provId,
              &ecm_pid,&ecm_table,&rewriterId,&nu,&dataIdx,&num)>=13
      && vers==CACHE_VERS) {
     SetName(Name);
     SetRewriter();
+    prgId=grPrgId%SIDGRP_SHIFT;
     const char *line=buf+num;
     if(nu>0 && *line++==':') {
       unsigned char *dat=AUTOMEM(nu);
@@ -629,7 +630,7 @@ cString cEcmData::ToString(bool hide)
     sprintf(str,"0/%d:",dataIdx);
     }
   return cString::sprintf("V%d:%d:%x:%x:%s:%x/%x:%x:%x/%x:%d:%s",
-                            CACHE_VERS,prgId,source,transponder,name,
+                            CACHE_VERS,grPrgId,source,transponder,name,
                             caId,emmCaId,provId,ecm_pid,ecm_table,rewriterId,
                             str);
 }
@@ -651,7 +652,7 @@ void cEcmCache::New(cEcmInfo *e)
     dat=new cEcmData(e);
     Add(dat);
     Modified();
-    PRINTF(L_CORE_ECM,"cache add prgId=%d source=%x transponder=%x ecm=%x/%x",e->prgId,e->source,e->transponder,e->ecm_pid,e->ecm_table);
+    PRINTF(L_CORE_ECM,"cache add prgId=%d source=%x transponder=%x ecm=%x/%x",e->grPrgId,e->source,e->transponder,e->ecm_pid,e->ecm_table);
     }
   else {
     if(strcasecmp(e->name,dat->name)) {
@@ -680,7 +681,7 @@ int cEcmCache::GetCached(cSimpleList<cEcmInfo> *list, int sid, int Source, int T
   if(ScSetup.EcmCache>1) return 0;
   ListLock(false);
   for(cEcmData *dat=First(); dat; dat=Next(dat)) {
-    if(dat->prgId==sid && dat->source==Source && dat->transponder==Transponder) {
+    if(dat->grPrgId==sid && dat->source==Source && dat->transponder==Transponder) {
       cEcmInfo *e=new cEcmInfo(dat);
       if(e) {
         PRINTF(L_CORE_ECM,"from cache: system %s (%04x) id %04x with ecm %x/%x",e->name,e->caId,e->provId,e->ecm_pid,e->ecm_table);
@@ -702,7 +703,7 @@ void cEcmCache::Delete(cEcmInfo *e)
   ListUnlock();
   if(dat) {
     DelItem(dat);
-    PRINTF(L_CORE_ECM,"invalidated cached prgId=%d source=%x transponder=%x ecm=%x/%x",dat->prgId,dat->source,dat->transponder,dat->ecm_pid,dat->ecm_table);
+    PRINTF(L_CORE_ECM,"invalidated cached prgId=%d source=%x transponder=%x ecm=%x/%x",dat->grPrgId,dat->source,dat->transponder,dat->ecm_pid,dat->ecm_table);
     }
 }
 
@@ -1474,6 +1475,7 @@ cCam::cCam(cScDvbDevice *dev, int CardNum)
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;
   memset(lastCW,0,sizeof(lastCW));
   memset(indexMap,0,sizeof(indexMap));
+  memset(splitSid,0,sizeof(splitSid));
 }
 
 cCam::~cCam()
@@ -1526,6 +1528,7 @@ void cCam::Stop(void)
     handler->Stop();
   if(logger) logger->Down();
   if(hookman) hookman->Down();
+  memset(splitSid,0,sizeof(splitSid));
 }
 
 void cCam::AddPrg(cPrg *prg)
@@ -1547,20 +1550,113 @@ void cCam::AddPrg(cPrg *prg)
       LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
     LBEND();
     }
-  if(prg->pids.Count()>0 && prg->SimplifyCaDescr()) {
-    PRINTF(L_GEN_WARN,"Stream specific caDescr (aka split-ecm) cannot be handled yet (SID %d)",prg->sid);
-    // take first caDescr and ignore the rest....
-    cPrgPid *pid=prg->pids.First();
-    prg->caDescr.Set(&pid->caDescr);
-    for(; pid; pid=prg->pids.Next(pid)) pid->caDescr.Clear();
-    prg->SetPidCaDescr(false);
+  bool isSplit=false;
+  if(prg->pids.Count()>0 && prg->SimplifyCaDescr()) isSplit=true;
+  else {
+    for(int i=0; splitSid[i]; i++)
+      if(splitSid[i]==prg->sid) { isSplit=true; break; }
     }
-  cEcmHandler *handler=GetHandler(prg->sid,needZero,noshift);
-  if(handler) {
-    PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->sid,handler->Id(),handler->IsIdle(),handler->CwIndex());
-    prg->source=source;
-    prg->transponder=transponder;
-    handler->SetPrg(prg);
+  if(!isSplit) {
+    cEcmHandler *handler=GetHandler(prg->sid,needZero,noshift);
+    if(handler) {
+      PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->sid,handler->Id(),handler->IsIdle(),handler->CwIndex());
+      prg->source=source;
+      prg->transponder=transponder;
+      handler->SetPrg(prg);
+      }
+    }
+  else {
+    PRINTF(L_CORE_PIDS,"%d: SID %d is handled as splitted",cardNum,prg->sid);
+    // first update the splitSid list
+    if(prg->pids.Count()==0) { // delete
+      for(int i=0; splitSid[i]; i++)
+        if(splitSid[i]==prg->sid) {
+          memmove(&splitSid[i],&splitSid[i+1],sizeof(splitSid[0])*(MAX_SPLIT_SID-i));
+          break;
+          }
+      PRINTF(L_CORE_PIDS,"%d: deleted from list",cardNum);
+      }
+    else { // add
+      bool has=false;
+      int i;
+      for(i=0; splitSid[i]; i++) if(splitSid[i]==prg->sid) has=true;
+      if(!has) {
+        if(i<MAX_SPLIT_SID) {
+          splitSid[i]=prg->sid;
+          splitSid[i+1]=0;
+          PRINTF(L_CORE_PIDS,"%d: added to list",cardNum);
+          }
+        else PRINTF(L_CORE_PIDS,"%d: split SID list overflow",cardNum);
+        }
+      }
+    LBSTART(L_CORE_PIDS);
+    LBPUT("%d: split SID list now:",cardNum);
+    for(int i=0; i<=MAX_SPLIT_SID; i++) LBPUT(" %d",splitSid[i]);
+    LBEND();
+    // prepare an empty prg head
+    cPrg work;
+    work.source=source;
+    work.transponder=transponder;
+    // loop through pids
+    int group=1;
+    cPrgPid *first;
+    while((first=prg->pids.First())) {
+      LBSTARTF(L_CORE_PIDS);
+      LBPUT("%d: group %d pids",cardNum,group);
+      prg->pids.Del(first,false);
+      work.caDescr.Set(&first->caDescr);
+      first->caDescr.Clear();
+      work.pids.Add(first);
+      LBPUT(" %04x",first->pid);
+      for(cPrgPid *pid=prg->pids.First(); pid;) {
+        cPrgPid *next=prg->pids.Next(pid);
+        if(work.caDescr==pid->caDescr) { // same group
+          prg->pids.Del(pid,false);
+          pid->caDescr.Clear();
+          work.pids.Add(pid);
+          LBPUT(" %04x",pid->pid);
+          }
+        pid=next;
+        }
+      LBEND();
+      // get a handler for the group
+      int grsid=group*SIDGRP_SHIFT+prg->sid;
+      cEcmHandler *handler=0;
+      if(group==1) {
+        // in the first group check if we have a non-split handler
+        // for the sid
+        for(handler=handlerList.First(); handler; handler=handlerList.Next(handler))
+          if(handler->Sid()==prg->sid) {
+            // let GetHandler() take care of needZero/noshift stuff
+            handler=GetHandler(prg->sid,needZero,noshift);
+            break;
+            }
+        }
+      // otherwise get the group-sid handler
+      if(!handler) handler=GetHandler(grsid,needZero,noshift);
+      if(handler) {
+        PRINTF(L_CORE_PIDS,"%d: found handler for group-SID %d (%s idle=%d idx=%d)",cardNum,grsid,handler->Id(),handler->IsIdle(),handler->CwIndex());
+        work.sid=grsid;
+        handler->SetPrg(&work);
+        }
+      // prepare for next group
+      work.pids.Clear();
+      needZero=false; // only one group can have this
+      group++;
+      }
+    // now we scan the handler list for leftover group handlers
+    for(cEcmHandler *handler=handlerList.First(); handler; handler=handlerList.Next(handler)) {
+      int sid=handler->Sid();
+      if(!handler->IsIdle() && sid>SIDGRP_SHIFT) {
+        int gr=sid/SIDGRP_SHIFT;
+        sid%=SIDGRP_SHIFT;
+        if(sid==prg->sid && gr>=group) {
+          PRINTF(L_CORE_PIDS,"%d: idle group handler %s idx=%d",cardNum,handler->Id(),handler->CwIndex());
+          work.sid=handler->Sid();
+          handler->SetPrg(&work);
+          }
+        }
+      }
     }
 }
 

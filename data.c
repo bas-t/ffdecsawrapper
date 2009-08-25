@@ -587,7 +587,7 @@ cEcmInfo::cEcmInfo(const cEcmInfo *e)
   provId=e->provId;
   AddCaDescr(e);
   dataIdx=e->dataIdx;
-  prgId=e->prgId;
+  grPrgId=e->grPrgId; prgId=grPrgId%SIDGRP_SHIFT;
   source=e->source;
   transponder=e->transponder;
   rewriterId=e->rewriterId;
@@ -613,20 +613,20 @@ void cEcmInfo::Setup(void)
 {
   cached=failed=false;
   name=0; caDescr=0; caDescrLen=0; dataIdx=-1;
-  prgId=source=transponder=-1;
+  prgId=grPrgId=source=transponder=-1;
   ecm_table=0x80; emmCaId=0;
   rewriter=0; rewriterId=0;
 }
 
 bool cEcmInfo::Compare(const cEcmInfo *e)
 {
-  return prgId==e->prgId && source==e->source && transponder==e->transponder &&
+  return grPrgId==e->grPrgId && source==e->source && transponder==e->transponder &&
          caId==e->caId && ecm_pid==e->ecm_pid && provId==e->provId;
 }
 
-void cEcmInfo::SetSource(int PrgId, int Source, int Transponder)
+void cEcmInfo::SetSource(int GrPrgId, int Source, int Transponder)
 {
-  prgId=PrgId;
+  grPrgId=GrPrgId; prgId=grPrgId%SIDGRP_SHIFT;
   source=Source;
   transponder=Transponder;
 }

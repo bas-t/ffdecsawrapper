@@ -55,8 +55,17 @@ only recent versions support concurrent recording! Recompile the driver, unload
 the modules, install the new ones and reload the DVB driver. If you suffer from
 ARM crashes, add "hw_sections=0" while loading the dvb-ttpci module.
 
-Contrary to older plugin versions (before 0.7.0) you MUST NOT apply any patches
-to the VDR core (neither vdr-sc nor ffdecsa/softcsa).
+Contrary to older plugin versions (before 0.7.0) you MUST NOT apply patches to
+the VDR core (neither vdr-sc nor ffdecsa/softcsa) except if:
+- you are using VDR 1.4.x (see section below)
+- you are using VDR 1.7.8 or lower and want to view channels with split ECM
+
+To correctly decode channels with split ECM (i.e. audio and video encrypted
+with different CW) you need to apply a patch to the VDR core if you are using
+a VDR version before 1.7.9. You can find the "vdr-1.6.0-2-streamca.diff" file
+in the patches subdirectory. It has been tested with VDR 1.6.0-2 only, but
+probably will apply to other VDR versions as well. This feature is explicitely
+not supported for VDR 1.4.x.
 
 You must have installed the openssl development files. For most distributions
 this means to install openssl-devel package. You should use a openssl package

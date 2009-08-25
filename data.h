@@ -217,6 +217,8 @@ public:
 
 // ----------------------------------------------------------------
 
+#define SIDGRP_SHIFT 100000 // for group in split ECM handling
+
 class cEcmInfo : public cStructItem {
 private:
   bool cached, failed;
@@ -231,7 +233,7 @@ public:
   char *name;
   int ecm_pid, ecm_table;
   int caId, provId, emmCaId;
-  int prgId, source, transponder;
+  int prgId, grPrgId, source, transponder;
   cRewriter *rewriter;
   int rewriterId;
   //
@@ -241,7 +243,7 @@ public:
   ~cEcmInfo();
   virtual cString ToString(bool hide=false) { return ""; }
   bool Compare(const cEcmInfo *e);
-  void SetSource(int PrgId, int Source, int Transponder);
+  void SetSource(int GrPrgId, int Source, int Transponder);
   void SetName(const char *Name);
   void SetDataIdx(int idx);
   const unsigned char *Data(void) const;
