@@ -38,6 +38,8 @@
 #define AUTOARRAY(type,size) (type *)alloca(sizeof(type)*(size))
 #define AUTOMEM(size)        (unsigned char *)alloca(size)
 
+#define LOOP_EINTR(xx) ({ int _r; do { _r=(xx); } while(_r<0 && errno==EINTR); _r; })
+
 // ----------------------------------------------------------------
 
 #define DEV_DVB_FRONTEND "frontend"
