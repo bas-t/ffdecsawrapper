@@ -436,7 +436,7 @@ private:
   cNetSocket so;
   unsigned char nodeid[8];
   int shareid;
-  char username[21], password[21];
+  char username[21], password[64];
   bool login;
   //
   bool newcw;
@@ -580,7 +580,7 @@ bool cCardClientCCcam2::Init(const char *config)
   cMutexLock lock(this);
   int num=0;
   if(!ParseStdConfig(config,&num)
-     || sscanf(&config[num],":%20[^:]:%20[^:]",username,password)!=2 ) return false;
+     || sscanf(&config[num],":%20[^:]:%63[^:]",username,password)!=2 ) return false;
   PRINTF(L_CC_CORE,"%s: username=%s password=%s",name,username,password);
   for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
   LDUMP(L_CC_CORE,nodeid,sizeof(nodeid),"Our nodeid:");
