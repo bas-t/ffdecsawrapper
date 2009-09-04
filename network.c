@@ -212,7 +212,7 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
     if(!quietlog) PRINTF(L_CORE_NET,"connecting to %s:%d/%s (%d.%d.%d.%d)",
                hostname,port,udp?"udp":"tcp",
                (socketAddr.sin_addr.s_addr>> 0)&0xff,(socketAddr.sin_addr.s_addr>> 8)&0xff,(socketAddr.sin_addr.s_addr>>16)&0xff,(socketAddr.sin_addr.s_addr>>24)&0xff);
-    if(connect(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr))==0)
+    if(LOOP_EINTR(connect(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)))==0)
       connected=true;
     else if(errno==EINPROGRESS) {
       if(Select(false,timeout)>0) {
@@ -253,7 +253,7 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
     if(!quietlog) PRINTF(L_CORE_NET,"socket: binding to %s:%d/%s (%d.%d.%d.%d)",
                hostname,port,udp?"udp":"tcp",
                (socketAddr.sin_addr.s_addr>> 0)&0xff,(socketAddr.sin_addr.s_addr>> 8)&0xff,(socketAddr.sin_addr.s_addr>>16)&0xff,(socketAddr.sin_addr.s_addr>>24)&0xff);
-    if(bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr))==0) {
+    if(LOOP_EINTR(bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)))==0) {
       connected=true;
       Activity(); Unlock();
       return true;
@@ -284,17 +284,28 @@ void cNetSocket::Flush(void)
     }
 }
 
+// len>0 : read available bytes, up to len
+// len<0 : block read len bytes or fail
 int cNetSocket::Read(unsigned char *data, int len, int timeout)
 {
   cMutexLock lock(this);
   if(timeout<0) timeout=rwTimeout;
-  int r=Select(true,timeout);
-  if(r>0) {
-    r=read(sd,data,len);
-    if(r<0) PRINTF(L_GEN_ERROR,"socket: read failed: %s",strerror(errno));
-    else if(r>0) HEXDUMP(L_CORE_NETDATA,data,r,"network read");
-    }
+  bool fullread=false;
+  if(len<0) { len=-len; fullread=true; }
+  int cnt=0, r;
+  do {
+    r=Select(true,timeout);
+    if(r>0) {
+      r=LOOP_EINTR(read(sd,data,len));
+      if(r<0) PRINTF(L_GEN_ERROR,"socket: read failed: %s",strerror(errno));
+      else if(r>0) cnt+=r;
+      }
+    } while(r>0 && cnt<len && fullread);
   Activity();
+  if(r>0) {
+    HEXDUMP(L_CORE_NETDATA,data,cnt,"network read");
+    return cnt;
+    }
   return r;
 }
 
@@ -302,13 +313,20 @@ int cNetSocket::Write(const unsigned char *data, int len, int timeout)
 {
   cMutexLock lock(this);
   if(timeout<0) timeout=rwTimeout;
-  int r=Select(false,timeout);
-  if(r>0) {
-    r=write(sd,data,len);
-    if(r<0) PRINTF(L_GEN_ERROR,"socket: write failed: %s",strerror(errno));
-    else if(r>0) HEXDUMP(L_CORE_NETDATA,data,r,"network write");
-    }
+  int cnt=0, r;
+  do {
+    r=Select(false,timeout);
+    if(r>0) {
+      r=LOOP_EINTR(write(sd,data+cnt,len-cnt));
+      if(r<0) PRINTF(L_GEN_ERROR,"socket: write failed: %s",strerror(errno));
+      else if(r>0) cnt+=r;
+      }
+    } while(r>0 && cnt<len);
   Activity();
+  if(r>0) {
+    HEXDUMP(L_CORE_NETDATA,data,cnt,"network write");
+    return cnt;
+    }
   return r;
 }
 
@@ -316,17 +334,23 @@ int cNetSocket::SendTo(const char *Host, int Port, const unsigned char *data, in
 {
   cMutexLock lock(this);
   if(timeout<0) timeout=rwTimeout;
-  int r=Select(false,timeout);
-  if(r>0) {
-    struct sockaddr_in saddr;
-    if(GetAddr(&saddr,Host,Port)) {
-      r=sendto(sd,data,len,0,(struct sockaddr *)&saddr,sizeof(saddr));
-      if(r<0) PRINTF(L_GEN_ERROR,"socket: sendto %d.%d.%d.%d:%d failed: %s",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port,strerror(errno));
-      else if(r>0) HEXDUMP(L_CORE_NETDATA,data,r,"network sendto %d.%d.%d.%d:%d",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port);
-      }
-    else r=-1;
+  int cnt=0, r=-1;
+  struct sockaddr_in saddr;
+  if(GetAddr(&saddr,Host,Port)) {
+    do {
+      r=Select(false,timeout);
+      if(r>0) {
+        r=LOOP_EINTR(sendto(sd,data,len,0,(struct sockaddr *)&saddr,sizeof(saddr)));
+        if(r<0) PRINTF(L_GEN_ERROR,"socket: sendto %d.%d.%d.%d:%d failed: %s",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port,strerror(errno));
+        else if(r>0) cnt+=r;
+        }
+      } while(r>0 && cnt<len);
     }
   Activity();
+  if(r>0) {
+    HEXDUMP(L_CORE_NETDATA,data,cnt,"network sendto %d.%d.%d.%d:%d",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port);
+    return cnt;
+    }
   return r;
 }
 
@@ -338,7 +362,7 @@ int cNetSocket::Select(bool forRead, int timeout)
     struct timeval tv;
     if(timeout&MSTIMEOUT) { tv.tv_sec=0; tv.tv_usec=(timeout&~MSTIMEOUT)*1000; }
     else { tv.tv_sec=timeout; tv.tv_usec=0; }
-    int r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
+    int r=LOOP_EINTR(select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv));
     if(r>0) return 1;
     else if(r<0) {
       PRINTF(L_GEN_ERROR,"socket: select failed: %s",strerror(errno));
