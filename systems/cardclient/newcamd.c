@@ -180,15 +180,15 @@ private:
   bool NextProto(void);
   void InitCustomData(struct CustomData *cd, const unsigned short PrgId, const unsigned char *data);
   void PrepareLoginKey(unsigned char *deskey, const unsigned char *rkey, const unsigned char *ckey);
+  // Client Helper functions
+  bool SendMessage(const unsigned char *data, int len, bool UseMsgId, const struct CustomData *cd=0, comm_type_t commType=COMMTYPE_CLIENT);
+  int ReceiveMessage(unsigned char *data, bool UseMsgId, struct CustomData *cd=0, comm_type_t commType=COMMTYPE_CLIENT);
+  bool CmdSend(net_msg_type_t cmd,  comm_type_t commType=COMMTYPE_CLIENT);
+  int CmdReceive(comm_type_t commType=COMMTYPE_CLIENT);
 protected:
   virtual bool Login(void);
 public:
   cCardClientNewCamd(const char *Name);
-  // Client Helper functions
-  bool SendMessage(cNetSocket *so, const unsigned char *data, int len, bool UseMsgId, const struct CustomData *cd=0, comm_type_t commType=COMMTYPE_CLIENT);
-  int ReceiveMessage(cNetSocket *so, unsigned char *data, bool UseMsgId, struct CustomData *cd=0, comm_type_t commType=COMMTYPE_CLIENT);
-  bool CmdSend(cNetSocket *so, net_msg_type_t cmd,  comm_type_t commType=COMMTYPE_CLIENT);
-  int CmdReceive(cNetSocket *so, comm_type_t commType=COMMTYPE_CLIENT);
   // 
   virtual bool Init(const char *CfgDir);
   virtual bool CanHandle(unsigned short SysId);  
@@ -257,7 +257,7 @@ void cCardClientNewCamd::PrepareLoginKey(unsigned char *deskey, const unsigned c
   Expand(deskey, tmpkey);
 }
 
-bool cCardClientNewCamd::SendMessage(cNetSocket *so, const unsigned char *data, int len, bool UseMsgId, const struct CustomData *cd, comm_type_t commType)
+bool cCardClientNewCamd::SendMessage(const unsigned char *data, int len, bool UseMsgId, const struct CustomData *cd, comm_type_t commType)
 {
   if(len<3||len+cdLen+4>CWS_NETMSGSIZE) {
     PRINTF(L_CC_NEWCAMD,"bad message size %d in SendMessage",len);
@@ -287,13 +287,13 @@ bool cCardClientNewCamd::SendMessage(cNetSocket *so, const unsigned char *data, 
   len+=sizeof(DES_cblock);
   netbuf[0]=(len-2)>>8;
   netbuf[1]=(len-2)&0xff;
-  return cCardClient::SendMsg(so,netbuf,len);
+  return cCardClient::SendMsg(&so,netbuf,len);
 }
 
-int cCardClientNewCamd::ReceiveMessage(cNetSocket *so, unsigned char *data, bool UseMsgId, struct CustomData *cd, comm_type_t commType)
+int cCardClientNewCamd::ReceiveMessage(unsigned char *data, bool UseMsgId, struct CustomData *cd, comm_type_t commType)
 {
   unsigned char netbuf[CWS_NETMSGSIZE];
-  int len=cCardClient::RecvMsg(so,netbuf,2);
+  int len=cCardClient::RecvMsg(&so,netbuf,2);
   if(len!=2) {
     if(len>0) PRINTF(L_CC_NEWCAMD,"bad length %d != 2 on message length read",len);
     return 0;
@@ -303,7 +303,7 @@ int cCardClientNewCamd::ReceiveMessage(cNetSocket *so, unsigned char *data, bool
    PRINTF(L_CC_NEWCAMD,"receive message buffer overflow");
    return 0;
    }
-  len=cCardClient::RecvMsg(so,netbuf+2,mlen);
+  len=cCardClient::RecvMsg(&so,netbuf+2,mlen);
   if(len!=mlen) {
     PRINTF(L_CC_NEWCAMD,"bad length %d != %d on message read",len,mlen);
     return 0;
@@ -337,17 +337,17 @@ int cCardClientNewCamd::ReceiveMessage(cNetSocket *so, unsigned char *data, bool
   return returnLen;
 }
 
-bool cCardClientNewCamd::CmdSend(cNetSocket *so, net_msg_type_t cmd, comm_type_t commType)
+bool cCardClientNewCamd::CmdSend(net_msg_type_t cmd, comm_type_t commType)
 {
   unsigned char buffer[3];
   buffer[0] = cmd; buffer[1] = buffer[2] = 0;
-  return SendMessage(so,buffer,sizeof(buffer),false,0,commType);
+  return SendMessage(buffer,sizeof(buffer),false,0,commType);
 }
 
-int cCardClientNewCamd::CmdReceive(cNetSocket *so, comm_type_t commType)
+int cCardClientNewCamd::CmdReceive(comm_type_t commType)
 {
   unsigned char buffer[CWS_NETMSGSIZE];
-  if(ReceiveMessage(so,buffer,false,0,commType)!=3) return -1;
+  if(ReceiveMessage(buffer,false,0,commType)!=3) return -1;
   return buffer[0];
 }
 
@@ -404,7 +404,7 @@ bool cCardClientNewCamd::Login(void)
   //struct CustomData cd;
   //InitCustomData(&cd,0x5644,0);
 
-  if(!SendMessage(&so,buffer,buffer[2]+3,true) || CmdReceive(&so)!=MSG_CLIENT_2_SERVER_LOGIN_ACK) {
+  if(!SendMessage(buffer,buffer[2]+3,true) || CmdReceive()!=MSG_CLIENT_2_SERVER_LOGIN_ACK) {
     PRINTF(L_CC_NEWCAMD,"failed to login to cardserver for username %s (proto %d)",username,protoVers);
     if(NextProto()) return Login();
     return false;
@@ -419,7 +419,7 @@ bool cCardClientNewCamd::Login(void)
   cTripleDes::Expand(desKey,tmpkey); // expand 14 byte key -> 16 byte
   cTripleDes::ScheduleKey();
 
-  if(!CmdSend(&so,MSG_CARD_DATA_REQ) || ReceiveMessage(&so,buffer,false)<=0) return false;
+  if(!CmdSend(MSG_CARD_DATA_REQ) || ReceiveMessage(buffer,false)<=0) return false;
   if(buffer[0] == MSG_CARD_DATA) {
     int c=(buffer[4]<<8)+buffer[5];
     if(c!=caId) CaidsChanged();
@@ -482,10 +482,10 @@ bool cCardClientNewCamd::ProcessECM(const cEcmInfo *ecm, const unsigned char *da
 
   struct CustomData cd;
   InitCustomData(&cd,(unsigned short)ecm->prgId,0);
-  if(!SendMessage(&so,data,SCT_LEN(data),true,&cd)) return false;
+  if(!SendMessage(data,SCT_LEN(data),true,&cd)) return false;
   unsigned char buffer[CWS_NETMSGSIZE];
   int n;
-  while((n=ReceiveMessage(&so,buffer,true))==-2)
+  while((n=ReceiveMessage(buffer,true))==-2)
     PRINTF(L_CC_NEWCAMD,"msg ID sync error. Retrying...");
   switch(n) {
     case 19: // ecm was decoded
@@ -513,9 +513,9 @@ bool cCardClientNewCamd::ProcessEMM(int caSys, const unsigned char *data)
         int len=SCT_LEN(data);
         int id=msEMM.Get(data,len,0);
         if(id>0) {
-          if(SendMessage(&so,data,len,true,0)) {
+          if(SendMessage(data,len,true,0)) {
             unsigned char buffer[CWS_NETMSGSIZE];
-            len=ReceiveMessage(&so,buffer,true);
+            len=ReceiveMessage(buffer,true);
             if(len>=3) {
               if(!(buffer[1]&0x10))
                 PRINTF(L_CC_EMM,"EMM rejected by card");
