@@ -71,6 +71,7 @@ protected:
   virtual bool SendMsg(const unsigned char *data, int len);
   virtual int RecvMsg(unsigned char *data, int len, int to=-1);
   virtual bool Login(void) { return false; }
+  virtual void Logout(void);
   bool Immediate(void);
   void CaidsChanged(void);
 public:

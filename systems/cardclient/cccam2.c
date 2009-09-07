@@ -442,10 +442,10 @@ private:
   cMutex cwmutex;
   cCondVar cwwait;
   //
-  void Logout(void);
   void PacketAnalyzer(const struct CmdHeader *hdr, int length);
 protected:
   virtual bool Login(void);
+  virtual void Logout(void);
   virtual void Action(void);
 public:
   cCardClientCCcam2(const char *Name);
@@ -577,6 +577,7 @@ bool cCardClientCCcam2::Init(const char *config)
 {
   cMutexLock lock(this);
   int num=0;
+  Logout();
   if(!ParseStdConfig(config,&num)
      || sscanf(&config[num],":%20[^:]:%63[^:]",username,password)!=2 ) return false;
   PRINTF(L_CC_CORE,"%s: username=%s password=%s",name,username,password);
@@ -589,7 +590,7 @@ void cCardClientCCcam2::Logout(void)
 {
   login=false;
   Cancel(3);
-  so.Disconnect();
+  cCardClient::Logout();
 }
 
 bool cCardClientCCcam2::Login(void)
@@ -603,9 +604,8 @@ bool cCardClientCCcam2::Login(void)
 
   unsigned char buffer[512];
   int len;
-  if((len=so.Read(buffer,16))<0) {
+  if((len=RecvMsg(buffer,16))<0) {
     PRINTF(L_CC_CCCAM2,"no welcome from server");
-    Logout();
     return false;
     }
   LDUMP(L_CC_CCCAM2DT,buffer,len,"welcome answer:");
@@ -626,9 +626,8 @@ bool cCardClientCCcam2::Login(void)
 
   LDUMP(L_CC_CCCAM2DT,buff2,20,"welcome response:");
   encr.Encrypt(buff2,buffer,20);
-  if(so.Write(buffer,20)<0) {
+  if(!SendMsg(buffer,20)) {
     PRINTF(L_CC_CCCAM2,"failed to send welcome response");
-    Logout();
     return false;
     }
 
@@ -636,23 +635,20 @@ bool cCardClientCCcam2::Login(void)
   strcpy((char *)buff2,username);
   LDUMP(L_CC_CCCAM2DT,buff2,20,"send username:");
   encr.Encrypt(buff2,buffer,20);
-  if(so.Write(buffer,20)<0) {
+  if(!SendMsg(buffer,20)) {
     PRINTF(L_CC_CCCAM2,"failed to send username");
-    Logout();
     return false;
     }
 
   encr.Encrypt((unsigned char *)password,buffer,strlen(password));
   encr.Encrypt((unsigned char *)cccamstr,buffer,6);
-  if(so.Write(buffer,6)<0) {
+  if(!SendMsg(buffer,6)) {
     PRINTF(L_CC_CCCAM2,"failed to send password hash");
-    Logout();
     return false;
     }
 
-  if((len=so.Read(buffer,20))<0) {
+  if((len=RecvMsg(buffer,20))<0) {
     PRINTF(L_CC_CCCAM2,"no login answer from server");
-    Logout();
     return false;
     }
   decr.Decrypt(buffer,buffer,len);
@@ -675,9 +671,8 @@ bool cCardClientCCcam2::Login(void)
   memcpy(clt.nodeid,nodeid,8);
   LDUMP(L_CC_CCCAM2DT,&clt,sizeof(clt),"send clientinfo:");
   encr.Encrypt((unsigned char*)&clt,buffer,sizeof(clt));
-  if(so.Write(buffer,sizeof(clt))<0) {
+  if(!SendMsg(buffer,sizeof(clt))) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
-    Logout();
     return false;
     }
   login=true;
@@ -724,9 +719,8 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
     LDUMP(L_CC_CCCAM2DT,req,ecm_len,"send ecm:");
     encr.Encrypt((unsigned char *)req,netbuff,ecm_len);
-    if(so.Write(netbuff,ecm_len)<0) {
+    if(!SendMsg(netbuff,ecm_len)) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
-      Logout();
       break;
       }
     cwmutex.Lock();
@@ -762,7 +756,7 @@ void cCardClientCCcam2::Action(void)
   int cnt=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
-    int len=so.Read(recvbuff+cnt,-(sizeof(recvbuff)-cnt),200);
+    int len=RecvMsg(recvbuff+cnt,-(sizeof(recvbuff)-cnt),200);
     if(len>0) {
       decr.Decrypt(recvbuff+cnt,recvbuff+cnt,len);
       HEXDUMP(L_CC_CCCAM2DT,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);

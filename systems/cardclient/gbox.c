@@ -55,6 +55,7 @@ cCardClientGbox::cCardClientGbox(const char *Name)
 bool cCardClientGbox::Init(const char *config) 
 { 
   cMutexLock lock(this); 
+  Logout();
   int num=0;
   if(!ParseStdConfig(config,&num)) return false;
   return Immediate() ? Login() : true; 
@@ -62,7 +63,7 @@ bool cCardClientGbox::Init(const char *config)
  
 bool cCardClientGbox::Login(void) 
 { 
-  so.Disconnect();
+  Logout();
   if(!so.Bind("127.0.0.1",8003)) return false;
   return true;
 } 

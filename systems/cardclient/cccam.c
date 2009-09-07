@@ -199,6 +199,7 @@ bool cCardClientCCcam::Init(const char *config)
   cMutexLock lock(this);
   int num=0;
   char path[256];
+  Logout();
   if(!ParseStdConfig(config,&num)
      || sscanf(&config[num],":%255[^:]",path)!=1) return false;
   PRINTF(L_CC_CORE,"%s: socket=%s",name,path);
@@ -209,8 +210,7 @@ bool cCardClientCCcam::Init(const char *config)
 
 bool cCardClientCCcam::Login(void)
 {
-  cMutexLock lock(this);
-  so.Disconnect();
+  Logout();
   if(!so.Bind("127.0.0.1",port)) return false;
   so.SetQuietLog(true);
   PRINTF(L_CC_CCCAM,"Bound to port %d, starting UDP listener",port);

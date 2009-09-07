@@ -65,7 +65,7 @@ bool cCardClientAroureos::ParseCardConfig(const char *config, int *num)
 bool cCardClientAroureos::Init(const char *config)
 {
   cMutexLock lock(this);
-  so.Disconnect();
+  Logout();
   int num=0;
   return ParseStdConfig(config,&num) &&
          ParseCardConfig(config,&num);
@@ -73,7 +73,7 @@ bool cCardClientAroureos::Init(const char *config)
 
 bool cCardClientAroureos::Login(void)
 {
-  so.Disconnect();
+  Logout();
   if(!so.Connect(hostname,port)) return false;
   PRINTF(L_CC_LOGIN,"%s: connected to %s:%d",name,hostname,port);
   if(!emmAllowed) PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);

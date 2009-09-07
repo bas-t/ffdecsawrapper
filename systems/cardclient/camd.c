@@ -125,7 +125,7 @@ int cCardClientCommon::RecvMsg(unsigned char *data, int len, int to)
 bool cCardClientCommon::Init(const char *config)
 {
   cMutexLock lock(this);
-  so.Disconnect();
+  Logout();
   int num=0;
   if(ParseStdConfig(config,&num) &&
      ParseUserConfig(config,&num) &&
@@ -137,7 +137,7 @@ bool cCardClientCommon::Init(const char *config)
 
 bool cCardClientCommon::Login(void)
 {
-  so.Disconnect();
+  Logout();
   if(!so.Connect(hostname,port)) return false;
   PRINTF(L_CC_LOGIN,"%s: connected to %s:%d (%s)",name,hostname,port,name);
   emmProcessing=false;
@@ -515,14 +515,14 @@ int cCardClientCamd35::RecvBlock(struct CmdBlock *cb, int maxlen, int to)
 bool cCardClientCamd35::Init(const char *config)
 {
   cMutexLock lock(this);
-  so.Disconnect();
+  Logout();
   int num=0;
   return (ParseStdConfig(config,&num) && ParseUserConfig(config,&num));
 }
 
 bool cCardClientCamd35::Login(void)
 {
-  so.Disconnect();
+  Logout();
   if(!so.Connect(hostname,port)) return false;
   PRINTF(L_CC_LOGIN,"%s: connected to %s:%d (%s)",name,hostname,port,name);
   emmProcessing=false; lastEmmReq=0;

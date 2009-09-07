@@ -355,6 +355,7 @@ bool cCardClientNewCamd::CanHandle(unsigned short SysId)
 bool cCardClientNewCamd::Init(const char *config)
 {
   cMutexLock lock(this);
+  Logout();
   int num=0;
   char key[29];
   const char *tmp=key;
@@ -368,14 +369,14 @@ bool cCardClientNewCamd::Init(const char *config)
 
 bool cCardClientNewCamd::Login(void)
 {
-  so.Disconnect();
+  Logout();
   if(!so.Connect(hostname,port)) return false;
 
   InitVars();
   unsigned char randData[14];
   if(so.Read(randData,sizeof(randData))<0) {
     PRINTF(L_CC_NEWCAMD,"no connect answer from %s:%d",hostname,port);
-    so.Disconnect();
+    Logout();
     return false;
     }
 
