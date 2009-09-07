@@ -441,6 +441,7 @@ private:
   unsigned char cw[16];
   cMutex cwmutex;
   cCondVar cwwait;
+  tThreadId readerTid;
   //
   void PacketAnalyzer(const struct CmdHeader *hdr, int length);
 protected:
@@ -459,9 +460,9 @@ static cCardClientLinkReg<cCardClientCCcam2> __ncd("cccam2");
 
 cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
-,cThread("CCcam2 listener")
+,cThread("CCcam2 reader")
 {
-  shareid=0; newcw=login=false;
+  shareid=0; readerTid=0; newcw=login=false;
   so.SetRWTimeout(10*1000);
 }
 
@@ -589,7 +590,8 @@ bool cCardClientCCcam2::Init(const char *config)
 void cCardClientCCcam2::Logout(void)
 {
   login=false;
-  Cancel(3);
+  Cancel(cThread::ThreadId()!=readerTid ? 2:-1);
+  readerTid=0;
   cCardClient::Logout();
 }
 
@@ -753,6 +755,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
 
 void cCardClientCCcam2::Action(void)
 {
+  readerTid=cThread::ThreadId();
   int cnt=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
@@ -775,4 +778,5 @@ void cCardClientCCcam2::Action(void)
     memmove(recvbuff,recvbuff+proc,cnt);
     usleep(10);
     }
+  readerTid=0;
 }
