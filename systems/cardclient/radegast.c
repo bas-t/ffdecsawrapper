@@ -22,7 +22,6 @@
 
 #include "cc.h"
 #include "parse.h"
-#include "network.h"
 #include "version.h"
 
 // -- cCardClientRadegast ------------------------------------------------------
@@ -31,7 +30,6 @@
 
 class cCardClientRadegast : public cCardClient, private cIdSet {
 private:
-  cNetSocket so;
   bool emmProcessing;
   int caids[MAXCAIDS], numCaids;
   //
@@ -61,9 +59,9 @@ static cCardClientLinkReg<cCardClientRadegast> __rdg("Radegast");
 
 cCardClientRadegast::cCardClientRadegast(const char *Name)
 :cCardClient(Name)
-,so(DEFAULT_CONNECT_TIMEOUT,7,DEFAULT_IDLE_TIMEOUT)
 {
   InitVars();
+  so.SetRWTimeout(7*1000);
 }
 
 void cCardClientRadegast::InitVars(void)
@@ -148,24 +146,26 @@ void cCardClientRadegast::AddNano(unsigned char *buff, int nano, int len, const 
 
 bool cCardClientRadegast::Send(const unsigned char *buff)
 {
-  return SendMsg(&so,buff,GetMsgLength(buff));
+  return SendMsg(buff,GetMsgLength(buff));
 }
 
 int cCardClientRadegast::Recv(unsigned char *buff, int len)
 {
-  int n=RecvMsg(&so,buff,len);
-  if(n<1) return n;
-  int k=GetNanoStart(buff);
-  if(n<k) {
-    PRINTF(L_CC_RDGD,"bad length %d < %d on cmd read",n,k);
+  if(RecvMsg(buff,1)<0) {
+    PRINTF(L_CC_RDGD,"short read");
     return -1;
     }
-  k=GetMsgLength(buff);
-  if(n<k) {
-    PRINTF(L_CC_RDGD,"bad length %d < %d on nano read",n,k);
+  int n=GetNanoStart(buff);
+  if(RecvMsg(buff+1,n-1,200)<0) {
+    PRINTF(L_CC_RDGD,"short read(2)");
     return -1;
     }
-  return n;
+  int k=GetMsgLength(buff);
+  if(RecvMsg(buff+n,k-n,200)<0) {
+    PRINTF(L_CC_RDGD,"short read(3)");
+    return -1;
+    }
+  return k;
 }
 
 bool cCardClientRadegast::Login(void)
@@ -180,13 +180,13 @@ bool cCardClientRadegast::Login(void)
   snprintf(hello,sizeof(hello),"rdgd/vdr-sc-%s",ScVersion);
   StartMsg(buff,0x90);			// RDGD_MSG_CLIENT_HELLO
   AddNano(buff,1,strlen(hello),(unsigned char *)hello);	// RDGD_NANO_DESCR
-  int n;
-  if(!Send(buff) || (n=Recv(buff,sizeof(buff)))<0) return false;
-  if(n>0 && buff[0]==0x91) {
+  if(!Send(buff) || Recv(buff,sizeof(buff))<0) return false;
+  if(buff[0]==0x91) {
     PRINTF(L_CC_RDGD,"got server hello, assuming V4 mode");
     StartMsg(buff,0x94);		// RDGD_MSG_CLIENT_CAP_REQ;
+    int n;
     if(!Send(buff) || (n=Recv(buff,sizeof(buff)))<0) return false;
-    if(n>0 && buff[0]==0x95) {
+    if(buff[0]==0x95) {
       LBSTARTF(L_CC_LOGIN);
       LBPUT("radegast: got caps");
       int caid;
@@ -248,7 +248,7 @@ bool cCardClientRadegast::ProcessECM(const cEcmInfo *ecm, const unsigned char *s
   if(!CheckLength(buff,len)) return false;
   AddNano(buff,3,len,source);		// ECM_NANO_PACKET
 
-  if(!Send(buff) || (len=Recv(buff,sizeof(buff)))<=0) return false;
+  if(!Send(buff) || (len=Recv(buff,sizeof(buff)))<0) return false;
   if(buff[0]==2) {
     for(int l=GetNanoStart(buff); l<len; l+=buff[l+1]+2) {
       switch(buff[l]) {

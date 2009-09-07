@@ -28,15 +28,12 @@
 #include <vdr/pat.h>
 
 #include "cc.h" 
-#include "network.h"
 #include "parse.h"
 
 // -- cGboxClient ----------------------------------------------------------- 
  
 class cCardClientGbox : public cCardClient { 
 private: 
-  cNetSocket so;
-  //
   int GetMsg(int cmd, unsigned char *buff, int len);
 protected: 
   virtual bool Login(void); 
@@ -50,8 +47,10 @@ static cCardClientLinkReg<cCardClientGbox> __ncd("gbox");
 
 cCardClientGbox::cCardClientGbox(const char *Name)
 :cCardClient(Name)
-,so(DEFAULT_CONNECT_TIMEOUT,2,DEFAULT_IDLE_TIMEOUT,true)
-{}
+{
+  so.SetRWTimeout(2*1000);
+  so.SetUDP(true);
+}
 
 bool cCardClientGbox::Init(const char *config) 
 { 
@@ -72,11 +71,8 @@ int cCardClientGbox::GetMsg(int cmd, unsigned char *buff, int len)
 {
   int n;
   do {
-    n=so.Read(buff,len);
-    if(n<=0) {
-      if(n==0) PRINTF(L_CC_GBOX,"timeout on GetMsg.");
-      break;
-      }
+    n=so.Read(buff,-len);
+    if(n<0) break;
     } while(buff[0]!=cmd);
   return n;
 }
@@ -115,12 +111,12 @@ bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data,
   SetSctLen(&buff[1],sizeof(pmt)-4+n+4);
   buff[2]=(buff[2]&0x0F)|0xB0;
 
-  if(so.SendTo("127.0.0.1",8004,buff,sizeof(pmt)+n+4)<(int)sizeof(pmt)) {
+  if(so.SendTo("127.0.0.1",8004,buff,sizeof(pmt)+n+4)<0) {
     PRINTF(L_CC_GBOX,"failed to send PMT data. GBOX running?");
     return false;
     }
 
-  if((n=GetMsg(0x8a,buff,sizeof(buff)))<=0) {
+  if((n=GetMsg(0x8a,buff,sizeof(buff)))<0) {
     PRINTF(L_CC_GBOX,"failed to get ECM port. GBOX running?");
     return false;
     }
@@ -149,12 +145,12 @@ bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data,
   buff[3]=n;
   memcpy(&buff[4],data,n);
   n+=4;
-  if(so.SendTo("127.0.0.1",8005+pidnum,buff,n)<n) {
+  if(so.SendTo("127.0.0.1",8005+pidnum,buff,n)<0) {
     PRINTF(L_CC_GBOX,"failed to send ECM data. GBOX running?");
     return false;
     }
 
-  if(GetMsg(0x89,buff,sizeof(buff))<=0) {
+  if(GetMsg(0x89,buff,sizeof(buff))<0) {
     PRINTF(L_CC_GBOX,"failed to get CW. GBOX running?");
     return false;
     }

@@ -26,12 +26,6 @@
 
 // ----------------------------------------------------------------
 
-#define DEFAULT_CONNECT_TIMEOUT   20
-#define DEFAULT_READWRITE_TIMEOUT 3
-#define DEFAULT_IDLE_TIMEOUT      120
-
-#define MSTIMEOUT 0x800000
-
 extern const char *netscript;
 extern int netTimeout;
 
@@ -53,7 +47,7 @@ private:
   bool GetAddr(struct sockaddr_in *saddr, const char *Hostname, int Port);
   int GetSocket(bool Udp);
 public:
-  cNetSocket(int ConnectTimeout, int ReadWriteTimeout, int IdleTimeout, bool Udp=false);
+  cNetSocket(void);
   ~cNetSocket();
   bool Connect(const char *Hostname, int Port, int timeout=-1);
   bool Bind(const char *Hostname, int Port);
@@ -64,6 +58,10 @@ public:
   void Flush(void);
   bool Connected(void) { return connected; }
   void SetQuietLog(bool ql) { quietlog=ql; }
+  void SetConnectTimeout(int to) { conTimeout=to; }
+  void SetRWTimeout(int to) { rwTimeout=to; }
+  void SetIdleTimeout(int to) { idleTimeout=to; }
+  void SetUDP(bool u) { udp=u; }
   };
 
 #endif //___NETWORK_H

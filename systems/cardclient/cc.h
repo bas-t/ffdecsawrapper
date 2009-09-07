@@ -22,6 +22,7 @@
 
 #include <vdr/thread.h>
 #include "system.h"
+#include "network.h"
 #include "misc.h"
 #include "log.h"
 
@@ -58,6 +59,7 @@ class cSystemCardClient;
 class cCardClient : public cStructItem, protected cMutex {
 friend class cSystemCardClient;
 protected:
+  cNetSocket so;
   const char *name;
   char hostname[64];
   int port;
@@ -66,8 +68,8 @@ protected:
   cMsgCache msECM, msEMM;
   //
   bool ParseStdConfig(const char *config, int *num=0);
-  virtual bool SendMsg(cNetSocket *so, const unsigned char *data, int len);
-  virtual int RecvMsg(cNetSocket *so, unsigned char *data, int len, int to=-1);
+  virtual bool SendMsg(const unsigned char *data, int len);
+  virtual int RecvMsg(unsigned char *data, int len, int to=-1);
   virtual bool Login(void) { return false; }
   bool Immediate(void);
   void CaidsChanged(void);

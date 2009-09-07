@@ -39,18 +39,14 @@ private:
   //
   bool Login(void);
 public:
-  cAuxSrv(void);
   int Map(int map, unsigned char *data, int len, int outlen);
   };
-
-cAuxSrv::cAuxSrv(void)
-:so(DEFAULT_CONNECT_TIMEOUT,7,DEFAULT_IDLE_TIMEOUT)
-{}
 
 bool cAuxSrv::Login()
 {
   unsigned char buff[256];
   PRINTF(L_SYS_MAP,"auxsrv: connecting to %s:%d",auxAddr,auxPort);
+  so.SetRWTimeout(7000);
   if(so.Connect(auxAddr,auxPort)) {
     buff[0]=0xA7;
     buff[1]=0x7A;
@@ -59,8 +55,8 @@ bool cAuxSrv::Login()
     buff[3]=l;
     memcpy(&buff[4],auxPassword,l);
     buff[4+l]=0xFF;
-    if(so.Write(buff,l+5)==l+5 &&
-       so.Read(buff,sizeof(buff))>=9 &&
+    if(so.Write(buff,l+5)>0 &&
+       so.Read(buff,9)>0 &&
        buff[0]==0x7A && buff[1]==0xA7 && buff[2]==0x00 && buff[3]==0x04 && buff[8]==0xff &&
        ((buff[4]<<8)|buff[5])==AUX_PROTOCOL_VERSION) return true;
     PRINTF(L_SYS_MAP,"auxsrv: login write failed");
@@ -87,22 +83,25 @@ int cAuxSrv::Map(int map, unsigned char *data, int len, int outlen)
   buff[4]=map;
   memcpy(&buff[5],data,len);
   buff[len+5]=0xFF;
-  if(so.Write(buff,len+6)==len+6) {
-    if((len=so.Read(buff,sizeof(buff)))>0) {
+  if(so.Write(buff,len+6)>0) {
+    if(so.Read(buff,5)>0) {
       if(buff[0]==0x7A && buff[1]==0xA7) {
-        if(buff[4]==0x00) {
-          int cycles=(buff[5]<<16)|(buff[6]<<8)|buff[7];
-          int l=buff[2]*256+buff[3];
-          if(len>=l+5 && l==outlen+4) {
-            if(buff[l+4]==0xFF) {
-              memcpy(data,buff+8,outlen);
-              return cycles;
+        int l=buff[2]*256+buff[3];
+        if(so.Read(buff+5,l,200)>0) {
+          if(buff[4]==0x00) {
+            int cycles=(buff[5]<<16)|(buff[6]<<8)|buff[7];
+            if(l==outlen+4) {
+              if(buff[l+4]==0xFF) {
+                memcpy(data,buff+8,outlen);
+                return cycles;
+                }
+              else PRINTF(L_SYS_MAP,"auxsrv: bad footer in map%02x response",map);
               }
-            else PRINTF(L_SYS_MAP,"auxsrv: bad footer in map%02x response",map);
+            else PRINTF(L_SYS_MAP,"auxsrv: bad length in map%02x response (got=%d want=%d)",map,l-4,outlen);
             }
-          else PRINTF(L_SYS_MAP,"auxsrv: bad length in map%02x response (got=%d,%d want=%d,%d)",map,l-4,len,outlen,l+8);
+          else PRINTF(L_SYS_MAP,"auxsrv: map%02x not successfull (unsupported?)",map);
           }
-        else PRINTF(L_SYS_MAP,"auxsrv: map%02x not successfull (unsupported?)",map);
+        else PRINTF(L_SYS_MAP,"auxsrv: map%02x read failed (2)",map);
         }
       else PRINTF(L_SYS_MAP,"auxsrv: bad response to map%02x",map);
       }
