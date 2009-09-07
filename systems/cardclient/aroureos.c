@@ -21,15 +21,12 @@
 #include <string.h>
 
 #include "cc.h"
-#include "network.h"
 #include "parse.h"
 
 // -- cCardClientAroureos ------------------------------------------------------
 
 class cCardClientAroureos : public cCardClient, protected cIdSet {
 private:
-  cNetSocket so;
-  //
   bool ParseCardConfig(const char *config, int *num);
 protected:
   virtual bool Login(void);
@@ -44,8 +41,9 @@ static cCardClientLinkReg<cCardClientAroureos> __aroureos("Aroureos");
 
 cCardClientAroureos::cCardClientAroureos(const char *Name)
 :cCardClient(Name)
-,so(DEFAULT_CONNECT_TIMEOUT,5,DEFAULT_IDLE_TIMEOUT)
-{}
+{
+  so.SetRWTimeout(5*1000);
+}
 
 bool cCardClientAroureos::ParseCardConfig(const char *config, int *num)
 {
@@ -93,7 +91,7 @@ bool cCardClientAroureos::ProcessEMM(int caSys, const unsigned char *source)
         unsigned char *buff=AUTOMEM(length+8);
         memcpy(buff,"EMM",3);
         memcpy(&buff[3],source,length);
-        SendMsg(&so,buff,length+3);
+        SendMsg(buff,length+3);
         msEMM.Cache(id,true,0);
         }
       return true;
@@ -112,12 +110,10 @@ bool cCardClientAroureos::ProcessECM(const cEcmInfo *ecm, const unsigned char *s
     memcpy(buff,"ECM",3);
     memcpy(&buff[3],source,len);
 
-    if(!SendMsg(&so,buff,96)) return false;
-    int n=RecvMsg(&so,buff,sizeof(buff));
-    if(n>0) {
+    if(!SendMsg(buff,96)) return false;
+    if(RecvMsg(buff,16)>0 && !CheckNull(buff,16)) {
       memcpy(cw,buff,16);
-      for(n=0; n<16; n++) if(cw[n]) break;
-      if(n<16) return true;
+      return true;
       }
     }
   return false;

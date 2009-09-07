@@ -26,7 +26,6 @@
 #include "system.h"
 #include "cc.h"
 #include "sc.h"
-#include "network.h"
 #include "misc.h"
 #include "opts.h"
 #include "log-core.h"
@@ -102,25 +101,24 @@ bool cCardClient::CanHandle(unsigned short SysId)
   return false;
 }
 
-bool cCardClient::SendMsg(cNetSocket *so, const unsigned char *data, int len)
+bool cCardClient::SendMsg(const unsigned char *data, int len)
 {
-  if(!so->Connected() && !Login()) return false;
-  if(so->Write(data,len)<0) {
+  if(!so.Connected() && !Login()) return false;
+  if(so.Write(data,len)<0) {
     PRINTF(L_CC_CORE,"send error. reconnecting...");;
-    so->Disconnect();
+    so.Disconnect();
     return false;
     }
   return true;
 }
 
-int cCardClient::RecvMsg(cNetSocket *so, unsigned char *data, int len, int to)
+int cCardClient::RecvMsg(unsigned char *data, int len, int to)
 {
-  if(!so->Connected() && !Login()) return -1;
-  int n=so->Read(data,len,to);
-  if(n<0 || (n==0 && to!=0)) {
+  if(!so.Connected() && !Login()) return -1;
+  int n=so.Read(data,len,to);
+  if(n<0) {
     PRINTF(L_CC_CORE,"recv error. reconnecting...");;
-    so->Disconnect();
-    return -1;
+    so.Disconnect();
     }
   return n;
 }

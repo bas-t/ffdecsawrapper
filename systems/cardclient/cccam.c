@@ -27,7 +27,6 @@
 #include <vdr/pat.h>
 
 #include "cc.h"
-#include "network.h"
 
 #define LIST_ONLY 0x03   /* CA application should clear the list when an 'ONLY' CAPMT object is received, and start working with the object */
 
@@ -164,7 +163,6 @@ bool cCCcamCard::GetCw(unsigned char *Cw, int timeout)
 
 class cCardClientCCcam : public cCardClient, private cThread {
 private:
-  cNetSocket so;
   cCCcamCard card[4];
   int pmtversion;
   int failedcw;
@@ -184,9 +182,10 @@ static cCardClientLinkReg<cCardClientCCcam> __ncd("cccam");
 cCardClientCCcam::cCardClientCCcam(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam listener")
-,so(DEFAULT_CONNECT_TIMEOUT,2,3600,true)
 {
   pmtversion=0; socketpath=0;
+  so.SetRWTimeout(2*1000);
+  so.SetUDP(true);
 }
 
 cCardClientCCcam::~cCardClientCCcam()
@@ -212,8 +211,8 @@ bool cCardClientCCcam::Login(void)
 {
   cMutexLock lock(this);
   so.Disconnect();
-  so.SetQuietLog(true);
   if(!so.Bind("127.0.0.1",port)) return false;
+  so.SetQuietLog(true);
   PRINTF(L_CC_CCCAM,"Bound to port %d, starting UDP listener",port);
   Start();
   return true;
@@ -311,12 +310,10 @@ void cCardClientCCcam::Action(void)
 {
   unsigned char cw[18];
   while(Running()) {
-    int r=so.Read(cw,sizeof(cw));
-    if(r==sizeof(cw)) {
+    if(so.Read(cw,sizeof(cw)>0)) {
       LDUMP(L_CC_CCCAM,cw+2,16,"got: %02x%02x ",cw[0],cw[1]);
       if(cw[1]==0x0f && cw[0]<4)
         card[cw[0]].NewCw(cw+2);
       }
-    else if(r>0) PRINTF(L_CC_CCCAM,"unexpected read length r=%d",r);
     }
 }

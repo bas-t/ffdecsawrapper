@@ -22,7 +22,6 @@
 #include <byteswap.h>
 
 #include "cc.h"
-#include "network.h"
 #include "crypto.h"
 #include "misc.h"
 #include "parse.h"
@@ -42,15 +41,15 @@ private:
   cCondVar sleepCond;
   cTimeMs time;
 protected:
-  cNetSocket so;
   bool emmProcessing;
   char username[11], password[11];
+  int emmReqLen;
   //
   virtual bool Login(void);
   bool ParseKeyConfig(const char *config, int *num);
   bool ParseUserConfig(const char *config, int *num);
-  virtual bool SendMsg(cNetSocket *so, const unsigned char *data, int len);
-  virtual int RecvMsg(cNetSocket *so, unsigned char *data, int len, int to=-1);
+  virtual bool SendMsg(const unsigned char *data, int len);
+  virtual int RecvMsg(unsigned char *data, int len, int to=-1);
   virtual void HandleEMMRequest(const unsigned char *buff, int len) {}
   virtual bool CanHandleEMM(int SysId) { return false; }
 public:
@@ -62,10 +61,11 @@ public:
 
 cCardClientCommon::cCardClientCommon(const char *Name, bool ConReply, bool LogReply, bool DoAES, int MinMsgLen)
 :cCardClient(Name)
-,so(DEFAULT_CONNECT_TIMEOUT,CCTIMEOUT/1000,DEFAULT_IDLE_TIMEOUT)
 {
   conReply=ConReply; logReply=LogReply; doAES=DoAES; minMsgLen=MinMsgLen;
   emmProcessing=exclusive=false;
+  so.SetRWTimeout(CCTIMEOUT);
+  emmReqLen=-64;
 }
 
 bool cCardClientCommon::ParseUserConfig(const char *config, int *num)
@@ -98,7 +98,7 @@ bool cCardClientCommon::ParseKeyConfig(const char *config, int *num)
   return true;
 }
 
-bool cCardClientCommon::SendMsg(cNetSocket *so, const unsigned char *data, int len)
+bool cCardClientCommon::SendMsg(const unsigned char *data, int len)
 {
   unsigned char *buff2=AUTOMEM(minMsgLen);
   if(len<minMsgLen) {
@@ -109,12 +109,12 @@ bool cCardClientCommon::SendMsg(cNetSocket *so, const unsigned char *data, int l
   unsigned char *buff=AUTOMEM(len+16);
   const int l=Encrypt(data,len,buff);
   if(l>0) { data=buff; len=l; }
-  return cCardClient::SendMsg(so,data,len);
+  return cCardClient::SendMsg(data,len);
 }
 
-int cCardClientCommon::RecvMsg(cNetSocket *so, unsigned char *data, int len, int to)
+int cCardClientCommon::RecvMsg(unsigned char *data, int len, int to)
 {
-  int n=cCardClient::RecvMsg(so,data,len,to);
+  int n=cCardClient::RecvMsg(data,len,to);
   if(n>0) {
     if(n&15) PRINTF(L_CC_CAMD,"AES crypted message length not a multiple of 16");
     Decrypt(data,n);
@@ -144,7 +144,7 @@ bool cCardClientCommon::Login(void)
 
   unsigned char buff[128];
   if(conReply) {
-    if(RecvMsg(&so,buff,sizeof(buff))!=16) {
+    if(RecvMsg(buff,16)<0) {
       PRINTF(L_CC_CAMD,"bad connect reply");
       return false;
       }
@@ -158,11 +158,11 @@ bool cCardClientCommon::Login(void)
   int vers_len=strlen(CCVERSION)+1;
   memcpy(buff+1+user_len+pass_len+1,CCVERSION,vers_len);
   PRINTF(L_CC_CAMD,"login user='%s' password=hidden version=%s",username,CCVERSION);
-  if(!SendMsg(&so,buff,32)) return false;
+  if(!SendMsg(buff,32)) return false;
 
   if(emmAllowed && logReply) {
     PRINTF(L_CC_CAMD,"waiting for login reply ...");
-    int r=RecvMsg(&so,buff,sizeof(buff));
+    int r=RecvMsg(buff,emmReqLen);
     if(r>0) HandleEMMRequest(buff,r);
     }
   PRINTF(L_CC_LOGIN,"%s: login done",name);
@@ -185,7 +185,7 @@ bool cCardClientCommon::ProcessEMM(int caSys, const unsigned char *source)
         buff[6]=((cCardIrdeto *)card)->hexBase;
         memcpy(&buff[7],source,length);
         //PRINTF(L_CC_CAMD,"%s: sending EMM for caid 0x%04X",name,caSys);
-        SendMsg(&so,buff,length+7);
+        SendMsg(buff,length+7);
         msEMM.Cache(id,true,0);
         }
       return true;
@@ -203,18 +203,18 @@ bool cCardClientCommon::ProcessECM(const cEcmInfo *ecm, const unsigned char *sou
     const int length=SCT_LEN(source);
     unsigned char *buff=AUTOMEM(length+32);
     int n;
-    while((n=RecvMsg(&so,buff,16,0))>0) HandleEMMRequest(buff,n);
+    while((n=RecvMsg(buff,-16,0))>0) HandleEMMRequest(buff,n);
     buff[0]=0x02;
     buff[1]=(ecm->caId>>8);
     buff[2]=(ecm->caId&0xFF);
     memset(&buff[3],0,4);
     memcpy(&buff[7],source,length);
-    if(SendMsg(&so,buff,length+7)) {
+    if(SendMsg(buff,length+7)) {
       exclusive=true;
       time.Set(CCTIMEOUT);
       do {
         sleepCond.TimedWait(*this,50);
-        while((n=RecvMsg(&so,buff,32,0))>0) {
+        while((n=RecvMsg(buff,-32,0))>0) {
           if(n>=21 && buff[0]==2) {
             if(!CheckNull(buff+5,16)) {
               if(!res) {
@@ -243,6 +243,8 @@ bool cCardClientCommon::ProcessECM(const cEcmInfo *ecm, const unsigned char *sou
 
 // -- cCardClientCamd33 --------------------------------------------------------
 
+#define EMMREQLEN33 13
+
 class cCardClientCamd33 : public cCardClientCommon {
 private:
   int CAID;
@@ -262,6 +264,7 @@ cCardClientCamd33::cCardClientCamd33(const char *Name)
 {
   CAID=0;
   memset(lastEmmReq,0,sizeof(lastEmmReq));
+  emmReqLen=EMMREQLEN33;
 }
 
 bool cCardClientCamd33::CanHandle(unsigned short SysId)
@@ -276,7 +279,7 @@ bool cCardClientCamd33::CanHandleEMM(int SysId)
 
 void cCardClientCamd33::HandleEMMRequest(const unsigned char *buff, int len)
 {
-  if(len>=13 && buff[0]==0 && !CheckNull(buff,len) && memcmp(buff,lastEmmReq,13)) {
+  if(len>=emmReqLen && buff[0]==0 && !CheckNull(buff,len) && memcmp(buff,lastEmmReq,emmReqLen)) {
     emmProcessing=false;
     int c=buff[1]*256+buff[2];
     if(c!=CAID) CaidsChanged();
@@ -356,8 +359,8 @@ bool cCardClientBuffy::Login(void)
   unsigned char buff[128];
   memset(buff,0,sizeof(buff));
   buff[0]=0x0A;
-  if(!SendMsg(&so,buff,32)) return false;
-  int n=RecvMsg(&so,buff,sizeof(buff));
+  if(!SendMsg(buff,32)) return false;
+  int n=RecvMsg(buff,-sizeof(buff));
   if(n<0) return false;
   for(int i=1; i<n && numCAIDs<MAX_CAIDS; i+=2) {
     unsigned short caid=(buff[i+1]<<8)+buff[i];
@@ -422,7 +425,6 @@ private:
   cCondVar sleepCond;
   cTimeMs time;
 protected:
-  cNetSocket so;
   bool emmProcessing;
   char username[33], password[33];
   int numCaids, Caids[8];
@@ -446,10 +448,11 @@ static cCardClientLinkReg<cCardClientCamd35> __camd35("Camd35");
 
 cCardClientCamd35::cCardClientCamd35(const char *Name)
 :cCardClient(Name)
-,so(DEFAULT_CONNECT_TIMEOUT,CCTIMEOUT/1000,DEFAULT_IDLE_TIMEOUT,true)
 {
   emmProcessing=exclusive=emmCmd06=false; pinid=0; numCaids=0; lastEmmReq=0;
   memset(Dx,0,sizeof(Dx));
+  so.SetRWTimeout(CCTIMEOUT);
+  so.SetUDP(true);
 }
 
 bool cCardClientCamd35::ParseUserConfig(const char *config, int *num)
@@ -476,29 +479,37 @@ bool cCardClientCamd35::SendBlock(struct CmdBlock *cb, int datalen)
   HEXDUMP(L_CC_CAMDEXTR,cb,datalen+UCSIZE(cb),"send:");
   const int l=Encrypt((unsigned char *)cb+UCSIZE(cb),datalen,buff+UCSIZE(cb));
   if(l<=0) return false;
-  return cCardClient::SendMsg(&so,buff,l+UCSIZE(cb));
+  return cCardClient::SendMsg(buff,l+UCSIZE(cb));
 }
 
 int cCardClientCamd35::RecvBlock(struct CmdBlock *cb, int maxlen, int to)
 {
-  int n=cCardClient::RecvMsg(&so,(unsigned char *)cb,maxlen,to);
-  if(n<=0) return n;
-  if((unsigned int)n>=CBSIZE(cb)+UCSIZE(cb)) {
-    if(cb->ucrc==ucrc) {
-      Decrypt((unsigned char *)cb+UCSIZE(cb),n-UCSIZE(cb));
-      if((unsigned int)n<cb->udp_header.len+CBSIZE(cb)+UCSIZE(cb))
-        PRINTF(L_CC_CAMD35,"packet length doesn't match data length");
-      else if(cb->udp_header.crc!=bswap_32(crc32_le(0,&cb->data[0],cb->udp_header.len)))
-        PRINTF(L_CC_CAMD35,"data crc failed");
-      else {
-        HEXDUMP(L_CC_CAMDEXTR,cb,n,"recv:");
-        return n;
-        }
-      }
-    else PRINTF(L_CC_CAMD35,"wrong ucrc: got %08x, want %08x",cb->ucrc,ucrc);
+  unsigned char *m=(unsigned char *)cb;
+  if(cCardClient::RecvMsg(m,16+UCSIZE(cb),to)<0) {
+    PRINTF(L_CC_CAMD35,"short packet received");
+    return -1;
     }
-  else PRINTF(L_CC_CAMD35,"short packet received");
-  return -1;
+  Decrypt(m+UCSIZE(cb),16);
+  int n=cb->udp_header.len+HDSIZE(cb);
+  if(n>maxlen) {
+    PRINTF(L_CC_CAMD35,"received buffer overflow");
+    return -1;
+    }
+  if(cCardClient::RecvMsg(m+16+UCSIZE(cb),n-(16+UCSIZE(cb)),200)<0) {
+    PRINTF(L_CC_CAMD35,"short packet received(2)");
+    return -1;
+    }
+  Decrypt(m+16+UCSIZE(cb),n-(16+UCSIZE(cb)));
+  if(cb->ucrc!=ucrc) {
+    PRINTF(L_CC_CAMD35,"wrong ucrc: got %08x, want %08x",cb->ucrc,ucrc);
+    return -1;
+    }
+  if(cb->udp_header.crc!=bswap_32(crc32_le(0,&cb->data[0],cb->udp_header.len))) {
+    PRINTF(L_CC_CAMD35,"data crc failed");
+    return -1;
+    }
+  HEXDUMP(L_CC_CAMDEXTR,cb,n,"recv:");
+  return n;
 }
 
 bool cCardClientCamd35::Init(const char *config)

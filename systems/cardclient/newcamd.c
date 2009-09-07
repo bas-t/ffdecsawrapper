@@ -26,7 +26,6 @@
 #include <vdr/thread.h>
 
 #include "cc.h"
-#include "network.h"
 #include "misc.h"
 #include "parse.h"
 
@@ -168,7 +167,6 @@ struct CustomData {
 
 class cCardClientNewCamd : public cCardClient, private cTripleDes, private cIdSet {
 private:
-  cNetSocket so;
   unsigned char configKey[14];
   unsigned short netMsgId;
   int caId, protoVers, cdLen;
@@ -200,12 +198,12 @@ static cCardClientLinkReg<cCardClientNewCamd> __ncd("Newcamd");
 
 cCardClientNewCamd::cCardClientNewCamd(const char *Name)
 :cCardClient(Name)
-,so(DEFAULT_CONNECT_TIMEOUT,20,DEFAULT_IDLE_TIMEOUT)
 {
   memset(username,0,sizeof(username));
   memset(password,0,sizeof(password));
   InitVars();
   InitProtoVers(525);
+  so.SetRWTimeout(20*1000);
 }
 
 void cCardClientNewCamd::InitVars(void)
@@ -287,30 +285,28 @@ bool cCardClientNewCamd::SendMessage(const unsigned char *data, int len, bool Us
   len+=sizeof(DES_cblock);
   netbuf[0]=(len-2)>>8;
   netbuf[1]=(len-2)&0xff;
-  return cCardClient::SendMsg(&so,netbuf,len);
+  return cCardClient::SendMsg(netbuf,len);
 }
 
 int cCardClientNewCamd::ReceiveMessage(unsigned char *data, bool UseMsgId, struct CustomData *cd, comm_type_t commType)
 {
   unsigned char netbuf[CWS_NETMSGSIZE];
-  int len=cCardClient::RecvMsg(&so,netbuf,2);
-  if(len!=2) {
-    if(len>0) PRINTF(L_CC_NEWCAMD,"bad length %d != 2 on message length read",len);
+  if(cCardClient::RecvMsg(netbuf,2)<0) {
+    PRINTF(L_CC_NEWCAMD,"failed to read message length");
     return 0;
     }
-  const int mlen=WORD(netbuf,0,0xFFFF);
+  int mlen=WORD(netbuf,0,0xFFFF);
   if(mlen>CWS_NETMSGSIZE-2) {
    PRINTF(L_CC_NEWCAMD,"receive message buffer overflow");
    return 0;
    }
-  len=cCardClient::RecvMsg(&so,netbuf+2,mlen);
-  if(len!=mlen) {
-    PRINTF(L_CC_NEWCAMD,"bad length %d != %d on message read",len,mlen);
+  if(cCardClient::RecvMsg(netbuf+2,mlen,200)<0) {
+    PRINTF(L_CC_NEWCAMD,"failed to read message");
     return 0;
     }
-  len+=2;
-  cTripleDes::Decrypt(netbuf,len); len-=sizeof(DES_cblock);
-  if(XorSum(netbuf+2, len-2)) {
+  mlen+=2;
+  cTripleDes::Decrypt(netbuf,mlen); mlen-=sizeof(DES_cblock);
+  if(XorSum(netbuf+2,mlen-2)) {
     PRINTF(L_CC_NEWCAMD,"checksum error");
     return 0;
     }
@@ -340,7 +336,7 @@ int cCardClientNewCamd::ReceiveMessage(unsigned char *data, bool UseMsgId, struc
 bool cCardClientNewCamd::CmdSend(net_msg_type_t cmd, comm_type_t commType)
 {
   unsigned char buffer[3];
-  buffer[0] = cmd; buffer[1] = buffer[2] = 0;
+  buffer[0]=cmd; buffer[1]=buffer[2]=0;
   return SendMessage(buffer,sizeof(buffer),false,0,commType);
 }
 
@@ -377,7 +373,7 @@ bool cCardClientNewCamd::Login(void)
 
   InitVars();
   unsigned char randData[14];
-  if(so.Read(randData,sizeof(randData))!=14) {
+  if(so.Read(randData,sizeof(randData))<0) {
     PRINTF(L_CC_NEWCAMD,"no connect answer from %s:%d",hostname,port);
     so.Disconnect();
     return false;
