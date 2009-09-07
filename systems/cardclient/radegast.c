@@ -80,7 +80,7 @@ bool cCardClientRadegast::CanHandle(unsigned short SysId)
 bool cCardClientRadegast::Init(const char *config)
 {
   cMutexLock lock(this);
-  so.Disconnect();
+  Logout();
   return ParseStdConfig(config) && (Immediate() ? Login() : true);
 }
 
@@ -170,7 +170,7 @@ int cCardClientRadegast::Recv(unsigned char *buff, int len)
 
 bool cCardClientRadegast::Login(void)
 {
-  so.Disconnect();
+  Logout();
   if(!so.Connect(hostname,port)) return false;
   PRINTF(L_CC_LOGIN,"%s: connected to %s:%d",name,hostname,port);
 

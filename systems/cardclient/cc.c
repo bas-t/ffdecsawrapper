@@ -101,12 +101,17 @@ bool cCardClient::CanHandle(unsigned short SysId)
   return false;
 }
 
+void cCardClient::Logout(void)
+{
+  so.Disconnect();
+}
+
 bool cCardClient::SendMsg(const unsigned char *data, int len)
 {
   if(!so.Connected() && !Login()) return false;
   if(so.Write(data,len)<0) {
     PRINTF(L_CC_CORE,"send error. reconnecting...");;
-    so.Disconnect();
+    Logout();
     return false;
     }
   return true;
@@ -118,7 +123,7 @@ int cCardClient::RecvMsg(unsigned char *data, int len, int to)
   int n=so.Read(data,len,to);
   if(n<0) {
     PRINTF(L_CC_CORE,"recv error. reconnecting...");;
-    so.Disconnect();
+    Logout();
     }
   return n;
 }
