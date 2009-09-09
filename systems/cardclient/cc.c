@@ -122,6 +122,7 @@ int cCardClient::RecvMsg(unsigned char *data, int len, int to)
   if(!so.Connected() && !Login()) return -1;
   int n=so.Read(data,len,to);
   if(n<0) {
+    if(len<0 && errno==ETIMEDOUT) return 0;
     PRINTF(L_CC_CORE,"recv error. reconnecting...");;
     Logout();
     }
