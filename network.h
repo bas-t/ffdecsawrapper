@@ -46,6 +46,7 @@ private:
   void Activity(void);
   bool GetAddr(struct sockaddr_in *saddr, const char *Hostname, int Port);
   int GetSocket(bool Udp);
+  cString StrError(int err) const;
 public:
   cNetSocket(void);
   ~cNetSocket();
@@ -56,7 +57,7 @@ public:
   int Write(const unsigned char *data, int len, int timeout=-1);
   int SendTo(const char *Host, int Port, const unsigned char *data, int len, int timeout=-1);
   void Flush(void);
-  bool Connected(void) { return connected; }
+  bool Connected(void) const { return connected; }
   void SetQuietLog(bool ql) { quietlog=ql; }
   void SetConnectTimeout(int to) { conTimeout=to; }
   void SetRWTimeout(int to) { rwTimeout=to; }
