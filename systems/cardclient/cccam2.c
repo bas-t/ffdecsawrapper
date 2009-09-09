@@ -426,7 +426,7 @@ struct NodeInfo {
 
 // -- cCardClientCCcam2 ---------------------------------------------------------
 
-#define MAX_ECM_TIME 3000 // ms
+#define MAX_ECM_TIME 3000     // ms
 
 class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
@@ -444,6 +444,8 @@ private:
   tThreadId readerTid;
   //
   void PacketAnalyzer(const struct CmdHeader *hdr, int length);
+  int CryptRecv(unsigned char *data, int len, int to=-1);
+  bool CryptSend(const unsigned char *data, int len);
 protected:
   virtual bool Login(void);
   virtual void Logout(void);
@@ -627,33 +629,29 @@ bool cCardClientCCcam2::Login(void)
   encr.Encrypt(buff2,buff2,20);
 
   LDUMP(L_CC_CCCAM2DT,buff2,20,"welcome response:");
-  encr.Encrypt(buff2,buffer,20);
-  if(!SendMsg(buffer,20)) {
+  if(!CryptSend(buff2,20)) {
     PRINTF(L_CC_CCCAM2,"failed to send welcome response");
     return false;
     }
 
-  memset(buff2,0,20);
-  strcpy((char *)buff2,username);
-  LDUMP(L_CC_CCCAM2DT,buff2,20,"send username:");
-  encr.Encrypt(buff2,buffer,20);
-  if(!SendMsg(buffer,20)) {
+  memset(buffer,0,20);
+  strcpy((char *)buffer,username);
+  LDUMP(L_CC_CCCAM2DT,buffer,20,"send username:");
+  if(!CryptSend(buffer,20)) {
     PRINTF(L_CC_CCCAM2,"failed to send username");
     return false;
     }
 
   encr.Encrypt((unsigned char *)password,buffer,strlen(password));
-  encr.Encrypt((unsigned char *)cccamstr,buffer,6);
-  if(!SendMsg(buffer,6)) {
+  if(!CryptSend((unsigned char *)cccamstr,6)) {
     PRINTF(L_CC_CCCAM2,"failed to send password hash");
     return false;
     }
 
-  if((len=RecvMsg(buffer,20))<0) {
+  if((len=CryptRecv(buffer,20))<0) {
     PRINTF(L_CC_CCCAM2,"no login answer from server");
     return false;
     }
-  decr.Decrypt(buffer,buffer,len);
   LDUMP(L_CC_CCCAM2DT,buffer,len,"login answer:");
 
   if(strcmp(cccamstr,(char *)buffer)!=0) {
@@ -672,8 +670,7 @@ bool cCardClientCCcam2::Login(void)
   strcpy(clt.build,"2892");
   memcpy(clt.nodeid,nodeid,8);
   LDUMP(L_CC_CCCAM2DT,&clt,sizeof(clt),"send clientinfo:");
-  encr.Encrypt((unsigned char*)&clt,buffer,sizeof(clt));
-  if(!SendMsg(buffer,sizeof(clt))) {
+  if(!CryptSend((unsigned char*)&clt,sizeof(clt))) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
     return false;
     }
@@ -713,15 +710,13 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     for(cShare *s=curr.First(); s; s=curr.Next(s))
       PRINTF(L_CC_CCCAM2SH,"shareid %08x hops %d %c lag %4d",s->ShareID(),s->Hops(),s->Status()>0?'+':(s->Status()<0?'-':' '),s->Lag());
     }
-  unsigned char *netbuff=AUTOMEM(ecm_len);
   cTimeMs max(MAX_ECM_TIME);
   for(cShare *s=curr.First(); s && !max.TimedOut(); s=curr.Next(s)) {
     if((shareid=s->ShareID())==0) continue;
     BYTE4_BE(&req->shareid,shareid);
     PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
     LDUMP(L_CC_CCCAM2DT,req,ecm_len,"send ecm:");
-    encr.Encrypt((unsigned char *)req,netbuff,ecm_len);
-    if(!SendMsg(netbuff,ecm_len)) {
+    if(!CryptSend((unsigned char *)req,ecm_len)) {
       PRINTF(L_CC_CCCAM2,"failed so send ecm request");
       break;
       }
@@ -759,9 +754,8 @@ void cCardClientCCcam2::Action(void)
   int cnt=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
-    int len=RecvMsg(recvbuff+cnt,-(sizeof(recvbuff)-cnt),200);
+    int len=CryptRecv(recvbuff+cnt,-(sizeof(recvbuff)-cnt),200);
     if(len>0) {
-      decr.Decrypt(recvbuff+cnt,recvbuff+cnt,len);
       HEXDUMP(L_CC_CCCAM2DT,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
       cnt+=len;
       }
@@ -779,4 +773,18 @@ void cCardClientCCcam2::Action(void)
     usleep(10);
     }
   readerTid=0;
+}
+
+int cCardClientCCcam2::CryptRecv(unsigned char *data, int len, int to)
+{
+  int r=RecvMsg(data,len,to);
+  if(r>0) decr.Decrypt(data,data,r);
+  return r;
+}
+
+bool cCardClientCCcam2::CryptSend(const unsigned char *data, int len)
+{
+  unsigned char *buff=AUTOMEM(len);
+  encr.Encrypt(data,buff,len);
+  return SendMsg(buff,len);
 }
