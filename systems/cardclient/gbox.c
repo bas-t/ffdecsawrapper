@@ -73,8 +73,7 @@ int cCardClientGbox::GetMsg(int cmd, unsigned char *buff, int len)
   int n;
   do {
     n=so.Read(buff,-len);
-    if(n<0) break;
-    } while(buff[0]!=cmd);
+    } while(n>0 && buff[0]!=cmd);
   return n;
 }
 
