@@ -427,6 +427,7 @@ struct NodeInfo {
 // -- cCardClientCCcam2 ---------------------------------------------------------
 
 #define MAX_ECM_TIME 3000     // ms
+#define PING_TIME    120*1000 // ms
 
 class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
@@ -436,6 +437,7 @@ private:
   int shareid;
   char username[21], password[64];
   bool login;
+  cTimeMs lastsend;
   //
   bool newcw;
   unsigned char cw[16];
@@ -516,6 +518,9 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         shares.Unlock();
         break;
         }
+      case 6:
+        PRINTF(L_CC_CCCAM2,"server PONG");
+        break;
       case 7:
         {
         struct AddShare *add=(struct AddShare *)hdr;
@@ -717,7 +722,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
     LDUMP(L_CC_CCCAM2DT,req,ecm_len,"send ecm:");
     if(!CryptSend((unsigned char *)req,ecm_len)) {
-      PRINTF(L_CC_CCCAM2,"failed so send ecm request");
+      PRINTF(L_CC_CCCAM2,"failed to send ecm request");
       break;
       }
     cwmutex.Lock();
@@ -770,6 +775,11 @@ void cCardClientCCcam2::Action(void)
       }
     cnt-=proc;
     memmove(recvbuff,recvbuff+proc,cnt);
+    if(lastsend.TimedOut()) {
+      static const struct CmdHeader ping = { 0,6,0 };
+      if(CryptSend((unsigned char *)&ping,sizeof(ping))<0)
+        PRINTF(L_CC_CCCAM2,"failed to send server PING");
+      }
     usleep(10);
     }
   readerTid=0;
@@ -786,5 +796,6 @@ bool cCardClientCCcam2::CryptSend(const unsigned char *data, int len)
 {
   unsigned char *buff=AUTOMEM(len);
   encr.Encrypt(data,buff,len);
+  lastsend.Set(PING_TIME);
   return SendMsg(buff,len);
 }
