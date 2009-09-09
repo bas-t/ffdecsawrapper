@@ -179,6 +179,12 @@ bool cNetSocket::GetAddr(struct sockaddr_in *saddr, const char *Hostname, int Po
   return false;
 }
 
+cString cNetSocket::StrError(int err) const
+{
+  char buf[64];
+  return strerror_r(err,buf,sizeof(buf));
+}
+
 int cNetSocket::GetSocket(bool Udp)
 {
   int proto=0;
@@ -190,12 +196,12 @@ int cNetSocket::GetSocket(bool Udp)
     if(flgs>=0) {
       if(fcntl(so,F_SETFL,flgs|O_NONBLOCK)==0)
         return so;
-      else PRINTF(L_GEN_ERROR,"socket: fcntl SETFL failed: %s",strerror(errno)); 
+      else PRINTF(L_GEN_ERROR,"socket: fcntl SETFL failed: %s",*StrError(errno));
       }
-    else PRINTF(L_GEN_ERROR,"socket: fcntl GETFL failed: %s",strerror(errno));
+    else PRINTF(L_GEN_ERROR,"socket: fcntl GETFL failed: %s",*StrError(errno));
     close(so);
     }
-  else PRINTF(L_GEN_ERROR,"socket: socket failed: %s",strerror(errno));
+  else PRINTF(L_GEN_ERROR,"socket: socket failed: %s",*StrError(errno));
   return -1;
 }
 
@@ -225,13 +231,13 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
         if(getsockopt(sd,SOL_SOCKET,SO_ERROR,&r,&l)==0) {
           if(r==0)
             connected=true;
-          else PRINTF(L_GEN_ERROR,"socket: connect failed (late): %s",strerror(r));
+          else PRINTF(L_GEN_ERROR,"socket: connect failed (late): %s",*StrError(r));
           }
-        else PRINTF(L_GEN_ERROR,"socket: getsockopt failed: %s",strerror(errno));
+        else PRINTF(L_GEN_ERROR,"socket: getsockopt failed: %s",*StrError(errno));
         }
       else PRINTF(L_GEN_ERROR,"socket: connect timed out");
       }
-    else PRINTF(L_GEN_ERROR,"socket: connect failed: %s",strerror(errno));
+    else PRINTF(L_GEN_ERROR,"socket: connect failed: %s",*StrError(errno));
 
     if(connected) { Activity(); Unlock(); return true; }
     }
@@ -261,7 +267,7 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
       Activity(); Unlock();
       return true;
       }
-    else PRINTF(L_GEN_ERROR,"socket: bind failed: %s",strerror(errno));
+    else PRINTF(L_GEN_ERROR,"socket: bind failed: %s",*StrError(errno));
     }
   Unlock();
   Disconnect();
@@ -303,7 +309,7 @@ int cNetSocket::Read(unsigned char *data, int len, int timeout)
     r=Select(true,r);
     if(r>0) {
       r=LOOP_EINTR(read(sd,data+cnt,len-cnt));
-      if(r<0) PRINTF(L_GEN_ERROR,"socket: read failed: %s",strerror(errno));
+      if(r<0) PRINTF(L_GEN_ERROR,"socket: read failed: %s",*StrError(errno));
       else if(r>0) cnt+=r;
       else {
         PRINTF(L_GEN_ERROR,"socket: EOF on read");
@@ -330,7 +336,7 @@ int cNetSocket::Write(const unsigned char *data, int len, int timeout)
     r=Select(false,r);
     if(r>0) {
       r=LOOP_EINTR(write(sd,data+cnt,len-cnt));
-      if(r<0) PRINTF(L_GEN_ERROR,"socket: write failed: %s",strerror(errno));
+      if(r<0) PRINTF(L_GEN_ERROR,"socket: write failed: %s",*StrError(errno));
       else if(r>0) cnt+=r;
       }
     } while(r>0 && cnt<len);
@@ -355,7 +361,7 @@ int cNetSocket::SendTo(const char *Host, int Port, const unsigned char *data, in
       r=Select(false,r);
       if(r>0) {
         r=LOOP_EINTR(sendto(sd,data+cnt,len-cnt,0,(struct sockaddr *)&saddr,sizeof(saddr)));
-        if(r<0) PRINTF(L_GEN_ERROR,"socket: sendto %d.%d.%d.%d:%d failed: %s",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port,strerror(errno));
+        if(r<0) PRINTF(L_GEN_ERROR,"socket: sendto %d.%d.%d.%d:%d failed: %s",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port,*StrError(errno));
         else if(r>0) cnt+=r;
         }
       } while(r>0 && cnt<len);
@@ -382,7 +388,7 @@ int cNetSocket::Select(bool forRead, int timeout)
     int r=LOOP_EINTR(select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv));
     if(r>0) return 1;
     else if(r<0) {
-      PRINTF(L_GEN_ERROR,"socket: select failed: %s",strerror(errno));
+      PRINTF(L_GEN_ERROR,"socket: select failed: %s",*StrError(errno));
       return -1;
       }
     else {
