@@ -1198,7 +1198,7 @@ PRINTF(L_CORE_ECM,"%s: new caDescr: %s",id,*filterCaDescr.ToString());
               }
             }
           else {
-            PRINTF(L_CORE_ECMPROC,"%s: check result %d\n",id,n);
+            PRINTF(L_CORE_ECMPROC,"%s: check result %d",id,n);
             switch(n) {
               case 1: NoSync(true); break;
               case 2: count++; break;
