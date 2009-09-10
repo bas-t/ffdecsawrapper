@@ -187,15 +187,17 @@ int cSystem::CheckECM(const cEcmInfo *ecm, const unsigned char *data, bool sync)
   switch(ecm->caId>>8) {
     case 0x06: // Irdeto
       {
-      const int cur=data[4];
-      const int max=data[5];
       const int chid=WORD(data,6,0xFFFF);
       // if multiple channel id's, use current one only
       if(sync && ecm->caId==0x0604 && check->caid.sys06.current>0 && chid!=check->caid.sys06.current) {
         PRINTF(L_CORE_ECMPROC,"ecmcheck(%s): chid %04x != current %04x",name,chid,check->caid.sys06.current);
         return 2;
         }
+/*
+//XXX is that still needed? Seems to conflict with some Irdeto2 provider
       // search for fake channel id's on Stream
+      const int cur=data[4];
+      const int max=data[5];
       if(!sync && max>0 && max<MAX_CHID) {
         if(cur==0) check->caid.sys06.startFlag=true;
         if(check->caid.sys06.startFlag) {
@@ -218,6 +220,7 @@ int cSystem::CheckECM(const cEcmInfo *ecm, const unsigned char *data, bool sync)
             }
           }
         }
+*/
       break;
       }
     }
