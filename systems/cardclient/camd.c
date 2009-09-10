@@ -485,12 +485,13 @@ bool cCardClientCamd35::SendBlock(struct CmdBlock *cb, int datalen)
 int cCardClientCamd35::RecvBlock(struct CmdBlock *cb, int maxlen, int to)
 {
   unsigned char *m=(unsigned char *)cb;
-  if(cCardClient::RecvMsg(m,16+UCSIZE(cb),to)<0) {
-    PRINTF(L_CC_CAMD35,"short packet received");
+  int n=cCardClient::RecvMsg(m,16+UCSIZE(cb),to);
+  if(n<=0) {
+    if(n<0) PRINTF(L_CC_CAMD35,"short packet received");
     return -1;
     }
   Decrypt(m+UCSIZE(cb),16);
-  int n=cb->udp_header.len+HDSIZE(cb);
+  n=cb->udp_header.len+HDSIZE(cb);
   if(n>maxlen) {
     PRINTF(L_CC_CAMD35,"received buffer overflow");
     return -1;

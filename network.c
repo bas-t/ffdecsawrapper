@@ -305,7 +305,7 @@ int cNetSocket::Read(unsigned char *data, int len, int timeout)
   cTimeMs tim;
   do {
     r=timeout;
-    if(blockmode) { r-=tim.Elapsed(); if(r<10) r=10; }
+    if(r>0 && blockmode) { r-=tim.Elapsed(); if(r<10) r=10; }
     r=Select(true,r);
     if(r>0) {
       r=LOOP_EINTR(read(sd,data+cnt,len-cnt));
@@ -332,7 +332,8 @@ int cNetSocket::Write(const unsigned char *data, int len, int timeout)
   int cnt=0, r;
   cTimeMs tim;
   do {
-    r=timeout-tim.Elapsed(); if(r<10) r=10;
+    r=timeout;
+    if(r>0) { r-=tim.Elapsed(); if(r<10) r=10; }
     r=Select(false,r);
     if(r>0) {
       r=LOOP_EINTR(write(sd,data+cnt,len-cnt));
@@ -357,7 +358,8 @@ int cNetSocket::SendTo(const char *Host, int Port, const unsigned char *data, in
   if(GetAddr(&saddr,Host,Port)) {
     cTimeMs tim;
     do {
-      r=timeout-tim.Elapsed(); if(r<10) r=10;
+      r=timeout;
+      if(r>0) { r-=tim.Elapsed(); if(r<10) r=10; }
       r=Select(false,r);
       if(r>0) {
         r=LOOP_EINTR(sendto(sd,data+cnt,len-cnt,0,(struct sockaddr *)&saddr,sizeof(saddr)));
