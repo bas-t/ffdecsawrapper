@@ -487,8 +487,8 @@ int cCardClientCamd35::RecvBlock(struct CmdBlock *cb, int maxlen, int to)
   unsigned char *m=(unsigned char *)cb;
   int n=cCardClient::RecvMsg(m,16+UCSIZE(cb),to);
   if(n<=0) {
-    if(n<0) PRINTF(L_CC_CAMD35,"short packet received");
-    return -1;
+    if(n<0) PRINTF(L_CC_CAMD35,"packet receive failed");
+    return n;
     }
   Decrypt(m+UCSIZE(cb),16);
   n=cb->udp_header.len+HDSIZE(cb);
