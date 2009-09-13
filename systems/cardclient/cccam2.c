@@ -19,6 +19,7 @@
 
 // initialy written by anetwolf anetwolf@hotmail.com
 // based on crypto & protocol information from _silencer
+// EMM handling based on contribution from appiemulder
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,7 @@
 #include <openssl/sha.h>
 
 #include "cc.h"
+#include "parse.h"
 #include "helper.h"
 #include "version.h"
 
@@ -220,33 +222,44 @@ public:
 
 class cShares;
 
-class cShare : public cSimpleItem {
+class cShare : public cSimpleItem, public cIdSet {
 friend class cShares;
 private:
   int shareid, caid;
   cSimpleList<cShareProv> prov;
   int hops, lag;
   int status;
+  unsigned char ua[8];
+  bool emmready;
+  cMsgCache *cache;
+  //
+  void Init(void);
+  void SetCache(void);
 public:
-  cShare(int Shareid, int Caid, int Hops);
+  cShare(int Shareid, int Caid, int Hops, const unsigned char *Ua);
   cShare(const cShare *s);
+  ~cShare();
   bool UsesProv(void) const;
   bool HasProv(int provid) const;
-  void AddProv(int provid);
+  bool CheckAddProv(const unsigned char *prov, const unsigned char *sa);
   bool Compare(const cShare *s) const;
   int ShareID(void) const { return shareid; };
   int CaID(void) const { return caid;};
   int Hops(void) const { return hops; };
   int Lag(void) const { return lag; };
   int Status(void) const { return status; }
+  bool EmmReady(void) const { return emmready; }
+  cMsgCache *Cache(void) const { return cache; }
   };
 
-cShare::cShare(int Shareid, int Caid, int Hops)
+cShare::cShare(int Shareid, int Caid, int Hops, const unsigned char *Ua)
 {
   shareid=Shareid;
   caid=Caid;
   hops=Hops;
   lag=STDLAG; status=0;
+  memcpy(ua,Ua,sizeof(ua));
+  Init();
 }
 
 cShare::cShare(const cShare *s)
@@ -256,6 +269,52 @@ cShare::cShare(const cShare *s)
   hops=s->hops;
   lag=s->lag;
   status=s->status;
+  memset(ua,0,sizeof(ua));
+  Init();
+}
+
+cShare::~cShare()
+{
+  delete cache;
+}
+
+void cShare::Init(void)
+{
+  cache=0; emmready=false;
+  if(!CheckNull(ua,sizeof(ua)))
+    switch(caid>>8) {
+      case 0x17:
+      case 0x06: SetCard(new cCardIrdeto(ua[4],&ua[5])); emmready=true; break;
+      case 0x01: SetCard(new cCardSeca(&ua[2])); emmready=true; break;
+      case 0x0b: SetCard(new cCardConax(&ua[1])); emmready=true; break;
+      case 0x09: SetCard(new cCardNDS(&ua[4])); emmready=true; break;
+      case 0x05: SetCard(new cCardViaccess(&ua[3])); emmready=true; break;
+      case 0x0d: SetCard(new cCardCryptoworks(&ua[3])); emmready=true; break;
+      case 0x12:
+      case 0x18: if((caid>>8)==0x18 || caid==0x1234) {
+                   SetCard(new cCardNagra2(&ua[4]));
+                   emmready=true;
+                   break;
+                   }
+      // fall through
+      default:   PRINTF(L_CC_CCCAM2,"share %08x: can't handle unique updates for CAID %04x",shareid,caid);
+                 break;
+      }
+  SetCache();
+}
+
+void cShare::SetCache(void)
+{
+  if(emmready) {
+    if(!cache) cache=new cMsgCache(32,0);
+    if(!cache) {
+      emmready=false;
+      PRINTF(L_CC_CCCAM2,"share %08x: failed to alloc EMM cache",shareid);
+      }
+    }
+  else {
+    delete cache; cache=0;
+    }
 }
 
 bool cShare::UsesProv(void) const
@@ -276,13 +335,34 @@ bool cShare::HasProv(int provid) const
   return false;
 }
 
-void cShare::AddProv(int provid)
+bool cShare::CheckAddProv(const unsigned char *pr, const unsigned char *sa)
 {
-  if(!HasProv(provid)) {
+  unsigned char s[8];
+  memset(&s[0],0,4); memcpy(&s[4],sa,4);
+  int provid=UINT32_BE(pr-1)&0xFFFFFF;
+  bool res=false;
+  if(!CheckNull(s,sizeof(s)))
+    switch(caid>>8) {
+      case 0x17:
+      case 0x06: AddProv(new cProviderIrdeto(s[4],&s[5])); res=true; break;
+      case 0x01: AddProv(new cProviderSeca(&pr[1],&s[4])); res=true; break;
+      case 0x0b: AddProv(new cProviderConax(&s[1])); res=true; break;
+      case 0x09: AddProv(new cProviderNDS(&s[4])); res=true; break;
+      case 0x05: AddProv(new cProviderViaccess(&pr[0],&s[4])); res=true; break;
+      case 0x0d: AddProv(new cProviderCryptoworks(&s[3])); res=true; break;
+      default:   PRINTF(L_CC_CCCAM2,"share %08x: can't handle shared updates for CAID %04x",shareid,caid);
+                 break;
+    }
+  if(res) emmready=true;
+  SetCache();
+
+  if(UsesProv() && !HasProv(provid)) {
     cShareProv *sp=new cShareProv;
     sp->provid=provid;
     prov.Add(sp);
+    res=true;
     }
+  return res;
 }
 
 bool cShare::Compare(const cShare *s) const
@@ -392,6 +472,16 @@ struct EcmRequest {
   unsigned char data[0];
   } __attribute__((packed));
 
+struct EmmRequest {
+  struct CmdHeader header;
+  unsigned short caid;  // BE
+  unsigned char dummy;  //XXX what is that?
+  unsigned int provid;  // BE
+  unsigned int shareid; // BE
+  unsigned char datalen;
+  unsigned char data[0];
+  } __attribute__((packed));
+
 struct DcwAnswer {
   struct CmdHeader header;
   unsigned char cw[16];
@@ -415,7 +505,7 @@ struct ProvInfo {
   unsigned char count;
   struct {
     unsigned char provid[3];
-    unsigned char info[4];
+    unsigned char sa[4];
     } prov[0];
   } __attribute__((packed));
 
@@ -436,7 +526,7 @@ private:
   unsigned char nodeid[8];
   int shareid;
   char username[21], password[64];
-  bool login;
+  bool login, emmProcessing;
   cTimeMs lastsend;
   //
   bool newcw;
@@ -458,6 +548,7 @@ public:
   virtual bool Init(const char *CfgDir);
   virtual bool CanHandle(unsigned short SysId);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
+  virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
 
 static cCardClientLinkReg<cCardClientCCcam2> __ncd("cccam2");
@@ -466,7 +557,7 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam2 reader")
 {
-  shareid=0; readerTid=0; newcw=login=false;
+  shareid=0; readerTid=0; newcw=login=emmProcessing=false;
   so.SetRWTimeout(10*1000);
 }
 
@@ -500,20 +591,34 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         decr.Decrypt(tempcw,tempcw,16);
         break;
         }
+      case 2:
+        PRINTF(L_CC_CCCAM2EX,"EMM ack");
+        break;
       case 4:
         {
         struct DelShare *del=(struct DelShare *)hdr;
         int shareid=UINT32_BE(&del->shareid);
+        bool check=false;
         shares.Lock(true);
         for(cShare *s=shares.First(); s;) {
           cShare *n=shares.Next(s);
           if(s->ShareID()==shareid) {
             PRINTF(L_CC_CCCAM2SH,"REMOVE share %08x caid: %04x (count %d)",s->ShareID(),s->CaID(),shares.Count());
             int caid=s->CaID();
+            if(s->EmmReady()) check=true;
             shares.Del(s);
             if(!shares.HasCaid(caid)) CaidsChanged();
             }
           s=n;
+          }
+        if(check && emmProcessing) {
+          bool emm=false;
+          for(cShare *s=shares.First(); s; s=shares.Next(s))
+            if(s->EmmReady()) { emm=true; break; }
+          if(!emm) {
+            emmProcessing=false;
+            PRINTF(L_CC_CCCAM2,"disabled EMM processing");
+            }
           }
         shares.Unlock();
         break;
@@ -529,21 +634,29 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         shares.Lock(false);
         if(!shares.HasCaid(caid)) CaidsChanged();
         shares.Unlock();
-        cShare *s=new cShare(shareid,caid,add->uphops);
+        cShare *s=new cShare(shareid,caid,add->uphops,add->cardserial);
         LBSTARTF(L_CC_CCCAM2SH);
-        LBPUT("ADD share %08x hops %d maxdown %d caid %04x serial ",shareid,add->uphops,add->maxdown,caid);
+        LBPUT("ADD share %08x hops %d maxdown %d caid %04x ua ",shareid,add->uphops,add->maxdown,caid);
         for(int i=0; i<8; i++) LBPUT("%02x",add->cardserial[i]);
         struct ProvInfo *prov=(struct ProvInfo *)(add+1);
-        if(s->UsesProv() && prov->count>0) {
-          LBPUT(" prov");
+        if(prov->count>0) {
+          bool first=true;
           for(int i=0; i<prov->count; i++) {
-            int provider=UINT32_BE(prov->prov[i].provid-1)&0xFFFFFF;
-            s->AddProv(provider);
-            LBPUT(" %06x",provider);
+            if(s->CheckAddProv(prov->prov[i].provid,prov->prov[i].sa)) {
+              if(first) { LBPUT(" prov"); first=false; }
+              LBPUT(" %06x/%08x",UINT32_BE(prov->prov[i].provid-1)&0xFFFFFF,UINT32_BE(prov->prov[i].sa));
+              }
             }
           }
+        if(s->EmmReady()) LBPUT(" (EMM)");
         LBEND();
-        shares.Lock(true); shares.Add(s); shares.Unlock();
+        shares.Lock(true);
+        shares.Add(s);
+        if(s->EmmReady() && !emmProcessing && emmAllowed) {
+          emmProcessing=true;
+          PRINTF(L_CC_CCCAM2,"enabled EMM processing");
+          }
+        shares.Unlock();
         break;
         }
       case 8:
@@ -600,14 +713,15 @@ void cCardClientCCcam2::Logout(void)
   Cancel(cThread::ThreadId()!=readerTid ? 2:-1);
   readerTid=0;
   cCardClient::Logout();
+  shares.Lock(true);
+  shares.Clear();
+  emmProcessing=false;
+  shares.Unlock();
 }
 
 bool cCardClientCCcam2::Login(void)
 {
   Logout();
-  shares.Lock(true);
-  shares.Clear();
-  shares.Unlock();
   if(!so.Connect(hostname,port)) return false;
   so.SetQuietLog(true);
 
@@ -751,6 +865,50 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     }
   PRINTF(L_CC_ECM,"%s: unable to decode the channel",name);
   return false;
+}
+
+bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
+{
+  bool res=false;
+  if(emmProcessing && emmAllowed) {
+    cMutexLock lock(this);
+    shares.Lock(false);
+    for(cShare *s=shares.First(); s; s=shares.Next(s)) {
+      if(s->EmmReady() && s->CaID()==caSys) {
+        cProvider *p;
+        cAssembleData ad(data);
+        if(s->MatchAndAssemble(&ad,0,&p)) {
+          const unsigned char *d;
+          while((d=ad.Assembled())) {
+            int len=SCT_LEN(d);
+            int id=s->Cache()->Get(d,len,0);
+            if(id>0) {
+              if(len<256) {
+                unsigned char bb[sizeof(struct EmmRequest)+256];
+                struct EmmRequest *req=(struct EmmRequest *)bb;
+                int emm_len=sizeof(struct EmmRequest)+len;
+                memset(req,0,sizeof(struct EmmRequest));
+                memcpy(req+1,d,len);
+                req->header.cmd=2;
+                SETCMDLEN(&req->header,emm_len);
+                BYTE2_BE(&req->caid,s->CaID());
+                BYTE4_BE(&req->provid,p ? p->ProvId() : 0);
+                BYTE4_BE(&req->shareid,s->ShareID());
+                req->datalen=len;
+                if(!CryptSend((unsigned char *)req,emm_len))
+                  PRINTF(L_CC_CCCAM2,"failed to send emm request");
+                }
+              else PRINTF(L_CC_CCCAM2,"EMM data length >=256 not supported by CCcam");
+              s->Cache()->Cache(id,true,0);
+              }
+            }
+          res=true;
+          }
+        }
+      }
+    shares.Unlock();
+    }
+  return res;
 }
 
 void cCardClientCCcam2::Action(void)
