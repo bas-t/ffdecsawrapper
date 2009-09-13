@@ -528,6 +528,7 @@ private:
   char username[21], password[64];
   bool login, emmProcessing;
   cTimeMs lastsend;
+  int pendingDCW;
   //
   bool newcw;
   unsigned char cw[16];
@@ -557,7 +558,7 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam2 reader")
 {
-  shareid=0; readerTid=0; newcw=login=emmProcessing=false;
+  shareid=0; readerTid=0; pendingDCW=0; newcw=login=emmProcessing=false;
   so.SetRWTimeout(10*1000);
 }
 
@@ -575,7 +576,8 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
       case 1:
         {
         struct DcwAnswer *dcw=(struct DcwAnswer *)hdr;
-        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x",shareid);
+        if(pendingDCW>0) pendingDCW--;
+        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x, pending %d",shareid,pendingDCW);
         unsigned char tempcw[16];
         memcpy(tempcw,dcw->cw,16);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
@@ -717,6 +719,7 @@ void cCardClientCCcam2::Logout(void)
   shares.Clear();
   emmProcessing=false;
   shares.Unlock();
+  pendingDCW=0;
 }
 
 bool cCardClientCCcam2::Login(void)
@@ -835,6 +838,9 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     BYTE4_BE(&req->shareid,shareid);
     PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
     LDUMP(L_CC_CCCAM2DT,req,ecm_len,"send ecm:");
+    if(pendingDCW>0)
+      PRINTF(L_CC_CCCAM2,"WARN: there are pending DCW answers. This may cause trouble...");
+    pendingDCW++;
     if(!CryptSend((unsigned char *)req,ecm_len)) {
       PRINTF(L_CC_CCCAM2,"failed to send ecm request");
       break;
