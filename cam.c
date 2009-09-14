@@ -2320,7 +2320,6 @@ void cScCamSlot::CaInfo(int tcid, int cid)
   int cn=0;
   for(int i=0; caids[i]; i++) cn+=2;
   int n=cn+8+LengthSize(cn);
-PRINTF(L_CORE_CI,"n=%d cn=%d",n,cn);
   unsigned char *p;
   if(!(p=frame.GetBuff(n+1+LengthSize(n)))) return;
   *p++=0xa0;
