@@ -19,7 +19,7 @@
 
 // initialy written by anetwolf anetwolf@hotmail.com
 // based on crypto & protocol information from _silencer
-// EMM handling based on contribution from appiemulder
+// EMM & cmd 05 handling based on contribution from appiemulder
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -528,7 +528,7 @@ private:
   char username[21], password[64];
   bool login, emmProcessing;
   cTimeMs lastsend;
-  int pendingDCW;
+  int pendingDCW, keymaskpos;
   //
   bool newcw;
   unsigned char cw[16];
@@ -558,7 +558,7 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam2 reader")
 {
-  shareid=0; readerTid=0; pendingDCW=0; newcw=login=emmProcessing=false;
+  shareid=0; readerTid=0; pendingDCW=keymaskpos=0; newcw=login=emmProcessing=false;
   so.SetRWTimeout(10*1000);
 }
 
@@ -591,6 +591,10 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         cwwait.Broadcast();
         cwmutex.Unlock();
         decr.Decrypt(tempcw,tempcw,16);
+        if(keymaskpos>0 && --keymaskpos<=2) {
+          PRINTF(L_CC_CCCAM2,"disconnecting due to key limit...");
+          Logout();
+          }
         break;
         }
       case 2:
@@ -623,6 +627,14 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
             }
           }
         shares.Unlock();
+        break;
+        }
+      case 5:
+        {
+        static const struct CmdHeader resp = { 0,5,0 };
+        if(CryptSend((unsigned char *)&resp,sizeof(resp))<0)
+          PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
+        keymaskpos=60;
         break;
         }
       case 6:
@@ -725,7 +737,7 @@ void cCardClientCCcam2::Logout(void)
   shares.Clear();
   emmProcessing=false;
   shares.Unlock();
-  pendingDCW=0;
+  pendingDCW=keymaskpos=0;
 }
 
 bool cCardClientCCcam2::Login(void)
