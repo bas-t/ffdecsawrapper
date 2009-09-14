@@ -173,7 +173,7 @@ bool cSystemScCore::ProcessECM(const cEcmInfo *ecm, unsigned char *source)
   return res;
 }
 
-void cSystemScCore::ProcessEMM(int pid, int caid, unsigned char *buffer)
+void cSystemScCore::ProcessEMM(int pid, int caid, const unsigned char *buffer)
 {
   cSmartCard *card=smartcards.LockCard(scId);
   if(card) {

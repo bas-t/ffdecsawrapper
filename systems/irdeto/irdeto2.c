@@ -123,7 +123,7 @@ private:
 public:
   cSystemIrd2(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *data);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *data);
   };
 
 cSystemIrd2::cSystemIrd2(void)
@@ -204,7 +204,7 @@ bool cSystemIrd2::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   return false;
 }
 
-void cSystemIrd2::ProcessEMM(int pid, int caid, unsigned char *data)
+void cSystemIrd2::ProcessEMM(int pid, int caid, const unsigned char *data)
 {
   int prov=0; //XXX how to get provider here??
 
