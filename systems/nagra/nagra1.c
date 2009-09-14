@@ -691,7 +691,7 @@ public:
   cSystemNagra(void);
   virtual ~cSystemNagra();
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *buffer);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer);
   };
 
 cSystemNagra::cSystemNagra(void)
@@ -863,7 +863,7 @@ bool cSystemNagra::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   return true;
 }
   
-void cSystemNagra::ProcessEMM(int pid, int caid, unsigned char *buffer)
+void cSystemNagra::ProcessEMM(int pid, int caid, const unsigned char *buffer)
 {
   const int id=buffer[10]*256+buffer[11];
   static const unsigned char tester[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x4B };

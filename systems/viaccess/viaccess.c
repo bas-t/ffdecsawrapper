@@ -356,7 +356,7 @@ private:
 public:
   cSystemViaccess(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *data);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *data);
   virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len);
   };
 
@@ -410,7 +410,7 @@ bool cSystemViaccess::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   return false;
 }
 
-void cSystemViaccess::ProcessEMM(int pid, int caid, unsigned char *data)
+void cSystemViaccess::ProcessEMM(int pid, int caid, const unsigned char *data)
 {
   for(cViaccessCardInfo *mkey=Vcards.First(); mkey; mkey=Vcards.Next(mkey)) {
     int updtype;

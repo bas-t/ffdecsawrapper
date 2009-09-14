@@ -116,7 +116,7 @@ public:
   virtual int CheckECM(const cEcmInfo *ecm, const unsigned char *data, bool sync);
   virtual void CheckECMResult(const cEcmInfo *ecm, const unsigned char *data, bool result);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *buffer)=0;
-  virtual void ProcessEMM(int pid, int caid, unsigned char *buffer) {};
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer) {};
   virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len);
   virtual void ParseCAT(cPids *pids, const unsigned char *buffer, int source, int transponder);
   unsigned char *CW(void) { return cw; }

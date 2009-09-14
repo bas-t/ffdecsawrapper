@@ -288,7 +288,7 @@ public:
   cSimpleList<cSystem> systems;
   //
   cLogChain(int CardNum, bool soft, int src, int tr);
-  void Process(int pid, unsigned char *data);
+  void Process(int pid, const unsigned char *data);
   bool Parse(const unsigned char *cat);
   };
 
@@ -298,7 +298,7 @@ cLogChain::cLogChain(int CardNum, bool soft, int src, int tr)
   active=delayed=false;
 }
 
-void cLogChain::Process(int pid, unsigned char *data)
+void cLogChain::Process(int pid, const unsigned char *data)
 {
   if(active) {
     for(cSystem *sys=systems.First(); sys; sys=systems.Next(sys))

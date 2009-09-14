@@ -106,7 +106,7 @@ private:
 public:
   cSystemScCore(const char *Name, int Pri, int ScId, const char *ScName);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *data);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *data);
   };
 
 #endif //___SYSTEM_COMMON_H

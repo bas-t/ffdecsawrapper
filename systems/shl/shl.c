@@ -421,7 +421,7 @@ public:
   cSystemShl(void);
   virtual ~cSystemShl();
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *source);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *buffer);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer);
   };
 
 cSystemShl::cSystemShl(void)
@@ -602,7 +602,7 @@ void cSystemShl::ProcessCw(const unsigned char *data, int prvId, const unsigned 
     }
 }
 
-void cSystemShl::ProcessEMM(int pid, int caid, unsigned char *buffer)
+void cSystemShl::ProcessEMM(int pid, int caid, const unsigned char *buffer)
 {
   int n=SCT_LEN(buffer)-3;
   buffer+=3;

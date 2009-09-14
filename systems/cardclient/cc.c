@@ -193,7 +193,7 @@ private:
 public:
   cSystemCardClient(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *buffer);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer);
   };
 
 cSystemCardClient::cSystemCardClient(void)
@@ -237,7 +237,7 @@ bool cSystemCardClient::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   return false;
 }
 
-void cSystemCardClient::ProcessEMM(int pid, int caid, unsigned char *buffer)
+void cSystemCardClient::ProcessEMM(int pid, int caid, const unsigned char *buffer)
 {
   cCardClient *cc=0;
   while((cc=staticCcl.FindBySysId(caid,cc)))

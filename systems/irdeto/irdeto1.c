@@ -221,7 +221,7 @@ private:
 public:
   cSystemIrd(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *source);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *buffer);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer);
   };
 
 cSystemIrd::cSystemIrd(void)
@@ -277,17 +277,14 @@ bool cSystemIrd::ProcessECM(const cEcmInfo *ecm, unsigned char *source)
   return false;
 }
 
-void cSystemIrd::ProcessEMM(int pid, int caid, unsigned char *buffer)
+void cSystemIrd::ProcessEMM(int pid, int caid, const unsigned char *data)
 {
   int i, numKeys=0, date=0;
   unsigned char adr[10], id[4], *pk[4], prov, *mk=0, prvId[3]={0,0,0};
 
-  int n=SCT_LEN(buffer);
-  unsigned char savebuf[4096];
-  if(n>(int)sizeof(savebuf)) {
-    PRINTF(L_SYS_EMM,"%d: paket size %d to big for savebuffer in IrdetoLog",CardNum(),n);
-    return;
-    }
+  int n=SCT_LEN(data);
+  unsigned char *buffer=AUTOMEM(n);
+  memcpy(buffer,data,n);
 
   int index=cParseIrdeto::AddrLen(buffer);
   memset(adr,0,sizeof(adr));
@@ -387,7 +384,6 @@ void cSystemIrd::ProcessEMM(int pid, int caid, unsigned char *buffer)
 
   // lastKey: save cpu time if we get bursts of the same key
   if((numKeys>0 && (id[0]!=lastKey || numKeys>1)) || mk) {
-    memcpy(savebuf,buffer,n); // save the buffer
     cIrdCardInfo *ci=Icards.First();
     unsigned char *chkkey=AUTOMEM(max(sizeof(ci->PMK),sizeof(ci->HMK)));
     while(ci) {
@@ -436,7 +432,7 @@ void cSystemIrd::ProcessEMM(int pid, int caid, unsigned char *buffer)
           }
         LBEND();
 
-        memcpy(buffer,savebuf,n); // restore the buffer
+        memcpy(buffer,data,n); // restore the buffer
         }
       ci=Icards.Next(ci);
       }

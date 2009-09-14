@@ -1177,7 +1177,7 @@ public:
   cSystemSeca(void);
   virtual ~cSystemSeca();
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *data);
-  virtual void ProcessEMM(int pid, int caid, unsigned char *buffer);
+  virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer);
   };
 
 cSystemSeca::cSystemSeca(void)
@@ -1561,7 +1561,7 @@ void cSystemSeca::Permute(unsigned char *data, const unsigned char *pdata, const
   for(int i=7; i>=0; i--) data[i] = P[i] ? pdata[P[i]] : 0;
 }
 
-void cSystemSeca::ProcessEMM(int pid, int caid, unsigned char *buffer)
+void cSystemSeca::ProcessEMM(int pid, int caid, const unsigned char *buffer)
 {
   if(buffer[0]!=0x84) return; // we only support shared updates
 
