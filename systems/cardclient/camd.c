@@ -485,32 +485,24 @@ bool cCardClientCamd35::SendBlock(struct CmdBlock *cb, int datalen)
 int cCardClientCamd35::RecvBlock(struct CmdBlock *cb, int maxlen, int to)
 {
   unsigned char *m=(unsigned char *)cb;
-  int n=cCardClient::RecvMsg(m,16+UCSIZE(cb),to);
-  if(n<=0) {
-    if(n<0) PRINTF(L_CC_CAMD35,"packet receive failed");
-    return n;
+  int n=cCardClient::RecvMsg(m,-maxlen,to);
+  if(n<=0) return n;
+  if((unsigned int)n>=HDSIZE(cb)) {
+    if(cb->ucrc==ucrc) {
+      Decrypt(m+UCSIZE(cb),n-UCSIZE(cb));
+      if((unsigned int)n<cb->udp_header.len+HDSIZE(cb))
+        PRINTF(L_CC_CAMD35,"packet length doesn't match data length");
+      else if(cb->udp_header.crc!=bswap_32(crc32_le(0,&cb->data[0],cb->udp_header.len)))
+        PRINTF(L_CC_CAMD35,"data crc failed");
+      else {
+        HEXDUMP(L_CC_CAMDEXTR,cb,n,"recv:");
+        return n;
+        }
+      }
+    else PRINTF(L_CC_CAMD35,"wrong ucrc: got %08x, want %08x",cb->ucrc,ucrc);
     }
-  Decrypt(m+UCSIZE(cb),16);
-  n=cb->udp_header.len+HDSIZE(cb);
-  if(n>maxlen) {
-    PRINTF(L_CC_CAMD35,"received buffer overflow");
-    return -1;
-    }
-  if(cCardClient::RecvMsg(m+16+UCSIZE(cb),n-(16+UCSIZE(cb)),200)<0) {
-    PRINTF(L_CC_CAMD35,"short packet received(2)");
-    return -1;
-    }
-  Decrypt(m+16+UCSIZE(cb),n-(16+UCSIZE(cb)));
-  if(cb->ucrc!=ucrc) {
-    PRINTF(L_CC_CAMD35,"wrong ucrc: got %08x, want %08x",cb->ucrc,ucrc);
-    return -1;
-    }
-  if(cb->udp_header.crc!=bswap_32(crc32_le(0,&cb->data[0],cb->udp_header.len))) {
-    PRINTF(L_CC_CAMD35,"data crc failed");
-    return -1;
-    }
-  HEXDUMP(L_CC_CAMDEXTR,cb,n,"recv:");
-  return n;
+  else PRINTF(L_CC_CAMD35,"short packet received");
+  return -1;
 }
 
 bool cCardClientCamd35::Init(const char *config)
