@@ -101,7 +101,11 @@ bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data,
     0xf0,0x00,		// prg info len
     0x02, 0xff,0xec, 0xf0,0x00
     };
-  unsigned char *buff=AUTOMEM(sizeof(pmt)+8+n);
+  unsigned char buff[512];
+  if(sizeof(pmt)+n+8>sizeof(buff)) {
+    PRINTF(L_CC_GBOX,"CA descriptor buffer overflow %d",sizeof(pmt)+n+8);
+    return false;
+    }
   memcpy(buff,pmt,sizeof(pmt));
   buff[4]=ecm->prgId >> 8;
   buff[5]=ecm->prgId & 0xFF;
