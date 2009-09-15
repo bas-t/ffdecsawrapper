@@ -310,7 +310,7 @@ void cCardClientCCcam::Action(void)
 {
   unsigned char cw[18];
   while(Running()) {
-    if(so.Read(cw,sizeof(cw)>0)) {
+    if(so.Read(cw,sizeof(cw))>0) {
       LDUMP(L_CC_CCCAM,cw+2,16,"got: %02x%02x ",cw[0],cw[1]);
       if(cw[1]==0x0f && cw[0]<4)
         card[cw[0]].NewCw(cw+2);
