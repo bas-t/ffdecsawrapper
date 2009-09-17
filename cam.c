@@ -2238,7 +2238,7 @@ public:
 cScCamSlot::cScCamSlot(cScCiAdapter *ca, int CardIndex, int Slot)
 :cCamSlot(ca)
 ,checkTimer(-SLOT_CAID_CHECK-1000)
-,rb(KILOBYTE(4),5+1,false,"SC-CI slot answer")
+,rb(KILOBYTE(4),5+LEN_OFF,false,"SC-CI slot answer")
 {
   ciadapter=ca; cardIndex=CardIndex; slot=Slot;
   version=0; caids[0]=0; doReply=false; lastStatus=msReset;
@@ -2438,7 +2438,7 @@ cScCiAdapter::cScCiAdapter(cDevice *Device, int CardIndex, cCam *Cam)
   memset(version,0,sizeof(version));
   memset(slots,0,sizeof(slots));
   SetDescription("SC-CI adapter on device %d",cardIndex);
-  rb=new cRingBufferLinear(KILOBYTE(8),6+1,false,"SC-CI adapter read");
+  rb=new cRingBufferLinear(KILOBYTE(8),6+LEN_OFF,false,"SC-CI adapter read");
   if(rb) {
     rb->SetTimeouts(0,CAM_READ_TIMEOUT);
     frame.SetRb(rb);
