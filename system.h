@@ -172,7 +172,7 @@ private:
   static cSystemLink *FindById(unsigned short SysId, bool ff, int oldPri);
   static cSystemLink *FindByIdent(int ident);
 public:
-  static int Provides(const unsigned short *SysIds, bool ff);
+  static int CanHandle(int SysId, bool ff);
   static cSystem *FindBySysId(unsigned short SysId, bool ff, int oldPri);
   static int FindIdentBySysId(unsigned short SysId, bool ff, int &Pri);
   static int FindIdentBySysName(unsigned short SysId, bool ff, const char *Name, int &Pri);

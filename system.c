@@ -26,7 +26,6 @@
 #include <openssl/md5.h>
 
 #include "sc.h"
-#include "scsetup.h"
 #include "system.h"
 #include "data.h"
 #include "override.h"
@@ -285,22 +284,12 @@ void cSystems::Register(cSystemLink *sysLink)
   first=sysLink;
 }
 
-int cSystems::Provides(const unsigned short *SysIds, bool ff)
+int cSystems::CanHandle(int SysId, bool ff)
 {
-  int n=0;
-  for(; *SysIds; SysIds++) {
-    if(ScSetup.Ignore(*SysIds)) continue;
-    cSystemLink *sl=first;
-    while(sl) {
-      if(sl->CanHandle(*SysIds)) {
-        if(sl->noFF && ff) return 0;
-        n++;
-        break;
-        }
-      sl=sl->next;
-      }
-    }
-  return n;
+  for(cSystemLink *sl=first; sl; sl=sl->next)
+    if(sl->CanHandle(SysId))
+      return (sl->noFF && ff) ? -1:1;
+  return 0;
 }
 
 cSystemLink *cSystems::FindByName(const char *Name)
@@ -346,33 +335,26 @@ cSystemLink *cSystems::FindByIdent(int ident)
 
 cSystem *cSystems::FindBySysId(unsigned short SysId, bool ff, int oldPri)
 {
-  if(!ScSetup.Ignore(SysId)) {
-    cSystemLink *csl=FindById(SysId,ff,oldPri);
-    if(csl) return csl->Create();
-    }
-  return 0;
+  cSystemLink *csl=FindById(SysId,ff,oldPri);
+  return csl ? csl->Create() : 0;
 }
 
 int cSystems::FindIdentBySysId(unsigned short SysId, bool ff, int &Pri)
 {
-  if(!ScSetup.Ignore(SysId)) {
-    cSystemLink *csl=FindById(SysId,ff,Pri);
-    if(csl) {
-      Pri=csl->pri;
-      return csl->sysIdent;
-      }
+  cSystemLink *csl=FindById(SysId,ff,Pri);
+  if(csl) {
+    Pri=csl->pri;
+    return csl->sysIdent;
     }
   return 0;
 }
 
 int cSystems::FindIdentBySysName(unsigned short SysId, bool ff, const char *Name, int &Pri)
 {
-  if(!ScSetup.Ignore(SysId)) {
-    cSystemLink *csl=FindByName(Name);
-    if(csl && (!ff || !csl->noFF) && csl->CanHandle(SysId)) {
-      Pri=csl->pri;
-      return csl->sysIdent;
-      }
+  cSystemLink *csl=FindByName(Name);
+  if(csl && (!ff || !csl->noFF) && csl->CanHandle(SysId)) {
+    Pri=csl->pri;
+    return csl->sysIdent;
     }
   return 0;
 }

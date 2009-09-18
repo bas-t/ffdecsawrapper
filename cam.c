@@ -320,17 +320,19 @@ bool cLogChain::Parse(const unsigned char *cat)
       }
     else {
       LBPUT(" ->");
-      int Pri=0;
-      while((sys=cSystems::FindBySysId(caid,!softCSA,Pri))) {
-        Pri=sys->Pri();
-        if(sys->HasLogger()) {
-          sys->CardNum(cardNum);
-          sys->ParseCAT(&pids,cat,source,transponder);
-          systems.Add(sys);
-          LBPUT(" %s(%d)",sys->Name(),sys->Pri());
+      if(!overrides.Ignore(source,transponder,caid)) {
+        int Pri=0;
+        while((sys=cSystems::FindBySysId(caid,!softCSA,Pri))) {
+          Pri=sys->Pri();
+          if(sys->HasLogger()) {
+            sys->CardNum(cardNum);
+            sys->ParseCAT(&pids,cat,source,transponder);
+            systems.Add(sys);
+            LBPUT(" %s(%d)",sys->Name(),sys->Pri());
+            }
+          else
+            delete sys;
           }
-        else
-          delete sys;
         }
       }
     if(systems.Count()==0) LBPUT(" none available");
@@ -1300,6 +1302,7 @@ void cEcmHandler::AddEcmPri(cEcmInfo *n)
 {
   int ident, pri=0;
   while(1) {
+    if(overrides.Ignore(n->source,n->transponder,n->caId)) break;
     if(!n->Cached()) ident=cSystems::FindIdentBySysId(n->caId,!cam->IsSoftCSA(filterCwIndex==0),pri);
     else ident=(pri==0) ? cSystems::FindIdentBySysName(n->caId,!cam->IsSoftCSA(filterCwIndex==0),n->name,pri) : 0;
     if(ident<=0) break;
@@ -1414,6 +1417,10 @@ void cEcmHandler::ParseCAInfo(int SysId)
         int sysId=WORD(buff,index+2,0xFFFF);
         if(SysId!=0xFFFF && sysId!=SysId) continue;
         if(dolog) LDUMP(L_CORE_ECM,&buff[index+2],buff[index+1],"%s: descriptor",id);
+        if(overrides.Ignore(filterSource,filterTransponder,sysId)) {
+          if(dolog) PRINTF(L_CORE_ECM,"%s: system %04x ignored",id,sysId);
+          continue;
+          }
         int sysPri=0;
         cSystem *sys;
         while((sys=cSystems::FindBySysId(sysId,!cam->IsSoftCSA(filterCwIndex==0),sysPri))) {
@@ -1918,6 +1925,8 @@ public:
   void Dump(int n);
   const caid_t *Caids(void) { caids[numcaids]=0; return caids; }
   int NumCaids(void) { return numcaids; }
+  int Source(void) const { return source; }
+  int Transponder(void) const { return transponder; }
   };
 
 cChannelCaids::cChannelCaids(cChannel *channel)
@@ -2006,7 +2015,9 @@ void cChannelList::CheckIgnore(void)
     const caid_t *ids=ch->Caids();
     while(*ids) {
       int pri=0;
-      if(!cSystems::FindIdentBySysId(*ids,false,pri)) {
+      if(overrides.Ignore(ch->Source(),ch->Transponder(),*ids))
+        ch->Del(*ids);
+      else if(!cSystems::FindIdentBySysId(*ids,false,pri)) {
         for(cChannelCaids *ch2=Next(ch); ch2; ch2=Next(ch2)) ch2->Del(*ids);
         ch->Del(*ids);
         }
@@ -3153,10 +3164,13 @@ bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 int cScDvbDevice::ProvidesCa(const cChannel *Channel) const
 {
   if(cam && Channel->Ca()>=CA_ENCRYPTED_MIN) {
-    int j;
-    caid_t ids[MAXCAIDS+1];
-    for(j=0; j<=MAXCAIDS; j++) if((ids[j]=Channel->Ca(j))==0) break;
-    if(cSystems::Provides(ids,!softcsa)>0) return 2;
+    int caid;
+    for(int j=0; (caid=Channel->Ca(j)); j++)
+      if(!overrides.Ignore(Channel->Source(),Channel->Transponder(),caid)) {
+        int n=cSystems::CanHandle(caid,!softcsa);
+        if(n<0) break;
+        if(n>0) return 2;
+        }
     }
   return cDvbDevice::ProvidesCa(Channel);
 }

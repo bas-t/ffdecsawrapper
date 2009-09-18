@@ -32,6 +32,26 @@
 ;
 
 ;
+; Define ignored CAIDs for general processing
+;
+; NOTE: this replace the CaIgnore option in setup.conf. See below on how to
+; convert your settings
+;
+; format:
+; ignore:{src[-src]:[freq[-freq]]}caid[:caid][...]
+; ignore:{*}caid[:caid][...]
+;
+; if your ignore line in setup.conf looks like this
+; sc.CaIgnore = 622 9c4 b00 d22 1702 1722 1836 1837
+; then you should add an entry like this
+; ignore:{*}0622:09c4:0b00:0d22:1702:1722:1836:1837
+; Of course you could set a more fine grade validity range as well.
+;
+; examples
+; ignore:{S61.5W-S148W:}1801:0D04:0600
+; ignore:{*}0622:1833
+
+;
 ; Add entries to the CAT (conditional access table) in case a EMM stream is
 ; not announced there.
 ;
@@ -87,7 +107,6 @@ emmtable:{1815:S82W-S91W:}83:84    # BEV N3
 ;
 ; format:
 ; tunnel:{caid[-caid]:[src[-src]]:[freq[-freq]]}newcaid[:rewriter]
-;
 ;
 ; examples:
 ; tunnel:{1833:S19.2E:}1702:nagra-beta

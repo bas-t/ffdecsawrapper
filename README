@@ -174,7 +174,8 @@ To reduce the number of CAIDs SC has to deal with, you should obey some rules:
  (e.g. SHL seems pretty useless nowadays).
 -When using a cardclient, be as precise as possible with the CAID/MASK values in
  the cardclient.conf file. Using wide open 0000/0000 is not recommended.
--Add CAIDs which you cannot use due to lack of keys to the SC.CaIgnore setting.
+-Add CAIDs which you cannot use due to lack of keys to the ignore setup in
+ override.conf.
 
 
 

@@ -32,13 +32,15 @@
 cValidityRange::cValidityRange(void)
 {
   fromCaid=toCaid=-1; fromSource=toSource=-1; fromFreq=toFreq=-1;
+  wildcard=false;
 }
 
 bool cValidityRange::Match(int caid, int source, int freq) const
 {
-  return (caid<0 || fromCaid<0 || (toCaid<0 && caid==fromCaid) || (caid>=fromCaid && caid<=toCaid)) &&
-         (fromSource<0 || (toSource<0 && source==fromSource) || (source>=fromSource && source<=toSource)) &&
-         (fromFreq<0 || (toFreq<0 && freq==fromFreq) || (freq>=fromFreq && freq<=toFreq));
+  return wildcard ||
+         ((caid<0 || fromCaid<0 || (toCaid<0 && caid==fromCaid) || (caid>=fromCaid && caid<=toCaid)) &&
+          (fromSource<0 || (toSource<0 && source==fromSource) || (source>=fromSource && source<=toSource)) &&
+          (fromFreq<0 || (toFreq<0 && freq==fromFreq) || (freq>=fromFreq && freq<=toFreq)));
 }
 
 char *cValidityRange::Parse3(char *s)
@@ -69,13 +71,18 @@ char *cValidityRange::Parse3(char *s)
   return 0;
 }
 
-char *cValidityRange::Parse2(char *s)
+char *cValidityRange::Parse2(char *s, bool wildAllow)
 {
   bool log=true;
   s=skipspace(s);
   char *e=index(s,'}');
   if(e && *s++=='{') {
     *e=0; e=skipspace(e+1);
+    s=skipspace(s);
+    if(wildAllow && *s=='*' && isempty(s+1)) {
+      wildcard=true;
+      return e;
+      }
     char *p;
     if((p=index(s,':'))) {
       *p=0;
@@ -140,6 +147,7 @@ bool cValidityRange::ParseSourceRange(const char *str)
 
 cString cValidityRange::Print(void)
 {
+  if(wildcard) return "*";
   char buff[256];
   int q=0;
   if(fromCaid>0) {
@@ -169,6 +177,7 @@ cString cValidityRange::Print(void)
 #define OV_ECMTABLE 3
 #define OV_EMMTABLE 4
 #define OV_TUNNEL   5
+#define OV_IGNORE   6
 
 // -- cOverrideCat -------------------------------------------------------------
 
@@ -433,6 +442,48 @@ int cOverrideTunnel::GetTunnel(int *id, bool log)
   return caid;
 }
 
+// -- cOverrideIgnore ----------------------------------------------------------
+
+#define OV_MAXIGNORES 64
+
+class cOverrideIgnore : public cOverride {
+private:
+  int num, caid[OV_MAXIGNORES];
+public:
+  cOverrideIgnore(void) { type=OV_IGNORE; }
+  virtual bool Parse(char *str);
+  bool Ignore(int Caid);
+  };
+
+bool cOverrideIgnore::Parse(char *str)
+{
+  if((str=Parse2(str,true))) {
+    num=0;
+    int n=-1;
+    do {
+      int l=n+1;
+      if(sscanf(&str[l],"%x%n",&caid[num],&n)!=1) {
+        PRINTF(L_CORE_LOAD,"override: IGNORE format error");
+        return false;
+        }
+      n+=l; num++;
+      } while(num<OV_MAXTABLES && str[n]==':');
+    LBSTART(L_CORE_OVER);
+    LBPUT("ignore: %s - caids",*Print());
+    for(int i=0; i<num; i++) LBPUT(" %02x",caid[i]);
+    LBEND();
+    return true;
+    }
+  return false;
+}
+
+bool cOverrideIgnore::Ignore(int Caid)
+{
+  for(int i=0; i<num; i++)
+    if(Caid==caid[i]) return true;
+  return false;
+}
+
 // -- cOverrides ---------------------------------------------------------------
 
 cOverrides overrides;
@@ -453,6 +504,7 @@ cOverride *cOverrides::ParseLine(char *line)
     else if(!strncasecmp(line,"ecmtable",8)) ov=new cOverrideEcmTable;
     else if(!strncasecmp(line,"emmtable",8)) ov=new cOverrideEmmTable;
     else if(!strncasecmp(line,"tunnel",6)) ov=new cOverrideTunnel;
+    else if(!strncasecmp(line,"ignore",6)) ov=new cOverrideIgnore;
     if(ov && !ov->Parse(p)) { delete ov; ov=0; }
     }
   return ov;
@@ -502,6 +554,18 @@ bool cOverrides::AddEmmPids(int caid, int source, int transponder, cPids *pids, 
   if(ovt) {
     ovt->AddPids(pids,pid,caid);
     res=true;
+    }
+  ListUnlock();
+  return res;
+}
+
+bool cOverrides::Ignore(int source, int transponder, int caid)
+{
+  bool res=false;
+  ListLock(false);
+  for(cOverride *ov=0; (ov=Find(OV_IGNORE,-1,source,transponder,ov)) && !res;) {
+    cOverrideIgnore *ovi=dynamic_cast<cOverrideIgnore *>(ov);
+    if(ovi && ovi->Ignore(caid)) res=true;
     }
   ListUnlock();
   return res;

@@ -21,7 +21,6 @@
 #define ___SC_SETUP_H
 
 #define MAXSCCAPS 10
-#define MAXCAIGN  64
 
 // ----------------------------------------------------------------
 
@@ -30,7 +29,6 @@ public:
   int AutoUpdate;
   int ScCaps[MAXSCCAPS];
   int ConcurrentFF;
-  int CaIgnore[MAXCAIGN];
   int LocalPriority;
   int ForceTransfer;
   int PrestartAU;
@@ -41,7 +39,6 @@ public:
   void Check(void);
   void Store(bool AsIs);
   bool CapCheck(int n);
-  bool Ignore(unsigned short caid);
   };
 
 extern cScSetup ScSetup;
