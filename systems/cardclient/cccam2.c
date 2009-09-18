@@ -941,7 +941,13 @@ void cCardClientCCcam2::Action(void)
   int cnt=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
-    int len=CryptRecv(recvbuff+cnt,-(sizeof(recvbuff)-cnt),200);
+    int len=sizeof(recvbuff)-cnt;
+    if(len==0) {
+      HEXDUMP(L_GEN_DEBUG,recvbuff,sizeof(recvbuff),"internal: cccam2 read buffer overflow");
+      Logout();
+      break;
+      }
+    len=CryptRecv(recvbuff+cnt,-len,200);
     if(len>0) {
       HEXDUMP(L_CC_CCCAM2DT,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
       cnt+=len;
@@ -950,13 +956,17 @@ void cCardClientCCcam2::Action(void)
     while(proc+4<=cnt) {
       struct CmdHeader *hdr=(struct CmdHeader *)(recvbuff+proc);
       int l=CMDLEN(hdr);
+      if(l>(int)sizeof(recvbuff))
+        PRINTF(L_GEN_DEBUG,"internal: cccam2 cmd length exceed buffer size");
       if(proc+l>cnt) break;
       LDUMP(L_CC_CCCAM2DT,hdr,l,"msg in:");
       PacketAnalyzer(hdr,l);
       proc+=l;
       }
-    cnt-=proc;
-    memmove(recvbuff,recvbuff+proc,cnt);
+    if(proc) {
+      cnt-=proc;
+      memmove(recvbuff,recvbuff+proc,cnt);
+      }
     if(lastsend.TimedOut()) {
       static const struct CmdHeader ping = { 0,6,0 };
       if(CryptSend((unsigned char *)&ping,sizeof(ping))<0)
