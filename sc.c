@@ -949,7 +949,6 @@ cScSetup::cScSetup(void)
   ScCaps[0]=1;
   ScCaps[1]=2;
   ConcurrentFF=0;
-  memset(CaIgnore,0,sizeof(CaIgnore));
   LocalPriority=0;
   ForceTransfer=1;
   PrestartAU=0;
@@ -975,8 +974,6 @@ void cScSetup::Check(void)
   PRINTF(L_CORE_LOAD,"** ECM cache is set to %s",EcmCache ? (EcmCache==1?"READ-ONLY":"DISABLED"):"enabled");
   LBSTART(L_CORE_LOAD);
   LBPUT("** ScCaps are"); for(int i=0; i<MAXSCCAPS ; i++) LBPUT(" %d",ScCaps[i]);
-  LBFLUSH();
-  LBPUT("** Ignored CAIDs"); for(int i=0; i<MAXCAIGN ; i++) LBPUT(" %04X",CaIgnore[i]);
   LBEND();
 }
 
@@ -994,13 +991,6 @@ bool cScSetup::CapCheck(int n)
 {
   for(int j=0; j<MAXSCCAPS; j++)
     if(ScCaps[j] && ScCaps[j]==n+1) return true;
-  return false;
-}
-
-bool cScSetup::Ignore(unsigned short caid)
-{
-  for(int i=0; i<MAXCAIGN; i++)
-    if(CaIgnore[i]==caid) return true;
   return false;
 }
 
@@ -1269,7 +1259,6 @@ cScPlugin::cScPlugin(void)
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptSel  ("EcmCache"     ,trNOOP("ECM cache")            ,&ScSetup.EcmCache,3,ecache));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
-  ScOpts->Add(new cOptMInt ("CaIgnore"     ,trNOOP("Ignore CAID")          , ScSetup.CaIgnore,MAXCAIGN,2));
   LogOpts=new cOpts(0,6);
   LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));
   LogOpts->Add(new cOptBool ("LogFile"     ,trNOOP("Log to file")         ,&logcfg.logFile));
