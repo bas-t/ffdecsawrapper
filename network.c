@@ -301,6 +301,11 @@ int cNetSocket::Read(unsigned char *data, int len, int timeout)
   if(timeout<0) timeout=rwTimeout;
   bool blockmode=true;
   if(len<0) { len=-len; blockmode=false; }
+  else if(len==0) {
+    PRINTF(L_GEN_DEBUG,"internal: zero length on socket read");
+    errno=EINVAL;
+    return -1;
+    }
   int cnt=0, r;
   cTimeMs tim;
   do {
