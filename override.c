@@ -178,6 +178,7 @@ cString cValidityRange::Print(void)
 #define OV_EMMTABLE 4
 #define OV_TUNNEL   5
 #define OV_IGNORE   6
+#define OV_ECMPRIO  7
 
 // -- cOverrideCat -------------------------------------------------------------
 
@@ -484,6 +485,68 @@ bool cOverrideIgnore::Ignore(int Caid)
   return false;
 }
 
+// -- cOverrideEcmPrio ---------------------------------------------------------
+
+#define OV_MAXPRIOS 16
+
+class cOverrideEcmPrio : public cOverride {
+private:
+  int num, caid[OV_MAXPRIOS], prov[OV_MAXPRIOS];
+  //
+  bool UsesProvId(int caid);
+public:
+  cOverrideEcmPrio(void) { type=OV_ECMPRIO; }
+  virtual bool Parse(char *str);
+  int GetPrio(int Caid, int Prov);
+  };
+
+bool cOverrideEcmPrio::Parse(char *str)
+{
+  if((str=Parse2(str))) {
+    num=0;
+    int n=-1;
+    do {
+      prov[num]=-1;
+      int l=n+1;
+      if(sscanf(&str[l],"%x%n/%x%n",&caid[num],&n,&prov[num],&n)<1) {
+        PRINTF(L_CORE_LOAD,"override: ECMPRIO format error");
+        return false;
+        }
+      if(prov[num]>=0 && !UsesProvId(caid[num])) {
+        PRINTF(L_CORE_LOAD,"override: ECMPRIO provider ID not supported for caid %04x",caid[num]);
+        return false;
+        }
+      n+=l; num++;
+      } while(num<OV_MAXPRIOS && str[n]==':');
+    LBSTART(L_CORE_OVER);
+    LBPUT("ecmprio: %s - chain",*Print());
+    for(int i=0; i<num; i++) LBPUT(prov[i]>=0 ? " %04x/%x":" %04x",caid[i],prov[i]);
+    LBEND();
+    return true;
+    }
+  return false;
+}
+
+bool cOverrideEcmPrio::UsesProvId(int caid)
+{
+  switch(caid>>8) {
+    case 0x01:
+    case 0x05: return true;
+    }
+  return false;
+}
+
+int cOverrideEcmPrio::GetPrio(int Caid, int Prov)
+{
+  int pri=0;
+  for(int i=0; i<num; i++) {
+    if(Caid==caid[i] && (prov[i]<0 || Prov==prov[i])) break;
+    pri--;
+    }
+  PRINTF(L_CORE_OVER,"ecmprio: %04x/%x pri %d",Caid,Prov,pri);
+  return pri;
+}
+
 // -- cOverrides ---------------------------------------------------------------
 
 cOverrides overrides;
@@ -505,6 +568,7 @@ cOverride *cOverrides::ParseLine(char *line)
     else if(!strncasecmp(line,"emmtable",8)) ov=new cOverrideEmmTable;
     else if(!strncasecmp(line,"tunnel",6)) ov=new cOverrideTunnel;
     else if(!strncasecmp(line,"ignore",6)) ov=new cOverrideIgnore;
+    else if(!strncasecmp(line,"ecmprio",7)) ov=new cOverrideEcmPrio;
     if(ov && !ov->Parse(p)) { delete ov; ov=0; }
     }
   return ov;
@@ -569,4 +633,14 @@ bool cOverrides::Ignore(int source, int transponder, int caid)
     }
   ListUnlock();
   return res;
+}
+
+int cOverrides::GetEcmPrio(int source, int transponder, int caid, int prov)
+{
+  int pri=0;
+  ListLock(false);
+  cOverrideEcmPrio *ovp=dynamic_cast<cOverrideEcmPrio *>(Find(OV_ECMPRIO,-1,source,transponder));
+  if(ovp) pri=ovp->GetPrio(caid,prov);
+  ListUnlock();
+  return pri;
 }

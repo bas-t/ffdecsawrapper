@@ -52,6 +52,22 @@
 ; ignore:{*}0622:1833
 
 ;
+; Define priority chains for ECM processing
+;
+; The first listed CAID will have the highest priority, then stepping down. If a
+; CAID is not listed, the priority will be lower than the last one.
+;
+; NOTE: priorities based on provider ID are supported for CAID 0100 & 0500 only,
+; and are rejected for others.
+;
+; format:
+; ecmprio:{src[-src]:[freq[-freq]]}caid[/provid][:caid[/provid]][...]
+;
+; examples
+; ecmprio:{S19.2E}0100/6a:0622
+; ecmprio:{S28.5E:12973}1833:1702:1801
+
+;
 ; Add entries to the CAT (conditional access table) in case a EMM stream is
 ; not announced there.
 ;

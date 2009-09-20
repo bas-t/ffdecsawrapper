@@ -1313,6 +1313,7 @@ void cEcmHandler::AddEcmPri(cEcmInfo *n)
       ep->pri=pri;
       ep->sysIdent=ident;
       if(n->Cached() && (!ScSetup.LocalPriority || pri!=-15)) ep->pri+=20;
+      ep->pri=ep->pri*100 + overrides.GetEcmPrio(n->source,n->transponder,n->caId,n->provId);
 
       // keep ecmPriList sorted
       cEcmPri *eppp, *epp=ecmPriList.First();
