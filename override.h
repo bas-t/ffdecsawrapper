@@ -92,6 +92,7 @@ public:
   void UpdateEcm(cEcmInfo *ecm, bool log);
   bool AddEmmPids(int caid, int source, int transponder, cPids *pids, int pid);
   bool Ignore(int source, int transponder, int caid);
+  int GetEcmPrio(int source, int transponder, int caid, int prov);
   };
 
 extern cOverrides overrides;
