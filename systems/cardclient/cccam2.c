@@ -872,7 +872,9 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
       shares.SetLag(shareid,l);
       PRINTF(L_CC_CCCAM2EX,"wait returned after %lld",l);
       if(newcw) {
-        memcpy(Cw,cw,16);
+        // check for partial CW
+        if(!CheckNull(cw+0,8)) memcpy(Cw+0,cw+0,8);
+        if(!CheckNull(cw+8,8)) memcpy(Cw+8,cw+8,8);
         cwmutex.Unlock();
         ecmshares.AddStatus(ecm,shareid,1);
         PRINTF(L_CC_CCCAM2,"got CW");
