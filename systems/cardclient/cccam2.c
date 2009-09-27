@@ -681,8 +681,9 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         }
       case 0xff:
       case 0xfe:
-        if(hdr->cmd==0xfe) PRINTF(L_CC_CCCAM2,"share not found on server");
-        else PRINTF(L_CC_CCCAM2,"server can't decode this ecm");
+        if(pendingDCW>0) pendingDCW--;
+        if(hdr->cmd==0xfe) PRINTF(L_CC_CCCAM2,"share not found on server (%d pending)",pendingDCW);
+        else PRINTF(L_CC_CCCAM2,"server can't decode this ecm, (%d pending)",pendingDCW);
         cwmutex.Lock();
         newcw=false;
         cwwait.Broadcast();
@@ -857,7 +858,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     PRINTF(L_CC_CCCAM2EX,"now try shareid %08x",shareid);
     LDUMP(L_CC_CCCAM2DT,req,ecm_len,"send ecm:");
     if(pendingDCW>0)
-      PRINTF(L_CC_CCCAM2,"WARN: there are pending DCW answers. This may cause trouble...");
+      PRINTF(L_CC_CCCAM2,"WARN: there are pending %d DCW answers. This may cause trouble...",pendingDCW);
     pendingDCW++;
     if(!CryptSend((unsigned char *)req,ecm_len)) {
       PRINTF(L_CC_CCCAM2,"failed to send ecm request");
