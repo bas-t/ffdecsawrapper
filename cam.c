@@ -2682,13 +2682,20 @@ bool cScCiAdapter::Assign(cDevice *Device, bool Query)
 #define MAX_CSA_IDX  16
 #define MAX_STALL_MS 70
 
+#define MAX_REL_WAIT 100 // time to wait if key in used on set
+#define MAX_KEY_WAIT 500 // time to wait if key not ready on change
+
+#define FL_EVEN_GOOD 1
+#define FL_ODD_GOOD  2
+#define FL_ACTIVITY  4
+
 class cDeCSA {
 private:
   int cs;
   unsigned char **range, *lastData;
   unsigned char pidmap[MAX_CSA_PIDS];
   void *keys[MAX_CSA_IDX];
-  unsigned int even_odd[MAX_CSA_IDX];
+  unsigned int even_odd[MAX_CSA_IDX], flags[MAX_CSA_IDX];
   cMutex mutex;
   cCondVar wait;
   cTimeMs stall;
@@ -2714,6 +2721,7 @@ cDeCSA::cDeCSA(int CardIndex)
   range=MALLOC(unsigned char *,(cs*2+5));
   memset(keys,0,sizeof(keys));
   memset(even_odd,0,sizeof(even_odd));
+  memset(flags,0,sizeof(flags));
   memset(pidmap,0,sizeof(pidmap));
   lastData=0;
 }
@@ -2743,13 +2751,24 @@ bool cDeCSA::SetDescr(ca_descr_t *ca_descr, bool initial)
   int idx=ca_descr->index;
   if(idx<MAX_CSA_IDX && GetKeyStruct(idx)) {
     if(!initial && active && ca_descr->parity==(even_odd[idx]&0x40)>>6) {
-      PRINTF(L_CORE_CSA,"%d.%d: %s key in use",cardindex,idx,ca_descr->parity?"odd":"even");
-      if(wait.TimedWait(mutex,100)) PRINTF(L_CORE_CSA,"%d.%d: successfully waited for release",cardindex,idx);
-      else PRINTF(L_CORE_CSA,"%d.%d: timed out. setting anyways",cardindex,idx);
+      if(flags[idx] & (ca_descr->parity?FL_ODD_GOOD:FL_EVEN_GOOD)) {
+        PRINTF(L_CORE_CSA,"%d.%d: %s key in use",cardindex,idx,ca_descr->parity?"odd":"even");
+        if(wait.TimedWait(mutex,MAX_REL_WAIT)) PRINTF(L_CORE_CSA,"%d.%d: successfully waited for release",cardindex,idx);
+        else PRINTF(L_CORE_CSA,"%d.%d: timed out. setting anyways",cardindex,idx);
+        }
+      else PRINTF(L_CORE_CSA,"%d.%d: late key set...",cardindex,idx);
       }
     PRINTF(L_CORE_CSA,"%d.%d: %s key set",cardindex,idx,ca_descr->parity?"odd":"even");
-    if(ca_descr->parity==0) set_even_control_word(keys[idx],ca_descr->cw);
-    else                    set_odd_control_word(keys[idx],ca_descr->cw);
+    if(ca_descr->parity==0) {
+      set_even_control_word(keys[idx],ca_descr->cw);
+      flags[idx]|=FL_EVEN_GOOD|FL_ACTIVITY;
+      wait.Broadcast();
+      }
+    else {
+      set_odd_control_word(keys[idx],ca_descr->cw);
+      flags[idx]|=FL_ODD_GOOD|FL_ACTIVITY;
+      wait.Broadcast();
+      }
     }
   return true;
 }
@@ -2787,6 +2806,24 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
           even_odd[idx]=ev_od;
           wait.Broadcast();
           PRINTF(L_CORE_CSA,"%d.%d: change to %s key",cardindex,idx,(ev_od&0x40)?"odd":"even");
+          bool doWait=false;
+          if(ev_od&0x40) {
+            flags[idx]&=~FL_EVEN_GOOD;
+            if(!(flags[idx]&FL_ODD_GOOD)) doWait=true;
+            }
+          else {
+            flags[idx]&=~FL_ODD_GOOD;
+            if(!(flags[idx]&FL_EVEN_GOOD)) doWait=true;
+            }
+          if(doWait) {
+            PRINTF(L_CORE_CSA,"%d.%d: %s key not ready",cardindex,idx,(ev_od&0x40)?"odd":"even");
+            if(flags[idx]&FL_ACTIVITY) {
+              flags[idx]&=~FL_ACTIVITY;
+              if(wait.TimedWait(mutex,MAX_KEY_WAIT)) PRINTF(L_CORE_CSA,"%d.%d: successfully waited for key",cardindex,idx);
+              else PRINTF(L_CORE_CSA,"%d.%d: timed out. proceeding anyways",cardindex,idx);
+              }
+            else PRINTF(L_CORE_CSA,"%d.%d: not active. wait skipped",cardindex,idx);
+            }
           }
         if(newRange) {
           r+=2; newRange=false;
@@ -3253,7 +3290,7 @@ bool cScDvbDevice::OpenDvr(void)
   fd_dvr=DvbOpen(DEV_DVB_DVR,CardIndex(),O_RDONLY|O_NONBLOCK,true);
   if(fd_dvr>=0) {
     tsMutex.Lock();
-    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(2),CardIndex()+1,decsa,ScActive());
+    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(4),CardIndex()+1,decsa,ScActive());
     tsMutex.Unlock();
     }
   return fd_dvr>=0;
