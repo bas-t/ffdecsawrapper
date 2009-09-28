@@ -583,13 +583,14 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
         cCCcamCrypt::ScrambleDcw(tempcw,nodeid,shareid);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"un-scrambled CW");
-        cCCcamCrypt::DcwChecksum(tempcw);
-        cwmutex.Lock();
-        newcw=true;
-        if(!CheckNull(tempcw+0,8)) memcpy(cw+0,tempcw+0,8);
-        if(!CheckNull(tempcw+8,8)) memcpy(cw+8,tempcw+8,8);
-        cwwait.Broadcast();
-        cwmutex.Unlock();
+        if(cCCcamCrypt::DcwChecksum(tempcw) || pendingDCW==0) {
+          cwmutex.Lock();
+          newcw=true;
+          memcpy(cw,tempcw,16);
+          cwwait.Broadcast();
+          cwmutex.Unlock();
+          }
+        else PRINTF(L_CC_CCCAM2,"pending DCW, skipping bad CW");
         decr.Decrypt(tempcw,tempcw,16);
         if(keymaskpos>0 && --keymaskpos<=2) {
           PRINTF(L_CC_CCCAM2,"disconnecting due to key limit...");
