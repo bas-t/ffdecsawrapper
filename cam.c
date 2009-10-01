@@ -2703,6 +2703,7 @@ private:
   int cardindex;
   //
   bool GetKeyStruct(int idx);
+  void ResetState(void);
 public:
   cDeCSA(int CardIndex);
   ~cDeCSA();
@@ -2720,10 +2721,7 @@ cDeCSA::cDeCSA(int CardIndex)
   PRINTF(L_CORE_CSA,"%d: clustersize=%d rangesize=%d",cardindex,cs,cs*2+5);
   range=MALLOC(unsigned char *,(cs*2+5));
   memset(keys,0,sizeof(keys));
-  memset(even_odd,0,sizeof(even_odd));
-  memset(flags,0,sizeof(flags));
-  memset(pidmap,0,sizeof(pidmap));
-  lastData=0;
+  ResetState();
 }
 
 cDeCSA::~cDeCSA()
@@ -2733,8 +2731,17 @@ cDeCSA::~cDeCSA()
   free(range);
 }
 
+void cDeCSA::ResetState(void)
+{
+  memset(even_odd,0,sizeof(even_odd));
+  memset(flags,0,sizeof(flags));
+  memset(pidmap,0,sizeof(pidmap));
+  lastData=0;
+}
+
 void cDeCSA::SetActive(bool on)
 {
+  if(on && !active) ResetState();
   active=on;
   PRINTF(L_CORE_CSA,"%d: set active %s",cardindex,active?"on":"off");
 }
@@ -2752,21 +2759,21 @@ bool cDeCSA::SetDescr(ca_descr_t *ca_descr, bool initial)
   if(idx<MAX_CSA_IDX && GetKeyStruct(idx)) {
     if(!initial && active && ca_descr->parity==(even_odd[idx]&0x40)>>6) {
       if(flags[idx] & (ca_descr->parity?FL_ODD_GOOD:FL_EVEN_GOOD)) {
-        PRINTF(L_CORE_CSA,"%d.%d: %s key in use",cardindex,idx,ca_descr->parity?"odd":"even");
+        PRINTF(L_CORE_CSA,"%d.%d: %s key in use (%d ms)",cardindex,idx,ca_descr->parity?"odd":"even",MAX_REL_WAIT);
         if(wait.TimedWait(mutex,MAX_REL_WAIT)) PRINTF(L_CORE_CSA,"%d.%d: successfully waited for release",cardindex,idx);
         else PRINTF(L_CORE_CSA,"%d.%d: timed out. setting anyways",cardindex,idx);
         }
       else PRINTF(L_CORE_CSA,"%d.%d: late key set...",cardindex,idx);
       }
-    PRINTF(L_CORE_CSA,"%d.%d: %s key set",cardindex,idx,ca_descr->parity?"odd":"even");
+    LDUMP(L_CORE_CSA,ca_descr->cw,8,"%d.%d: %4s key set",cardindex,idx,ca_descr->parity?"odd":"even");
     if(ca_descr->parity==0) {
       set_even_control_word(keys[idx],ca_descr->cw);
-      flags[idx]|=FL_EVEN_GOOD|FL_ACTIVITY;
+      if(!CheckNull(ca_descr->cw,8)) flags[idx]|=FL_EVEN_GOOD|FL_ACTIVITY;
       wait.Broadcast();
       }
     else {
       set_odd_control_word(keys[idx],ca_descr->cw);
-      flags[idx]|=FL_ODD_GOOD|FL_ACTIVITY;
+      if(!CheckNull(ca_descr->cw,8)) flags[idx]|=FL_ODD_GOOD|FL_ACTIVITY;
       wait.Broadcast();
       }
     }
@@ -2816,7 +2823,7 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
             if(!(flags[idx]&FL_EVEN_GOOD)) doWait=true;
             }
           if(doWait) {
-            PRINTF(L_CORE_CSA,"%d.%d: %s key not ready",cardindex,idx,(ev_od&0x40)?"odd":"even");
+            PRINTF(L_CORE_CSA,"%d.%d: %s key not ready (%d ms)",cardindex,idx,(ev_od&0x40)?"odd":"even",MAX_KEY_WAIT);
             if(flags[idx]&FL_ACTIVITY) {
               flags[idx]&=~FL_ACTIVITY;
               if(wait.TimedWait(mutex,MAX_KEY_WAIT)) PRINTF(L_CORE_CSA,"%d.%d: successfully waited for key",cardindex,idx);

@@ -101,6 +101,7 @@ cSystem::cSystem(const char *Name, int Pri)
   currentKeyStr[0]=0; doLog=true; cardNum=-1; logecm=0;
   check=new struct EcmCheck;
   memset(check,0,sizeof(struct EcmCheck));
+  memset(cw,0,sizeof(cw));
   // default config
   maxEcmTry=2; // try to get a key X times from the same ECM pid (default)
   hasLogger=false;
