@@ -2733,6 +2733,7 @@ cDeCSA::~cDeCSA()
 
 void cDeCSA::ResetState(void)
 {
+  PRINTF(L_CORE_CSA,"%d: reset state",cardindex);
   memset(even_odd,0,sizeof(even_odd));
   memset(flags,0,sizeof(flags));
   memset(pidmap,0,sizeof(pidmap));
@@ -2741,7 +2742,7 @@ void cDeCSA::ResetState(void)
 
 void cDeCSA::SetActive(bool on)
 {
-  if(on && !active) ResetState();
+  if(!on && active) ResetState();
   active=on;
   PRINTF(L_CORE_CSA,"%d: set active %s",cardindex,active?"on":"off");
 }
@@ -2769,11 +2770,13 @@ bool cDeCSA::SetDescr(ca_descr_t *ca_descr, bool initial)
     if(ca_descr->parity==0) {
       set_even_control_word(keys[idx],ca_descr->cw);
       if(!CheckNull(ca_descr->cw,8)) flags[idx]|=FL_EVEN_GOOD|FL_ACTIVITY;
+      else PRINTF(L_CORE_CSA,"%d.%d: zero even CW",cardindex,idx);
       wait.Broadcast();
       }
     else {
       set_odd_control_word(keys[idx],ca_descr->cw);
       if(!CheckNull(ca_descr->cw,8)) flags[idx]|=FL_ODD_GOOD|FL_ACTIVITY;
+      else PRINTF(L_CORE_CSA,"%d.%d: zero odd CW",cardindex,idx);
       wait.Broadcast();
       }
     }
