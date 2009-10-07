@@ -15,6 +15,21 @@ VDR Plugin 'sc' Revision History
 
 ------------------------------------------------------------
 
+07.10.2009: Version 0.9.3
+- Ported from Emunation:
+    * Improve msg handling in cardclient newcamd
+    * Add support for seca provider 64 (spain)
+    * A bunch of Nagra updates, mainly map related
+    * fix CAID range in smartcard Nagra
+- Ported from oscam (R127):
+    * Add pin handling in smartcard Conax
+    * Update ECM handling in smartcard Seca
+    * Update ECM/EMM handling in smartcard Viaccess
+- Fix large file options for TSplay patch
+- Various bugfixes and translation updates.
+- The 0.9.x branch is now frozen, only bugfixes will be applied.
+- For a detailed list of changes, refer to the HG changelog.
+
 04.07.2009: Version 0.9.2
 - Restructure of smartcard code. Configuration has been moved to cardslot.conf.
   See cardslot.conf.example file.

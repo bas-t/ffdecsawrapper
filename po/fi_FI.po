@@ -224,7 +224,7 @@ msgid "SC-Seca: EMM updates"
 msgstr "SC-Seca: EMM-päivitykset"
 
 msgid "SC-Viaccess: Parental lock"
-msgstr ""
+msgstr "SC-Viaccess: Lapsilukko"
 
 msgid "stream"
 msgstr "lähete"
