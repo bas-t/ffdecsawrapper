@@ -525,7 +525,7 @@ private:
   cShares shares;
   unsigned char nodeid[8];
   int shareid;
-  char username[21], password[64];
+  char username[21], password[64], versstr[32], buildstr[32];
   bool login, emmProcessing;
   cTimeMs lastsend;
   int pendingDCW, keymaskpos;
@@ -713,19 +713,22 @@ bool cCardClientCCcam2::CanHandle(unsigned short SysId)
 bool cCardClientCCcam2::Init(const char *config)
 {
   cMutexLock lock(this);
+  strn0cpy(versstr,"2.0.11",sizeof(versstr));
+  strn0cpy(buildstr,"2892",sizeof(buildstr));
   int n=0, num=0;
   Logout();
   char ni[17];
   if(!ParseStdConfig(config,&num)
-     || (n=sscanf(&config[num],":%20[^:]:%63[^:]:%16[^:]",username,password,ni))<2 ) return false;
+     || (n=sscanf(&config[num],":%20[^:]:%63[^:]:%16[^:]:%31[^/]:%31[^:]",username,password,ni,versstr,buildstr))<2 ) return false;
   PRINTF(L_CC_CORE,"%s: username=%s password=%s",name,username,password);
-  if(n>2) {
+  if(n>2 && strcmp(ni,"*")) {
     const char *tmp=ni;
     if(GetHex(tmp,nodeid,sizeof(nodeid),false)!=sizeof(nodeid)) return false;
     }
   else
     for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
   LDUMP(L_CC_CORE,nodeid,sizeof(nodeid),"Our nodeid:");
+  PRINTF(L_CC_CORE,"Pretended CCcam version '%s' build '%s'",versstr,buildstr);
   return Immediate() ? Login() : true;
 }
 
@@ -808,8 +811,8 @@ bool cCardClientCCcam2::Login(void)
   clt.header.cmd=0;
   SETCMDLEN(&clt.header,sizeof(clt));
   strcpy(clt.username,username);
-  snprintf(clt.version,sizeof(clt.version),"vdr-sc %s",ScVersion);
-  strcpy(clt.build,"2892");
+  strn0cpy(clt.version,versstr,sizeof(clt.version));
+  strn0cpy(clt.build,buildstr,sizeof(clt.build));
   memcpy(clt.nodeid,nodeid,8);
   LDUMP(L_CC_CCCAM2DT,&clt,sizeof(clt),"send clientinfo:");
   if(!CryptSend((unsigned char*)&clt,sizeof(clt))) {
