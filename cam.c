@@ -2721,6 +2721,7 @@ cDeCSA::cDeCSA(int CardIndex)
   PRINTF(L_CORE_CSA,"%d: clustersize=%d rangesize=%d",cardindex,cs,cs*2+5);
   range=MALLOC(unsigned char *,(cs*2+5));
   memset(keys,0,sizeof(keys));
+  memset(pidmap,0,sizeof(pidmap));
   ResetState();
 }
 
@@ -2736,7 +2737,6 @@ void cDeCSA::ResetState(void)
   PRINTF(L_CORE_CSA,"%d: reset state",cardindex);
   memset(even_odd,0,sizeof(even_odd));
   memset(flags,0,sizeof(flags));
-  memset(pidmap,0,sizeof(pidmap));
   lastData=0;
 }
 
