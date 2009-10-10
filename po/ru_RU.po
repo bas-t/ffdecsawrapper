@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2009-08-04 19:21-0400\n"
+"POT-Creation-Date: 2009-09-18 08:17-0400\n"
 "PO-Revision-Date: 2009-05-14 19:33+0100\n"
 "Last-Translator: somebody\n"
 "Language-Team: ru\n"
@@ -151,9 +151,6 @@ msgstr "ECM кэш"
 
 msgid "Active on DVB card"
 msgstr "Активный на плате DVB"
-
-msgid "Ignore CAID"
-msgstr "Игнорировать CAID"
 
 msgid "Log to console"
 msgstr "Сообщения в консоле"
