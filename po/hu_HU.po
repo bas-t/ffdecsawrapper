@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.11\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2009-08-04 19:21-0400\n"
+"POT-Creation-Date: 2009-09-18 08:17-0400\n"
 "PO-Revision-Date: 2009-05-17 11:09+0800\n"
 "Last-Translator: jv\n"
 "Language-Team: somebody\n"
@@ -150,9 +150,6 @@ msgstr ""
 
 msgid "Active on DVB card"
 msgstr "Aktív a következo DVB kártyán"
-
-msgid "Ignore CAID"
-msgstr "CAID mellozése"
 
 msgid "Log to console"
 msgstr "Naplózás a konzolon"
