@@ -528,7 +528,7 @@ private:
   char username[21], password[64], versstr[32], buildstr[32];
   bool login, emmProcessing;
   cTimeMs lastsend;
-  int pendingDCW, keymaskpos;
+  int pendingDCW, pendingEMM, keymaskpos;
   //
   bool newcw;
   unsigned char cw[16];
@@ -558,7 +558,7 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam2 reader")
 {
-  shareid=0; readerTid=0; pendingDCW=keymaskpos=0; newcw=login=emmProcessing=false;
+  shareid=0; readerTid=0; pendingDCW=pendingEMM=keymaskpos=0; newcw=login=emmProcessing=false;
   so.SetRWTimeout(10*1000);
 }
 
@@ -577,7 +577,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         {
         struct DcwAnswer *dcw=(struct DcwAnswer *)hdr;
         if(pendingDCW>0) pendingDCW--;
-        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x, pending %d",shareid,pendingDCW);
+        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x (pending %d, EMM %d)",shareid,pendingDCW,pendingEMM);
         unsigned char tempcw[16];
         memcpy(tempcw,dcw->cw,16);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
@@ -599,7 +599,8 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         break;
         }
       case 2:
-        PRINTF(L_CC_CCCAM2EX,"EMM ack");
+        if(pendingEMM>0) pendingEMM--;
+        PRINTF(L_CC_CCCAM2EX,"EMM ack (pending %d)",pendingEMM);
         break;
       case 4:
         {
@@ -742,7 +743,7 @@ void cCardClientCCcam2::Logout(void)
   shares.Clear();
   emmProcessing=false;
   shares.Unlock();
-  pendingDCW=keymaskpos=0;
+  pendingDCW=pendingEMM=keymaskpos=0;
 }
 
 bool cCardClientCCcam2::Login(void)
@@ -926,6 +927,8 @@ bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
                 BYTE4_BE(&req->provid,p ? p->ProvId() : 0);
                 BYTE4_BE(&req->shareid,s->ShareID());
                 req->datalen=len;
+                LDUMP(L_CC_CCCAM2DT,req,emm_len,"send emm (share %08x, caid %04x, pending %d, EMM %d):",s->ShareID(),s->CaID(),pendingDCW,pendingEMM);
+                pendingEMM++;
                 if(!CryptSend((unsigned char *)req,emm_len))
                   PRINTF(L_CC_CCCAM2,"failed to send emm request");
                 }
