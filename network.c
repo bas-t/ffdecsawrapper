@@ -222,8 +222,9 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
     if(!quietlog) PRINTF(L_CORE_NET,"connecting to %s:%d/%s (%d.%d.%d.%d)",
                hostname,port,udp?"udp":"tcp",
                (socketAddr.sin_addr.s_addr>> 0)&0xff,(socketAddr.sin_addr.s_addr>> 8)&0xff,(socketAddr.sin_addr.s_addr>>16)&0xff,(socketAddr.sin_addr.s_addr>>24)&0xff);
-    if(LOOP_EINTR(connect(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)))==0)
-      connected=true;
+    int r;
+    do { r=connect(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)); } while(r<0 && errno==EINTR);
+    if(r==0) connected=true;
     else if(errno==EINPROGRESS) {
       if(Select(false,timeout)>0) {
         int r=-1;
@@ -262,7 +263,9 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
     if(!quietlog) PRINTF(L_CORE_NET,"socket: binding to %s:%d/%s (%d.%d.%d.%d)",
                hostname,port,udp?"udp":"tcp",
                (socketAddr.sin_addr.s_addr>> 0)&0xff,(socketAddr.sin_addr.s_addr>> 8)&0xff,(socketAddr.sin_addr.s_addr>>16)&0xff,(socketAddr.sin_addr.s_addr>>24)&0xff);
-    if(LOOP_EINTR(bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)))==0) {
+    int r;
+    do { r=bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)); } while(r<0 && errno==EINTR);
+    if(r==0) {
       connected=true;
       Activity(); Unlock();
       return true;
@@ -313,7 +316,7 @@ int cNetSocket::Read(unsigned char *data, int len, int timeout)
     if(r>0 && blockmode) { r-=tim.Elapsed(); if(r<10) r=10; }
     r=Select(true,r);
     if(r>0) {
-      r=LOOP_EINTR(read(sd,data+cnt,len-cnt));
+      do { r=read(sd,data+cnt,len-cnt); } while(r<0 && errno==EINTR);
       if(r<0) PRINTF(L_GEN_ERROR,"socket: read failed: %s",*StrError(errno));
       else if(r>0) cnt+=r;
       else {
@@ -341,7 +344,7 @@ int cNetSocket::Write(const unsigned char *data, int len, int timeout)
     if(r>0) { r-=tim.Elapsed(); if(r<10) r=10; }
     r=Select(false,r);
     if(r>0) {
-      r=LOOP_EINTR(write(sd,data+cnt,len-cnt));
+      do { r=write(sd,data+cnt,len-cnt); } while(r<0 && errno==EINTR);
       if(r<0) PRINTF(L_GEN_ERROR,"socket: write failed: %s",*StrError(errno));
       else if(r>0) cnt+=r;
       }
@@ -367,7 +370,7 @@ int cNetSocket::SendTo(const char *Host, int Port, const unsigned char *data, in
       if(r>0) { r-=tim.Elapsed(); if(r<10) r=10; }
       r=Select(false,r);
       if(r>0) {
-        r=LOOP_EINTR(sendto(sd,data+cnt,len-cnt,0,(struct sockaddr *)&saddr,sizeof(saddr)));
+        do { r=sendto(sd,data+cnt,len-cnt,0,(struct sockaddr *)&saddr,sizeof(saddr)); } while(r<0 && errno==EINTR);
         if(r<0) PRINTF(L_GEN_ERROR,"socket: sendto %d.%d.%d.%d:%d failed: %s",(saddr.sin_addr.s_addr>> 0)&0xff,(saddr.sin_addr.s_addr>> 8)&0xff,(saddr.sin_addr.s_addr>>16)&0xff,(saddr.sin_addr.s_addr>>24)&0xff,Port,*StrError(errno));
         else if(r>0) cnt+=r;
         }
@@ -392,7 +395,8 @@ int cNetSocket::Select(bool forRead, int timeout)
       PRINTF(L_GEN_DEBUG,"socket: internal: small timeout value %d",timeout);
 
     tv.tv_sec=timeout/1000; tv.tv_usec=(timeout%1000)*1000;
-    int r=LOOP_EINTR(select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv));
+    int r;
+    do { r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv); } while(r<0 && errno==EINTR);
     if(r>0) return 1;
     else if(r<0) {
       PRINTF(L_GEN_ERROR,"socket: select failed: %s",*StrError(errno));
