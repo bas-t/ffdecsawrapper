@@ -448,6 +448,11 @@ struct CmdHeader {
 #define SETCMDLEN(h,l) BYTE2_BE(&(h)->cmdlen,(l)-4)
 #define CMDLEN(h)      (UINT16_BE(&(h)->cmdlen)+4)
 
+struct GenericCmd {
+  struct CmdHeader header;
+  unsigned char payload[0];
+  } __attribute__((packed));
+
 struct ClientInfo {
   struct CmdHeader header;
   char username[20];
@@ -569,7 +574,9 @@ cCardClientCCcam2::~cCardClientCCcam2()
 
 void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
 {
-  if(CMDLEN(hdr)<=length) {
+  int plen=CMDLEN(hdr);
+  if(plen<=length) {
+    plen-=sizeof(struct CmdHeader);
     switch(hdr->cmd) {
       case 0:
         break;
@@ -577,7 +584,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         {
         struct DcwAnswer *dcw=(struct DcwAnswer *)hdr;
         if(pendingDCW>0) pendingDCW--;
-        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x (pending %d, EMM %d)",shareid,pendingDCW,pendingEMM);
+        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x (pending %d, EMM %d, keymaskpos=%d)",shareid,pendingDCW,pendingEMM,keymaskpos);
         unsigned char tempcw[16];
         memcpy(tempcw,dcw->cw,16);
         LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
@@ -633,10 +640,16 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         }
       case 5:
         {
-        static const struct CmdHeader resp = { 0,5,0 };
-        if(CryptSend((unsigned char *)&resp,sizeof(resp))<0)
-          PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
-        keymaskpos=60;
+        PRINTF(L_CC_CCCAM2,"got CMD 05 (payload length=%d)",plen);
+        if(plen>0) {
+          static const struct CmdHeader resp = { 0,5,0 };
+          LDUMP(L_CC_CCCAM2DT,((struct GenericCmd *)hdr)->payload,plen,"CMD 05 payload");
+          if(CryptSend((unsigned char *)&resp,sizeof(resp))<0)
+            PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
+          keymaskpos=60;
+          }
+        else
+          keymaskpos=0;
         break;
         }
       case 6:
@@ -697,7 +710,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
       }
     }
   else
-    PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",CMDLEN(hdr),length);
+    PRINTF(L_CC_CCCAM2,"cmdlen mismatch: cmdlen=%d length=%d",plen,length);
 }
 
 bool cCardClientCCcam2::CanHandle(unsigned short SysId)
