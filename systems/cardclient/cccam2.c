@@ -741,22 +741,26 @@ bool cCardClientCCcam2::Init(const char *config)
     }
   else
     for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
-  LDUMP(L_CC_CORE,nodeid,sizeof(nodeid),"Our nodeid:");
-  PRINTF(L_CC_CORE,"Pretended CCcam version '%s' build '%s'",versstr,buildstr);
+  LDUMP(L_CC_CORE,nodeid,sizeof(nodeid),"our nodeid:");
+  PRINTF(L_CC_CORE,"pretended CCcam version '%s' build '%s'",versstr,buildstr);
   return Immediate() ? Login() : true;
 }
 
 void cCardClientCCcam2::Logout(void)
 {
+  PRINTF(L_CC_CCCAM2,"logout from server initiated");
   login=false;
   Cancel(cThread::ThreadId()!=readerTid ? 2:-1);
   readerTid=0;
+  PRINTF(L_CC_CCCAM2EX,"reader thread stopped");
   cCardClient::Logout();
+  PRINTF(L_CC_CCCAM2EX,"network shut down");
   shares.Lock(true);
   shares.Clear();
   emmProcessing=false;
   shares.Unlock();
   pendingDCW=pendingEMM=keymaskpos=0;
+  PRINTF(L_CC_CCCAM2EX,"logout done");
 }
 
 bool cCardClientCCcam2::Login(void)
