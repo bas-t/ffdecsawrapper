@@ -965,7 +965,7 @@ bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
 void cCardClientCCcam2::Action(void)
 {
   readerTid=cThread::ThreadId();
-  int cnt=0;
+  int cnt=0, dec=0;
   while(Running() && so.Connected()) {
     unsigned char recvbuff[1024];
     int len=sizeof(recvbuff)-cnt;
@@ -974,24 +974,46 @@ void cCardClientCCcam2::Action(void)
       Logout();
       break;
       }
-    len=CryptRecv(recvbuff+cnt,-len,200);
+    len=RecvMsg(recvbuff+cnt,-len,200);
     if(len>0) {
-      HEXDUMP(L_CC_CCCAM2DT,recvbuff+cnt,len,"net read: len=%d cnt=%d",len,cnt+len);
+      PRINTF(L_CC_CCCAM2DT,"net read: len=%d cnt=%d dec=%d",len,cnt+len,dec);
       cnt+=len;
       }
+    // We cannot decrypt the whole buffer because it might contain an DCW
+    // cmd followed by others. But the DCW has an additional Decrypt() during
+    // processing, so the crypt state would be wrong for the rest of the buffer.
     int proc=0;
-    while(proc+4<=cnt) {
+    while(proc+(int)sizeof(struct CmdHeader)<=cnt) {
+      // First decrypt the cmd header only!
+      int a;
+      if((a=proc+sizeof(struct CmdHeader)-dec)>0) {
+        decr.Decrypt(recvbuff+dec,recvbuff+dec,a);
+        dec+=a;
+        PRINTF(L_CC_CCCAM2DT,"hdr decrypt: cnt=%d proc=%d dec=%d",cnt,proc,dec);
+        }
       struct CmdHeader *hdr=(struct CmdHeader *)(recvbuff+proc);
       int l=CMDLEN(hdr);
-      if(l>(int)sizeof(recvbuff))
-        PRINTF(L_GEN_DEBUG,"internal: cccam2 cmd length exceed buffer size");
-      if(proc+l>cnt) break;
+      if(l>(int)sizeof(recvbuff)) {
+        LDUMP(L_GEN_DEBUG,recvbuff+proc,sizeof(struct CmdHeader),"internal: cccam2 cmd length exceed buffer size");
+        Logout();
+        break;
+        }
+      if(proc+l>cnt) {
+        PRINTF(L_CC_CCCAM2DT,"cmd incomplete: proc+l=%d cnt=%d dec=%d",proc+l,cnt,dec);
+        break;
+        }
+      // Now decrypt payload for this cmd only!
+      if((a=proc+l-dec)>0) {
+        decr.Decrypt(recvbuff+dec,recvbuff+dec,a);
+        dec+=a;
+        PRINTF(L_CC_CCCAM2DT,"payload decrypt: cnt=%d proc=%d dec=%d",cnt,proc,dec);
+        }
       LDUMP(L_CC_CCCAM2DT,hdr,l,"msg in:");
       PacketAnalyzer(hdr,l);
       proc+=l;
       }
     if(proc) {
-      cnt-=proc;
+      cnt-=proc; dec-=proc;
       memmove(recvbuff,recvbuff+proc,cnt);
       }
     if(lastsend.TimedOut()) {
