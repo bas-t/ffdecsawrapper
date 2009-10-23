@@ -138,6 +138,7 @@ PARALLEL   ?= PARALLEL_32_INT
 CSAFLAGS   ?= -Wall -fPIC -g -O3 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops
 FFDECSADIR  = FFdecsa
 FFDECSA     = $(FFDECSADIR)/FFdecsa.o
+FFDECSATEST = $(FFDECSADIR)/FFdecsa_test.done
 
 # SASC
 ifdef SASC
@@ -195,7 +196,7 @@ $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION): libvdr-$(PLUGIN).so
 $(LIBDIR)/libvdr-$(PLUGIN).a: $(OBJS)
 	$(AR) r $@ $(OBJS)
 
-$(FFDECSA): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
+$(FFDECSA) $(FFDECSATEST): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
 	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all
 
 $(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
