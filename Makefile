@@ -144,6 +144,7 @@ FFDECSATEST = $(FFDECSADIR)/FFdecsa_test.done
 ifdef SASC
 DEFINES += -DSASC
 FFDECSA =
+FFDECSATEST =
 endif
 
 # export for system makefiles
@@ -163,7 +164,7 @@ SHAREDDEFINES += -DSTATICBUILD
 else
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
 endif
-BUILDTARGETS += systems contrib
+BUILDTARGETS += $(FFDECSATEST) systems contrib
 
 ifneq ($(strip $(HASLOCALE)),)
 BUILDTARGETS += i18n
