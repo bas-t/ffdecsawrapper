@@ -15,7 +15,7 @@
 #define DBG_NAME "CSA"
 #include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
 
-#define FF_MAX_IDX 8
+#define FF_MAX_IDX 16
 #define FF_MAX_PID 8
 
 #define push_empty_queue(_item, _queue) {      \
@@ -94,6 +94,8 @@ void update_keys(int adpt, unsigned char keytype, int index, unsigned char *key,
     }
     assert(csa);
     if(! csa)
+      return;
+    if(index < 0 || index >= FF_MAX_IDX)
       return;
 
     pthread_mutex_lock(&csa->state_lock);
