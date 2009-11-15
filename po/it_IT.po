@@ -221,7 +221,7 @@ msgid "SC-Seca: EMM updates"
 msgstr "SC-Seca: aggiornamenti EMM"
 
 msgid "SC-Viaccess: Parental lock"
-msgstr ""
+msgstr "SC-Viaccess: Filtro famiglia"
 
 msgid "stream"
 msgstr "flusso"
