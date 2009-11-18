@@ -172,7 +172,9 @@ int dvblb_init_procfs_device(struct dvblb *dvblb, struct dvblb_devinfo *lbdev)
 	lbdev->procfile->data = lbdev;
 	lbdev->procfile->read_proc = dvblb_procfs_read;
 	lbdev->procfile->write_proc = dvblb_procfs_write;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 	lbdev->procfile->owner = THIS_MODULE;
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(dvblb_init_procfs_device);
@@ -184,7 +186,9 @@ int dvblb_init_procfs_adapter(struct dvblb *dvblb)
 	dvblb->procdir = proc_mkdir(name, procdir);
 	if (dvblb->procdir == NULL)
 		return -ENOMEM;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 	dvblb->procdir->owner = THIS_MODULE;
+#endif
 	dvblb->procfile = create_proc_entry("adapter", 0644, dvblb->procdir);
 	if (dvblb->procfile == NULL) {
 		dvblb_remove_procfs(dvblb->procdir, procdir);
@@ -193,7 +197,9 @@ int dvblb_init_procfs_adapter(struct dvblb *dvblb)
 	dvblb->procfile->data = dvblb;
 	dvblb->procfile->read_proc = dvblb_procfs_adapter_read;
 	dvblb->procfile->write_proc = dvblb_procfs_adapter_write;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 	dvblb->procfile->owner = THIS_MODULE;
+#endif
 	dvblb->init |= DVBLB_STATUS_PROC;
 
 	return 0;
