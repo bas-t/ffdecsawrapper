@@ -224,7 +224,9 @@ int dvblb_init_procfs(void)
 	procdir = proc_mkdir("dvbloopback", NULL);
 	if (procdir == NULL)
 		return -ENOMEM;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 	procdir->owner = THIS_MODULE;
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(dvblb_init_procfs);
