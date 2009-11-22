@@ -164,7 +164,7 @@ SHAREDDEFINES += -DSTATICBUILD
 else
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
 endif
-BUILDTARGETS += $(FFDECSATEST) systems contrib
+BUILDTARGETS += $(FFDECSATEST) systems
 
 ifneq ($(strip $(HASLOCALE)),)
 BUILDTARGETS += i18n
