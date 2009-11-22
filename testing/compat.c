@@ -159,14 +159,14 @@ cScSetup::cScSetup(void)
   ScCaps[0] = 1;
   ScCaps[1] = 2;
   ConcurrentFF = 0;
-  memset(CaIgnore,0,sizeof(CaIgnore));
   LocalPriority = 0;
   ForceTransfer = 1;
   PrestartAU = 0;
+  SuperKeys=0;
+  EcmCache=0;
 }
 
 void cScSetup::Check(void) {}
-bool cScSetup::Ignore(unsigned short caid) { return false; }
 
 //
 //
@@ -174,6 +174,7 @@ bool cScSetup::Ignore(unsigned short caid) { return false; }
 void cSoftCAM::SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on) {}
 void cSoftCAM::AddHook(int CardNum, cLogHook *hook) {}
 bool cSoftCAM::TriggerHook(int CardNum, int id) { return true; }
+void cSoftCAM::CaidsChanged(void) {}
 
 //
 //
