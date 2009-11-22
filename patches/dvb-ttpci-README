@@ -1,7 +1,8 @@
 The firmware patches have been created with the bsdiff 4.3 utility.
 
 If it's not available on your system, you can find the source code in the
-contrib directory.
+contrib directory. To compile it you can issue a "make bspatch" in that
+directory.
 
 To create a patched firmware:
 
