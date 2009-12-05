@@ -85,12 +85,14 @@ static int opt_allpids = 0;
 static int opt_resetpidmap = 0;
 static int opt_experimental = 0;
 static int opt_orbit = 0;
+static char *opt_ignore = 0;
 static struct option Sid_Opts[] = {
   {"sid-filt", 1, &sid_opt, 'f'},
   {"sid-allpid", 0, &sid_opt, 'p'},
   {"sid-nocache", 0, &sid_opt, 'c'},
   {"sid-orbit", 1, &sid_opt, 'o'},
   {"sid-experimental", 0, &sid_opt, 'e'},
+  {"sid-ignore", 1, &sid_opt, 'i'},
   {0, 0, 0, 0},
 };
 
@@ -300,6 +302,37 @@ static int read_nit(unsigned char *buf, struct nit_data *nit, unsigned int size)
   }
   return 0;
 }
+
+static bool cmp_wild(const char *pat, const char *s)
+{
+  while(1) {
+    if (!*s || !*pat) return *pat==*s; // true if length matched
+    if (*pat!='?' && *pat!=*s) return false;
+    pat++; s++;
+    }
+}
+
+static bool ignore_sid(int sid)
+{
+  bool ret = false;
+  if (opt_ignore) {
+    char s_sid[32];
+    sprintf(s_sid,"%u",sid);
+
+    char **save, *ignored = strdup(opt_ignore);
+    char *tok = strtok_r(ignored, ",", save);
+    while(tok) {
+      if (cmp_wild(tok,s_sid)) {
+        ret = true;
+        break;
+        }
+      tok = strtok_r(0, ",", save);
+      }
+    free(ignored);
+    }
+  return ret;
+}
+
 static int read_pmt(unsigned char *buf, struct filter *filt,
                     struct sid_data *sid_data, unsigned int size) {
   //
@@ -342,6 +375,11 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
   ll_find_elem(sidnum, filt->sids, sid, sid, struct sidnum);
   if(sidnum == NULL) {
     dprintf1("Sid %d is unexpected\n", sid);
+    free_sid(sid_ll);
+    return -1;
+  }
+  if (ignore_sid(sid)) {
+    dprintf0("Ignoring SID %d.\n", sid);
     free_sid(sid_ll);
     return -1;
   }
@@ -978,6 +1016,8 @@ static struct option *parseopt_sid(arg_enum_t cmd)
   if(cmd == ARG_HELP) {
     printf("   --sid-filt <num>  : Maximum number of open filters (default 2)\n");
     printf("   --sid-allpid      : Parse all pids instead of just A/V\n");
+    printf("   --sid-ignore <sid1,sid2,...>\n");
+    printf("                     : When tuning, ignore given SIDs\n");
     printf("   --sid-nocache     : Don't cache pid<->sid mapping\n");
     printf("   --sid-orbit <val> : Set the satellit orbit to 'val' and don't scan the NIT\n");
     printf("   --sid-experimental: Enable experimental tuning code\n");
@@ -1003,6 +1043,8 @@ static struct option *parseopt_sid(arg_enum_t cmd)
       opt_resetpidmap = 1;
     case 'e':
       opt_experimental = 1;
+    case 'i':
+      opt_ignore = optarg;
   }
   //must reset sid_opt after every call
   sid_opt = 0;
