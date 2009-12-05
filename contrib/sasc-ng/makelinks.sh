@@ -15,5 +15,7 @@ mkdir -p "$DEST"
    dir=`dirname "$base"`
    mkdir -p "$DEST/$dir"
    COR=`echo -n "$DEST/$dir" | sed -e 'sX/\.XX' | sed -e 'sX[^/]*X..Xg'`
-   ln -sf "$PAR/$COR/$SRC/$base" "$DEST/$base"
+   if [ "$base" != "contrib" ]; then
+     ln -sf "$PAR/$COR/$SRC/$base" "$DEST/$base"
+   fi
  done
