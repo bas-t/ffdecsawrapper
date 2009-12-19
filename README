@@ -93,6 +93,8 @@ and the plugin detect the card as a full-featured card, thus disabling FFdecsa.
 You should use commandline option -B to force detection as a budget card in such
 a case. This commandline option takes a device number as argument and may appear
 multiple times (compare VDR commandline option -D).
+If you have a full-featured card with Full-TS hardware modification, you need
+specify option -B for this card to correctly activate hybrid mode.
 
 By default the plugin logs his messages to console only. For testing purpose
 it's a good idea to start VDR in foreground so you can see any error messages.
