@@ -45,12 +45,11 @@ private:
   void AddNano(unsigned char *buff, int nano, int len, const unsigned char *data);
   bool Send(const unsigned char *buff);
   int Recv(unsigned char *buff, int len);
-protected:
-  virtual bool Login(void);
 public:
   cCardClientRadegast(const char *Name);
   virtual bool Init(const char *config);
-  virtual bool CanHandle(unsigned short SysId);  
+  virtual bool Login(void);
+  virtual bool CanHandle(unsigned short SysId);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
@@ -81,7 +80,7 @@ bool cCardClientRadegast::Init(const char *config)
 {
   cMutexLock lock(this);
   Logout();
-  return ParseStdConfig(config) && (Immediate() ? Login() : true);
+  return ParseStdConfig(config);
 }
 
 void cCardClientRadegast::SetLength(unsigned char *buff, int len)

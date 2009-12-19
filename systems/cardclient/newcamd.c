@@ -183,13 +183,12 @@ private:
   int ReceiveMessage(unsigned char *data, bool UseMsgId, struct CustomData *cd=0, comm_type_t commType=COMMTYPE_CLIENT);
   bool CmdSend(net_msg_type_t cmd,  comm_type_t commType=COMMTYPE_CLIENT);
   int CmdReceive(comm_type_t commType=COMMTYPE_CLIENT);
-protected:
-  virtual bool Login(void);
 public:
   cCardClientNewCamd(const char *Name);
   // 
   virtual bool Init(const char *CfgDir);
-  virtual bool CanHandle(unsigned short SysId);  
+  virtual bool Login(void);
+  virtual bool CanHandle(unsigned short SysId);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
@@ -364,7 +363,7 @@ bool cCardClientNewCamd::Init(const char *config)
      || GetHex(tmp,configKey,sizeof(configKey),false)!=14) return false;
   char str[32];
   PRINTF(L_CC_CORE,"%s: username=%s password=%s key=%s",name,username,password,HexStr(str,configKey,14));
-  return Immediate() ? Login() : true;
+  return true;
 }
 
 bool cCardClientNewCamd::Login(void)

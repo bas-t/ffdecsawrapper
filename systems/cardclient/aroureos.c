@@ -28,11 +28,10 @@
 class cCardClientAroureos : public cCardClient, protected cIdSet {
 private:
   bool ParseCardConfig(const char *config, int *num);
-protected:
-  virtual bool Login(void);
 public:
   cCardClientAroureos(const char *Name);
   virtual bool Init(const char *config);
+  virtual bool Login(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *source);
   };

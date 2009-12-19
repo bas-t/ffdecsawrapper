@@ -35,11 +35,10 @@
 class cCardClientGbox : public cCardClient { 
 private: 
   int GetMsg(int cmd, unsigned char *buff, int len);
-protected: 
-  virtual bool Login(void); 
 public: 
   cCardClientGbox(const char *Name); 
   virtual bool Init(const char *CfgDir); 
+  virtual bool Login(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   }; 
  
@@ -58,7 +57,7 @@ bool cCardClientGbox::Init(const char *config)
   Logout();
   int num=0;
   if(!ParseStdConfig(config,&num)) return false;
-  return Immediate() ? Login() : true; 
+  return true;
 } 
  
 bool cCardClientGbox::Login(void) 

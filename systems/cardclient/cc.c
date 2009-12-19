@@ -285,6 +285,7 @@ bool cSystemLinkCardClient::ParseLinePlain(const char *line)
         if(cc->Init(&line[num])) {
           Add(cc);
           PRINTF(L_CC_CORE,"client '%s' ready",cc->Name());
+          if(cc->Immediate()) cc->Login();
           return true;
           }
         else {

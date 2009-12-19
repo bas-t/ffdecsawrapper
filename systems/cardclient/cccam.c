@@ -168,12 +168,12 @@ private:
   int failedcw;
   char *socketpath;
 protected:
-  virtual bool Login(void);
   virtual void Action(void);
 public:
   cCardClientCCcam(const char *Name);
   ~cCardClientCCcam();
   virtual bool Init(const char *CfgDir);
+  virtual bool Login(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   };
 
@@ -205,7 +205,7 @@ bool cCardClientCCcam::Init(const char *config)
   PRINTF(L_CC_CORE,"%s: socket=%s",name,path);
   socketpath=strdup(path);
   for(int i=0; i<4; i++) card[i].Setup(i,socketpath);
-  return Immediate() ? Login() : true;
+  return true;
 }
 
 bool cCardClientCCcam::Login(void)

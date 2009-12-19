@@ -545,13 +545,13 @@ private:
   int CryptRecv(unsigned char *data, int len, int to=-1);
   bool CryptSend(const unsigned char *data, int len);
 protected:
-  virtual bool Login(void);
   virtual void Logout(void);
   virtual void Action(void);
 public:
   cCardClientCCcam2(const char *Name);
   ~cCardClientCCcam2();
   virtual bool Init(const char *CfgDir);
+  virtual bool Login(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
@@ -743,7 +743,7 @@ bool cCardClientCCcam2::Init(const char *config)
     for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
   LDUMP(L_CC_CORE,nodeid,sizeof(nodeid),"our nodeid:");
   PRINTF(L_CC_CORE,"pretended CCcam version '%s' build '%s'",versstr,buildstr);
-  return Immediate() ? Login() : true;
+  return true;
 }
 
 void cCardClientCCcam2::Logout(void)
