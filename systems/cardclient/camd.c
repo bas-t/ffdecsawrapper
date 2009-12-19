@@ -45,7 +45,6 @@ protected:
   char username[11], password[11];
   int emmReqLen;
   //
-  virtual bool Login(void);
   bool ParseKeyConfig(const char *config, int *num);
   bool ParseUserConfig(const char *config, int *num);
   virtual bool SendMsg(const unsigned char *data, int len);
@@ -55,6 +54,8 @@ protected:
 public:
   cCardClientCommon(const char *Name, bool ConReply, bool LogReply, bool DoAES, int MinMsgLen);
   virtual bool Init(const char *config);
+  virtual bool Login(void);
+  virtual bool Immediate(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *source);
   };
@@ -122,6 +123,11 @@ int cCardClientCommon::RecvMsg(unsigned char *data, int len, int to)
   return n;
 }
 
+bool cCardClientCommon::Immediate(void)
+{
+  return emmAllowed && logReply && cCardClient::Immediate();
+}
+
 bool cCardClientCommon::Init(const char *config)
 {
   cMutexLock lock(this);
@@ -130,7 +136,7 @@ bool cCardClientCommon::Init(const char *config)
   if(ParseStdConfig(config,&num) &&
      ParseUserConfig(config,&num) &&
      (!doAES || ParseKeyConfig(config,&num))) {
-    return (emmAllowed && logReply && Immediate()) ? Login() : true;
+    return true;
     }
   return false;
 }
@@ -321,11 +327,10 @@ cCardClientCardd::cCardClientCardd(const char *Name)
 class cCardClientBuffy : public cCardClientCommon {
 private:
   unsigned short CAIDs[MAX_CAIDS], numCAIDs;
-protected:
-  virtual bool Login(void);
 public:
   cCardClientBuffy(const char *Name);
   virtual bool Init(const char *config);
+  virtual bool Login(void);
   virtual bool CanHandle(unsigned short SysId);
   };
 
@@ -338,10 +343,7 @@ cCardClientBuffy::cCardClientBuffy(const char *Name)
 bool cCardClientBuffy::Init(const char *config)
 {
   cMutexLock lock(this);
-  if(cCardClientCommon::Init(config)) {
-    return Immediate() ? Login() : true;
-    }
-  return false;
+  return cCardClientCommon::Init(config);
 }
 
 bool cCardClientBuffy::CanHandle(unsigned short SysId)
@@ -431,7 +433,6 @@ protected:
   unsigned char Dx[8];
   int lastEmmReq;
   //
-  virtual bool Login(void);
   bool ParseUserConfig(const char *config, int *num);
   bool SendBlock(struct CmdBlock *cb, int datalen);
   int RecvBlock(struct CmdBlock *cb, int maxlen, int to);
@@ -440,6 +441,7 @@ protected:
 public:
   cCardClientCamd35(const char *Name);
   virtual bool Init(const char *config);
+  virtual bool Login(void);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };

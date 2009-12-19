@@ -70,13 +70,13 @@ protected:
   bool ParseStdConfig(const char *config, int *num=0);
   virtual bool SendMsg(const unsigned char *data, int len);
   virtual int RecvMsg(unsigned char *data, int len, int to=-1);
-  virtual bool Login(void) { return false; }
   virtual void Logout(void);
-  bool Immediate(void);
   void CaidsChanged(void);
 public:
   cCardClient(const char *Name);
   virtual bool Init(const char *config)=0;
+  virtual bool Login(void)=0;
+  virtual bool Immediate(void);
   virtual bool CanHandle(unsigned short SysId);
   virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)=0;
   virtual bool ProcessEMM(int caSys, const unsigned char *data) { return false; }
