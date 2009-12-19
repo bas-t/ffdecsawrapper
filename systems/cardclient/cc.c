@@ -84,6 +84,8 @@ bool cCardClient::ParseStdConfig(const char *config, int *num)
       if(sscanf(&config[start],"%x%n/%x%n",&emmCaid[numCaid],num,&emmMask[numCaid],num)<1)
         return false;
       *num+=start;
+      if(emmMask[numCaid]==0x0000 && emmCaid[numCaid]!=0x0000)
+        PRINTF(L_GEN_WARN,"CAID %04x MASK %04x in cardclient config doesn't match anything!",emmCaid[numCaid],emmMask[numCaid]);
       numCaid++;
       } while(numCaid<MAX_CC_CAID && config[*num]==',');
     }
@@ -110,7 +112,7 @@ bool cCardClient::SendMsg(const unsigned char *data, int len)
 {
   if(!so.Connected() && !Login()) return false;
   if(so.Write(data,len)<0) {
-    PRINTF(L_CC_CORE,"send error. reconnecting...");;
+    PRINTF(L_CC_CORE,"send error. reconnecting...");
     Logout();
     return false;
     }
