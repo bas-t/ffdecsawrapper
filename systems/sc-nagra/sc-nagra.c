@@ -445,6 +445,7 @@ bool cSmartCardNagra::Init(void)
     GetCardStatus();
     }
   SetCard(new cCardNagra2(cardId));
+  if(provId==0x0401 || provId==0x3411) swapCW=true;
 
   if(!HasCamMod()) {
     cSmartCardDataNagra cd(cardId,false);
