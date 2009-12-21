@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2009-09-18 08:17-0400\n"
+"POT-Creation-Date: 2009-12-21 08:38-0500\n"
 "PO-Revision-Date: 2008-11-19 12:23+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -204,6 +204,9 @@ msgstr "disabilita"
 
 msgid "SC-Cryptoworks: Parental rating"
 msgstr "SC-Cryptoworks: Filtro famiglia"
+
+msgid "SC-Nagra: use T14 Nagra mode"
+msgstr ""
 
 msgid "allow ALL"
 msgstr "permetti TUTTI"
