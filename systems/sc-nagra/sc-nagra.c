@@ -317,6 +317,7 @@ private:
   time_t Date(const unsigned char *data, char *buf, int len);
   bool DoBlkCmd(unsigned char cmd, int ilen, unsigned char res, int rlen, const unsigned char *data=0);
   bool SetIFS(unsigned char len);
+  void PostProcess(void);
 public:
   cSmartCardNagra(void);
   virtual bool Init(void);
@@ -496,6 +497,14 @@ bool cSmartCardNagra::SendDateTimeCmd(void)
   return true;
 }
 
+void cSmartCardNagra::PostProcess(void)
+{
+  GetCardStatus();
+  cCondWait::SleepMs(10);
+  if(RENEW_SESSIONKEY()) DoCamExchange();
+  if(SENDDATETIME()) SendDateTimeCmd();
+}
+
 bool cSmartCardNagra::GetDataType(unsigned char dt, int len, int shots)
 {
   bool isdt8 = (dt==0x08);
@@ -585,6 +594,7 @@ bool cSmartCardNagra::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
     cCondWait::SleepMs(5);
     if(HAS_CW() && DoBlkCmd(0x1C,0x02,0x9C,0x36) && Status()) {
       DecryptCW(cw,buff+33,buff+7);
+      PostProcess();
       if(swapCW) {
         unsigned char tt[8];
         memcpy(&tt[0],&cw[0],8);
@@ -597,6 +607,7 @@ bool cSmartCardNagra::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
   else {
     if(DoBlkCmd(0xD3,data[4]+2,0x53,0x16,data+3+2)) {
       DecryptCW(cw,buff+17,buff+9);
+      PostProcess();
       return true;
       }
     }
@@ -608,10 +619,7 @@ bool cSmartCardNagra::Update(int pid, int caid, const unsigned char *data)
   if(MatchEMM(data)) {
     if(DoBlkCmd(data[8],data[9]+2,0x84,0x02,data+8+2) && Status()) {
       cCondWait::SleepMs(300);
-      GetCardStatus();
-      cCondWait::SleepMs(10);
-      if(RENEW_SESSIONKEY()) DoCamExchange();
-      if(SENDDATETIME()) SendDateTimeCmd();
+      PostProcess();
       }
     return true;
     }
