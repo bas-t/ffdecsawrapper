@@ -102,6 +102,15 @@ void cIDEA::Decrypt(unsigned char *data, int len, const unsigned char *key, unsi
   idea_cbc_encrypt(data,data,len&~7,&ks,iv,IDEA_DECRYPT);
 }
 
+void cIDEA::Decrypt(const unsigned char *data, int len, unsigned char *decrypt, const unsigned char *key, unsigned char *iv) const
+{
+  unsigned char v[8];
+  if(!iv) { memset(v,0,sizeof(v)); iv=v; }
+  IDEA_KEY_SCHEDULE ks;
+  idea_set_encrypt_key(key,&ks);
+  idea_cbc_encrypt(data,decrypt,len&~7,&ks,iv,IDEA_DECRYPT);
+}
+
 int cIDEA::Encrypt(const unsigned char *data, int len, unsigned char *crypt, const unsigned char *key, unsigned char *iv) const
 {
   unsigned char v[8];

@@ -113,6 +113,7 @@ class cIDEA {
 public:
   // single shot API
   void Decrypt(unsigned char *data, int len, const unsigned char *key, unsigned char *iv) const;
+  void Decrypt(const unsigned char *data, int len, unsigned char *decrypt, const unsigned char *key, unsigned char *iv) const;
   int Encrypt(const unsigned char *data, int len, unsigned char *crypt, const unsigned char *key, unsigned char *iv) const;
   // multi shot API
   void SetEncKey(const unsigned char *key, IdeaKS *ks) const;
