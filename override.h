@@ -83,9 +83,13 @@ public:
 // ----------------------------------------------------------------
 
 class cOverrides : public cStructList<cOverride> {
+private:
+  bool caidTrigger;
 protected:
   cOverride *Find(int type, int caid, int source, int transponder, cOverride *ov=0);
   virtual cOverride *ParseLine(char *line);
+  virtual void PreLoad(void);
+  virtual void PostLoad(void);
 public:
   cOverrides(void);
   int GetCat(int source, int transponder, unsigned char *buff, int len);

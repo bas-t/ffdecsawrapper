@@ -304,6 +304,7 @@ void cStructLoader::Load(bool reload)
   if(SL_TSTFLAG(SL_DISABLED) || (reload && !SL_TSTFLAG(SL_WATCH))) return;
   FILE *f=fopen(path,"r");
   if(f) {
+    PreLoad();
     int curr_mtime=MTime(true);
     ListLock(true);
     bool doload=false;

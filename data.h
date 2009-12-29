@@ -132,6 +132,7 @@ protected:
   bool IsModified(void) const { return SL_TSTFLAG(SL_MODIFIED); }
   void ListLock(bool rw) { lock.Lock(rw); }
   void ListUnlock(void) { lock.Unlock(); }
+  virtual void PreLoad(void) {}
   virtual void PostLoad(void) {}
 public:
   cStructLoader(const char *Type, const char *Filename, int Flags);
