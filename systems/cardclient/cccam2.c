@@ -644,7 +644,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         if(plen>0) {
           static const struct CmdHeader resp = { 0,5,0 };
           LDUMP(L_CC_CCCAM2DT,((struct GenericCmd *)hdr)->payload,plen,"CMD 05 payload");
-          if(CryptSend((unsigned char *)&resp,sizeof(resp))<0)
+          if(!CryptSend((unsigned char *)&resp,sizeof(resp)))
             PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
           keymaskpos=60;
           }
@@ -1018,7 +1018,7 @@ void cCardClientCCcam2::Action(void)
       }
     if(lastsend.TimedOut()) {
       static const struct CmdHeader ping = { 0,6,0 };
-      if(CryptSend((unsigned char *)&ping,sizeof(ping))<0)
+      if(!CryptSend((unsigned char *)&ping,sizeof(ping)))
         PRINTF(L_CC_CCCAM2,"failed to send server PING");
       }
     usleep(10);
