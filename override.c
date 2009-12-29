@@ -468,7 +468,7 @@ bool cOverrideIgnore::Parse(char *str)
         return false;
         }
       n+=l; num++;
-      } while(num<OV_MAXTABLES && str[n]==':');
+      } while(num<OV_MAXIGNORES && str[n]==':');
     LBSTART(L_CORE_OVER);
     LBPUT("ignore: %s - caids",*Print());
     for(int i=0; i<num; i++) LBPUT(" %02x",caid[i]);
