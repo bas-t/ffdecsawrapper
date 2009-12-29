@@ -82,11 +82,11 @@ void cN2Timer::Update(void)
   if(divisor) {
     if(timerBugged && cycles>=0x100*divisor) {
       timerBugged=false;
-      cycles-=0x101*divisor;
+      cycles-=(unsigned int)(0x101*divisor);
       }
     if(timerBugged) rlatch=0x100;
 
-    int v=cycles*invDivisor;
+    int v=(int)(cycles*invDivisor);
     if(ctrl&tmCONTINUOUS) {
       val=rlatch-(v % (rlatch+1));
       if(InterruptSet() && val==0)
