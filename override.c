@@ -24,6 +24,7 @@
 #include <vdr/sources.h>
 
 #include "override.h"
+#include "sc.h"
 #include "misc.h"
 #include "log-core.h"
 
@@ -555,6 +556,16 @@ cOverrides::cOverrides(void)
 :cStructList<cOverride>("overrides","override.conf",SL_MISSINGOK|SL_WATCH|SL_VERBOSE)
 {}
 
+void cOverrides::PreLoad(void)
+{
+  caidTrigger=false;
+}
+
+void cOverrides::PostLoad(void)
+{
+  if(caidTrigger) cSoftCAM::CaidsChanged();
+}
+
 cOverride *cOverrides::ParseLine(char *line)
 {
   cOverride *ov=0;
@@ -567,7 +578,7 @@ cOverride *cOverrides::ParseLine(char *line)
     else if(!strncasecmp(line,"ecmtable",8)) ov=new cOverrideEcmTable;
     else if(!strncasecmp(line,"emmtable",8)) ov=new cOverrideEmmTable;
     else if(!strncasecmp(line,"tunnel",6)) ov=new cOverrideTunnel;
-    else if(!strncasecmp(line,"ignore",6)) ov=new cOverrideIgnore;
+    else if(!strncasecmp(line,"ignore",6)) { ov=new cOverrideIgnore; caidTrigger=true; }
     else if(!strncasecmp(line,"ecmprio",7)) ov=new cOverrideEcmPrio;
     if(ov && !ov->Parse(p)) { delete ov; ov=0; }
     }
