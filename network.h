@@ -39,7 +39,7 @@ private:
   int sd;
   char *hostname;
   int port, dummy, conTimeout, rwTimeout, idleTimeout;
-  bool udp, connected, netup, quietlog;
+  bool udp, connected, quietlog;
   cTimeMs activity;
   //
   int Select(bool forRead, int timeout);
