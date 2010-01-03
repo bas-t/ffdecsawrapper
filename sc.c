@@ -1345,7 +1345,8 @@ const char *cScPlugin::CommandLineHelp(void)
   static char *help_str=0;
   
   free(help_str);    //                                     for easier orientation, this is column 80|
-  help_str=bprintf(  "  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
+  help_str=bprintf(  "  -B N    --budget=N        forces DVB device N to budget mode (using FFdecsa)\n"
+                     "  -E CMD  --external-au=CMD script for external key updates\n"
                      );
   return help_str;
 }
@@ -1353,22 +1354,14 @@ const char *cScPlugin::CommandLineHelp(void)
 bool cScPlugin::ProcessArgs(int argc, char *argv[])
 {
   static struct option long_options[] = {
-      { "serial",      optional_argument, NULL, 's' },
-      { "inverse-cd",  no_argument,       NULL, 'I' },
-      { "inverse-rst", no_argument,       NULL, 'R' },
-      { "clock",       optional_argument, NULL, 'C' },
       { "external-au", required_argument, NULL, 'E' },
       { "budget",      required_argument, NULL, 'B' },
       { NULL }
     };
 
   int c, option_index=0;
-  while((c=getopt_long(argc,argv,"s:B:C:E:IR",long_options,&option_index))!=-1) {
+  while((c=getopt_long(argc,argv,"B:E:",long_options,&option_index))!=-1) {
     switch (c) {
-      case 'I':
-      case 'R':
-      case 'C':
-      case 's': fprintf(stderr,"smartcard commandline options were removed. use cardslot.conf\n"); return false;
       case 'E': externalAU=optarg; break;
       case 'B': cScDvbDevice::SetForceBudget(atoi(optarg)); break;
       default:  return false;
