@@ -1346,11 +1346,6 @@ const char *cScPlugin::CommandLineHelp(void)
   
   free(help_str);    //                                     for easier orientation, this is column 80|
   help_str=bprintf(  "  -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)\n"
-                     "  -d CMD    --dialup=CMD   call CMD to start/stop dialup-network\n"
-                     "                           (default: %s)\n"
-                     "  -t SECS   --timeout=SECS shutdown timeout for dialup-network\n"
-                     "                           (default: %d secs)\n",
-                     "none",netTimeout/1000
                      );
   return help_str;
 }
@@ -1362,21 +1357,18 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
       { "inverse-cd",  no_argument,       NULL, 'I' },
       { "inverse-rst", no_argument,       NULL, 'R' },
       { "clock",       optional_argument, NULL, 'C' },
-      { "dialup",      required_argument, NULL, 'd' },
       { "external-au", required_argument, NULL, 'E' },
       { "budget",      required_argument, NULL, 'B' },
       { NULL }
     };
 
   int c, option_index=0;
-  while((c=getopt_long(argc,argv,"d:s:t:B:C:E:IR",long_options,&option_index))!=-1) {
+  while((c=getopt_long(argc,argv,"s:B:C:E:IR",long_options,&option_index))!=-1) {
     switch (c) {
       case 'I':
       case 'R':
       case 'C':
       case 's': fprintf(stderr,"smartcard commandline options were removed. use cardslot.conf\n"); return false;
-      case 'd': netscript=optarg; break;
-      case 't': netTimeout=atoi(optarg)*1000; break;
       case 'E': externalAU=optarg; break;
       case 'B': cScDvbDevice::SetForceBudget(atoi(optarg)); break;
       default:  return false;

@@ -301,26 +301,12 @@ The connections are tried in the order they are defined in the conf file until
 a valid decryption is obtained. After that, the decryption sticks to that
 particular connection until next channel switch.
 
-The network code supports dialup on demand. To use this you have to provide an
-external script to connect/disconnect your dialup link. Use commandline option
--d to set the script name and enable the feature, e.g. "-d dialup.sh". See the
-example script "examples/dialup.sh.example". The network is brought up as soon
-as an server connection is requested. All server connections are disconnected if
-they are idle too long (normaly after 120 seconds). The network is brought down
-after the last connection has terminated and an additional network timeout has
-expired. The network timeout is configurable with the commandline option -t and
-defaults to 60 seconds, e.g. "-t 120".
-
 
 
 Summary of commandline options
 ------------------------------
 
 -B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)
--d CMD    --dialup=CMD   call CMD to start/stop dialup-network
-                         (default: none)
--t SECS   --timeout=SECS shutdown timeout for dialup-network
-                         (default: 60 secs)
 
 
 

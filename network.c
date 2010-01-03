@@ -38,19 +38,11 @@
 #define DEFAULT_READWRITE_TIMEOUT 3*1000    // ms
 #define DEFAULT_IDLE_TIMEOUT      120*1000  // ms
 
-const char *netscript=0;
-int netTimeout=60*1000;   // timeout for shutting down dialup-network
-
 // -- cNetWatcher ---------------------------------------------------------------
 
 class cNetWatcher : protected cThread {
 private:
-  int count;
-  cTimeMs down;
-  bool netup, downDelay;
   cSimpleList<cNetSocket> socks;
-  //
-  int RunCommand(const char *cmd, const char *state);
 protected:
   virtual void Action(void);
 public:
@@ -58,23 +50,18 @@ public:
   ~cNetWatcher();
   void Up(cNetSocket *so);
   void Down(cNetSocket *so);
-  void Block(void) { Lock(); }
-  void Unblock(void) { Unlock(); }
   };
 
 static cNetWatcher nw;
 
 cNetWatcher::cNetWatcher(void)
 :cThread("Netwatcher")
-{
-  count=0; netup=downDelay=false;
-}
+{}
 
 cNetWatcher::~cNetWatcher()
 {
   Cancel(2);
   Lock();
-  if(netup) RunCommand(netscript,"down");
   cNetSocket *so;
   while((so=socks.First())) socks.Del(so,false);
   Unlock();
@@ -85,13 +72,6 @@ void cNetWatcher::Up(cNetSocket *so)
   Lock();
   socks.Add(so);
   if(!Active()) Start();
-  if(netscript) {
-    downDelay=false; netup=true;
-    RunCommand(netscript,"up");
-    count++;
-    PRINTF(L_CORE_NET,"netwatch up (%d)",count);
-    }
-  else PRINTF(L_CORE_NET,"netwatch up");
   Unlock();
 }
 
@@ -99,14 +79,6 @@ void cNetWatcher::Down(cNetSocket *so)
 {
   Lock();
   socks.Del(so,false);
-  if(netscript) {
-    if(--count==0) {
-      downDelay=true;
-      down.Set(netTimeout);
-      }
-    PRINTF(L_CORE_NET,"netwatch down (%d)",count);
-    }
-  else PRINTF(L_CORE_NET,"netwatch down");
   Unlock();
 }
 
@@ -115,14 +87,6 @@ void cNetWatcher::Action(void)
   while(Running()) {
     sleep(1);
     Lock();
-    if(downDelay && down.TimedOut()) {
-      PRINTF(L_CORE_NET,"netdown timeout expired");
-      if(netup) {
-        RunCommand(netscript,"down");
-        netup=false;
-        }
-      downDelay=false;
-      }
     for(cNetSocket *so=socks.First(); so;) {
       cNetSocket *next=socks.Next(so);
       so->Lock();
@@ -137,20 +101,11 @@ void cNetWatcher::Action(void)
     }
 }
 
-int cNetWatcher::RunCommand(const char *cmd, const char *state)
-{
-  char *tmp=bprintf("%s %s",cmd,state);
-  PRINTF(L_CORE_NET,"netwatch cmd exec '%s'",tmp);
-  int res=SystemExec(tmp);
-  free(tmp);
-  return res;
-}
-
 // -- cNetSocket ------------------------------------------------------------------
 
 cNetSocket::cNetSocket(void)
 {
-  hostname=0; sd=-1; udp=connected=netup=quietlog=false;
+  hostname=0; sd=-1; udp=connected=quietlog=false;
   conTimeout=DEFAULT_CONNECT_TIMEOUT; rwTimeout=DEFAULT_READWRITE_TIMEOUT;
   idleTimeout=DEFAULT_IDLE_TIMEOUT;
 }
@@ -207,7 +162,6 @@ int cNetSocket::GetSocket(bool Udp)
 
 bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
 {
-  nw.Block();
   Lock();
   Disconnect();
   if(Hostname) {
@@ -215,8 +169,6 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
     hostname=strdup(Hostname); port=Port;
     }
   if(timeout<0) timeout=conTimeout;
-  nw.Up(this); netup=true;
-  nw.Unblock();
   struct sockaddr_in socketAddr;
   if(GetAddr(&socketAddr,hostname,port) && (sd=GetSocket(udp))>=0) {
     if(!quietlog) PRINTF(L_CORE_NET,"connecting to %s:%d/%s (%d.%d.%d.%d)",
@@ -240,7 +192,7 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
       }
     else PRINTF(L_GEN_ERROR,"socket: connect failed: %s",*StrError(errno));
 
-    if(connected) { Activity(); Unlock(); return true; }
+    if(connected) { Activity(); nw.Up(this); Unlock(); return true; }
     }
   Unlock();
   Disconnect();
@@ -249,15 +201,12 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
 
 bool cNetSocket::Bind(const char *Hostname, int Port)
 {
-  nw.Block();
   Lock();
   Disconnect();
   if(Hostname) {
     free(hostname);
     hostname=strdup(Hostname); port=Port;
     }
-  nw.Up(this); netup=true;
-  nw.Unblock();
   struct sockaddr_in socketAddr;
   if(GetAddr(&socketAddr,hostname,port) && (sd=GetSocket(udp))>=0) {
     if(!quietlog) PRINTF(L_CORE_NET,"socket: binding to %s:%d/%s (%d.%d.%d.%d)",
@@ -267,7 +216,7 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
     do { r=bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)); } while(r<0 && errno==EINTR);
     if(r==0) {
       connected=true;
-      Activity(); Unlock();
+      Activity(); nw.Up(this); Unlock();
       return true;
       }
     else PRINTF(L_GEN_ERROR,"socket: bind failed: %s",*StrError(errno));
@@ -279,12 +228,10 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
 
 void cNetSocket::Disconnect(void)
 {
-  nw.Block();
   cMutexLock lock(this);
+  nw.Down(this);
   if(sd>=0) { close(sd); sd=-1; }
   quietlog=connected=false;
-  if(netup) { nw.Down(this); netup=false; }
-  nw.Unblock();
 }
 
 void cNetSocket::Flush(void)
