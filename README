@@ -306,7 +306,8 @@ particular connection until next channel switch.
 Summary of commandline options
 ------------------------------
 
--B N      --budget=N     forces DVB device N to budget mode (using FFdecsa)
+-B N    --budget=N        forces DVB device N to budget mode (using FFdecsa)
+-E CMD  --external-au=CMD script for external key updates
 
 
 
