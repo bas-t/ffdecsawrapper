@@ -206,7 +206,7 @@ msgid "SC-Cryptoworks: Parental rating"
 msgstr "SC-Cryptoworks: Ikäraja"
 
 msgid "SC-Nagra: use T14 Nagra mode"
-msgstr ""
+msgstr "SC-Nagra: Käytä T14-moodia"
 
 msgid "allow ALL"
 msgstr "salli kaikki"
