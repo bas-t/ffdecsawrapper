@@ -64,7 +64,7 @@
 ; ecmprio:{src[-src]:[freq[-freq]]}caid[/provid][:caid[/provid]][...]
 ;
 ; examples
-; ecmprio:{S19.2E}0100/6a:0622
+; ecmprio:{S19.2E:}0100/6a:0622
 ; ecmprio:{S28.5E:12973}1833:1702:1801
 
 ;
