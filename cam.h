@@ -170,6 +170,15 @@ void LogStatsDown(void);
 
 // ----------------------------------------------------------------
 
+#if APIVERSNUM >= 10711
+class cScDvbDeviceProbe : public cDvbDeviceProbe {
+public:
+  virtual bool Probe(int Adapter, int Frontend);
+  };
+#endif
+
+// ----------------------------------------------------------------
+
 class cScDvbDevice : public cDvbDevice {
 private:
   cDeCSA *decsa;
@@ -218,7 +227,11 @@ protected:
   virtual bool GetTSPacket(uchar *&Data);
 #endif //SASC
 public:
+#if APIVERSNUM >= 10711
+  cScDvbDevice(int Adapter, int Frontend, int cafd);
+#else
   cScDvbDevice(int n, int cafd);
+#endif
   ~cScDvbDevice();
 #ifndef SASC
 #if APIVERSNUM >= 10501
