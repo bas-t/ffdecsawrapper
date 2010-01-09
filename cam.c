@@ -2994,14 +2994,30 @@ uchar *cDeCsaTSBuffer::Get(void)
 
 #endif //SASC
 
+// --- cScDvbDeviceProbe -------------------------------------------------------
+
+#if APIVERSNUM >= 10711
+bool cScDvbDeviceProbe::Probe(int Adapter, int Frontend)
+{
+  int cafd=open(cString::sprintf("%s%d/%s%d",DEV_DVB_ADAPTER,Adapter,DEV_DVB_CA,Frontend),O_RDWR);
+  new cScDvbDevice(Adapter,Frontend,cafd);
+  return true;
+}
+#endif
+
 // -- cScDvbDevice -------------------------------------------------------------
 
 int cScDvbDevice::budget=0;
 
 #ifndef SASC
 
+#if APIVERSNUM >= 10711
+cScDvbDevice::cScDvbDevice(int Adapter, int Frontend, int cafd)
+:cDvbDevice(Adapter,Frontend)
+#else
 cScDvbDevice::cScDvbDevice(int n, int cafd)
 :cDvbDevice(n)
+#endif
 {
   decsa=0; tsBuffer=0; cam=0; fullts=false;
 #if APIVERSNUM >= 10500
@@ -3098,10 +3114,15 @@ bool cScDvbDevice::ForceBudget(int n)
    return budget && (budget&(1<<n));
 }
 
+#if APIVERSNUM < 10711
 static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
+#endif
 
 void cScDvbDevice::Capture(void)
 {
+#if APIVERSNUM >= 10711
+  new cScDvbDeviceProbe;
+#else
 /*
   This is an extremly ugly hack to access VDRs device scan parameters, which are
   protected in this context. Heavily dependant on the actual symbol names
@@ -3119,10 +3140,14 @@ void cScDvbDevice::Capture(void)
   vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_7cDevice.useDevice");
 #endif
   if(vdr_nci && vdr_ud) { vdr_save_ud=*vdr_ud; *vdr_ud=1<<30; }
+#endif
 }
 
 bool cScDvbDevice::Initialize(void)
 {
+#if APIVERSNUM >= 10711
+  return true;
+#else
   if(!vdr_nci || !vdr_ud) {
     PRINTF(L_GEN_ERROR,"Failed to locate VDR symbols. Plugin not operable");
     return false;
@@ -3163,6 +3188,7 @@ bool cScDvbDevice::Initialize(void)
   if(found>0) PRINTF(L_GEN_INFO,"captured %d video device%s",found,found>1 ? "s" : "");
   else PRINTF(L_GEN_INFO,"no DVB device captured");
   return found>0;
+#endif
 }
 
 #if APIVERSNUM >= 10501
