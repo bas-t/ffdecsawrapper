@@ -347,6 +347,7 @@ bool cSmartCardNagra::SetIFS(unsigned char size)
   buf[0]=0x21; buf[1]=0xC1; buf[2]=0x01;
   // Information Field size
   buf[3]=size; buf[4]=XorSum(buf,4);
+  PRINTF(L_SC_INIT,"Setting IFS to %x",size);
   if(SerWrite(buf,5)!=5) {
     PRINTF(L_SC_ERROR,"failed to write IFS command");
     return false;
@@ -381,15 +382,16 @@ bool cSmartCardNagra::Init(void)
 
   static const unsigned char atrDNASP[] = { 'D','N','A','S','P' };
   static const unsigned char atrTIGER[] = { 'T','I','G','E','R' };
+  static const unsigned char atrNCMED[] = { 'N','C','M','E','D' };
   static const unsigned char atrIRDET[] = { 'I','R','D','E','T','O' };
   if(!memcmp(atr->hist,atrDNASP,sizeof(atrDNASP))) {
     PRINTF(L_SC_INIT,"detected native T1 nagra card");
-    //if(!SetIFS(0xFE)) return false;
+    if(!SetIFS(0xFE)) return false;
     memcpy(rominfo,atr->hist,sizeof(rominfo));
     }
-  else if(!memcmp(atr->hist,atrTIGER,sizeof(atrTIGER))) {
+  else if(!memcmp(atr->hist,atrTIGER,sizeof(atrTIGER)) || !memcmp(atr->hist,atrNCMED,sizeof(atrNCMED))) {
     PRINTF(L_SC_INIT,"detected nagra tiger card");
-    //if(!SetIFS(0xFE)) return false;
+    if(!SetIFS(0xFE)) return false;
     memcpy(rominfo,atr->hist,sizeof(rominfo));
     memset(cardId,0xFF,sizeof(cardId));
     isTiger=true;
@@ -434,7 +436,7 @@ bool cSmartCardNagra::Init(void)
     GetCardStatus();
     if(!GetDataType(DT04,0x44)) return false;
     GetCardStatus();
-    if(!memcmp(rominfo+5,"181",3)) {
+    if(memcmp(rominfo+5,"181",3)!=0) { // not working on ROM181
       infoStr.Printf("Tiers\n");
       infoStr.Printf("|id  |chid| dates               |\n");
       infoStr.Printf("+----+----+---------------------+\n");
@@ -468,14 +470,8 @@ bool cSmartCardNagra::DoCamExchange(void)
 {
   if(!isTiger) {
     if(!DoBlkCmd(0x2A,0x02,0xAA,0x42) || !Status()) return false;
-    }
-  else {
-    static const unsigned char d1[] = { 0xd2 };
-    if(!DoBlkCmd(0xD1,0x03,0x51,0x42,d1) || !Status()) return false;
-    }
-  unsigned char res[64];
-  if(!MakeSessionKey(res,buff+5)) return false;
-  if(!isTiger) {
+    unsigned char res[64];
+    if(!MakeSessionKey(res,buff+5)) return false;
     if(!DoBlkCmd(0x2B,0x42,0xAB,0x02,res) ||
        !Status() ||
        !GetCardStatus()) return false;
@@ -487,6 +483,13 @@ bool cSmartCardNagra::DoCamExchange(void)
       }
     }
   else {
+    static const unsigned char d1[] = { 0xd2 };
+    if(!DoBlkCmd(0xD1,0x03,0x51,0x42,d1) || !Status()) return false;
+
+    //XXX need implement Tiger session key handling (see oscam)
+    return false;
+
+    unsigned char res[64];
     if(!DoBlkCmd(0xD2,0x42,0x52,0x03,res) || !Status()) return false;
     }
   return true;
@@ -500,10 +503,12 @@ bool cSmartCardNagra::SendDateTimeCmd(void)
 
 void cSmartCardNagra::PostProcess(void)
 {
-  GetCardStatus();
-  cCondWait::SleepMs(10);
-  if(RENEW_SESSIONKEY()) DoCamExchange();
-  if(SENDDATETIME()) SendDateTimeCmd();
+  if(!isTiger) {
+    GetCardStatus();
+    cCondWait::SleepMs(10);
+    if(RENEW_SESSIONKEY()) DoCamExchange();
+    if(SENDDATETIME()) SendDateTimeCmd();
+    }
 }
 
 bool cSmartCardNagra::GetDataType(unsigned char dt, int len, int shots)
@@ -590,9 +595,9 @@ bool cSmartCardNagra::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
         return false;
         }
       }
-    cCondWait::SleepMs(5);
+    cCondWait::SleepMs(10);
     for(int retry=0; !GetCardStatus() && retry<5; retry++) cCondWait::SleepMs(5);
-    cCondWait::SleepMs(5);
+    cCondWait::SleepMs(10);
     if(HAS_CW() && DoBlkCmd(0x1C,0x02,0x9C,0x36) && Status()) {
       DecryptCW(cw,buff+33,buff+7);
       PostProcess();
@@ -606,7 +611,12 @@ bool cSmartCardNagra::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
       }
     }
   else {
-    if(DoBlkCmd(0xD3,data[4]+2,0x53,0x16,data+3+2)) {
+    //                  ecm_data: 80 30 89 D3 87 54 11 10 DA A6 0F 4B 92 05 34 00 ...
+    //serial_data: A0 CA 00 00 8C D3 8A 00 00 00 00 00 10 DA A6 0F .
+    unsigned char ecm_trim[150];
+    memset(ecm_trim,0,150);
+    memcpy(&ecm_trim[5],data+3+2+2,data[4]+2);
+    if(DoBlkCmd(data[3],data[4]+5,0x53,0x16,ecm_trim) && Status()) {
       DecryptCW(cw,buff+17,buff+9);
       PostProcess();
       return true;
@@ -659,7 +669,6 @@ bool cSmartCardNagra::DoBlkCmd(unsigned char cmd, int ilen, unsigned char res, i
     }
   msg[c+2]=dlen;
   if(isT14Nagra) msg[c]++;
-  if(isTiger) { msg[c]--; msg[c+2]--; }
   c+=3;
   if(data && dlen>0) { memcpy(msg+c,data,dlen); c+=dlen; }
   msg[c++]=rlen;
@@ -672,24 +681,24 @@ bool cSmartCardNagra::DoBlkCmd(unsigned char cmd, int ilen, unsigned char res, i
       PRINTF(L_SC_ERROR,"reading back reply failed");
       return false;
       }
-    int reslen=buff[2]+1;
-    if(SerRead(buff+3,reslen,cardCfg.workTO)!=reslen) {
+    int xlen=buff[2]+1;
+    if(SerRead(buff+3,xlen,cardCfg.workTO)!=xlen) {
       PRINTF(L_SC_ERROR,"reading back information block failed");
       return false;
       }
-    reslen+=3;
-    if(XorSum(buff,reslen)) {
+    xlen+=3;
+    if(XorSum(buff,xlen)) {
       PRINTF(L_SC_ERROR,"checksum failed");
       return false;
       }
-    LDUMP(L_CORE_SC,buff,reslen,"NAGRA: ->");
+    LDUMP(L_CORE_SC,buff,xlen,"NAGRA: ->");
 
     if(buff[3]!=res) {
       PRINTF(L_SC_ERROR,"result not expected (%02X != %02X)",buff[3],res);
       return false;
       }
-    if(reslen-2!=rlen) {
-      PRINTF(L_SC_ERROR,"result length expected (%d != %d)",reslen-2,rlen);
+    if(buff[2]-2!=rlen) {
+      PRINTF(L_SC_ERROR,"result length not expected (%d != %d)",buff[2]-2,rlen);
       return false;
       }
     memcpy(sb,&buff[3+rlen],2);
