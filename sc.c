@@ -1062,6 +1062,12 @@ void cSoftCAM::CaidsChanged(void)
     }
 }
 
+int cSoftCAM::FilterHandle(int CardNum)
+{
+  cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
+  return dev ? dev->FilterHandle() : -1;
+}
+
 // --- cScHousekeeper ----------------------------------------------------------
 
 class cScHousekeeper : public cThread {

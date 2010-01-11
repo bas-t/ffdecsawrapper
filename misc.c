@@ -29,20 +29,6 @@
 
 // -----------------------------------------------------------------------------
 
-void DvbName(const char *Name, int n, char *buffer, int len)
-{
-  snprintf(buffer,len,"/dev/dvb/adapter%d/%s%d",n,Name,0);
-}
-
-int DvbOpen(const char *Name, int n, int Mode, bool ReportError)
-{
-  char FileName[128];
-  DvbName(Name,n,FileName,sizeof(FileName));
-  int fd=open(FileName,Mode);
-  if(fd<0 && ReportError) LOG_ERROR_STR(FileName);
-  return fd;
-}
-
 const char *HexStr(char *str, const unsigned char *mem, int len)
 {
   for(int i=0 ; i<len ; i++) sprintf(&str[i*2],"%02X",mem[i]);
