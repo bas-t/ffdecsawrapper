@@ -2997,8 +2997,11 @@ uchar *cDeCsaTSBuffer::Get(void)
 // --- cScDvbDeviceProbe -------------------------------------------------------
 
 #if APIVERSNUM >= 10711
+static cScDvbDeviceProbe *scProbe=0;
+
 bool cScDvbDeviceProbe::Probe(int Adapter, int Frontend)
 {
+  PRINTF(L_GEN_DEBUG,"capturing device %d/%d",Adapter,Frontend);
   int cafd=open(cString::sprintf("%s%d/%s%d",DEV_DVB_ADAPTER,Adapter,DEV_DVB_CA,Frontend),O_RDWR);
   new cScDvbDevice(Adapter,Frontend,cafd);
   return true;
@@ -3121,7 +3124,7 @@ static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
 void cScDvbDevice::Capture(void)
 {
 #if APIVERSNUM >= 10711
-  new cScDvbDeviceProbe;
+  scProbe=new cScDvbDeviceProbe;
 #else
 /*
   This is an extremly ugly hack to access VDRs device scan parameters, which are
@@ -3146,6 +3149,7 @@ void cScDvbDevice::Capture(void)
 bool cScDvbDevice::Initialize(void)
 {
 #if APIVERSNUM >= 10711
+  delete scProbe; scProbe=0;
   return true;
 #else
   if(!vdr_nci || !vdr_ud) {
@@ -3323,7 +3327,11 @@ bool cScDvbDevice::ScActive(void)
 bool cScDvbDevice::OpenDvr(void)
 {
   CloseDvr();
+#if APIVERSNUM >= 10711
+  fd_dvr=DvbOpen(DEV_DVB_DVR,adapter,frontend,O_RDONLY|O_NONBLOCK,true);
+#else
   fd_dvr=DvbOpen(DEV_DVB_DVR,CardIndex(),O_RDONLY|O_NONBLOCK,true);
+#endif
   if(fd_dvr>=0) {
     tsMutex.Lock();
     tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(4),CardIndex()+1,decsa,ScActive());
