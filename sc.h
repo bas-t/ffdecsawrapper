@@ -36,6 +36,7 @@ public:
   static void AddHook(int CardNum, cLogHook *hook);
   static bool TriggerHook(int CardNum, int id);
   static void CaidsChanged(void);
+  static int FilterHandle(int CardNum);
   };
 
 #endif // ___SC_H

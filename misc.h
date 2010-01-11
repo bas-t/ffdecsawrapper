@@ -40,13 +40,6 @@
 
 // ----------------------------------------------------------------
 
-#define DEV_DVB_FRONTEND "frontend"
-#define DEV_DVB_DVR      "dvr"
-#define DEV_DVB_DEMUX    "demux"
-#define DEV_DVB_CA       "ca"
-void DvbName(const char *Name, int n, char *buffer, int len);
-int DvbOpen(const char *Name, int n, int Mode, bool ReportError=false);
-
 const char *HexStr(char *str, const unsigned char *mem, int len);
 #define KeyStr(str,key) HexStr(str,key,8)
 

@@ -30,6 +30,7 @@
 #include <vdr/tools.h>
 
 #include "filter.h"
+#include "sc.h"
 #include "misc.h"
 #include "log-core.h"
 
@@ -59,7 +60,7 @@ bool cPidFilter::Open(void)
 {
   cMutexLock lock(this);
   if(fd<0) {
-    fd=DvbOpen(DEV_DVB_DEMUX,dvbNum,O_RDWR|O_NONBLOCK);
+    fd=cSoftCAM::FilterHandle(dvbNum);
     if(fd>=0) return true;
     }
   return false;

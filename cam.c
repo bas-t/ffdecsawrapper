@@ -2996,6 +2996,10 @@ uchar *cDeCsaTSBuffer::Get(void)
 
 // --- cScDvbDeviceProbe -------------------------------------------------------
 
+#define DEV_DVB_DVR      "dvr"
+#define DEV_DVB_DEMUX    "demux"
+#define DEV_DVB_CA       "ca"
+
 #if APIVERSNUM >= 10711
 static cScDvbDeviceProbe *scProbe=0;
 
@@ -3194,6 +3198,31 @@ bool cScDvbDevice::Initialize(void)
   return found>0;
 #endif
 }
+
+int cScDvbDevice::FilterHandle(void)
+{
+#if APIVERSNUM >= 10711
+  return DvbOpen(DEV_DVB_DEMUX,adapter,frontend,O_RDWR|O_NONBLOCK);
+#else
+  return DvbOpen(DEV_DVB_DEMUX,CardIndex(),O_RDWR|O_NONBLOCK);
+#endif
+}
+
+#if APIVERSNUM < 10711
+void cScDvbDevice::DvbName(const char *Name, int n, char *buffer, int len)
+{
+  snprintf(buffer,len,"/dev/dvb/adapter%d/%s%d",n,Name,0);
+}
+
+int cScDvbDevice::DvbOpen(const char *Name, int n, int Mode, bool ReportError)
+{
+  char FileName[128];
+  DvbName(Name,n,FileName,sizeof(FileName));
+  int fd=open(FileName,Mode);
+  if(fd<0 && ReportError) LOG_ERROR_STR(FileName);
+  return fd;
+}
+#endif
 
 #if APIVERSNUM >= 10501
 bool cScDvbDevice::HasCi(void)
