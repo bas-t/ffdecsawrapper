@@ -69,7 +69,7 @@ libscanwrap.so: dvblb_plugins/scanwrap.c
 
 clean:
 	@-rm -rf $(SCDIR)/*
-	@-rm -f ./sc/PLUGINS/lib/*.so*
+	@-rm -f ./sc/PLUGINS/lib/*.so* ./sc/PLUGINS/lib/*.a
 	@-rm -f ./sc/config.h
 	@-rm -f $(OBJS)
 	@-rm -f $(OBJ_LIBSI)
