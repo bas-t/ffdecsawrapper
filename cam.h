@@ -225,11 +225,11 @@ protected:
   virtual bool OpenDvr(void);
   virtual void CloseDvr(void);
   virtual bool GetTSPacket(uchar *&Data);
+#endif //SASC
 #if APIVERSNUM < 10711
   static void DvbName(const char *Name, int n, char *buffer, int len);
   static int DvbOpen(const char *Name, int n, int Mode, bool ReportError=false);
 #endif
-#endif //SASC
 public:
 #if APIVERSNUM >= 10711
   cScDvbDevice(int Adapter, int Frontend, int cafd);
