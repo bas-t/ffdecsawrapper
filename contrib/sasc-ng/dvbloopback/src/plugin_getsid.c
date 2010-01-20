@@ -319,14 +319,14 @@ static bool ignore_sid(int sid)
     char s_sid[32];
     sprintf(s_sid,"%u",sid);
 
-    char **save=0, *ignored = strdup(opt_ignore);
-    char *tok = strtok_r(ignored, ",", save);
+    char *save, *ignored = strdup(opt_ignore);
+    char *tok = strtok_r(ignored, ",", &save);
     while(tok) {
       if (cmp_wild(tok,s_sid)) {
         ret = true;
         break;
         }
-      tok = strtok_r(0, ",", save);
+      tok = strtok_r(0, ",", &save);
       }
     free(ignored);
     }
