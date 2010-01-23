@@ -56,12 +56,15 @@ gbox:hostname:port:emm/caid/mask
 cccam:hostname:port:emm/caid/mask:socket
 #
 # (the real) cccam client
-# 'nodeid' is your node ID (16 characters). Optional, defaults to use random ID
-# 'version/build' is the version and build string send to the server (each max.
-#  31 characters). Optional, defaults to 2.0.11/2892
-# If you want to specify version/build but you don't want to specify a node ID,
-# put a * to the node ID field.
+#
+# The parameter field is a list of parameters seperated by ','. The individual
+# parameters must be given in the form PARAMETER=VALUE.
+# NODEID=<16 characters>    - your static node ID. Defaults to random ID
+# VERSION=<str>             - version string. Defaults to '2.0.11'
+# BUILD=<str>               - build string. Defaults to '2892'
+#
+# parameter example: BUILD=3212,NODEID=123A567F901C34E6
 #
 # NOTE: this is a real client. You don't need to have CCcam running on local
 # machine.
-cccam2:hostname:port:emm/caid/mask:username:password[:nodeid][:version/build]
+cccam2:hostname:port:emm/caid/mask:username:password[:param=value[,param=value]]

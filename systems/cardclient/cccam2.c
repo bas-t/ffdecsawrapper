@@ -727,20 +727,47 @@ bool cCardClientCCcam2::CanHandle(unsigned short SysId)
 bool cCardClientCCcam2::Init(const char *config)
 {
   cMutexLock lock(this);
+  // defaults
   strn0cpy(versstr,"2.0.11",sizeof(versstr));
   strn0cpy(buildstr,"2892",sizeof(buildstr));
+  for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
+
   int n=0, num=0;
   Logout();
-  char ni[17];
+  char params[256];
   if(!ParseStdConfig(config,&num)
-     || (n=sscanf(&config[num],":%20[^:]:%63[^:]:%16[^:]:%31[^/]:%31[^:]",username,password,ni,versstr,buildstr))<2 ) return false;
+     || (n=sscanf(&config[num],":%20[^:]:%63[^:]:%255[^:]",username,password,params))<2 ) return false;
   PRINTF(L_CC_CORE,"%s: username=%s password=%s",name,username,password);
-  if(n>2 && strcmp(ni,"*")) {
-    const char *tmp=ni;
-    if(GetHex(tmp,nodeid,sizeof(nodeid),false)!=sizeof(nodeid)) return false;
+  if(n>2) {
+    char *save;
+    char *p=strtok_r(params,",",&save);
+    while(p) {
+      char *v=index(p,'=');
+      if(v) {
+        *v++=0;
+        if(!strcasecmp(p,"NODEID")) {
+          const char *v2=v;
+          if(GetHex(v2,nodeid,sizeof(nodeid),false)!=sizeof(nodeid)) {
+            PRINTF(L_CC_CORE,"NODEID parameter format error");
+            return false;
+            }
+          }
+        else if(!strcasecmp(p,"VERSION"))
+          strn0cpy(versstr,v,sizeof(versstr));
+        else if(!strcasecmp(p,"BUILD"))
+          strn0cpy(buildstr,v,sizeof(buildstr));
+        else {
+          PRINTF(L_CC_CORE,"unknown parameter '%s'",p);
+          return false;
+          }
+        }
+      else {
+        PRINTF(L_CC_CORE,"bad parameter format '%s'",p);
+        return false;
+        }
+      p=strtok_r(0,",",&save);
+      }
     }
-  else
-    for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
   LDUMP(L_CC_CORE,nodeid,sizeof(nodeid),"our nodeid:");
   PRINTF(L_CC_CORE,"pretended CCcam version '%s' build '%s'",versstr,buildstr);
   return true;
