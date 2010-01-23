@@ -62,8 +62,9 @@ cccam:hostname:port:emm/caid/mask:socket
 # NODEID=<16 characters>    - your static node ID. Defaults to random ID
 # VERSION=<str>             - version string. Defaults to '2.0.11'
 # BUILD=<str>               - build string. Defaults to '2892'
+# WANTEMUS=<0/1>            - requesting of emulations. Defaults to 0 (off)
 #
-# parameter example: BUILD=3212,NODEID=123A567F901C34E6
+# parameter example: BUILD=3212,WANTEMUS=1,NODEID=123A567F901C34E6
 #
 # NOTE: this is a real client. You don't need to have CCcam running on local
 # machine.

@@ -418,7 +418,9 @@ int cShares::GetShares(const cEcmInfo *ecm, cShares *ss)
   Clear();
   ss->Lock(false);
   for(cShare *s=ss->First(); s; s=ss->Next(s)) {
-    if(s->caid==ecm->caId && (!s->UsesProv() || s->HasProv(ecm->provId)) && !Find(s->shareid)) {
+    if(((s->caid==ecm->caId && (!s->UsesProv() || s->HasProv(ecm->provId))) ||
+        (s->shareid<64 && s->caid==(ecm->caId&0xFF00))) &&
+       !Find(s->shareid)) {
       cShare *n=new cShare(s);
       n->status=ecmshares.FindStatus(ecm,n->shareid);
       // keep the list sorted
@@ -531,7 +533,7 @@ private:
   unsigned char nodeid[8];
   int shareid;
   char username[21], password[64], versstr[32], buildstr[32];
-  bool login, emmProcessing;
+  bool login, emmProcessing, wantEmus;
   cTimeMs lastsend;
   int pendingDCW, pendingEMM, keymaskpos;
   //
@@ -731,6 +733,7 @@ bool cCardClientCCcam2::Init(const char *config)
   strn0cpy(versstr,"2.0.11",sizeof(versstr));
   strn0cpy(buildstr,"2892",sizeof(buildstr));
   for(unsigned int i=0; i<sizeof(nodeid); i++) nodeid[i]=rand();
+  wantEmus=false;
 
   int n=0, num=0;
   Logout();
@@ -756,6 +759,10 @@ bool cCardClientCCcam2::Init(const char *config)
           strn0cpy(versstr,v,sizeof(versstr));
         else if(!strcasecmp(p,"BUILD"))
           strn0cpy(buildstr,v,sizeof(buildstr));
+        else if(!strcasecmp(p,"WANTEMUS")) {
+          wantEmus=(atoi(v)!=0);
+          if(wantEmus) PRINTF(L_CC_CORE,"requesting emulations from server");
+          }
         else {
           PRINTF(L_CC_CORE,"unknown parameter '%s'",p);
           return false;
@@ -859,6 +866,7 @@ bool cCardClientCCcam2::Login(void)
   strn0cpy(clt.version,versstr,sizeof(clt.version));
   strn0cpy(clt.build,buildstr,sizeof(clt.build));
   memcpy(clt.nodeid,nodeid,8);
+  clt.wantemus=wantEmus;
   LDUMP(L_CC_CCCAM2DT,&clt,sizeof(clt),"send clientinfo:");
   if(!CryptSend((unsigned char*)&clt,sizeof(clt))) {
     PRINTF(L_CC_CCCAM2,"failed to send clientinfo");
