@@ -1921,7 +1921,7 @@ public:
   void Sort(void);
   void Del(caid_t caid);
   bool HasCaid(caid_t caid);
-  bool Same(cChannelCaids *ch);
+  bool Same(cChannelCaids *ch, bool full);
   void HistAdd(unsigned short *hist);
   void Dump(int n);
   const caid_t *Caids(void) { caids[numcaids]=0; return caids; }
@@ -1973,8 +1973,9 @@ bool cChannelCaids::HasCaid(caid_t caid)
   return false;
 }
 
-bool cChannelCaids::Same(cChannelCaids *ch)
+bool cChannelCaids::Same(cChannelCaids *ch, bool full)
 {
+  if(full && (source!=ch->source || transponder!=ch->transponder)) return false;
   if(numcaids!=ch->numcaids) return false;
   return memcmp(caids,ch->caids,numcaids*sizeof(caid_t))==0;
 }
@@ -1999,7 +2000,7 @@ private:
   int n;
 public:
   cChannelList(int N);
-  void Unique(void);
+  void Unique(bool full);
   void CheckIgnore(void);
   int Histo(void);
   void Purge(int caid, bool fullch);
@@ -2012,28 +2013,40 @@ cChannelList::cChannelList(int N)
 
 void cChannelList::CheckIgnore(void)
 {
+  char *cache=MALLOC(char,0x10000);
+  if(!cache) return;
+  memset(cache,0,sizeof(char)*0x10000);
+  int cTotal=0, cHits=0;
   for(cChannelCaids *ch=First(); ch; ch=Next(ch)) {
     const caid_t *ids=ch->Caids();
     while(*ids) {
       int pri=0;
       if(overrides.Ignore(ch->Source(),ch->Transponder(),*ids))
         ch->Del(*ids);
-      else if(!cSystems::FindIdentBySysId(*ids,false,pri)) {
-        for(cChannelCaids *ch2=Next(ch); ch2; ch2=Next(ch2)) ch2->Del(*ids);
-        ch->Del(*ids);
+      else {
+        char c=cache[*ids];
+        if(c==0) cache[*ids]=c=(cSystems::FindIdentBySysId(*ids,false,pri) ? 1 : -1);
+        else cHits++;
+        cTotal++;
+        if(c<0) {
+          for(cChannelCaids *ch2=Next(ch); ch2; ch2=Next(ch2)) ch2->Del(*ids);
+          ch->Del(*ids);
+          }
+        else ids++;
         }
-      else ids++;
       }
     }
+  free(cache);
   PRINTF(L_CORE_CAIDS,"%d: after check",n);
   for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->Dump(n);
+  PRINTF(L_CORE_CAIDS,"%d: check cache usage: %d requests, %d hits, %d%% hits",n,cTotal,cHits,cHits*100/cTotal);
 }
 
-void cChannelList::Unique(void)
+void cChannelList::Unique(bool full)
 {
   for(cChannelCaids *ch1=First(); ch1; ch1=Next(ch1)) {
     for(cChannelCaids *ch2=Next(ch1); ch2;) {
-      if(ch1->Same(ch2) || ch2->NumCaids()<1) {
+      if(ch1->Same(ch2,full) || ch2->NumCaids()<1) {
         cChannelCaids *t=Next(ch2);
         Del(ch2);
         ch2=t;
@@ -2042,7 +2055,7 @@ void cChannelList::Unique(void)
       }
     }
   if(Count()==1 && First() && First()->NumCaids()<1) Del(First());
-  PRINTF(L_CORE_CAIDS,"%d: after unique",n);
+  PRINTF(L_CORE_CAIDS,"%d: after unique (%d)",n,full);
   for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->Dump(n);
 }
 
@@ -2524,9 +2537,9 @@ void cScCiAdapter::BuildCaids(bool force)
         }
       }
     Channels.Unlock();
-    list.Unique();
+    list.Unique(true);
     list.CheckIgnore();
-    list.Unique();
+    list.Unique(false);
 
     int n=0, h;
     caid_t c[MAX_CI_SLOT_CAIDS+1];
