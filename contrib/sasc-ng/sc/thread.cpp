@@ -242,21 +242,29 @@ void cMutex::Unlock(void)
 	  return NULL;
 	}
 
-	extern pthread_attr_t default_attr;
+	#define THREAD_STOP_TIMEOUT  3000 // ms to wait for a thread to stop before newly starting it
+	#define THREAD_STOP_SLEEP      30 // ms to sleep while waiting for a thread to stop
+
 	bool cThread::Start(void)
 	{
-	  if (!active) {
-	     active = running = true;
-	     if (pthread_create(&childTid, &default_attr, (void *(*) (void *))&StartThread, (void *)this) == 0) {
-		struct sched_param param;
-		memset(&param, 0, sizeof(param));
-		pthread_detach(childTid); // auto-reap
-		pthread_setschedparam(childTid, SCHED_RR, &param);
+	  if (!running) {
+	     if (active) {
+		// Wait until the previous incarnation of this thread has completely ended
+		// before starting it newly:
+		cTimeMs RestartTimeout;
+		while (!running && active && RestartTimeout.Elapsed() < THREAD_STOP_TIMEOUT)
+		      cCondWait::SleepMs(THREAD_STOP_SLEEP);
 		}
-	     else {
-		LOG_ERROR;
-		active = running = false;
-		return false;
+	     if (!active) {
+		active = running = true;
+		if (pthread_create(&childTid, NULL, (void *(*) (void *))&StartThread, (void *)this) == 0) {
+		   pthread_detach(childTid); // auto-reap
+		   }
+		else {
+		   LOG_ERROR;
+		   active = running = false;
+		   return false;
+		   }
 		}
 	     }
 	  return true;
@@ -295,14 +303,14 @@ void cMutex::Unlock(void)
 	void cThread::Cancel(int WaitSeconds)
 	{
 	  running = false;
-	  if (active) {
+	  if (active && WaitSeconds > -1) {
 	     if (WaitSeconds > 0) {
 		for (time_t t0 = time(NULL) + WaitSeconds; time(NULL) < t0; ) {
 		    if (!Active())
 		       return;
 		    cCondWait::SleepMs(10);
 		    }
-		esyslog("ERROR: thread %ld won't end (waited %d seconds) - canceling it...", childTid, WaitSeconds);
+		esyslog("ERROR: %s thread %d won't end (waited %d seconds) - canceling it...", description ? description : "", (int)childTid, WaitSeconds);
 		}
 	     pthread_cancel(childTid);
 	     childTid = 0;
