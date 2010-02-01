@@ -80,7 +80,7 @@ struct pat {
 
 static int sid_opt = 0;
 static int opt_maxfilters = 2;
-static int opt_max_fail = 10;
+static int opt_max_fail = 20;
 static int opt_allpids = 0;
 static int opt_resetpidmap = 0;
 static int opt_experimental = 0;
@@ -424,6 +424,8 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
   struct pat pat;
   struct list_head *lptr;
 
+  restart:
+
   bzero(&pat, sizeof(struct pat));
   INIT_LIST_HEAD(&pat.dmx_filter_ll);
   pat.patfd = open(dmxdev, O_RDWR | O_NONBLOCK);
@@ -497,9 +499,11 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
         done = read_nit(pes, &sid_data->nit, size);
         if (done <= 0) 
           nit_retries++; 
-        if (nit_retries == 5) { 
-          dprintf0("start: giving up reading nit\n"); 
-          done = 1; 
+        if (nit_retries == 10) {
+          dprintf0("start: giving up reading nit and restarting...\n");
+          close(pat.patfd);
+          free_pat(&pat);
+          goto restart;
         } 
       }
     }
