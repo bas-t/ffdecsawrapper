@@ -501,7 +501,7 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
           nit_retries++; 
         if (nit_retries == 10) {
           dprintf0("start: giving up reading nit and restarting...\n");
-          close(pat.patfd);
+          close(fd);
           free_pat(&pat);
           goto restart;
         } 
