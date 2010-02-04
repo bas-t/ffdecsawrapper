@@ -2039,7 +2039,7 @@ void cChannelList::CheckIgnore(void)
   free(cache);
   PRINTF(L_CORE_CAIDS,"%d: after check",n);
   for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->Dump(n);
-  PRINTF(L_CORE_CAIDS,"%d: check cache usage: %d requests, %d hits, %d%% hits",n,cTotal,cHits,cHits*100/cTotal);
+  PRINTF(L_CORE_CAIDS,"%d: check cache usage: %d requests, %d hits, %d%% hits",n,cTotal,cHits,(cTotal>0)?(cHits*100/cTotal):0);
 }
 
 void cChannelList::Unique(bool full)
