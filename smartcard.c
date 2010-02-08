@@ -1002,7 +1002,7 @@ bool cSmartCardSlotSRPlus::DeviceSetMode(int mode, int baud)
   // Configure SmartReader+ with initial settings, ref ISO 7816 3.1.
   return baud==ISO_BAUD &&
          cSmartCardSlotSerial::DeviceSetMode(mode,ISO_BAUD) &&
-         SRConfig(372,0.0,clock,0,0,0);
+         SRConfig(372,1.0,clock,0,0,0);
 }
 
 bool cSmartCardSlotSRPlus::DevicePTS(void)
