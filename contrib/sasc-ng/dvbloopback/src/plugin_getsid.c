@@ -86,6 +86,7 @@ static int opt_resetpidmap = 0;
 static int opt_experimental = 0;
 static int opt_orbit = 0;
 static char *opt_ignore = 0;
+static int opt_maxrestart = 2;
 static struct option Sid_Opts[] = {
   {"sid-filt", 1, &sid_opt, 'f'},
   {"sid-allpid", 0, &sid_opt, 'p'},
@@ -93,6 +94,7 @@ static struct option Sid_Opts[] = {
   {"sid-orbit", 1, &sid_opt, 'o'},
   {"sid-experimental", 0, &sid_opt, 'e'},
   {"sid-ignore", 1, &sid_opt, 'i'},
+  {"sid-restart", 1, &sid_opt, 'r'},
   {0, 0, 0, 0},
 };
 
@@ -418,7 +420,7 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
 static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
   unsigned char pes[4096];
   struct pollfd  pfd, pollfd[MAX_SIMULTANEOUS_PMT];
-  int done = 0, size, i;
+  int pat_restart = 0, done = 0, size, i;
   int ret;
 
   struct pat pat;
@@ -500,10 +502,15 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
         if (done <= 0) 
           nit_retries++; 
         if (nit_retries == 10) {
-          dprintf0("start: giving up reading nit and restarting...\n");
-          close(fd);
-          free_pat(&pat);
-          goto restart;
+          if(++pat_restart<=opt_maxrestart) {
+            dprintf0("start: giving up reading nit and restarting...\n");
+            close(fd);
+            free_pat(&pat);
+            done = 0;
+            goto restart;
+          }
+          dprintf0("start: giving up reading nit\n");
+          done = 1;
         } 
       }
     }
@@ -1025,7 +1032,8 @@ static struct option *parseopt_sid(arg_enum_t cmd)
     printf("   --sid-nocache     : Don't cache pid<->sid mapping\n");
     printf("   --sid-orbit <val> : Set the satellit orbit to 'val' and don't scan the NIT\n");
     printf("   --sid-experimental: Enable experimental tuning code\n");
-  } 
+    printf("   --sid-restart <n> : Max number of PAT/NIT read restarts\n");
+  }
   if(! sid_opt)
     return NULL;
 
@@ -1049,6 +1057,8 @@ static struct option *parseopt_sid(arg_enum_t cmd)
       opt_experimental = 1;
     case 'i':
       opt_ignore = optarg;
+    case 'r':
+      opt_maxrestart = atoi(optarg);
   }
   //must reset sid_opt after every call
   sid_opt = 0;
