@@ -309,8 +309,9 @@ void process_cam(struct msg *msg, unsigned int priority)
 
   ch->SetId(0, 1, sidmsg->sid, 0);
   //set source type to Satellite.  Use orbit and E/W data
-  int source = 0x8000 | (BCD2INT(sidmsg->nit.orbit) & 0x7ff) | ((int)sidmsg->nit.is_east << 19);
-  ch->SetSatTransponderData(source, sidmsg->nit.frequency, sidmsg->nit.polarization, sidmsg->nit.symbolrate, 0);
+  int source = 0x8000 | (BCD2INT(sidmsg->nit.orbit) & 0x7ff) | ((int)sidmsg->nit.is_east << 11);
+  static char Polarizations[] = { 'h', 'v', 'l', 'r' };
+  ch->SetSatTransponderData(source, BCD2INT(sidmsg->nit.frequency)/100, Polarizations[sidmsg->nit.polarization], BCD2INT(sidmsg->nit.symbolrate), 0);
   dcnt = (MAXDPIDS >= sidmsg->epid_count) ?
             sidmsg->epid_count : MAXDPIDS;
   memcpy(dpid, sidmsg->epid, sizeof(int)*dcnt);

@@ -2,7 +2,15 @@
 #include "include/vdr/device.h"
 #include <ctype.h>
 #include <linux/dvb/ca.h>
-int cChannel::Transponder() const {return sid;}
+int cChannel::Transponder() const
+{
+  int tf = frequency;
+  while (tf > 20000)
+        tf /= 1000;
+  if (IsSat())
+     tf = Transponder(tf, polarization);
+  return tf;
+}
 int cChannel::Transponder(int Frequency, char Polarization)
 {
   // some satellites have transponders at the same frequency, just with different polarization:
