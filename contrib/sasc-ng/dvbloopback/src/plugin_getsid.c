@@ -1053,12 +1053,16 @@ static struct option *parseopt_sid(arg_enum_t cmd)
       break;
     case 'c':
       opt_resetpidmap = 1;
+      break;
     case 'e':
       opt_experimental = 1;
+      break;
     case 'i':
       opt_ignore = optarg;
+      break;
     case 'r':
       opt_maxrestart = atoi(optarg);
+      break;
   }
   //must reset sid_opt after every call
   sid_opt = 0;
