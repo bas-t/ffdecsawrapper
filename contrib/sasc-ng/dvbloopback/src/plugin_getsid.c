@@ -86,6 +86,7 @@ static int opt_resetpidmap = 0;
 static int opt_experimental = 0;
 static int opt_orbit = 0;
 static char *opt_ignore = 0;
+static char *opt_unseen = 0;
 static int opt_maxrestart = 0;
 static struct option Sid_Opts[] = {
   {"sid-filt", 1, &sid_opt, 'f'},
@@ -95,6 +96,7 @@ static struct option Sid_Opts[] = {
   {"sid-experimental", 0, &sid_opt, 'e'},
   {"sid-ignore", 1, &sid_opt, 'i'},
   {"sid-restart", 1, &sid_opt, 'r'},
+  {"sid-unseen", 1, &sid_opt, 'u'},
   {0, 0, 0, 0},
 };
 
@@ -314,14 +316,14 @@ static bool cmp_wild(const char *pat, const char *s)
     }
 }
 
-static bool ignore_sid(int sid)
+static bool match_sid(int sid, const char *param)
 {
   bool ret = false;
-  if (opt_ignore) {
+  if (param) {
     char s_sid[32];
     sprintf(s_sid,"%u",sid);
 
-    char *save, *ignored = strdup(opt_ignore);
+    char *save, *ignored = strdup(param);
     char *tok = strtok_r(ignored, ",", &save);
     while(tok) {
       if (cmp_wild(tok,s_sid)) {
@@ -380,12 +382,12 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
     free_sid(sid_ll);
     return -1;
   }
-  if (ignore_sid(sid)) {
+  if (match_sid(sid,opt_ignore)) {
     dprintf0("Ignoring SID %d.\n", sid);
     free_sid(sid_ll);
     return -1;
   }
-  if(sidnum->seen) {
+  if(sidnum->seen && !match_sid(sid,opt_unseen)) {
     dprintf0("Already seen sid: %d\n", sid);
     free_sid(sid_ll);
     return -1;
@@ -1029,6 +1031,8 @@ static struct option *parseopt_sid(arg_enum_t cmd)
     printf("   --sid-allpid      : Parse all pids instead of just A/V\n");
     printf("   --sid-ignore <sid1,sid2,...>\n");
     printf("                     : When tuning, ignore given SIDs\n");
+    printf("   --sid-unseen <sid1,sid2,...>\n");
+    printf("                     : When tuning, treat given SIDs as unseen allways\n");
     printf("   --sid-nocache     : Don't cache pid<->sid mapping\n");
     printf("   --sid-orbit <val> : Set the satellit orbit to 'val' and don't scan the NIT\n");
     printf("   --sid-experimental: Enable experimental tuning code\n");
@@ -1059,6 +1063,9 @@ static struct option *parseopt_sid(arg_enum_t cmd)
       break;
     case 'i':
       opt_ignore = optarg;
+      break;
+    case 'u':
+      opt_unseen = optarg;
       break;
     case 'r':
       opt_maxrestart = atoi(optarg);
