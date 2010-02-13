@@ -485,7 +485,10 @@ static int dvblb_release(struct inode *inode, struct file *f)
 		goto out;
 	}
 	lbdev->pid = -1;
-	mutex_lock_interruptible(&lbdev->lock_buffer);
+        if (mutex_lock_interruptible(&lbdev->lock_buffer)) {
+                ret = -ERESTARTSYS;
+                goto out;
+        }
 	if (lbdev->buffer) {
 		rvfree(lbdev->buffer, lbdev->buflen*N_BUFFS);
 		lbdev->buffer = NULL;
