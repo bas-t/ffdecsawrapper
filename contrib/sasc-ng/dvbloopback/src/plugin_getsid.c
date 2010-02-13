@@ -86,7 +86,7 @@ static int opt_resetpidmap = 0;
 static int opt_experimental = 0;
 static int opt_orbit = 0;
 static char *opt_ignore = 0;
-static int opt_maxrestart = 2;
+static int opt_maxrestart = 0;
 static struct option Sid_Opts[] = {
   {"sid-filt", 1, &sid_opt, 'f'},
   {"sid-allpid", 0, &sid_opt, 'p'},
