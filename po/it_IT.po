@@ -206,7 +206,7 @@ msgid "SC-Cryptoworks: Parental rating"
 msgstr "SC-Cryptoworks: Filtro famiglia"
 
 msgid "SC-Nagra: use T14 Nagra mode"
-msgstr ""
+msgstr "SC-Nagra: usa modalità Nagra T14"
 
 msgid "allow ALL"
 msgstr "permetti TUTTI"
