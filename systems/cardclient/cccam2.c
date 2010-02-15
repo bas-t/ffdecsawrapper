@@ -644,14 +644,14 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         {
         PRINTF(L_CC_CCCAM2,"got CMD 05 (payload length=%d)",plen);
         if(plen>0) {
-          static const struct CmdHeader resp = { 0,5,0 };
           LDUMP(L_CC_CCCAM2DT,((struct GenericCmd *)hdr)->payload,plen,"CMD 05 payload");
-          if(!CryptSend((unsigned char *)&resp,sizeof(resp)))
-            PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
           keymaskpos=60;
           }
         else
           keymaskpos=0;
+        static const struct CmdHeader resp = { 0,5,0 };
+        if(!CryptSend((unsigned char *)&resp,sizeof(resp)))
+          PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
         break;
         }
       case 6:
