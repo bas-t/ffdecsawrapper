@@ -39,6 +39,15 @@ bool cChannel::SetSatTransponderData(int Source, int Frequency, char Polarizatio
      coderateH = CoderateH;
      return true;
 }
+bool cChannel::SetCableTransponderData(int Source, int Frequency, int Modulation, int Srate, int CoderateH)
+{
+     source = Source;
+     frequency = Frequency;
+     modulation = Modulation;
+     srate = Srate;
+     coderateH = CoderateH;
+     return true;
+}
 void cChannel::SetPids(int Vpid, int Ppid, int *Apids, char ALangs[][MAXLANGCODE2], int *Dpids, char DLangs[][MAXLANGCODE2], int Tpid)
 {
   vpid = Vpid;

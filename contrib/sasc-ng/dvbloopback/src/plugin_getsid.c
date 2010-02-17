@@ -289,6 +289,7 @@ static int read_nit(unsigned char *buf, struct nit_data *nit, unsigned int size)
       tag = buf[pos+6];
       tag_len = buf[pos+7];
       if(tag == 0x43 && tag_len >= 11) { //satellite descriptor
+        nit->type = tag;
         nit->frequency = (buf[pos+8] << 24) | (buf[pos+9]<<16) | (buf[pos+10]<<8) | buf[pos+11];
         nit->orbit = (buf[pos+12] << 8) | buf[pos+13];
         nit->is_east = buf[pos+14] >> 7;
@@ -297,6 +298,14 @@ static int read_nit(unsigned char *buf, struct nit_data *nit, unsigned int size)
         nit->symbolrate = (buf[pos+15]<<16) | (buf[pos+16]<<8) | buf[pos+17];
         nit->fec = buf[pos+18];
         printf("Orbit: %08x%c\n", nit->orbit, nit->is_east ? 'E' : 'W');
+        return 1;
+      } else if(tag == 0x44 && tag_len >= 11) { //cable descriptor
+        nit->type = tag;
+        nit->frequency = (buf[pos+8] << 24) | (buf[pos+9]<<16) | (buf[pos+10]<<8) | buf[pos+11];
+        nit->modulation = buf[pos+14];
+        nit->symbolrate = (buf[pos+15]<<16) | (buf[pos+16]<<8) | buf[pos+17];
+        nit->fec = buf[pos+18];
+        printf("Cable: %08x\n", nit->frequency);
         return 1;
       }
       pos += tag_len+2;
