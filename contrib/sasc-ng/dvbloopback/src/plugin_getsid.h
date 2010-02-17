@@ -14,6 +14,7 @@ struct nit_data {
   unsigned char modulation;
   unsigned int symbolrate;
   unsigned char fec;
+  unsigned char type;
 };
 
 struct sid_msg {

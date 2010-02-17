@@ -308,10 +308,14 @@ void process_cam(struct msg *msg, unsigned int priority)
   ch = new cChannel();
 
   ch->SetId(0, 1, sidmsg->sid, 0);
-  //set source type to Satellite.  Use orbit and E/W data
-  int source = 0x8000 | (BCD2INT(sidmsg->nit.orbit) & 0x7ff) | ((int)sidmsg->nit.is_east << 11);
-  static char Polarizations[] = { 'h', 'v', 'l', 'r' };
-  ch->SetSatTransponderData(source, BCD2INT(sidmsg->nit.frequency)/100, Polarizations[sidmsg->nit.polarization], BCD2INT(sidmsg->nit.symbolrate), 0);
+  if(sidmsg->nit.type==0x43) { //set source type to Satellite.  Use orbit and E/W data
+    int source = 0x8000 | (BCD2INT(sidmsg->nit.orbit) & 0x7ff) | ((int)sidmsg->nit.is_east << 11);
+    static char Polarizations[] = { 'h', 'v', 'l', 'r' };
+    ch->SetSatTransponderData(source, BCD2INT(sidmsg->nit.frequency)/100, Polarizations[sidmsg->nit.polarization], BCD2INT(sidmsg->nit.symbolrate)/10, 0);
+    }
+  else if(sidmsg->nit.type==0x44) { //set source type to Cable
+    ch->SetCableTransponderData(0x4000, BCD2INT(sidmsg->nit.frequency)/10, 0, BCD2INT(sidmsg->nit.symbolrate)/10, 0);
+    }
   dcnt = (MAXDPIDS >= sidmsg->epid_count) ?
             sidmsg->epid_count : MAXDPIDS;
   memcpy(dpid, sidmsg->epid, sizeof(int)*dcnt);
