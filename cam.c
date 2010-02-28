@@ -3139,7 +3139,7 @@ bool cScDvbDevice::ForceBudget(int n)
 static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
 #endif
 
-void cScDvbDevice::Capture(void)
+void cScDvbDevice::OnPluginLoad(void)
 {
 #if APIVERSNUM >= 10711
   scProbe=new cScDvbDeviceProbe;
@@ -3164,10 +3164,16 @@ void cScDvbDevice::Capture(void)
 #endif
 }
 
-bool cScDvbDevice::Initialize(void)
+void cScDvbDevice::OnPluginUnload(void)
 {
 #if APIVERSNUM >= 10711
   delete scProbe; scProbe=0;
+#endif
+}
+
+bool cScDvbDevice::Initialize(void)
+{
+#if APIVERSNUM >= 10711
   return true;
 #else
   if(!vdr_nci || !vdr_ud) {
@@ -3510,7 +3516,10 @@ bool cScDvbDevice::ForceBudget(int n)
    return true;
 }
 
-void cScDvbDevice::Capture(void)
+void cScDvbDevice::OnPluginLoad(void)
+{}
+
+void cScDvbDevice::OnPluginUnload(void)
 {}
 
 bool cScDvbDevice::Initialize(void)

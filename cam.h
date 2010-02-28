@@ -245,7 +245,8 @@ public:
   virtual int ProvidesCa(const cChannel *Channel) const;
 #endif
 #endif //SASC
-  static void Capture(void);
+  static void OnPluginLoad(void);
+  static void OnPluginUnload(void);
   static bool Initialize(void);
   static void Startup(void);
   static void Shutdown(void);

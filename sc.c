@@ -1277,7 +1277,7 @@ cScPlugin::cScPlugin(void)
 #else
   dllSuccess=true;
 #endif
-  if(dllSuccess) cScDvbDevice::Capture();
+  if(dllSuccess) cScDvbDevice::OnPluginLoad();
   keeper=0;
 }
 
@@ -1286,6 +1286,7 @@ cScPlugin::~cScPlugin()
   delete keeper;
   delete ScOpts;
   delete LogOpts;
+  cScDvbDevice::OnPluginUnload();
 }
 
 bool cScPlugin::Initialize(void)
