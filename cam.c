@@ -1315,6 +1315,14 @@ void cEcmHandler::AddEcmPri(cEcmInfo *n)
       if(n->Cached() && (!ScSetup.LocalPriority || pri!=-15)) ep->pri+=20;
       ep->pri=ep->pri*100 + overrides.GetEcmPrio(n->source,n->transponder,n->caId,n->provId);
 
+      // no double entries in ecmPriList
+      for(cEcmPri *epp=ecmPriList.First(); epp; epp=ecmPriList.Next(epp))
+        if(epp->ecm==ep->ecm && epp->sysIdent==ep->sysIdent) {
+          delete ep; ep=0;
+          break;
+          }
+      }
+    if(ep) {
       // keep ecmPriList sorted
       cEcmPri *eppp, *epp=ecmPriList.First();
       if(!epp || epp->pri<ep->pri)
@@ -1444,6 +1452,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
                   if(e->caId==n->caId && e->provId==n->provId) {
                     if(e->AddCaDescr(n) && dolog) LBPUT("(updated) ");
                     if(dolog) LBPUT("(already present)");
+                    AddEcmPri(n);
                     delete n; n=0;
                     break;
                     }
@@ -1468,11 +1477,10 @@ void cEcmHandler::ParseCAInfo(int SysId)
         }
       }
     }
-  if(SysId==0xFFFF) {
-    for(cEcmPri *ep=ecmPriList.First(); ep; ep=ecmPriList.Next(ep))
-      PRINTF(L_CORE_ECMPROC,"%s: ecmPriList pri=%d ident=%04x caid=%04x pid=%04x",id,ep->pri,ep->sysIdent,ep->ecm->caId,ep->ecm->ecm_pid);
-    PRINTF(L_CORE_ECMPROC,"%s: ecmPri list end",id);
-    }
+
+  for(cEcmPri *ep=ecmPriList.First(); ep; ep=ecmPriList.Next(ep))
+    PRINTF(L_CORE_ECMPROC,"%s: ecmPriList pri=%d ident=%04x caid=%04x pid=%04x",id,ep->pri,ep->sysIdent,ep->ecm->caId,ep->ecm->ecm_pid);
+  PRINTF(L_CORE_ECMPROC,"%s: ecmPri list end",id);
 }
 
 // -- cCam ---------------------------------------------------------------
