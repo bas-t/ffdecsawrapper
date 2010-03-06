@@ -189,9 +189,9 @@ int cSystem::CheckECM(const cEcmInfo *ecm, const unsigned char *data, bool sync)
       {
       const int chid=WORD(data,6,0xFFFF);
       // if multiple channel id's, use current one only
-      if(sync && ecm->caId==0x0604 && check->caid.sys06.current>0 && chid!=check->caid.sys06.current) {
+      if(sync && check->caid.sys06.current>0 && chid!=check->caid.sys06.current) {
         PRINTF(L_CORE_ECMPROC,"ecmcheck(%s): chid %04x != current %04x",name,chid,check->caid.sys06.current);
-        return 2;
+        return 3;
         }
 /*
 //XXX is that still needed? Seems to conflict with some Irdeto2 provider
