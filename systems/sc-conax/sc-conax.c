@@ -167,10 +167,9 @@ struct stdent {
   unsigned int pbm[2];
   };
 
-class cSmartCardConax : public cSmartCard, private cProviders {
+class cSmartCardConax : public cSmartCard, private cIdSet {
 private:
   int sysId, cardVer, currency;
-  bool emmInitDone;
   unsigned char ua[ADDR_SIZE];
   //
   int GetLen(void);
@@ -202,7 +201,6 @@ cSmartCardConax::cSmartCardConax(void)
 :cSmartCard(&cardCfg,msgs)
 {
   sysId=0; cardVer=0; currency=0;
-  emmInitDone=false;
   memset(ua,0,sizeof(ua));
 }
 
@@ -221,6 +219,8 @@ bool cSmartCardConax::Init(void)
   static const unsigned char cnxHist[] = { '0','B','0','0' }; // XXX is this always true ?
 
   sysId=0; cardVer=0; currency=0;
+  memset(ua,0,sizeof(ua));
+  ResetIdSet();
   if(atr->histLen<4 || memcmp(atr->hist, cnxHist, atr->histLen)) {
     PRINTF(L_SC_INIT,"doesn't look like a Conax card");
     return false;
@@ -235,12 +235,12 @@ bool cSmartCardConax::Init(void)
   unsigned char buff[MAX_LEN];
   int l;
   if(!IsoWrite(ins26,hostVer) || !Status() || (l=GetLen())<=0) {
-    PRINTF(L_SC_ERROR,"card init failed (1)");
+    PRINTF(L_SC_ERROR,"card caid request failed");
     return false;
     }
   insca[4]=l;
   if(!IsoRead(insca,buff) || !Status()) {
-    PRINTF(L_SC_ERROR,"card init failed (2)");
+    PRINTF(L_SC_ERROR,"card caid read failed");
     return false;
     }
   for(int i=0; i<l; i+=buff[i+1]+2) {
@@ -256,8 +256,38 @@ bool cSmartCardConax::Init(void)
       }
     }
   infoStr.Printf("Card v.%d Caid %04x\n",cardVer,sysId);
-  PRINTF(L_SC_INIT,"card v.%d",cardVer);
+  PRINTF(L_SC_INIT,"card v.%d caid %04x",cardVer,sysId);
   snprintf(idStr,sizeof(idStr),"%s (V.%d)",SC_NAME,cardVer);
+
+  static unsigned char ins82[] = { 0xdd,0x82,0x00,0x00,0x11 };
+  static const unsigned char ins82Data[] = { 0x11,0x0f,0x01,0xb0,0x0f,0xff,0xff,0xfb,0x00,0x00,0x09,0x04,0x0b,0x00,0xe0,0x30,0x2b };
+  if(!IsoWrite(ins82,ins82Data) || !Status() || (l=GetLen())<=0) {
+    PRINTF(L_SC_ERROR,"card serial request failed");
+    return false;
+    }
+  insca[4]=l;
+  if(!IsoRead(insca,buff) || !Status()) {
+    PRINTF(L_SC_ERROR,"card serial read failed");
+    return false;
+    }
+  LBSTARTF(L_SC_INIT);
+  LBPUT("card serials");
+  for(int i=2; i<l; i+=buff[i+1]+2) {
+    if(buff[i]==0x23 && buff[i+1]==ADDR_SIZE) { // Card Address
+      if(CheckNull(&buff[i+2],4)) {
+        AddProv(new cProviderConax(&buff[i+2]));
+        LBPUT(" prov");
+        }
+      else {
+        SetCard(new cCardConax(&buff[i+2]));
+        memcpy(ua,&buff[i+2],sizeof(ua));
+        LBPUT(" card");
+        }
+      char str[ADDR_SIZE*2+4];
+      LBPUT(" %s",HexStr(str,&buff[i+2],ADDR_SIZE));
+      }
+    }
+  LBEND();
 
   static const unsigned char stdEntits[] = { 0x1C,0x01,0x00 };
   if(IsoWrite(insc6,stdEntits) && Status() && (l=GetLen())>0) {
@@ -327,7 +357,6 @@ bool cSmartCardConax::Init(void)
     PRINTF(L_SC_ERROR,"getting PPV entitlements failed");
 */
 
-  emmInitDone=false;
   infoStr.Finish();
   return true;
 }
@@ -398,64 +427,9 @@ bool cSmartCardConax::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
 bool cSmartCardConax::Update(int pid, int caid, const unsigned char *data)
 {
   static unsigned char ins84[] = { 0xdd,0x84,0x00,0x00,0x00 };
-  static unsigned char insca[] = { 0xdd,0xca,0x00,0x00,0x00 };
-  static unsigned char ins82[] = { 0xdd,0x82,0x00,0x00,0x11 };
-  static unsigned char ins82Data[] = { 0x11,0x0f,0x01,0xb0,0x0f,0xff,0xff,0xfb,0x00,0x00,0x09,0x04,0x0b,0x00,0x00,0x00,0x2b };
-
   unsigned char buff[MAX_LEN];
 
-  if(!emmInitDone) {
-    ins82Data[14]=(pid>>8)&0xFF;
-    ins82Data[15]=pid&0xFF;
-    int l;
-    if(!IsoWrite(ins82,ins82Data) || !Status() || (l=GetLen())<=0) return false;
-    insca[4]=l;
-    if(!IsoRead(insca,buff) || !Status()) return false;
-    if(buff[0]!=0x22 || buff[1]+2!=l) {
-      PRINTF(L_SC_ERROR,"bad card reply on EMM init");
-      return false;
-      }
-
-    LBSTARTF(L_SC_INIT);
-    LBPUT("set filter");
-    Clear();
-    for(int i=2; i<l; i+=buff[i+1]+2) {
-/*
-  from oscam.
-  Actually we should differentiate between card and provider, but I would need
-  some data dumps to be sure to not break others (e.g. newcamd), because
-  our code assumes ua & sa is both 7 bytes long,
-  but oscam has 6 for ua and 4 for sa !!
-
-      case 0x09: // provider id
-		reader[ridx].prid[j][2]=cta_res[i+4];
-		reader[ridx].prid[j][3]=cta_res[i+5];
-		break;
-      case 0x23: // ua/sa
-		if ( cta_res[i+5] != 0x00) {
-			 memcpy(reader[ridx].hexserial, &cta_res[i+3], 6);
-		}else{
-			 memcpy(reader[ridx].sa[j], &cta_res[i+5], 4);
-		}
-		break;
-*/
-      if(buff[i]==0x23) { // Card Address
-        if(buff[i+1]==ADDR_SIZE) {
-          AddProv(new cProviderConax(&buff[i+2]));
-          char str[ADDR_SIZE*2+4];
-          LBPUT(" addr %s",HexStr(str,&buff[i+2],ADDR_SIZE));
-          }    
-        else {
-          LBPUT(" bad addr cmd (size=%d)",buff[i+1]);
-          return false;
-          }
-        }
-      }
-    LBEND();
-    emmInitDone=true;
-    }
-
-  if(MatchProv(data)) {
+  if(MatchEMM(data)) {
     int l;
     if((l=CheckSctLen(data,2))>0) {
       buff[0]=0x12; buff[1]=l;
