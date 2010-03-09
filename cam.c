@@ -3017,6 +3017,7 @@ uchar *cDeCsaTSBuffer::Get(void)
 
 // --- cScDeviceProbe ----------------------------------------------------------
 
+#define DEV_DVB_ADAPTER  "/dev/dvb/adapter"
 #define DEV_DVB_FRONTEND "frontend"
 #define DEV_DVB_DVR      "dvr"
 #define DEV_DVB_DEMUX    "demux"
@@ -3163,8 +3164,8 @@ bool cScDevices::ForceBudget(int n)
 
 #else //SASC
 
-void cScDevice::OnPluginLoad(void) {}
-void cScDevice::OnPluginUnload(void) {}
+void cScDevices::OnPluginLoad(void) {}
+void cScDevices::OnPluginUnload(void) {}
 bool cScDevices::Initialize(void) { return true; }
 void cScDevices::Startup(void) {}
 void cScDevices::Shutdown(void) {}
@@ -3543,7 +3544,7 @@ void cScDevice::DumpAV7110(void)
 
 #else //SASC
 
-cScDevice::cScDevice(int n, int cafd)
+cScDevice::cScDevice(int n, int zero, int cafd)
 :cDvbDevice(n)
 {
   softcsa=false;
