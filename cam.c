@@ -1485,7 +1485,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
 
 // -- cCam ---------------------------------------------------------------
 
-cCam::cCam(cScDvbDevice *dev, int CardNum)
+cCam::cCam(cScDevice *dev, int CardNum)
 {
   device=dev; cardNum=CardNum;
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;
@@ -3015,7 +3015,7 @@ uchar *cDeCsaTSBuffer::Get(void)
 
 #endif //SASC
 
-// --- cScDvbDeviceProbe -------------------------------------------------------
+// --- cScDeviceProbe ----------------------------------------------------------
 
 #define DEV_DVB_FRONTEND "frontend"
 #define DEV_DVB_DVR      "dvr"
@@ -3023,29 +3023,185 @@ uchar *cDeCsaTSBuffer::Get(void)
 #define DEV_DVB_CA       "ca"
 
 #if APIVERSNUM >= 10711
-static cScDvbDeviceProbe *scProbe=0;
+cScDeviceProbe *cScDeviceProbe::probe=0;
 
-bool cScDvbDeviceProbe::Probe(int Adapter, int Frontend)
+void cScDeviceProbe::Install(void)
+{
+  if(!probe) probe=new cScDeviceProbe;
+}
+
+void cScDeviceProbe::Remove(void)
+{
+  delete probe; probe=0;
+}
+
+bool cScDeviceProbe::Probe(int Adapter, int Frontend)
 {
   PRINTF(L_GEN_DEBUG,"capturing device %d/%d",Adapter,Frontend);
-  int cafd=open(cString::sprintf("%s%d/%s%d",DEV_DVB_ADAPTER,Adapter,DEV_DVB_CA,Frontend),O_RDWR);
-  new cScDvbDevice(Adapter,Frontend,cafd);
+  new cScDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
   return true;
 }
 #endif
 
-// -- cScDvbDevice -------------------------------------------------------------
+// -- cScDevices ---------------------------------------------------------------
 
-int cScDvbDevice::budget=0;
+int cScDevices::budget=0;
 
 #ifndef SASC
 
+#if APIVERSNUM < 10711
+static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
+#endif
+
+void cScDevices::OnPluginLoad(void)
+{
 #if APIVERSNUM >= 10711
-cScDvbDevice::cScDvbDevice(int Adapter, int Frontend, int cafd)
+  cScDeviceProbe::Install();
+#else
+/*
+  This is an extremly ugly hack to access VDRs device scan parameters, which are
+  protected in this context. Heavily dependant on the actual symbol names
+  created by the compiler. May fail in any future version!
+
+  To get the actual symbol names of your VDR binary you may use the command:
+  objdump -T <path-to-vdr>/vdr | grep -E "(useDevice|nextCardIndex)"
+  Insert the symbol names below.
+*/
+#if __GNUC__ >= 3
+  vdr_nci=(int *)dlsym(RTLD_DEFAULT,"_ZN7cDevice13nextCardIndexE");
+  vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_ZN7cDevice9useDeviceE");
+#else
+  vdr_nci=(int *)dlsym(RTLD_DEFAULT,"_7cDevice.nextCardIndex");
+  vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_7cDevice.useDevice");
+#endif
+  if(vdr_nci && vdr_ud) { vdr_save_ud=*vdr_ud; *vdr_ud=1<<30; }
+#endif
+}
+
+void cScDevices::OnPluginUnload(void)
+{
+#if APIVERSNUM >= 10711
+  cScDeviceProbe::Remove();
+#endif
+}
+
+bool cScDevices::Initialize(void)
+{
+#if APIVERSNUM >= 10711
+  return true;
+#else
+  if(!vdr_nci || !vdr_ud) {
+    PRINTF(L_GEN_ERROR,"Failed to locate VDR symbols. Plugin not operable");
+    return false;
+    }
+  if(NumDevices()>0) {
+    PRINTF(L_GEN_ERROR,"Number of devices != 0 on init. Put SC plugin first on VDR commandline! Aborting.");
+    return false;
+    }
+  *vdr_nci=0; *vdr_ud=vdr_save_ud;
+
+  int i, found=0;
+  for(i=0; i<MAXDVBDEVICES; i++) {
+    if(UseDevice(NextCardIndex())) {
+      char name[128];
+      cScDevices::DvbName(DEV_DVB_FRONTEND,i,0,name,sizeof(name));
+      if(access(name,F_OK)==0) {
+        PRINTF(L_GEN_DEBUG,"probing %s",name);
+        int f=open(name,O_RDONLY);
+        if(f>=0) {
+          close(f);
+          PRINTF(L_GEN_DEBUG,"capturing device %d",i);
+          new cScDevice(i,0,cScDevices::DvbOpen(DEV_DVB_CA,i,0,O_RDWR));
+          found++;
+          }
+        else {
+          if(errno!=ENODEV && errno!=EINVAL) PRINTF(L_GEN_ERROR,"open %s failed: %s",name,strerror(errno));
+          break;
+          }
+        }
+      else {
+        if(errno!=ENOENT) PRINTF(L_GEN_ERROR,"access %s failed: %s",name,strerror(errno));
+        break;
+        }
+      }
+    else NextCardIndex(1);
+    }
+  NextCardIndex(MAXDVBDEVICES-i);
+  if(found>0) PRINTF(L_GEN_INFO,"captured %d video device%s",found,found>1 ? "s" : "");
+  else PRINTF(L_GEN_INFO,"no DVB device captured");
+  return found>0;
+#endif
+}
+
+void cScDevices::Startup(void)
+{
+  if(ScSetup.ForceTransfer)
+    SetTransferModeForDolbyDigital(2);
+  for(int n=cDevice::NumDevices(); --n>=0;) {
+    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
+    if(dev) dev->LateInit();
+    }
+}
+
+void cScDevices::Shutdown(void)
+{
+  for(int n=cDevice::NumDevices(); --n>=0;) {
+    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
+    if(dev) dev->EarlyShutdown();
+    }
+}
+
+void cScDevices::SetForceBudget(int n)
+{
+   if(n>=0 && n<MAXDVBDEVICES) budget|=(1<<n);
+}
+
+bool cScDevices::ForceBudget(int n)
+{
+   return budget && (budget&(1<<n));
+}
+
+#else //SASC
+
+void cScDevice::OnPluginLoad(void) {}
+void cScDevice::OnPluginUnload(void) {}
+bool cScDevices::Initialize(void) { return true; }
+void cScDevices::Startup(void) {}
+void cScDevices::Shutdown(void) {}
+void cScDevices::SetForceBudget(int n) {}
+bool cScDevices::ForceBudget(int n) { return true; }
+
+#endif //SASC
+
+void cScDevices::DvbName(const char *Name, int a, int f, char *buffer, int len)
+{
+  snprintf(buffer,len,"%s%d/%s%d",DEV_DVB_ADAPTER,a,Name,f);
+}
+
+int cScDevices::DvbOpen(const char *Name, int a, int f, int Mode, bool ReportError)
+{
+  char FileName[128];
+  DvbName(Name,a,f,FileName,sizeof(FileName));
+  int fd=open(FileName,Mode);
+  if(fd<0 && ReportError) LOG_ERROR_STR(FileName);
+  return fd;
+}
+
+// -- cScDevice ----------------------------------------------------------------
+
+#if APIVERSNUM >= 10711
+#define DVB_DEV_SPEC adapter,frontend
+#else
+#define DVB_DEV_SPEC CardIndex(),0
+#endif
+
+#ifndef SASC
+
+cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
+#if APIVERSNUM >= 10711
 :cDvbDevice(Adapter,Frontend)
 #else
-cScDvbDevice::cScDvbDevice(int n, int cafd)
-:cDvbDevice(n)
+:cDvbDevice(Adapter)
 #endif
 {
   decsa=0; tsBuffer=0; cam=0; fullts=false;
@@ -3058,7 +3214,7 @@ cScDvbDevice::cScDvbDevice(int n, int cafd)
   softcsa=(fd_ca<0);
 }
 
-cScDvbDevice::~cScDvbDevice()
+cScDevice::~cScDevice()
 {
   DetachAllReceivers();
   Cancel(3);
@@ -3070,7 +3226,7 @@ cScDvbDevice::~cScDvbDevice()
 #endif
 }
 
-void cScDvbDevice::EarlyShutdown(void)
+void cScDevice::EarlyShutdown(void)
 {
 #if APIVERSNUM >= 10500
   SetCamSlot(0);
@@ -3081,7 +3237,7 @@ void cScDvbDevice::EarlyShutdown(void)
   delete cam; cam=0;
 }
 
-void cScDvbDevice::LateInit(void)
+void cScDevice::LateInit(void)
 {
   int n=CardIndex();
   if(DeviceNumber()!=n)
@@ -3089,7 +3245,7 @@ void cScDvbDevice::LateInit(void)
   if(softcsa) {
     if(HasDecoder()) PRINTF(L_GEN_ERROR,"Card %d is a full-featured card but no ca device found!",n);
     }
-  else if(ForceBudget(n)) {
+  else if(cScDevices::ForceBudget(n)) {
     PRINTF(L_GEN_INFO,"Budget mode forced on card %d",n);
     softcsa=true;
     }
@@ -3115,134 +3271,22 @@ void cScDvbDevice::LateInit(void)
     }
 }
 
-void cScDvbDevice::Shutdown(void)
-{
-  for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
-    if(dev) dev->EarlyShutdown();
-    }
-}
-
-void cScDvbDevice::Startup(void)
-{
-  if(ScSetup.ForceTransfer)
-    SetTransferModeForDolbyDigital(2);
-  for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
-    if(dev) dev->LateInit();
-    }
-}
-
-void cScDvbDevice::SetForceBudget(int n)
-{
-   if(n>=0 && n<MAXDVBDEVICES) budget|=(1<<n);
-}
-
-bool cScDvbDevice::ForceBudget(int n)
-{
-   return budget && (budget&(1<<n));
-}
-
-#if APIVERSNUM < 10711
-static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
-#endif
-
-void cScDvbDevice::OnPluginLoad(void)
-{
-#if APIVERSNUM >= 10711
-  scProbe=new cScDvbDeviceProbe;
-#else
-/*
-  This is an extremly ugly hack to access VDRs device scan parameters, which are
-  protected in this context. Heavily dependant on the actual symbol names
-  created by the compiler. May fail in any future version!
-
-  To get the actual symbol names of your VDR binary you may use the command:
-  objdump -T <path-to-vdr>/vdr | grep -E "(useDevice|nextCardIndex)"
-  Insert the symbol names below.
-*/
-#if __GNUC__ >= 3
-  vdr_nci=(int *)dlsym(RTLD_DEFAULT,"_ZN7cDevice13nextCardIndexE");
-  vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_ZN7cDevice9useDeviceE");
-#else
-  vdr_nci=(int *)dlsym(RTLD_DEFAULT,"_7cDevice.nextCardIndex");
-  vdr_ud =(int *)dlsym(RTLD_DEFAULT,"_7cDevice.useDevice");
-#endif
-  if(vdr_nci && vdr_ud) { vdr_save_ud=*vdr_ud; *vdr_ud=1<<30; }
-#endif
-}
-
-void cScDvbDevice::OnPluginUnload(void)
-{
-#if APIVERSNUM >= 10711
-  delete scProbe; scProbe=0;
-#endif
-}
-
-bool cScDvbDevice::Initialize(void)
-{
-#if APIVERSNUM >= 10711
-  return true;
-#else
-  if(!vdr_nci || !vdr_ud) {
-    PRINTF(L_GEN_ERROR,"Failed to locate VDR symbols. Plugin not operable");
-    return false;
-    }
-  if(NumDevices()>0) {
-    PRINTF(L_GEN_ERROR,"Number of devices != 0 on init. Put SC plugin first on VDR commandline! Aborting.");
-    return false;
-    }
-  *vdr_nci=0; *vdr_ud=vdr_save_ud;
-
-  int i, found=0;
-  for(i=0; i<MAXDVBDEVICES; i++) {
-    if(UseDevice(NextCardIndex())) {
-      char name[128];
-      DvbName(DEV_DVB_FRONTEND,i,name,sizeof(name));
-      if(access(name,F_OK)==0) {
-        PRINTF(L_GEN_DEBUG,"probing %s",name);
-        int f=open(name,O_RDONLY);
-        if(f>=0) {
-          close(f);
-          PRINTF(L_GEN_DEBUG,"capturing device %d",i);
-          new cScDvbDevice(i,DvbOpen(DEV_DVB_CA,i,O_RDWR));
-          found++;
-          }
-        else {
-          if(errno!=ENODEV && errno!=EINVAL) PRINTF(L_GEN_ERROR,"open %s failed: %s",name,strerror(errno));
-          break;
-          }
-        }
-      else {
-        if(errno!=ENOENT) PRINTF(L_GEN_ERROR,"access %s failed: %s",name,strerror(errno));
-        break;
-        }
-      }
-    else NextCardIndex(1);
-    }
-  NextCardIndex(MAXDVBDEVICES-i);
-  if(found>0) PRINTF(L_GEN_INFO,"captured %d video device%s",found,found>1 ? "s" : "");
-  else PRINTF(L_GEN_INFO,"no DVB device captured");
-  return found>0;
-#endif
-}
-
 #if APIVERSNUM >= 10501
-bool cScDvbDevice::HasCi(void)
+bool cScDevice::HasCi(void)
 {
   return ciadapter || hwciadapter;
 }
 #endif
 
 #if APIVERSNUM >= 10500
-bool cScDvbDevice::Ready(void)
+bool cScDevice::Ready(void)
 {
   return (ciadapter   ? ciadapter->Ready():true) &&
          (hwciadapter ? hwciadapter->Ready():true);
 }
 #endif
 
-bool cScDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
+bool cScDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 {
   if(cam) cam->SetPid(Type,Handle->pid,On);
   tsMutex.Lock();
@@ -3251,18 +3295,10 @@ bool cScDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
   return cDvbDevice::SetPid(Handle,Type,On);
 }
 
-bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
+bool cScDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 {
 #if APIVERSNUM < 10500
-  lruMutex.Lock();
-  int i=FindLRUPrg(Channel->Source(),Channel->Transponder(),Channel->Sid());
-  if(i<0) i=MAX_LRU_CAID-1;
-  if(i>0) memmove(&lrucaid[1],&lrucaid[0],sizeof(struct LruCaid)*i);
-  for(i=0; i<=MAXCAIDS; i++) if((lrucaid[0].caids[i]=Channel->Ca(i))==0) break;
-  lrucaid[0].src=Channel->Source();
-  lrucaid[0].tr=Channel->Transponder();
-  lrucaid[0].prg=Channel->Sid();
-  lruMutex.Unlock();
+  SetChannelLRU(Channel);
 #endif
   if(cam) cam->Tune(Channel);
   bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
@@ -3271,7 +3307,7 @@ bool cScDvbDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 }
 
 #if APIVERSNUM < 10500
-int cScDvbDevice::ProvidesCa(const cChannel *Channel) const
+int cScDevice::ProvidesCa(const cChannel *Channel) const
 {
   if(cam && Channel->Ca()>=CA_ENCRYPTED_MIN) {
     int caid;
@@ -3285,12 +3321,12 @@ int cScDvbDevice::ProvidesCa(const cChannel *Channel) const
   return cDvbDevice::ProvidesCa(Channel);
 }
 
-bool cScDvbDevice::CiAllowConcurrent(void) const
+bool cScDevice::CiAllowConcurrent(void) const
 {
   return softcsa || ScSetup.ConcurrentFF>0;
 }
 
-bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
+bool cScDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
 {
   cMutexLock lock(&lruMutex);
   int i=FindLRUPrg(source,transponder,prg);
@@ -3302,14 +3338,27 @@ bool cScDvbDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
   return false;
 }
 
-int cScDvbDevice::FindLRUPrg(int source, int transponder, int prg)
+int cScDevice::FindLRUPrg(int source, int transponder, int prg)
 {
   for(int i=0; i<MAX_LRU_CAID; i++)
     if(lrucaid[i].src==source && lrucaid[i].tr==transponder && lrucaid[i].prg==prg) return i;
   return -1;
 }
 
-void cScDvbDevice::CiStartDecrypting(void)
+void cScDevice::SetChannelLRU(const cChannel *Channel)
+{
+  lruMutex.Lock();
+  int i=FindLRUPrg(Channel->Source(),Channel->Transponder(),Channel->Sid());
+  if(i<0) i=MAX_LRU_CAID-1;
+  if(i>0) memmove(&lrucaid[1],&lrucaid[0],sizeof(struct LruCaid)*i);
+  for(i=0; i<=MAXCAIDS; i++) if((lrucaid[0].caids[i]=Channel->Ca(i))==0) break;
+  lrucaid[0].src=Channel->Source();
+  lrucaid[0].tr=Channel->Transponder();
+  lrucaid[0].prg=Channel->Sid();
+  lruMutex.Unlock();
+}
+
+void cScDevice::CiStartDecrypting(void)
 {
   if(cam) {
     cSimpleList<cPrg> prgList;
@@ -3347,7 +3396,7 @@ void cScDvbDevice::CiStartDecrypting(void)
 }
 #endif //APIVERSNUM < 10500
 
-bool cScDvbDevice::ScActive(void)
+bool cScDevice::ScActive(void)
 {
 #if APIVERSNUM >= 10500
   return dynamic_cast<cScCamSlot *>(CamSlot())!=0;
@@ -3356,14 +3405,10 @@ bool cScDvbDevice::ScActive(void)
 #endif
 }
 
-bool cScDvbDevice::OpenDvr(void)
+bool cScDevice::OpenDvr(void)
 {
   CloseDvr();
-#if APIVERSNUM >= 10711
-  fd_dvr=DvbOpen(DEV_DVB_DVR,adapter,frontend,O_RDONLY|O_NONBLOCK,true);
-#else
-  fd_dvr=DvbOpen(DEV_DVB_DVR,CardIndex(),O_RDONLY|O_NONBLOCK,true);
-#endif
+  fd_dvr=cScDevices::DvbOpen(DEV_DVB_DVR,DVB_DEV_SPEC,O_RDONLY|O_NONBLOCK,true);
   if(fd_dvr>=0) {
     tsMutex.Lock();
     tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(4),CardIndex()+1,decsa,ScActive());
@@ -3372,7 +3417,7 @@ bool cScDvbDevice::OpenDvr(void)
   return fd_dvr>=0;
 }
 
-void cScDvbDevice::CloseDvr(void)
+void cScDevice::CloseDvr(void)
 {
   tsMutex.Lock();
   delete tsBuffer; tsBuffer=0;
@@ -3380,18 +3425,18 @@ void cScDvbDevice::CloseDvr(void)
   if(fd_dvr>=0) { close(fd_dvr); fd_dvr=-1; }
 }
 
-bool cScDvbDevice::GetTSPacket(uchar *&Data)
+bool cScDevice::GetTSPacket(uchar *&Data)
 {
   if(tsBuffer) { Data=tsBuffer->Get(); return true; }
   return false;
 }
 
-bool cScDvbDevice::SoftCSA(bool live)
+bool cScDevice::SoftCSA(bool live)
 {
   return softcsa && (!fullts || !live);
 }
 
-void cScDvbDevice::CaidsChanged(void)
+void cScDevice::CaidsChanged(void)
 {
 #if APIVERSNUM >= 10500
   if(ciadapter) ciadapter->CaidsChanged();
@@ -3399,7 +3444,7 @@ void cScDvbDevice::CaidsChanged(void)
 #endif
 }
 
-bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+bool cScDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   if(!softcsa || (fullts && ca_descr->index==0)) {
     cMutexLock lock(&cafdMutex);
@@ -3409,7 +3454,7 @@ bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
   return false;
 }
 
-bool cScDvbDevice::SetCaPid(ca_pid_t *ca_pid)
+bool cScDevice::SetCaPid(ca_pid_t *ca_pid)
 {
   if(!softcsa || (fullts && ca_pid->index==0)) {
     cMutexLock lock(&cafdMutex);
@@ -3437,7 +3482,7 @@ static void av7110_write(int fd, unsigned int addr, unsigned int val)
 }
 #endif
 
-void cScDvbDevice::DumpAV7110(void)
+void cScDevice::DumpAV7110(void)
 {
   if(LOG(L_CORE_AV7110)) {
 #define CODEBASE (0x2e000404+0x1ce00)
@@ -3498,87 +3543,42 @@ void cScDvbDevice::DumpAV7110(void)
 
 #else //SASC
 
-cScDvbDevice::cScDvbDevice(int n, int cafd)
+cScDevice::cScDevice(int n, int cafd)
 :cDvbDevice(n)
 {
   softcsa=false;
   cam=new cCam(this,n);
 }
 
-cScDvbDevice::~cScDvbDevice()
+cScDevice::~cScDevice()
 {
   delete cam;
 }
 
-void cScDvbDevice::Shutdown(void)
+void cScDevice::CaidsChanged(void)
 {}
 
-void cScDvbDevice::Startup(void)
-{}
-
-void cScDvbDevice::SetForceBudget(int n)
-{}
-
-bool cScDvbDevice::ForceBudget(int n)
-{
-   return true;
-}
-
-void cScDvbDevice::OnPluginLoad(void)
-{}
-
-void cScDvbDevice::OnPluginUnload(void)
-{}
-
-bool cScDvbDevice::Initialize(void)
-{
-  return true;
-}
-
-void cScDvbDevice::CaidsChanged(void)
-{}
-
-bool cScDvbDevice::SoftCSA(bool live)
+bool cScDevice::SoftCSA(bool live)
 {
   return softcsa && !live;
 }
 
-bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+bool cScDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   return false;
 }
 
-bool cScDvbDevice::SetCaPid(ca_pid_t *ca_pid)
+bool cScDevice::SetCaPid(ca_pid_t *ca_pid)
 {
   return false;
 }
 
-void cScDvbDevice::DumpAV7110(void)
+void cScDevice::DumpAV7110(void)
 {}
 
 #endif //SASC
 
-int cScDvbDevice::FilterHandle(void)
+int cScDevice::FilterHandle(void)
 {
-#if APIVERSNUM >= 10711
-  return DvbOpen(DEV_DVB_DEMUX,adapter,frontend,O_RDWR|O_NONBLOCK);
-#else
-  return DvbOpen(DEV_DVB_DEMUX,CardIndex(),O_RDWR|O_NONBLOCK);
-#endif
+  return cScDevices::DvbOpen(DEV_DVB_DEMUX,DVB_DEV_SPEC,O_RDWR|O_NONBLOCK);
 }
-
-#if APIVERSNUM < 10711
-void cScDvbDevice::DvbName(const char *Name, int n, char *buffer, int len)
-{
-  snprintf(buffer,len,"/dev/dvb/adapter%d/%s%d",n,Name,0);
-}
-
-int cScDvbDevice::DvbOpen(const char *Name, int n, int Mode, bool ReportError)
-{
-  char FileName[128];
-  DvbName(Name,n,FileName,sizeof(FileName));
-  int fd=open(FileName,Mode);
-  if(fd<0 && ReportError) LOG_ERROR_STR(FileName);
-  return fd;
-}
-#endif

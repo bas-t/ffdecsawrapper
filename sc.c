@@ -1018,7 +1018,7 @@ void cSoftCAM::Shutdown(void)
 
 char *cSoftCAM::CurrKeyStr(int CardNum, int num)
 {
-  cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
+  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
   char *str=0;
   if(dev) {
     if(dev->Cam()) str=dev->Cam()->CurrentKeyStr(num);
@@ -1030,7 +1030,7 @@ char *cSoftCAM::CurrKeyStr(int CardNum, int num)
 bool cSoftCAM::Active(bool log)
 {
   for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
+    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
     if(dev && dev->Cam() && dev->Cam()->Active(log)) return true;
     }
   return false;
@@ -1038,33 +1038,33 @@ bool cSoftCAM::Active(bool log)
 
 void cSoftCAM::SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on)
 {
-  cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
+  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
   if(dev && dev->Cam()) dev->Cam()->LogEcmStatus(ecm,on);
 }
 
 void cSoftCAM::AddHook(int CardNum, cLogHook *hook)
 {
-  cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
+  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
   if(dev && dev->Cam()) dev->Cam()->AddHook(hook);
 }
 
 bool cSoftCAM::TriggerHook(int CardNum, int id)
 {
-  cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
+  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
   return dev && dev->Cam() && dev->Cam()->TriggerHook(id);
 }
 
 void cSoftCAM::CaidsChanged(void)
 {
   for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
+    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
     if(dev) dev->CaidsChanged();
     }
 }
 
 int cSoftCAM::FilterHandle(int CardNum)
 {
-  cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(CardNum));
+  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
   return dev ? dev->FilterHandle() : -1;
 }
 
@@ -1096,7 +1096,7 @@ void cScHousekeeper::Action(void)
     if(++c==20) {
       c=0;
       for(int n=cDevice::NumDevices(); --n>=0;) {
-        cScDvbDevice *dev=dynamic_cast<cScDvbDevice *>(cDevice::GetDevice(n));
+        cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
         if(dev && dev->Cam()) dev->Cam()->HouseKeeping();
         }
       }
@@ -1277,7 +1277,7 @@ cScPlugin::cScPlugin(void)
 #else
   dllSuccess=true;
 #endif
-  if(dllSuccess) cScDvbDevice::OnPluginLoad();
+  if(dllSuccess) cScDevices::OnPluginLoad();
   keeper=0;
 }
 
@@ -1286,13 +1286,13 @@ cScPlugin::~cScPlugin()
   delete keeper;
   delete ScOpts;
   delete LogOpts;
-  cScDvbDevice::OnPluginUnload();
+  cScDevices::OnPluginUnload();
 }
 
 bool cScPlugin::Initialize(void)
 {
   PRINTF(L_GEN_INFO,"SC version %s initializing (VDR %s)",ScVersion,VDRVERSION);
-  return dllSuccess && cScDvbDevice::Initialize();
+  return dllSuccess && cScDevices::Initialize();
 }
 
 bool cScPlugin::Start(void)
@@ -1320,7 +1320,7 @@ bool cScPlugin::Start(void)
   cStructLoaders::SetCfgDir(cfgdir);
   ScSetup.Check();
   if(!cSoftCAM::Load(cfgdir)) return false;
-  cScDvbDevice::Startup();
+  cScDevices::Startup();
   keeper=new cScHousekeeper;
   return true;
 }
@@ -1328,7 +1328,7 @@ bool cScPlugin::Start(void)
 void cScPlugin::Stop(void)
 {
   delete keeper; keeper=0;
-  cScDvbDevice::Shutdown();
+  cScDevices::Shutdown();
   LogStatsDown();
   cSoftCAM::Shutdown();
 #if APIVERSNUM < 10507
@@ -1370,7 +1370,7 @@ bool cScPlugin::ProcessArgs(int argc, char *argv[])
   while((c=getopt_long(argc,argv,"B:E:",long_options,&option_index))!=-1) {
     switch (c) {
       case 'E': externalAU=optarg; break;
-      case 'B': cScDvbDevice::SetForceBudget(atoi(optarg)); break;
+      case 'B': cScDevices::SetForceBudget(atoi(optarg)); break;
       default:  return false;
       }
     }
