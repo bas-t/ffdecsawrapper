@@ -29,11 +29,11 @@
 #include "scsetup.h"
 
 // -- cSascDvbDevice -------------------------------------------------------------
-class cSascDvbDevice : public cScDvbDevice {
+class cSascDvbDevice : public cScDevice {
 private:
   int cardidx;
 public:
-  cSascDvbDevice(int n, int cafd) :cScDvbDevice(n, cafd) {cardidx = n;}
+  cSascDvbDevice(int n, int cafd) :cScDevice(n, 0, cafd) {cardidx = n;}
   ~cSascDvbDevice() {};
   bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   bool SetCaPid(ca_pid_t *ca_pid);
