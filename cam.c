@@ -1452,7 +1452,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
                   if(e->caId==n->caId && e->provId==n->provId) {
                     if(e->AddCaDescr(n) && dolog) LBPUT("(updated) ");
                     if(dolog) LBPUT("(already present)");
-                    AddEcmPri(n);
+                    AddEcmPri(e);
                     delete n; n=0;
                     break;
                     }
