@@ -36,7 +36,7 @@ class cLogHook;
 class cDeCSA;
 class cDeCsaTSBuffer;
 class cScCiAdapter;
-class cScDvbDevice;
+class cScDevice;
 class cPrg;
 
 // ----------------------------------------------------------------
@@ -130,7 +130,7 @@ typedef unsigned short caid_t;
 class cCam : private cMutex {
 private:
   int cardNum;
-  cScDvbDevice *device;
+  cScDevice *device;
   cSimpleList<cEcmHandler> handlerList;
   cLogger *logger;
   cHookManager *hookman;
@@ -143,7 +143,7 @@ private:
   int GetFreeIndex(void);
   void LogStartup(void);
 public:
-  cCam(cScDvbDevice *dev, int CardNum);
+  cCam(cScDevice *dev, int CardNum);
   virtual ~cCam();
   // EcmHandler API
   void WriteCW(int index, unsigned char *cw, bool force);
@@ -171,15 +171,42 @@ void LogStatsDown(void);
 // ----------------------------------------------------------------
 
 #if APIVERSNUM >= 10711
-class cScDvbDeviceProbe : public cDvbDeviceProbe {
+class cScDeviceProbe : public cDvbDeviceProbe {
+private:
+  static cScDeviceProbe *probe;
 public:
   virtual bool Probe(int Adapter, int Frontend);
+  static void Install(void);
+  static void Remove(void);
   };
 #endif
 
 // ----------------------------------------------------------------
 
-class cScDvbDevice : public cDvbDevice {
+class cScDevices : public cDvbDevice {
+private:
+  static int budget;
+public:
+#if APIVERSNUM >= 10711 // make compiler happy. These are never used!
+  cScDevices(void):cDvbDevice(0,0) {}
+#else
+  cScDevices(void):cDvbDevice(0) {}
+#endif
+  static void OnPluginLoad(void);
+  static void OnPluginUnload(void);
+  static bool Initialize(void);
+  static void Startup(void);
+  static void Shutdown(void);
+  static void SetForceBudget(int n);
+  static bool ForceBudget(int n);
+  static void DvbName(const char *Name, int a, int f, char *buffer, int len);
+  static int DvbOpen(const char *Name, int a, int f, int Mode, bool ReportError=false);
+  };
+
+// ----------------------------------------------------------------
+
+class cScDevice : public cDvbDevice {
+friend class cScDevices;
 private:
   cDeCSA *decsa;
   cDeCsaTSBuffer *tsBuffer;
@@ -193,7 +220,6 @@ private:
   bool softcsa, fullts;
   cMutex cafdMutex;
   cTimeMs lastDump;
-  static int budget;
   //
 #ifndef SASC
   void LateInit(void);
@@ -211,6 +237,7 @@ private:
   //
   int FindLRUPrg(int source, int transponder, int prg);
   bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
+  void SetChannelLRU(const cChannel *Channel);
 #endif
 protected:
 #ifndef SASC
@@ -226,17 +253,9 @@ protected:
   virtual void CloseDvr(void);
   virtual bool GetTSPacket(uchar *&Data);
 #endif //SASC
-#if APIVERSNUM < 10711
-  static void DvbName(const char *Name, int n, char *buffer, int len);
-  static int DvbOpen(const char *Name, int n, int Mode, bool ReportError=false);
-#endif
 public:
-#if APIVERSNUM >= 10711
-  cScDvbDevice(int Adapter, int Frontend, int cafd);
-#else
-  cScDvbDevice(int n, int cafd);
-#endif
-  ~cScDvbDevice();
+  cScDevice(int Adapter, int Frontend, int cafd);
+  ~cScDevice();
 #ifndef SASC
 #if APIVERSNUM >= 10501
   virtual bool HasCi(void);
@@ -245,13 +264,6 @@ public:
   virtual int ProvidesCa(const cChannel *Channel) const;
 #endif
 #endif //SASC
-  static void OnPluginLoad(void);
-  static void OnPluginUnload(void);
-  static bool Initialize(void);
-  static void Startup(void);
-  static void Shutdown(void);
-  static void SetForceBudget(int n);
-  static bool ForceBudget(int n);
   virtual bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   virtual bool SetCaPid(ca_pid_t *ca_pid);
   int FilterHandle(void);
