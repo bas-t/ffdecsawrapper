@@ -88,19 +88,6 @@ public:
 
 // ----------------------------------------------------------------
 
-#if APIVERSNUM >= 10711
-class cScDeviceProbe : public cDvbDeviceProbe {
-private:
-  static cScDeviceProbe *probe;
-public:
-  virtual bool Probe(int Adapter, int Frontend);
-  static void Install(void);
-  static void Remove(void);
-  };
-#endif
-
-// ----------------------------------------------------------------
-
 class cScDevices : public cDvbDevice {
 private:
   static int budget;
