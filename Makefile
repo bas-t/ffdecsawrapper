@@ -80,7 +80,7 @@ endif
 
 ### The object files (add further files here):
 
-OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o version.o \
+OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o device.o version.o \
        smartcard.o network.o crypto.o system-common.o parse.o log.o \
        override.o
 

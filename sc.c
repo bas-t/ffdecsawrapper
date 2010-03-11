@@ -33,7 +33,6 @@
 #include <vdr/status.h>
 #include <vdr/dvbdevice.h>
 #include <vdr/channels.h>
-#include <vdr/ci.h>
 #include <vdr/interface.h>
 #include <vdr/menu.h>
 #include <vdr/tools.h>
@@ -44,6 +43,7 @@
 #include "filter.h"
 #include "system.h"
 #include "cam.h"
+#include "device.h"
 #include "smartcard.h"
 #include "data.h"
 #include "network.h"
