@@ -39,7 +39,7 @@ Requirements
 
 * DVB driver from dvb-kernel 2.6 or 2.4 branch with applied patches
 * a patched firmware version 2620 or newer
-* VDR 1.5.0 or newer (VDR 1.4.6+ in compatibility mode, see 1.4.x setup section)
+* VDR 1.6.0 or newer
 * Openssl package version 0.9.7 or newer
 
 
@@ -57,15 +57,13 @@ ARM crashes, add "hw_sections=0" while loading the dvb-ttpci module.
 
 Contrary to older plugin versions (before 0.7.0) you MUST NOT apply patches to
 the VDR core (neither vdr-sc nor ffdecsa/softcsa) except if:
-- you are using VDR 1.4.x (see section below)
 - you are using VDR 1.7.8 or lower and want to view channels with split ECM
 
 To correctly decode channels with split ECM (i.e. audio and video encrypted
 with different CW) you need to apply a patch to the VDR core if you are using
 a VDR version before 1.7.9. You can find the "vdr-1.6.0-2-streamca.diff" file
 in the patches subdirectory. It has been tested with VDR 1.6.0-2 only, but
-probably will apply to other VDR versions as well. This feature is explicitely
-not supported for VDR 1.4.x.
+probably will apply to other VDR versions as well.
 
 You must have installed the openssl development files. For most distributions
 this means to install openssl-devel package. You should use a openssl package
@@ -104,23 +102,6 @@ destination filename too. If you set a filesize limit (in KByte) and the logfile
 grows bigger than the limit, the current logfile is renamed to logfile.old and a
 new logfile is started. If the filesize limit is zero, the logfile never is
 rotated.
-
-
-
-How to setup for VDR 1.4.x ?
-----------------------------
-
-NOTE: support for VDR 1.4.7 is deprecated. As development requires, the support
-will be removed.
-
-Additional to the points mentioned above, you have to patch the VDR core with
-the supplied patch (vdr-1.4.x-sc7.diff). Recompile VDR and use the new binary.
-Patches from older SC releases are not going to work.
-
-Even with VDR 1.4.x you don't have to use a softcsa/ffdecsa patch.
-
-Activating/deactivating DVB cards in the plugin setup menu needs a VDR restart
-to take effect.
 
 
 

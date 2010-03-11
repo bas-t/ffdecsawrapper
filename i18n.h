@@ -22,9 +22,4 @@
 
 #include <vdr/i18n.h>
 
-#if APIVERSNUM < 10507
-extern const tI18nPhrase ScPhrases[];
-#define trNOOP(s) (s)
-#endif
-
 #endif //___I18N_H

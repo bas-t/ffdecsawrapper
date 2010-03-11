@@ -11,7 +11,6 @@ po/*.pot
 *.rej
 *.bak
 version.c
-i18n.c
 FFdecsa/FFdecsa_test
 FFdecsa/FFdecsa_test.done
 dump.*

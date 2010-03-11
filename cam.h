@@ -112,11 +112,7 @@ public:
 
 // ----------------------------------------------------------------
 
-#if APIVERSNUM >= 10500
 typedef int caid_t;
-#else
-typedef unsigned short caid_t;
-#endif
 
 #define MAX_CW_IDX        16
 #define MAX_CI_SLOTS      8
@@ -211,10 +207,8 @@ private:
   cDeCSA *decsa;
   cDeCsaTSBuffer *tsBuffer;
   cMutex tsMutex;
-#if APIVERSNUM >= 10500
   cScCiAdapter *ciadapter;
   cCiAdapter *hwciadapter;
-#endif
   cCam *cam;
   int fd_dvr, fd_ca, fd_ca2;
   bool softcsa, fullts;
@@ -227,26 +221,9 @@ private:
   bool ScActive(void);
 #endif //SASC
   //
-#if APIVERSNUM < 10500
-#define MAX_LRU_CAID 10
-  struct LruCaid {
-    int src, tr, prg;
-    caid_t caids[MAXCAIDS+1];
-    } lrucaid[MAX_LRU_CAID];
-  cMutex lruMutex;
-  //
-  int FindLRUPrg(int source, int transponder, int prg);
-  bool GetPrgCaids(int source, int transponder, int prg, caid_t *c);
-  void SetChannelLRU(const cChannel *Channel);
-#endif
 protected:
 #ifndef SASC
-#if APIVERSNUM >= 10500
   virtual bool Ready(void);
-#else
-  virtual void CiStartDecrypting(void);
-  virtual bool CiAllowConcurrent(void) const;
-#endif
   virtual bool SetPid(cPidHandle *Handle, int Type, bool On);
   virtual bool SetChannelDevice(const cChannel *Channel, bool LiveView);
   virtual bool OpenDvr(void);
@@ -257,12 +234,7 @@ public:
   cScDevice(int Adapter, int Frontend, int cafd);
   ~cScDevice();
 #ifndef SASC
-#if APIVERSNUM >= 10501
   virtual bool HasCi(void);
-#endif
-#if APIVERSNUM < 10500
-  virtual int ProvidesCa(const cChannel *Channel) const;
-#endif
 #endif //SASC
   virtual bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   virtual bool SetCaPid(ca_pid_t *ca_pid);

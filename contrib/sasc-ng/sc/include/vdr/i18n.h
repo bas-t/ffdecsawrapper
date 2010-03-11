@@ -44,4 +44,6 @@ bool I18nIsPreferredLanguage(int *PreferredLanguages, const char *LanguageCode, 
 #define tr(s)  I18nTranslate(s)
 #endif
 
+#define trNOOP(s) (s)
+
 #endif //__I18N_H
