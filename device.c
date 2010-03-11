@@ -1301,6 +1301,16 @@ uchar *cDeCsaTSBuffer::Get(void)
 #define DEV_DVB_CA       "ca"
 
 #if APIVERSNUM >= 10711
+
+class cScDeviceProbe : public cDvbDeviceProbe {
+private:
+  static cScDeviceProbe *probe;
+public:
+  virtual bool Probe(int Adapter, int Frontend);
+  static void Install(void);
+  static void Remove(void);
+  };
+
 cScDeviceProbe *cScDeviceProbe::probe=0;
 
 void cScDeviceProbe::Install(void)
@@ -1324,6 +1334,20 @@ bool cScDeviceProbe::Probe(int Adapter, int Frontend)
 // -- cScDevices ---------------------------------------------------------------
 
 int cScDevices::budget=0;
+
+void cScDevices::DvbName(const char *Name, int a, int f, char *buffer, int len)
+{
+  snprintf(buffer,len,"%s%d/%s%d",DEV_DVB_ADAPTER,a,Name,f);
+}
+
+int cScDevices::DvbOpen(const char *Name, int a, int f, int Mode, bool ReportError)
+{
+  char FileName[128];
+  DvbName(Name,a,f,FileName,sizeof(FileName));
+  int fd=open(FileName,Mode);
+  if(fd<0 && ReportError) LOG_ERROR_STR(FileName);
+  return fd;
+}
 
 #ifndef SASC
 
@@ -1451,20 +1475,6 @@ bool cScDevices::ForceBudget(int n) { return true; }
 
 #endif //SASC
 
-void cScDevices::DvbName(const char *Name, int a, int f, char *buffer, int len)
-{
-  snprintf(buffer,len,"%s%d/%s%d",DEV_DVB_ADAPTER,a,Name,f);
-}
-
-int cScDevices::DvbOpen(const char *Name, int a, int f, int Mode, bool ReportError)
-{
-  char FileName[128];
-  DvbName(Name,a,f,FileName,sizeof(FileName));
-  int fd=open(FileName,Mode);
-  if(fd<0 && ReportError) LOG_ERROR_STR(FileName);
-  return fd;
-}
-
 // -- cScDevice ----------------------------------------------------------------
 
 #if APIVERSNUM >= 10711
@@ -1473,8 +1483,6 @@ int cScDevices::DvbOpen(const char *Name, int a, int f, int Mode, bool ReportErr
 #define DVB_DEV_SPEC CardIndex(),0
 #endif
 
-#ifndef SASC
-
 cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
 #if APIVERSNUM >= 10711
 :cDvbDevice(Adapter,Frontend)
@@ -1482,21 +1490,32 @@ cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
 :cDvbDevice(Adapter)
 #endif
 {
+#ifndef SASC
   decsa=0; tsBuffer=0; cam=0; fullts=false;
   ciadapter=0; hwciadapter=0;
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
   softcsa=(fd_ca<0);
+#else
+  softcsa=fullts=false;
+  cam=new cCam(this,Adapter);
+#endif // !SASC
 }
 
 cScDevice::~cScDevice()
 {
+#ifndef SASC
   DetachAllReceivers();
   Cancel(3);
   EarlyShutdown();
   delete decsa;
   if(fd_ca>=0) close(fd_ca);
   if(fd_ca2>=0) close(fd_ca2);
+#else
+  delete cam;
+#endif // !SASC
 }
+
+#ifndef SASC
 
 void cScDevice::EarlyShutdown(void)
 {
@@ -1592,6 +1611,8 @@ bool cScDevice::GetTSPacket(uchar *&Data)
   return false;
 }
 
+#endif // !SASC
+
 bool cScDevice::SoftCSA(bool live)
 {
   return softcsa && (!fullts || !live);
@@ -1599,30 +1620,42 @@ bool cScDevice::SoftCSA(bool live)
 
 void cScDevice::CaidsChanged(void)
 {
+#ifndef SASC
   if(ciadapter) ciadapter->CaidsChanged();
   PRINTF(L_CORE_CAIDS,"caid list rebuild triggered");
+#endif // !SASC
 }
 
 bool cScDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
+#ifndef SASC
   if(!softcsa || (fullts && ca_descr->index==0)) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
     }
   else if(decsa) return decsa->SetDescr(ca_descr,initial);
+#endif // !SASC
   return false;
 }
 
 bool cScDevice::SetCaPid(ca_pid_t *ca_pid)
 {
+#ifndef SASC
   if(!softcsa || (fullts && ca_pid->index==0)) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_PID,ca_pid)>=0;
     }
   else if(decsa) return decsa->SetCaPid(ca_pid);
+#endif // !SASC
   return false;
 }
 
+int cScDevice::FilterHandle(void)
+{
+  return cScDevices::DvbOpen(DEV_DVB_DEMUX,DVB_DEV_SPEC,O_RDWR|O_NONBLOCK);
+}
+
+#ifndef SASC
 static unsigned int av7110_read(int fd, unsigned int addr)
 {
   ca_pid_t arg;
@@ -1630,6 +1663,7 @@ static unsigned int av7110_read(int fd, unsigned int addr)
   ioctl(fd,CA_GET_MSG,&arg);
   return arg.index;
 }
+#endif // !SASC
 
 #if 0
 static void av7110_write(int fd, unsigned int addr, unsigned int val)
@@ -1643,6 +1677,7 @@ static void av7110_write(int fd, unsigned int addr, unsigned int val)
 
 void cScDevice::DumpAV7110(void)
 {
+#ifndef SASC
   if(LOG(L_CORE_AV7110)) {
 #define CODEBASE (0x2e000404+0x1ce00)
     cMutexLock lock(&cafdMutex);
@@ -1698,46 +1733,5 @@ void cScDevice::DumpAV7110(void)
         }
       }
     }
-}
-
-#else //SASC
-
-cScDevice::cScDevice(int n, int zero, int cafd)
-:cDvbDevice(n)
-{
-  softcsa=false;
-  cam=new cCam(this,n);
-}
-
-cScDevice::~cScDevice()
-{
-  delete cam;
-}
-
-void cScDevice::CaidsChanged(void)
-{}
-
-bool cScDevice::SoftCSA(bool live)
-{
-  return softcsa && !live;
-}
-
-bool cScDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
-{
-  return false;
-}
-
-bool cScDevice::SetCaPid(ca_pid_t *ca_pid)
-{
-  return false;
-}
-
-void cScDevice::DumpAV7110(void)
-{}
-
-#endif //SASC
-
-int cScDevice::FilterHandle(void)
-{
-  return cScDevices::DvbOpen(DEV_DVB_DEMUX,DVB_DEV_SPEC,O_RDWR|O_NONBLOCK);
+#endif // !SASC
 }
