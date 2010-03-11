@@ -29,9 +29,7 @@
 #include <vdr/ci.h>
 #include <vdr/dvbdevice.h>
 #ifndef SASC
-#if APIVERSNUM >= 10500
 #include <vdr/dvbci.h>
-#endif
 #include <vdr/thread.h>
 
 #include "FFdecsa/FFdecsa.h"
@@ -1916,8 +1914,6 @@ void cCam::RemHandler(cEcmHandler *handler)
 
 // --- cChannelCaids -----------------------------------------------------------
 
-#if APIVERSNUM >= 10500
-
 class cChannelCaids : public cSimpleItem {
 private:
   int prg, source, transponder;
@@ -2695,8 +2691,6 @@ bool cScCiAdapter::Assign(cDevice *Device, bool Query)
   return Device ? (Device==device) : true;
 }
 
-#endif //APIVERSNUM >= 10500
-
 // -- cDeCSA -------------------------------------------------------------------
 
 #define MAX_CSA_PIDS 8192
@@ -3206,11 +3200,7 @@ cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
 #endif
 {
   decsa=0; tsBuffer=0; cam=0; fullts=false;
-#if APIVERSNUM >= 10500
   ciadapter=0; hwciadapter=0;
-#else
-  memset(lrucaid,0,sizeof(lrucaid));
-#endif
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
   softcsa=(fd_ca<0);
 }
@@ -3222,18 +3212,14 @@ cScDevice::~cScDevice()
   EarlyShutdown();
   delete decsa;
   if(fd_ca>=0) close(fd_ca);
-#if APIVERSNUM >= 10500
   if(fd_ca2>=0) close(fd_ca2);
-#endif
 }
 
 void cScDevice::EarlyShutdown(void)
 {
-#if APIVERSNUM >= 10500
   SetCamSlot(0);
   delete ciadapter; ciadapter=0;
   delete hwciadapter; hwciadapter=0;
-#endif
   if(cam) cam->Stop();
   delete cam; cam=0;
 }
@@ -3251,17 +3237,9 @@ void cScDevice::LateInit(void)
     softcsa=true;
     }
   
-#if APIVERSNUM >= 10500
   if(fd_ca2>=0) hwciadapter=cDvbCiAdapter::CreateCiAdapter(this,fd_ca2);
   cam=new cCam(this,n);
   ciadapter=new cScCiAdapter(this,n,cam);
-#else
-  if(fd_ca2>=0) {
-    ciHandler=cCiHandler::CreateCiHandler(fd_ca2);
-    if(!ciHandler) close(fd_ca2);
-    }
-  cam=ScSetup.CapCheck(n) ? new cCam(this,n):0;
-#endif
   if(softcsa) {
     decsa=new cDeCSA(n);
     if(IsPrimaryDevice() && HasDecoder()) {
@@ -3272,20 +3250,16 @@ void cScDevice::LateInit(void)
     }
 }
 
-#if APIVERSNUM >= 10501
 bool cScDevice::HasCi(void)
 {
   return ciadapter || hwciadapter;
 }
-#endif
 
-#if APIVERSNUM >= 10500
 bool cScDevice::Ready(void)
 {
   return (ciadapter   ? ciadapter->Ready():true) &&
          (hwciadapter ? hwciadapter->Ready():true);
 }
-#endif
 
 bool cScDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 {
@@ -3298,112 +3272,15 @@ bool cScDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 
 bool cScDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
 {
-#if APIVERSNUM < 10500
-  SetChannelLRU(Channel);
-#endif
   if(cam) cam->Tune(Channel);
   bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
   if(ret && cam) cam->PostTune();
   return ret;
 }
 
-#if APIVERSNUM < 10500
-int cScDevice::ProvidesCa(const cChannel *Channel) const
-{
-  if(cam && Channel->Ca()>=CA_ENCRYPTED_MIN) {
-    int caid;
-    for(int j=0; (caid=Channel->Ca(j)); j++)
-      if(!overrides.Ignore(Channel->Source(),Channel->Transponder(),caid)) {
-        int n=cSystems::CanHandle(caid,!softcsa);
-        if(n<0) break;
-        if(n>0) return 2;
-        }
-    }
-  return cDvbDevice::ProvidesCa(Channel);
-}
-
-bool cScDevice::CiAllowConcurrent(void) const
-{
-  return softcsa || ScSetup.ConcurrentFF>0;
-}
-
-bool cScDevice::GetPrgCaids(int source, int transponder, int prg, caid_t *c)
-{
-  cMutexLock lock(&lruMutex);
-  int i=FindLRUPrg(source,transponder,prg);
-  if(i>=0) {
-    for(int j=0; j<MAXCAIDS && lrucaid[i].caids[j]; j++) *c++=lrucaid[i].caids[j];
-    *c=0;
-    return true;
-    }
-  return false;
-}
-
-int cScDevice::FindLRUPrg(int source, int transponder, int prg)
-{
-  for(int i=0; i<MAX_LRU_CAID; i++)
-    if(lrucaid[i].src==source && lrucaid[i].tr==transponder && lrucaid[i].prg==prg) return i;
-  return -1;
-}
-
-void cScDevice::SetChannelLRU(const cChannel *Channel)
-{
-  lruMutex.Lock();
-  int i=FindLRUPrg(Channel->Source(),Channel->Transponder(),Channel->Sid());
-  if(i<0) i=MAX_LRU_CAID-1;
-  if(i>0) memmove(&lrucaid[1],&lrucaid[0],sizeof(struct LruCaid)*i);
-  for(i=0; i<=MAXCAIDS; i++) if((lrucaid[0].caids[i]=Channel->Ca(i))==0) break;
-  lrucaid[0].src=Channel->Source();
-  lrucaid[0].tr=Channel->Transponder();
-  lrucaid[0].prg=Channel->Sid();
-  lruMutex.Unlock();
-}
-
-void cScDevice::CiStartDecrypting(void)
-{
-  if(cam) {
-    cSimpleList<cPrg> prgList;
-    for(cCiCaProgramData *p=ciProgramList.First(); p; p=ciProgramList.Next(p)) {
-      if(p->modified) {
-        cPrg *prg=new cPrg(p->programNumber,cam->HasPrg(p->programNumber));
-        if(prg) {
-          bool haspid=false;
-          for(cCiCaPidData *q=p->pidList.First(); q; q=p->pidList.Next(q)) {
-            if(q->active) {
-              prg->pids.Add(new cPrgPid(q->streamType,q->pid));
-              haspid=true;
-              }
-            }
-          if(haspid) {
-            caid_t casys[MAXCAIDS+1];
-            if(GetPrgCaids(ciSource,ciTransponder,p->programNumber,casys)) {
-              unsigned char buff[2048];
-              bool streamflag;
-              int len=GetCaDescriptors(ciSource,ciTransponder,p->programNumber,casys,sizeof(buff),buff,streamflag);
-              if(len>0) prg->caDescr.Set(buff,len);
-              }
-            }
-          prgList.Add(prg);
-          }
-        p->modified=false;
-        }
-      }
-    for(int loop=1; loop<=2; loop++) // first delete, then add
-      for(cPrg *prg=prgList.First(); prg; prg=prgList.Next(prg))
-        if((loop==1)!=(prg->pids.Count()>0))
-          cam->AddPrg(prg);
-    }
-  cDvbDevice::CiStartDecrypting();
-}
-#endif //APIVERSNUM < 10500
-
 bool cScDevice::ScActive(void)
 {
-#if APIVERSNUM >= 10500
   return dynamic_cast<cScCamSlot *>(CamSlot())!=0;
-#else
-  return cam && softcsa;
-#endif
 }
 
 bool cScDevice::OpenDvr(void)
@@ -3439,10 +3316,8 @@ bool cScDevice::SoftCSA(bool live)
 
 void cScDevice::CaidsChanged(void)
 {
-#if APIVERSNUM >= 10500
   if(ciadapter) ciadapter->CaidsChanged();
   PRINTF(L_CORE_CAIDS,"caid list rebuild triggered");
-#endif
 }
 
 bool cScDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)

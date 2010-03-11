@@ -88,18 +88,9 @@ OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o version.o \
 
 PODIR     = po
 I18Npot   = $(PODIR)/$(PLUGIN).pot
-ifeq ($(strip $(APIVERSION)),1.5.7)
-  I18Nmo  = $(PLUGIN).mo
-else
-  I18Nmo  = vdr-$(PLUGIN).mo
-endif
+I18Nmo    = vdr-$(PLUGIN).mo
 I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/$(I18Nmo),$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
 LOCALEDIR = $(VDRDIR)/locale
-HASLOCALE = $(shell grep -l 'I18N_DEFAULT_LOCALE' $(VDRDIR)/include/vdr/i18n.h)
-
-ifeq ($(strip $(HASLOCALE)),)
-  OBJS += i18n.o
-endif
 
 ### VDR version dependant
 
@@ -164,11 +155,7 @@ SHAREDDEFINES += -DSTATICBUILD
 else
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
 endif
-BUILDTARGETS += $(FFDECSATEST) systems
-
-ifneq ($(strip $(HASLOCALE)),)
-BUILDTARGETS += i18n
-endif
+BUILDTARGETS += $(FFDECSATEST) systems i18n
 
 all: $(BUILDTARGETS)
 .PHONY: i18n systems systems-pre contrib clean clean-core clean-systems clean-pre dist srcdist
@@ -216,9 +203,6 @@ $(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/$(I18Nmo): $(PODIR)/%.mo
 
 i18n: $(I18Nmsgs)
 
-i18n.c: $(PODIR)/*.po i18n-template.c po2i18n.pl
-	perl ./po2i18n.pl <i18n-template.c >i18n.c
-
 version.c: FORCE
 	@echo >$@.new "/* generated file, do not edit */"; \
 	 echo >>$@.new 'const char *ScVersion =' '"'$(VERSION)'";'; \
@@ -244,7 +228,7 @@ clean-core:
 	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
-	@-rm -f $(OBJS) $(DEPFILE) version.c i18n.c *.so *.tar.gz core* *~
+	@-rm -f $(OBJS) $(DEPFILE) version.c *.so *.tar.gz core* *~
 	@-rm -f $(PODIR)/*.mo
 
 clean-pre:

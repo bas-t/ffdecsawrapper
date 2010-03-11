@@ -54,26 +54,17 @@
 #include "version.h"
 
 #define MIN_VERS   1 // required VDR version
-#define MIN_MAJOR  4
-#define MIN_MINOR  6
-#define MINAPIVERSNUM 10405
+#define MIN_MAJOR  6
+#define MIN_MINOR  0
+#define MINAPIVERSNUM 10600
 
 // some sanity checks
 #ifdef HAVE_SOFTCSA
 #error softcsa/ffdecsa patch MUST NOT be applied. Next time read the README first.
 #endif
-#if APIVERSNUM >= 10500
 #ifdef VDR_IS_SC_PATCHED
 #error You MUST NOT patch the VDR core. Next time read the README first.
 #endif
-#else //APIVERSNUM >= 10500
-#if !defined(VDR_IS_SC_PATCHED)
-#error You MUST patch the VDR core with the supplied patch. Next time read the README first.
-#endif
-#if VDR_IS_SC_PATCHED<402
-#error Your VDR core is patched with an outdated patch version. Please upgrade to the supplied version.
-#endif
-#endif //APIVERSNUM >= 10500
 #if APIVERSNUM<MINAPIVERSNUM
 #error Your VDR API version is too old. See README.
 #endif
@@ -1312,9 +1303,6 @@ bool cScPlugin::Start(void)
     }
     
   ScPlugin=this;
-#if APIVERSNUM < 10507
-  RegisterI18n(ScPhrases);
-#endif
   const char *cfgdir=ConfigDirectory(cfgsub);
   filemaps.SetCfgDir(cfgdir);
   cStructLoaders::SetCfgDir(cfgdir);
@@ -1331,9 +1319,6 @@ void cScPlugin::Stop(void)
   cScDevices::Shutdown();
   LogStatsDown();
   cSoftCAM::Shutdown();
-#if APIVERSNUM < 10507
-  RegisterI18n(NULL);
-#endif
   PRINTF(L_GEN_DEBUG,"SC cleanup done");
 }
 
