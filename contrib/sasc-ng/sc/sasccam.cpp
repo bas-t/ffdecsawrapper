@@ -25,6 +25,7 @@
 #include "include/vdr/dvbdevice.h"
 #include "include/vdr/channels.h"
 #include "cam.h"
+#include "device.h"
 #include "sasccam.h"
 #include "scsetup.h"
 
