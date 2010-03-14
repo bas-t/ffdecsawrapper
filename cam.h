@@ -24,7 +24,7 @@
 #include "data.h"
 #include "misc.h"
 
-//class cChannel;
+class cChannel;
 
 class cEcmHandler;
 class cEcmData;
