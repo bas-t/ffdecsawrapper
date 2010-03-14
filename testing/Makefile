@@ -77,10 +77,14 @@ testExtAU.o: testExtAU.c compat.h
 testExtAU: testExtAU.o $(SHAREDOBJS) $(NOBJS)
 	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) $(DYNLIBS) -o $@
 
+testINIT.o: testINIT.c compat.h
+testINIT: testINIT.o $(SHAREDOBJS) $(NOBJS)
+	$(CXX) $(CXXFLAGS) -rdynamic $^ $(LIBS) $(DYNLIBS) -o $@
+
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 clean:
 	@-rm -f *.o core* *~
-	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU
+	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU testINIT
 	@-rm -f filterhelper
 	@-rm -f dump.txt

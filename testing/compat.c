@@ -175,6 +175,7 @@ void cSoftCAM::SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on) {}
 void cSoftCAM::AddHook(int CardNum, cLogHook *hook) {}
 bool cSoftCAM::TriggerHook(int CardNum, int id) { return true; }
 void cSoftCAM::CaidsChanged(void) {}
+int cSoftCAM::FilterHandle(int CardNum) { return -1; }
 
 //
 //
