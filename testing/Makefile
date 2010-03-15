@@ -23,6 +23,17 @@ DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOUR
 APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
 
+### VDR version dependant
+
+# test VDR version
+BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
+# test if PlayTsVideo() exists (e.g. TSplay patch)
+BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(VDRDIR)/include/vdr/device.h))
+
+ifneq ($(BYVERS)$(BYTSPL),)
+  DEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+endif
+
 ### The object files (add further files here):
 
 OBJS = misc.o log.o override.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
