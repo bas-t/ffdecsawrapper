@@ -78,7 +78,9 @@ static cSystemLinkScVideoGuard2 staticInit;
 
 cSystemLinkScVideoGuard2::cSystemLinkScVideoGuard2(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
-{}
+{
+  Feature.NeedsSmartCard();
+}
 
 bool cSystemLinkScVideoGuard2::CanHandle(unsigned short SysId)
 {
