@@ -25,5 +25,6 @@ int main(int argc, char *argv[])
   cLogging::SetModuleOption(LCLASS(16,0x20<<5),false); // Viacsess L_SYS_DISASM
 
   getchar();
+  fflush(stdout);
   return 0;
 }
