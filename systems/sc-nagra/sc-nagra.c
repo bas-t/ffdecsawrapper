@@ -107,17 +107,18 @@ private:
   cRSA rsa;
   cBN camMod, camExp;
   IdeaKS sessKey;
-  unsigned char cardid[4], boxkey[8], signature[8];
+  unsigned int cardid;
+  unsigned char boxkey[8], signature[8];
   bool hasMod;
   //
-  void InitKey(unsigned char *key, const unsigned char *bk, const unsigned char *data);
+  void InitKey(unsigned char *key, const unsigned char *bk, unsigned int id);
   void Signature(unsigned char *sig, const unsigned char *key, const unsigned char *msg, int len);
 public:
   cCamCryptNagra(void);
-  void SetCardData(const unsigned char *id, const unsigned char *bk);
+  void SetCardData(unsigned int id, const unsigned char *bk, BIGNUM *exp);
   void SetCamMod(BIGNUM *m);
   bool HasCamMod(void) { return hasMod; }
-  bool DecryptDT08(const unsigned char *dt08, const unsigned char *irdid, BIGNUM *irdmod);
+  bool DecryptDT08(const unsigned char *dt08, unsigned int irdid, BIGNUM *irdmod);
   bool MakeSessionKey(unsigned char *out, const unsigned char *in);
   void DecryptCW(unsigned char *cw, const unsigned char *ecw1, const unsigned char *ecw2);
   };
@@ -125,13 +126,18 @@ public:
 cCamCryptNagra::cCamCryptNagra(void)
 {
   hasMod=false;
-  BN_set_word(camExp,3);
 }
 
-void cCamCryptNagra::SetCardData(const unsigned char *id, const unsigned char *bk)
+void cCamCryptNagra::SetCardData(unsigned int id, const unsigned char *bk, BIGNUM *exp)
 {
-  memcpy(cardid,id,sizeof(cardid));
+  cardid=id;
   memcpy(boxkey,bk,sizeof(boxkey));
+  BN_copy(camExp,exp);
+  if(LOG(L_SC_PROC)) {
+    unsigned char bb[4];
+    camExp.Put(bb,2);
+    LDUMP(L_SC_PROC,boxkey,sizeof(boxkey),"Active card data: CARDID: %08x EXP: %02x%02x BOXKEY:",cardid,bb[0],bb[1]);
+    }
 }
 
 void cCamCryptNagra::SetCamMod(BIGNUM *m)
@@ -141,14 +147,11 @@ void cCamCryptNagra::SetCamMod(BIGNUM *m)
   hasMod=true;
 }
 
-void cCamCryptNagra::InitKey(unsigned char *key, const unsigned char *bk, const unsigned char *data)
+void cCamCryptNagra::InitKey(unsigned char *key, const unsigned char *bk, unsigned int id)
 {
   memcpy(key,bk,8);
-  int d=UINT32_LE(data);
-  BYTE4_LE(key+8 , d);
-  BYTE4_LE(key+12,~d);
-  //memcpy(key+8,data,4);
-  //for(int i=0; i<4; i++) key[i+12]=~data[i];
+  BYTE4_BE(key+8 , id);
+  BYTE4_BE(key+12,~id);
 }
 
 void cCamCryptNagra::Signature(unsigned char *sig, const unsigned char *key, const unsigned char *msg, int len)
@@ -163,7 +166,7 @@ void cCamCryptNagra::Signature(unsigned char *sig, const unsigned char *key, con
   memcpy(sig,buff,8);
 }
 
-bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, const unsigned char *irdid, BIGNUM *irdmod)
+bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, unsigned int irdid, BIGNUM *irdmod)
 {
   unsigned char buff[72];
   if(rsa.RSA(buff,dt08+1,64,camExp,irdmod)!=64) return false;
@@ -181,8 +184,8 @@ bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, const unsigned char 
 
   memcpy(signature,buff,8);
   LDUMP(L_SC_PROC,signature,8,"signature");
-  memset(buff+0,0,4);
-  memcpy(buff+4,cardid,4);
+  BYTE4_BE(buff  ,0);
+  BYTE4_BE(buff+4,cardid);
   Signature(buff,key,buff,72);
   LDUMP(L_SC_PROC,buff,8,"check sig");
   if(memcmp(signature,buff,8)) {
@@ -197,23 +200,28 @@ bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, const unsigned char 
 bool cCamCryptNagra::MakeSessionKey(unsigned char *out, const unsigned char *camdata)
 {
   if(!hasMod) return false;
+  if(LOG(L_SC_PROC)) {
+    unsigned char bb[64];
+    camMod.Put(bb,sizeof(bb));
+    LDUMP(L_SC_PROC,bb,sizeof(bb),"Sessionkey negotiation CAMMOD:");
+    }
   //decrypt $2A data here and prepare $2B reply
   if(rsa.RSA(out,camdata,64,camExp,camMod)!=64) return false;
-  LDUMP(L_SC_PROC,out,64,"CMD 2A after RSA");
+  LDUMP(L_SC_PROC,out,64,"CMD 2A after RSA:");
 
   unsigned char key[16], sess[16];
   InitKey(key,signature,cardid);
-  LDUMP(L_SC_PROC,key,16,"first IDEA key");
+  LDUMP(L_SC_PROC,key,16,"first IDEA key: ");
   Signature(sess,key,out,32);
   memcpy(key,sess,8);
   memcpy(key+8,sess,8);
-  LDUMP(L_SC_PROC,key,16,"second IDEA key");
+  LDUMP(L_SC_PROC,key,16,"second IDEA key:");
   Signature(sess+8,key,out,32);
-  LDUMP(L_SC_PROC,sess,16,"SESSION KEY");
+  LDUMP(L_SC_PROC,sess,16,"SESSION KEY:    ");
   idea.SetDecKey(sess,&sessKey);
 
   if(rsa.RSA(out,out,64,camExp,camMod)!=64) return false;
-  LDUMP(L_SC_PROC,out,64,"CMD 2B data");
+  LDUMP(L_SC_PROC,out,64,"CMD 2B data:");
   return true;
 }
 
@@ -227,14 +235,27 @@ void cCamCryptNagra::DecryptCW(unsigned char *cw, const unsigned char *ecw1, con
 
 // -- cSmartCardDataNagra ------------------------------------------------------
 
+struct SecondaryKey {
+  unsigned char irdid[4];
+  unsigned char free[8];
+  unsigned char exp[2];
+  unsigned char y1[8];
+  unsigned char mod[64];
+  unsigned char y2[8];
+  unsigned char cs[2];
+  } __attribute__((packed));
+
 class cSmartCardDataNagra : public cSmartCardData {
+private:
+  unsigned short CRC16(const unsigned char *mem, int len, bool reverse);
 public:
-  unsigned char cardid[4], bk[8];
-  cBN mod;
+  unsigned int cardid;
+  unsigned char bk[8];
+  cBN exp, mod;
   bool isIrdMod;
   //
   cSmartCardDataNagra(void);
-  cSmartCardDataNagra(const unsigned char *id, bool irdmod);
+  cSmartCardDataNagra(unsigned int id, bool irdmod);
   virtual bool Parse(const char *line);
   virtual bool Matches(cSmartCardData *param);
   };
@@ -242,46 +263,87 @@ public:
 cSmartCardDataNagra::cSmartCardDataNagra(void)
 :cSmartCardData(SC_ID) {}
 
-cSmartCardDataNagra::cSmartCardDataNagra(const unsigned char *id, bool irdmod)
+cSmartCardDataNagra::cSmartCardDataNagra(unsigned int id, bool irdmod)
 :cSmartCardData(SC_ID)
 {
-  memcpy(cardid,id,sizeof(cardid));
+  cardid=id;
   isIrdMod=irdmod;
 }
 
 bool cSmartCardDataNagra::Matches(cSmartCardData *param)
 {
   cSmartCardDataNagra *cd=(cSmartCardDataNagra *)param;
-  return !memcmp(cd->cardid,cardid,sizeof(cardid) && cd->isIrdMod==isIrdMod);
+  return cd->cardid==cardid && cd->isIrdMod==isIrdMod;
 }
 
 bool cSmartCardDataNagra::Parse(const char *line)
 {
+  bool isSK=false;
+  int dlen=64;
+  BN_set_word(exp,3);
   line=skipspace(line);
-  if(GetHex(line,cardid,sizeof(cardid))!=sizeof(cardid)) {
+  unsigned char id[4];
+  if(GetHex(line,id,sizeof(id))!=sizeof(id)) {
     PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: card id");
     return false;
     }
-  if(GetHex(line,bk,sizeof(bk))!=sizeof(bk)) {
+  cardid=UINT32_BE(id);
   line=skipspace(line);
-    PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: boxkey");
-    return false;
-    }
-  line=skipspace(line);
-  if(!strncasecmp(line,"IRDMOD",6)) { isIrdMod=true; line+=6; }
-  else if(!strncasecmp(line,"CARDMOD",7)) { isIrdMod=false; line+=7; }
+  if(!strncasecmp(line,"SK",2)) { isSK=true; dlen=96; line+=2; }
   else {
-    PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: IRDMOD/CARDMOD");
-    return false;
+    if(GetHex(line,bk,sizeof(bk))!=sizeof(bk)) {
+      PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: boxkey");
+      return false;
+      }
+    line=skipspace(line);
+    if(!strncasecmp(line,"IRDMOD",6)) { isIrdMod=true; line+=6; }
+    else if(!strncasecmp(line,"CARDMOD",7)) { isIrdMod=false; line+=7; }
+    else {
+      PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: IRDMOD/CARDMOD");
+      return false;
+      }
     }
   line=skipspace(line);
-  unsigned char buff[72];
-  if(GetHex(line,buff,64)!=64) {
-    PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: modulus");
+
+  unsigned char *buff=AUTOMEM(dlen);
+  if(GetHex(line,buff,dlen)!=dlen) {
+    PRINTF(L_CORE_LOAD,"smartcarddatanagra: format error: data block");
     return false;
     }
-  BN_bin2bn(buff,64,mod);
+  if(!isSK) {
+    mod.Get(buff,64);
+    }
+  else {
+    struct SecondaryKey *sk=(struct SecondaryKey *)buff;
+    if(UINT16_BE(sk->cs)!=CRC16(buff,sizeof(*sk)-sizeof(sk->cs),false)) {
+      PRINTF(L_CORE_LOAD,"smartcarddatanagra: secondary key CRC failed");
+      return false;
+      }
+    unsigned short e=UINT16_BE(sk->exp);
+    if(e!=0x0003 && e!=CRC16(buff,12,false)) BN_set_word(exp,e);
+    xxor(bk,sizeof(bk),sk->y1,sk->y2);
+    mod.Get(sk->mod,sizeof(sk->mod));
+    }
   return true;
+}
+
+#define CRC_POLY 0x1021 // CRC-16(XMODEM) Polynomial: x16 + x12 + x5 + 1
+#define CRC_INIT 0x0000
+
+unsigned short cSmartCardDataNagra::CRC16(const unsigned char *mem, int len, bool reverse)
+{
+  int index=0, dir=1;
+  if(reverse) { index=len-1; dir=-1; }
+  unsigned short crc=CRC_INIT;
+  for(int i=0; i<len; i++) {
+    crc^=(unsigned short)(mem[index]<<8);
+    index+=dir;
+    for(int j=0; j<8; j++) {
+      if((crc&0x8000)) crc=(unsigned short)(((crc<<1)&0xFFFF)^CRC_POLY);
+      else             crc=(unsigned short)( (crc<<1)&0xFFFF);
+      }
+    }
+  return(crc);
 }
 
 // -- cSmartCardNagra -----------------------------------------------------------------
@@ -305,7 +367,8 @@ bool cSmartCardDataNagra::Parse(const char *line)
 
 class cSmartCardNagra : public cSmartCard, public cIdSet, private cCamCryptNagra {
 private:
-  unsigned char buff[MAX_LEN+16], state[3], cardId[4], irdId[4], rominfo[15];
+  unsigned char buff[MAX_LEN+16], state[3], rominfo[15];
+  unsigned int cardId, irdId;
   int caid, provId, block;
   bool isTiger, isT14Nagra, swapCW;
   //
@@ -347,7 +410,7 @@ bool cSmartCardNagra::SetIFS(unsigned char size)
   buf[0]=0x21; buf[1]=0xC1; buf[2]=0x01;
   // Information Field size
   buf[3]=size; buf[4]=XorSum(buf,4);
-  PRINTF(L_SC_INIT,"Setting IFS to %x",size);
+  PRINTF(L_SC_INIT,"Setting IFS to 0x%02X",size);
   if(SerWrite(buf,5)!=5) {
     PRINTF(L_SC_ERROR,"failed to write IFS command");
     return false;
@@ -393,7 +456,7 @@ bool cSmartCardNagra::Init(void)
     PRINTF(L_SC_INIT,"detected nagra tiger card");
     if(!SetIFS(0xFE)) return false;
     memcpy(rominfo,atr->hist,sizeof(rominfo));
-    memset(cardId,0xFF,sizeof(cardId));
+    cardId=0xFFFFFFFF;
     isTiger=true;
     }
   else if(!memcmp(atr->hist,atrIRDET,sizeof(atrIRDET))) {
@@ -426,7 +489,8 @@ bool cSmartCardNagra::Init(void)
   if(!isTiger) {
     GetCardStatus();
     if(!DoBlkCmd(0x12,0x02,0x92,0x06) || !Status()) return false;
-    memcpy(cardId,buff+5,4);
+    cardId=UINT32_BE(buff+5);
+    SetCard(new cCardNagra2(buff+5));
 
     if(!GetDataType(DT01,0x0E)) return false;
     GetCardStatus();
@@ -446,14 +510,13 @@ bool cSmartCardNagra::Init(void)
     if(!GetDataType(DT06,0x16)) return false;
     GetCardStatus();
     }
-  SetCard(new cCardNagra2(cardId));
   if(provId==0x0401 || provId==0x3411) swapCW=true;
 
   if(!HasCamMod()) {
     cSmartCardDataNagra cd(cardId,false);
     cSmartCardDataNagra *entry=(cSmartCardDataNagra *)smartcards.FindCardData(&cd);
     if(entry) {
-      SetCardData(cardId,entry->bk);
+      SetCardData(cardId,entry->bk,entry->exp);
       SetCamMod(entry->mod);
       }
     else {
@@ -534,11 +597,9 @@ bool cSmartCardNagra::ParseDataType(unsigned char dt)
       {
       provId=(buff[10]*256)|buff[11];
       caid=SYSTEM_NAGRA+buff[14];
-      memcpy(irdId,buff+17,4);
-      char id[12];
-      LDUMP(L_SC_INIT,irdId,4,"CAID: %04X PROV: %04X, IRD ID:",caid,provId);
-      HexStr(id,irdId,sizeof(irdId));
-      infoStr.Printf("CAID: %04X PROV: %04X\nIRD ID: %s\n",caid,provId,id);
+      irdId=UINT32_BE(buff+17);
+      PRINTF(L_SC_INIT,"CAID: %04x PROV: %04x IRD ID: %08x",caid,provId,irdId);
+      infoStr.Printf("CAID: %04x PROV: %04x\nIRD ID: %08x\n",caid,provId,irdId);
       break;
       }
     case TIERS:
@@ -559,7 +620,7 @@ bool cSmartCardNagra::ParseDataType(unsigned char dt)
         cSmartCardDataNagra cd(cardId,true);
         cSmartCardDataNagra *entry=(cSmartCardDataNagra *)smartcards.FindCardData(&cd);
         if(entry) {
-          SetCardData(cardId,entry->bk);
+          SetCardData(cardId,entry->bk,entry->exp);
           return DecryptDT08(buff+15,irdId,entry->mod);
           }
         else {
