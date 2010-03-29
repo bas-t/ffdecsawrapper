@@ -118,7 +118,7 @@ public:
   void SetCardData(unsigned int id, const unsigned char *bk, BIGNUM *exp);
   void SetCamMod(BIGNUM *m);
   bool HasCamMod(void) { return hasMod; }
-  bool DecryptDT08(const unsigned char *dt08, unsigned int irdid, BIGNUM *irdmod);
+  bool DecryptDT08(const unsigned char *dt08, unsigned int irdid, cBN *irdmod, bool fakeid);
   bool MakeSessionKey(unsigned char *out, const unsigned char *in);
   void DecryptCW(unsigned char *cw, const unsigned char *ecw1, const unsigned char *ecw2);
   };
@@ -166,10 +166,15 @@ void cCamCryptNagra::Signature(unsigned char *sig, const unsigned char *key, con
   memcpy(sig,buff,8);
 }
 
-bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, unsigned int irdid, BIGNUM *irdmod)
+bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, unsigned int irdid, cBN *irdmod, bool fakeid)
 {
+  if(LOG(L_SC_PROC)) {
+    unsigned char bb[64];
+    irdmod->Put(bb,sizeof(bb));
+    LDUMP(L_SC_PROC,bb,sizeof(bb),"DT08 decrypt IRDID: %08x IRDMOD:",irdid);
+    }
   unsigned char buff[72];
-  if(rsa.RSA(buff,dt08+1,64,camExp,irdmod)!=64) return false;
+  if(rsa.RSA(buff,dt08+1,64,camExp,*irdmod)!=64) return false;
   memcpy(buff+64,dt08+1+64,8);
   buff[63]|=dt08[0]&0x80;
   LDUMP(L_SC_PROC,buff,72,"DT08 after RSA");
@@ -185,7 +190,7 @@ bool cCamCryptNagra::DecryptDT08(const unsigned char *dt08, unsigned int irdid, 
   memcpy(signature,buff,8);
   LDUMP(L_SC_PROC,signature,8,"signature");
   BYTE4_BE(buff  ,0);
-  BYTE4_BE(buff+4,cardid);
+  BYTE4_BE(buff+4,fakeid?0xFFFFFFFF:cardid);
   Signature(buff,key,buff,72);
   LDUMP(L_SC_PROC,buff,8,"check sig");
   if(memcmp(signature,buff,8)) {
@@ -496,7 +501,7 @@ bool cSmartCardNagra::Init(void)
     GetCardStatus();
     if(!GetDataType(IRDINFO,0x39)) return false;
     GetCardStatus();
-    if(!GetDataType(CAMDATA,0x55,0x10)) return false;
+    if(!GetDataType(CAMDATA,0x55)) return false;
     GetCardStatus();
     if(!GetDataType(DT04,0x44)) return false;
     GetCardStatus();
@@ -510,7 +515,6 @@ bool cSmartCardNagra::Init(void)
     if(!GetDataType(DT06,0x16)) return false;
     GetCardStatus();
     }
-  if(provId==0x0401 || provId==0x3411) swapCW=true;
 
   if(!HasCamMod()) {
     cSmartCardDataNagra cd(cardId,false);
@@ -582,7 +586,7 @@ bool cSmartCardNagra::GetDataType(unsigned char dt, int len, int shots)
      PRINTF(L_SC_ERROR,"failed to get datatype %02X",dt);
      return false;
      }
-    if(buff[5]==0 && !isdt8) break;
+    if(buff[5]==0) break;
     if(!ParseDataType(dt&0x0F)) return false;
     if(isdt8 && buff[14]==0x49) break;
     dt|=0x80; // get next item
@@ -596,10 +600,11 @@ bool cSmartCardNagra::ParseDataType(unsigned char dt)
     case IRDINFO:
       {
       provId=(buff[10]*256)|buff[11];
+      if(provId==0x0401 || provId==0x3411) swapCW=true;
       caid=SYSTEM_NAGRA+buff[14];
       irdId=UINT32_BE(buff+17);
-      PRINTF(L_SC_INIT,"CAID: %04x PROV: %04x IRD ID: %08x",caid,provId,irdId);
-      infoStr.Printf("CAID: %04x PROV: %04x\nIRD ID: %08x\n",caid,provId,irdId);
+      PRINTF(L_SC_INIT,"CAID: %04x PROV: %04x CARD ID: %08x IRD ID: %08x",caid,provId,cardId,irdId);
+      infoStr.Printf("CAID: %04x PROV: %04x\nCARD ID: %08x\nIRD ID: %08x\n",caid,provId,cardId,irdId);
       break;
       }
     case TIERS:
@@ -621,7 +626,7 @@ bool cSmartCardNagra::ParseDataType(unsigned char dt)
         cSmartCardDataNagra *entry=(cSmartCardDataNagra *)smartcards.FindCardData(&cd);
         if(entry) {
           SetCardData(cardId,entry->bk,entry->exp);
-          return DecryptDT08(buff+15,irdId,entry->mod);
+          return DecryptDT08(buff+15,irdId,&entry->mod,swapCW);
           }
         else {
           PRINTF(L_SC_ERROR,"can't find IRD modulus");
