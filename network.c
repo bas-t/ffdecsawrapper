@@ -192,7 +192,7 @@ bool cNetSocket::Connect(const char *Hostname, int Port, int timeout)
       }
     else PRINTF(L_GEN_ERROR,"socket: connect failed: %s",*StrError(errno));
 
-    if(connected) { Activity(); nw.Up(this); Unlock(); return true; }
+    if(connected) { Activity(); Unlock(); nw.Up(this); return true; }
     }
   Unlock();
   Disconnect();
@@ -216,7 +216,7 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
     do { r=bind(sd,(struct sockaddr *)&socketAddr,sizeof(socketAddr)); } while(r<0 && errno==EINTR);
     if(r==0) {
       connected=true;
-      Activity(); nw.Up(this); Unlock();
+      Activity(); Unlock(); nw.Up(this);
       return true;
       }
     else PRINTF(L_GEN_ERROR,"socket: bind failed: %s",*StrError(errno));
@@ -228,8 +228,8 @@ bool cNetSocket::Bind(const char *Hostname, int Port)
 
 void cNetSocket::Disconnect(void)
 {
-  cMutexLock lock(this);
   nw.Down(this);
+  cMutexLock lock(this);
   if(sd>=0) { close(sd); sd=-1; }
   quietlog=connected=false;
 }
