@@ -56,7 +56,7 @@
 #include <linux/cdev.h>
 #include <linux/platform_device.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 #include <linux/sched.h>
 #endif
 
