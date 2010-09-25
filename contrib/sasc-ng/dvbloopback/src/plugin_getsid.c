@@ -457,10 +457,10 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
   pfd.events = POLLIN;
   pfd.revents = 0;
   while(! done) {
-    poll(&pfd, 1, timeout);
+    if (poll(&pfd, 1, timeout) <= 0) continue;
     if ((size = read(pat.patfd, pes, sizeof(pes))) < 0) {
-      dprintf0("start: read pes returned err: %d\n", errno);
-      perror("start: read pes returned");
+      dprintf0("start: pat read pes returned err: %d\n", errno);
+      perror("start: pat read pes returned");
       close(pat.patfd);
       free_pat(&pat);
       return 1;
@@ -504,10 +504,10 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
       done = 0;
       int nit_retries = 0; 
       while(done <= 0) { 
-        poll(&pfd, 1, timeout);
+        if (poll(&pfd, 1, timeout) <= 0) continue;
         if ((size = read(fd, pes, sizeof(pes))) < 0) {
-          dprintf0("start: read pes returned err: %d\n", errno);
-          perror("start: read pes returned");
+          dprintf0("start: nit read pes returned err: %d\n", errno);
+          perror("start: nit read pes returned");
         }
         done = read_nit(pes, &sid_data->nit, size);
         if (done <= 0) 
