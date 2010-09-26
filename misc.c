@@ -264,6 +264,7 @@ void cSimpleListBase::Del(cSimpleItem *Item, bool Del)
   if(first==Item) {
     first=Item->next;
     if(!first) last=0;
+    count--;
     }
   else {
     cSimpleItem *item=first;
@@ -271,12 +272,12 @@ void cSimpleListBase::Del(cSimpleItem *Item, bool Del)
       if(item->next==Item) {
         item->next=Item->next;
         if(!item->next) last=item;
+        count--;
         break;
         }
       item=item->next;
       }
     }
-  count--;
   if(Del) delete Item;
 }
 
