@@ -212,7 +212,7 @@ bool cCamCryptNagra::MakeSessionKey(unsigned char *out, const unsigned char *cam
     }
   //decrypt $2A data here and prepare $2B reply
   if(rsa.RSA(out,camdata,64,camExp,camMod)!=64) return false;
-  LDUMP(L_SC_PROC,out,64,"CMD 2A after RSA:");
+  LDUMP(L_SC_PROC,out,64,"CMD 2A/26 after RSA:");
 
   unsigned char key[16], sess[16];
   InitKey(key,signature,cardid);
@@ -226,7 +226,7 @@ bool cCamCryptNagra::MakeSessionKey(unsigned char *out, const unsigned char *cam
   idea.SetDecKey(sess,&sessKey);
 
   if(rsa.RSA(out,out,64,camExp,camMod)!=64) return false;
-  LDUMP(L_SC_PROC,out,64,"CMD 2B data:");
+  LDUMP(L_SC_PROC,out,64,"CMD 2B/27 data:");
   return true;
 }
 
@@ -375,7 +375,7 @@ private:
   unsigned char buff[MAX_LEN+16], state[3], rominfo[15];
   unsigned int cardId, irdId;
   int caid, provId, block;
-  bool isTiger, isT14Nagra, swapCW;
+  bool isTiger, isT14Nagra, isN3, swapCW;
   //
   bool GetCardStatus(void);
   bool GetDataType(unsigned char dt, int len, int shots=MAX_REC);
@@ -444,7 +444,7 @@ bool cSmartCardNagra::CanHandle(unsigned short CaId)
 
 bool cSmartCardNagra::Init(void)
 {
-  block=0; isTiger=isT14Nagra=swapCW=false;
+  block=0; isTiger=isT14Nagra=isN3=swapCW=false;
   caid=SYSTEM_NAGRA;
   ResetIdSet();
 
@@ -453,7 +453,8 @@ bool cSmartCardNagra::Init(void)
   static const unsigned char atrNCMED[] = { 'N','C','M','E','D' };
   static const unsigned char atrIRDET[] = { 'I','R','D','E','T','O' };
   if(!memcmp(atr->hist,atrDNASP,sizeof(atrDNASP))) {
-    PRINTF(L_SC_INIT,"detected native T1 nagra card");
+    if(atr->hist[5]=='2' && atr->hist[6]=='4') isN3=true;
+    PRINTF(L_SC_INIT,"detected native T1 nagra card (N%d Mode)",isN3?3:2);
     if(!SetIFS(0xFE)) return false;
     memcpy(rominfo,atr->hist,sizeof(rominfo));
     }
@@ -536,10 +537,20 @@ bool cSmartCardNagra::Init(void)
 bool cSmartCardNagra::DoCamExchange(void)
 {
   if(!isTiger) {
-    if(!DoBlkCmd(0x2A,0x02,0xAA,0x42) || !Status()) return false;
-    unsigned char res[64];
+    // N3 cam session negotiation start
+    if(isN3 && (!DoBlkCmd(0x29,0x02,0xA9,0x04) || !Status())) return false;
+
+    unsigned char ext[5];
+    BYTE4_BE(ext,irdId); ext[4]=0; // tuner
+    if((!isN3 && !DoBlkCmd(0x2A,0x02,0xAA,0x42)) ||
+       ( isN3 && !DoBlkCmd(0x26,0x07,0xA6,0x42,ext)) ||
+       !Status()) return false;
+    unsigned char res[64+5];
     if(!MakeSessionKey(res,buff+5)) return false;
-    if(!DoBlkCmd(0x2B,0x42,0xAB,0x02,res) ||
+    memcpy(res+64,ext,5);
+    cCondWait::SleepMs(500);
+    if((!isN3 && !DoBlkCmd(0x2B,0x42,0xAB,0x02,res)) ||
+       ( isN3 && !DoBlkCmd(0x27,0x47,0xA7,0x02,res)) ||
        !Status() ||
        !GetCardStatus()) return false;
     if(SENDDATETIME())
@@ -654,11 +665,15 @@ time_t cSmartCardNagra::Date(const unsigned char *data, char *buf, int len)
 bool cSmartCardNagra::Decode(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)
 {
   if(!isTiger) {
-    if(!DoBlkCmd(data[3],data[4]+2,0x87,0x02,data+3+2) || !Status()) {
-      PRINTF(L_SC_ERROR,"ECM cmd failed, retrying");
-      if(!DoBlkCmd(data[3],data[4]+2,0x87,0x02,data+3+2) || !Status()) {
-        PRINTF(L_SC_ERROR,"ECM cmd failed");
-        return false;
+    unsigned char pkt[256+16];
+    memset(pkt,0,sizeof(pkt));
+    memcpy(pkt,data+3+2,data[4]);
+    for(int i=1; i>=0; i--) {
+      if((!isN3 && !DoBlkCmd(data[3],data[4]+2,0x87,0x02,pkt)) ||
+         ( isN3 && !DoBlkCmd(data[3]+1,data[4]+5+2,0x88,0x04,pkt)) ||
+         !Status()) {
+        PRINTF(L_SC_ERROR,"ECM cmd failed%s",(i>0)?", retrying":"");
+        if(i==0) return false;
         }
       }
     cCondWait::SleepMs(10);
