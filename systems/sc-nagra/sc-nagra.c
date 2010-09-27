@@ -669,12 +669,12 @@ bool cSmartCardNagra::Decode(const cEcmInfo *ecm, const unsigned char *data, uns
     memset(pkt,0,sizeof(pkt));
     memcpy(pkt,data+3+2,data[4]);
     for(int i=1; i>=0; i--) {
-      if((!isN3 && !DoBlkCmd(data[3],data[4]+2,0x87,0x02,pkt)) ||
-         ( isN3 && !DoBlkCmd(data[3]+1,data[4]+5+2,0x88,0x04,pkt)) ||
-         !Status()) {
-        PRINTF(L_SC_ERROR,"ECM cmd failed%s",(i>0)?", retrying":"");
-        if(i==0) return false;
-        }
+      if(((!isN3 && DoBlkCmd(data[3],data[4]+2,0x87,0x02,pkt)) ||
+          ( isN3 && DoBlkCmd(data[3]+1,data[4]+5+2,0x88,0x04,pkt))) &&
+          Status())
+        break;
+      PRINTF(L_SC_ERROR,"ECM cmd failed%s",(i>0)?", retrying":"");
+      if(i==0) return false;
       }
     cCondWait::SleepMs(10);
     for(int retry=0; !GetCardStatus() && retry<5; retry++) cCondWait::SleepMs(5);
