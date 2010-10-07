@@ -306,8 +306,8 @@ public:
   static int AddrMode(const unsigned char *data);
   static bool IsSA(const unsigned char *data);
   static bool HasAddr(const unsigned char *data, const unsigned char *a);
-  static const unsigned char *PayloadStart(const unsigned char *data);
-  static int PayloadSize(const unsigned char *data);
+  static const unsigned char *PayloadStart(const unsigned char *data, const unsigned char *a);
+  static int PayloadSize(const unsigned char *data, const unsigned char *a);
   static int Assemble(cAssembleData *ad, const unsigned char *a);
   };
 

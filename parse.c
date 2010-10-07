@@ -746,26 +746,44 @@ bool cParseNDS::HasAddr(const unsigned char *data, const unsigned char *a)
   return false;
 }
 
-const unsigned char *cParseNDS::PayloadStart(const unsigned char *data)
+const unsigned char *cParseNDS::PayloadStart(const unsigned char *data, const unsigned char *a)
 {
-  //return &data[4 + NumAddr(data)*4 + 2];
   if(AddrMode(data)==0) return &data[4];
-  else                  return &data[4+NumAddr(data)*4];
+  else {
+    int l;
+    for(l=NumAddr(data)-1; l>=0; l--) {
+      if(!memcmp(&data[l*4+4],a,AddrMode(data)+1)) break;
+      }
+    const unsigned char *pl;
+    pl=&data[4+NumAddr(data)*4];  // skip address list
+    pl+=2;                        // skip 00 00 separator
+    while(l--) {
+      pl++;                       // skip the 1st bitmap len
+      pl+=2+pl[1];                // skip IRD-EMM part, 02 00 or 02 06 xx aabbccdd yy
+      pl+=1+*pl;                  // skip sub-EMM payload
+      if (*pl == 0x00) pl++;      // skip sub-EMM separator
+      }
+    pl++;                         // skip the 1st bitmap len
+    return pl;
+    }
 }
 
-int cParseNDS::PayloadSize(const unsigned char *data)
+int cParseNDS::PayloadSize(const unsigned char *data, const unsigned char *a)
 {
-  //return emm[2]+emm[3]+4-1+5;
   int l=SCT_LEN(data);
   if(AddrMode(data)==0) return l-(4);
-  else                  return l-(4+NumAddr(data)*4);
+  else {
+    const unsigned char *pl=cParseNDS::PayloadStart(data,a); //points to 02 xx yy
+    pl+=2+pl[1];
+    return *pl;
+    }
 }
 
 int cParseNDS::Assemble(cAssembleData *ad, const unsigned char *a)
 {
   const unsigned char *data=ad->Data();
-  int len=cParseNDS::PayloadSize(data);
-  const unsigned char *pl=cParseNDS::PayloadStart(data);
+  int len=cParseNDS::PayloadSize(data,a);
+  const unsigned char *pl=cParseNDS::PayloadStart(data,a);
   switch(cParseNDS::AddrMode(data)) {
     case 0:
      {
@@ -796,12 +814,13 @@ int cParseNDS::Assemble(cAssembleData *ad, const unsigned char *a)
     case 2:
     case 3:
       {
-      unsigned char *ass=(unsigned char *)malloc(len+8); if(!ass) return -1; // ignore
+      unsigned char *ass=(unsigned char *)malloc(len+4+2+8); if(!ass) return -1; // ignore
       ass[0]=data[0];
-      ass[3]=data[3]&0x0F;
+      ass[3]=data[3]&0xCF;
       memcpy(&ass[4],a,4);
-      memcpy(&ass[8],pl,len);
-      SetSctLen(ass,len+5);
+      memset(&ass[8],0,2);
+      memcpy(&ass[10],pl-1,len+4);
+      SetSctLen(ass,len+4+2+5);
       ad->SetAssembled(ass);
       return 1; // assembled
       }
