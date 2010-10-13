@@ -756,14 +756,16 @@ const unsigned char *cParseNDS::PayloadStart(const unsigned char *data, const un
       }
     const unsigned char *pl;
     pl=&data[4+NumAddr(data)*4];  // skip address list
-    pl+=2;                        // skip 00 00 separator
-    while(l--) {
+    if(*pl!=0x02 && *pl!=0x07) {
+      pl+=2;                      // skip 00 00 separator
       pl++;                       // skip the 1st bitmap len
+      }
+    while(l--) {
       pl+=2+pl[1];                // skip IRD-EMM part, 02 00 or 02 06 xx aabbccdd yy
       pl+=1+*pl;                  // skip sub-EMM payload
       if (*pl == 0x00) pl++;      // skip sub-EMM separator
+      pl++;                       // skip the 1st bitmap len
       }
-    pl++;                         // skip the 1st bitmap len
     return pl;
     }
 }
@@ -814,13 +816,12 @@ int cParseNDS::Assemble(cAssembleData *ad, const unsigned char *a)
     case 2:
     case 3:
       {
-      unsigned char *ass=(unsigned char *)malloc(len+4+2+8); if(!ass) return -1; // ignore
+      unsigned char *ass=(unsigned char *)malloc(len+3+8); if(!ass) return -1; // ignore
       ass[0]=data[0];
       ass[3]=data[3]&0xCF;
       memcpy(&ass[4],a,4);
-      memset(&ass[8],0,2);
-      memcpy(&ass[10],pl-1,len+4);
-      SetSctLen(ass,len+4+2+5);
+      memcpy(&ass[8],pl,len+3);
+      SetSctLen(ass,len+3+5);
       ad->SetAssembled(ass);
       return 1; // assembled
       }
