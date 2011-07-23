@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.7.10\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2010-02-21 11:45+0200\n"
+"POT-Creation-Date: 2010-12-12 13:24+0100\n"
 "PO-Revision-Date: 2007-08-27 12:45+0200\n"
 "Last-Translator: somebody\n"
 "Language-Team: somebody\n"
@@ -148,6 +148,9 @@ msgstr "Teikti pirmenybę vietinėm sistemoms"
 msgid "ECM cache"
 msgstr "Laikonoji ECM saugykla (cache)"
 
+msgid "TS buffer size MB"
+msgstr ""
+
 msgid "Active on DVB card"
 msgstr "Palaikymas įjungtas DVB kortoje"
 
@@ -175,44 +178,8 @@ msgstr "Programiškai emuliuojamas dekodavimo modulis"
 msgid "undisclosed key"
 msgstr "nežinomas raktas"
 
-msgid "stream"
-msgstr "srautas"
-
-msgid "tps.bin"
-msgstr "tps.bin"
-
-msgid "Viaccess: TPS updates from"
-msgstr "Viaccess: TPS atnaujinimai imami iš"
-
-msgid "don't touch"
-msgstr "neliesti"
-
-msgid "disable"
-msgstr "išjungti"
-
-msgid "SC-Viaccess: Parental lock"
-msgstr "SC-Viaccess: Tėvų užraktas"
-
 msgid "Cardclient: connect immediately"
 msgstr "Programinė kortelė: prisijungti tučtuojau"
-
-msgid "allow ALL"
-msgstr "leisti VISKĄ"
-
-msgid "block UNIQUE"
-msgstr "blokuoti UNIQUE"
-
-msgid "block SHARED"
-msgstr "blokuoti SHARED"
-
-msgid "block ALL"
-msgstr "blokuoti VISUS"
-
-msgid "SC-Seca: EMM updates"
-msgstr "SC-Seca: EMM atnaujinimai"
-
-msgid "SC-Cryptoworks: Parental rating"
-msgstr "SC-Cryptoworks: Tėvų kodo reitingas"
 
 msgid "Nagra: min. ECM processing time"
 msgstr "Nagra: min. ECM apdorojimo laikas"
@@ -232,5 +199,41 @@ msgstr "Nagra2: AUXserver'io portas"
 msgid "Nagra2: AUXserver password"
 msgstr "Nagra2: AUXserver'io slapyvardis"
 
+msgid "don't touch"
+msgstr "neliesti"
+
+msgid "disable"
+msgstr "išjungti"
+
+msgid "SC-Cryptoworks: Parental rating"
+msgstr "SC-Cryptoworks: Tėvų kodo reitingas"
+
 msgid "SC-Nagra: use T14 Nagra mode"
 msgstr "SC-Nagra: naudoti Nagra T14 ręžimą"
+
+msgid "allow ALL"
+msgstr "leisti VISKĄ"
+
+msgid "block UNIQUE"
+msgstr "blokuoti UNIQUE"
+
+msgid "block SHARED"
+msgstr "blokuoti SHARED"
+
+msgid "block ALL"
+msgstr "blokuoti VISUS"
+
+msgid "SC-Seca: EMM updates"
+msgstr "SC-Seca: EMM atnaujinimai"
+
+msgid "SC-Viaccess: Parental lock"
+msgstr "SC-Viaccess: Tėvų užraktas"
+
+msgid "stream"
+msgstr "srautas"
+
+msgid "tps.bin"
+msgstr "tps.bin"
+
+msgid "Viaccess: TPS updates from"
+msgstr "Viaccess: TPS atnaujinimai imami iš"
