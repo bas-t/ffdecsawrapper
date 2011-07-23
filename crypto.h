@@ -90,12 +90,12 @@ class cAES {
 private:
   bool active;
   AES_KEY dkey, ekey;
-protected:
-  void SetKey(const unsigned char *key);
-  bool Decrypt(unsigned char *data, int len) const ;
-  int Encrypt(const unsigned char *data, int len, unsigned char *crypt) const;
 public:
   cAES(void);
+  void SetKey(const unsigned char *key);
+  bool Decrypt(unsigned char *data, int len) const ;
+  bool Decrypt(const unsigned char *data, int len, unsigned char *decrypt) const;
+  int Encrypt(const unsigned char *data, int len, unsigned char *crypt) const;
   };
 
 // ----------------------------------------------------------------
@@ -120,6 +120,7 @@ public:
   void SetDecKey(const unsigned char *key, IdeaKS *ks) const;
   void Decrypt(unsigned char *data, int len, IdeaKS *ks, unsigned char *iv) const;
   int Encrypt(const unsigned char *data, int len, unsigned char *crypt, IdeaKS *ks, unsigned char *iv) const;
+  void EcbEncrypt(const unsigned char *data, int len, unsigned char *crypt, IdeaKS *ks) const;
   };
 
 // ----------------------------------------------------------------
@@ -132,6 +133,23 @@ public:
   int RSA(unsigned char *out, const unsigned char *in, int n, const BIGNUM *exp, const BIGNUM *mod, bool LE=true) const;
   int RSA(BIGNUM *out, const unsigned char *in, int n, const BIGNUM *exp, const BIGNUM *mod, bool LE=true) const;
   int RSA(unsigned char *out, int len, BIGNUM *in, const BIGNUM *exp, const BIGNUM *mod, bool LE=true) const;
+  };
+
+// ----------------------------------------------------------------
+
+#define RC6_ROUNDS	20
+#define RC6_MAX		(RC6_ROUNDS*2+4)
+
+class cRC6 {
+private:
+  unsigned int key[RC6_MAX];
+  //
+  unsigned int rol(unsigned int v, unsigned int cnt);
+  unsigned int ror(unsigned int v, unsigned int cnt);
+public:
+  void SetKey(const unsigned char *Key, int len);
+  void Decrypt(unsigned char *data);
+  void Decrypt(const unsigned char *in, unsigned char *out);
   };
 
 #endif //___CRYPTO_H

@@ -33,22 +33,6 @@ class cST20;
 
 // ----------------------------------------------------------------
 
-#define RC6_ROUNDS	20
-#define RC6_MAX		(RC6_ROUNDS*2+4)
-
-class cRC6 {
-private:
-  unsigned int key[RC6_MAX];
-  //
-  unsigned int rol(unsigned int v, unsigned int cnt);
-  unsigned int ror(unsigned int v, unsigned int cnt);
-public:
-  void SetKey(const unsigned char *Key, int len);
-  void Decrypt(unsigned char *data);
-  };
-
-// ----------------------------------------------------------------
-
 class cTPSDecrypt : private cAES, private cRC6 {
 private:
   static unsigned char *mem;
