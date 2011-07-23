@@ -945,6 +945,7 @@ cScSetup::cScSetup(void)
   PrestartAU=0;
   SuperKeys=0;
   EcmCache=0;
+  DeCsaTsBuffSize=4;
 }
 
 void cScSetup::Check(void)
@@ -963,6 +964,7 @@ void cScSetup::Check(void)
   PRINTF(L_CORE_LOAD,"** Concurrent FF recordings are %sallowed",ConcurrentFF?"":"NOT ");
   PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital audio",ForceTransfer?"F":"DON'T f");
   PRINTF(L_CORE_LOAD,"** ECM cache is set to %s",EcmCache ? (EcmCache==1?"READ-ONLY":"DISABLED"):"enabled");
+  PRINTF(L_CORE_LOAD,"** TsBufferSize is %d MB",DeCsaTsBuffSize);
   LBSTART(L_CORE_LOAD);
   LBPUT("** ScCaps are"); for(int i=0; i<MAXSCCAPS ; i++) LBPUT(" %d",ScCaps[i]);
   LBEND();
@@ -1247,7 +1249,7 @@ cScPlugin::cScPlugin(void)
   static const char *logg[] = { trNOOP("off"),trNOOP("active CAIDs"),trNOOP("all CAIDs") };
   static const char *skey[] = { trNOOP("comment out"),trNOOP("remove") };
   static const char *ecache[] = { trNOOP("enabled"),trNOOP("read-only"),trNOOP("off") };
-  ScOpts=new cOpts(0,9);
+  ScOpts=new cOpts(0,10);
   ScOpts->Add(new cOptSel  ("AutoUpdate"   ,trNOOP("Update keys (AU)")     ,&ScSetup.AutoUpdate,3,logg));
   ScOpts->Add(new cOptBool ("PrestartAU"   ,trNOOP("Start AU on EPG scan") ,&ScSetup.PrestartAU));
   ScOpts->Add(new cOptSel  ("SuperKeys"    ,trNOOP("Superseded keys")      ,&ScSetup.SuperKeys,2,skey));
@@ -1255,6 +1257,7 @@ cScPlugin::cScPlugin(void)
   ScOpts->Add(new cOptBool ("ForceTranfer" ,trNOOP("Force TransferMode")   ,&ScSetup.ForceTransfer));
   ScOpts->Add(new cOptBool ("LocalPriority",trNOOP("Prefer local systems") ,&ScSetup.LocalPriority));
   ScOpts->Add(new cOptSel  ("EcmCache"     ,trNOOP("ECM cache")            ,&ScSetup.EcmCache,3,ecache));
+  ScOpts->Add(new cOptInt  ("DeCsaTsBuffSize",trNOOP("TS buffer size MB")  ,&ScSetup.DeCsaTsBuffSize,4,15));
   ScOpts->Add(new cOptMInt ("ScCaps"       ,trNOOP("Active on DVB card")   , ScSetup.ScCaps,MAXSCCAPS,0));
   LogOpts=new cOpts(0,6);
   LogOpts->Add(new cOptBool ("LogConsole"  ,trNOOP("Log to console")      ,&logcfg.logCon));

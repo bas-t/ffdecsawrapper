@@ -1591,7 +1591,7 @@ bool cScDevice::OpenDvr(void)
   fd_dvr=cScDevices::DvbOpen(DEV_DVB_DVR,DVB_DEV_SPEC,O_RDONLY|O_NONBLOCK,true);
   if(fd_dvr>=0) {
     tsMutex.Lock();
-    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(4),CardIndex()+1,decsa,ScActive());
+    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(ScSetup.DeCsaTsBuffSize),CardIndex()+1,decsa,ScActive());
     tsMutex.Unlock();
     }
   return fd_dvr>=0;

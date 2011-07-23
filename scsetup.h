@@ -34,6 +34,7 @@ public:
   int PrestartAU;
   int SuperKeys;
   int EcmCache;
+  int DeCsaTsBuffSize;
 public:
   cScSetup(void);
   void Check(void);
