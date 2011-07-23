@@ -20,7 +20,7 @@
 
 #include <emmintrin.h>
 
-#define MEMALIGN __attribute__((aligned(16)))
+#define MEMALIGN_VAL 16
 
 union __u128i {
 	unsigned int u[4];

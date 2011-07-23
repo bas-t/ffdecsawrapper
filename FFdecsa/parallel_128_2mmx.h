@@ -20,7 +20,7 @@
 
 #include <mmintrin.h>
 
-#define MEMALIGN __attribute__((aligned(16)))
+#define MEMALIGN_VAL 16
 
 struct group_t{
   __m64 s1,s2;
