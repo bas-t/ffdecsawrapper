@@ -20,6 +20,7 @@
 // initialy written by anetwolf anetwolf@hotmail.com
 // based on crypto & protocol information from _silencer
 // EMM & cmd 05 handling based on contribution from appiemulder
+// cmd 05/0b/0c/0d handling based on oscam sources
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,7 @@
 
 #include "cc.h"
 #include "parse.h"
+#include "crypto.h"
 #include "helper.h"
 #include "version.h"
 
@@ -141,6 +143,100 @@ void cCCcamCrypt::Xor(unsigned char *data, int length)
       if(index<=5) data[0]^=cccamstr[index];
       data++;
       }
+}
+
+// -- cCmd0cCrypt --------------------------------------------------------------
+
+#define CMD0C_MODE_PLAIN 0
+#define CMD0C_MODE_RC6   1
+#define CMD0C_MODE_RC4   2
+#define CMD0C_MODE_CC    3
+#define CMD0C_MODE_AES   4
+#define CMD0C_MODE_IDEA  5
+
+class cCmd0cCrypt {
+private:
+  int mode;
+  cAES aes;
+  cIDEA idea;
+  IdeaKS ks;
+  cRC6 rc6;
+  cCCcamCrypt cc;
+public:
+  cCmd0cCrypt(void);
+  void Reset(void);
+  void SetMode(int m);
+  void SetKey(const unsigned char *key, int l);
+  void Decrypt(const unsigned char *in, int len, unsigned char *out);
+  };
+
+cCmd0cCrypt::cCmd0cCrypt(void)
+{
+  Reset();
+}
+
+void cCmd0cCrypt::Reset(void)
+{
+  mode=CMD0C_MODE_PLAIN;
+  PRINTF(L_CC_CCCAM2EX,"CMD 0c crypt mode now %d",mode);
+}
+
+void cCmd0cCrypt::SetMode(int m)
+{
+  mode=m;
+  PRINTF(L_CC_CCCAM2EX,"CMD 0c crypt mode now %d",mode);
+}
+
+void cCmd0cCrypt::SetKey(const unsigned char *key, int l)
+{
+  unsigned char buff[32];
+  memset(buff,0,sizeof(buff));
+  if(l>32) l=32;
+  memcpy(buff,key,l);
+  switch(mode) {
+    case CMD0C_MODE_PLAIN:
+      break;
+    case CMD0C_MODE_RC6:
+      rc6.SetKey(buff,32);
+      break;
+    case CMD0C_MODE_RC4:
+    case CMD0C_MODE_CC:
+      cc.Init(buff,32);
+      break;
+    case CMD0C_MODE_AES:
+      aes.SetKey(buff);
+      break;
+    case CMD0C_MODE_IDEA:
+      idea.SetDecKey(buff,&ks);
+      break;
+    }
+}
+
+void cCmd0cCrypt::Decrypt(const unsigned char *in, int len, unsigned char *out)
+{
+  switch(mode) {
+    case CMD0C_MODE_PLAIN:
+      memcpy(out,in,len);
+      break;
+    case CMD0C_MODE_RC6:
+      for(int i=0; i<(len&~15); i+=16) rc6.Decrypt(in+i,out+i);
+      break;
+    case CMD0C_MODE_RC4:
+      cc.Encrypt(in,out,len);
+      break;
+    case CMD0C_MODE_CC:
+      cc.Decrypt(in,out,len);
+      break;
+    case CMD0C_MODE_AES:
+      aes.Decrypt(in,len,out);
+      break;
+    case CMD0C_MODE_IDEA:
+      idea.EcbEncrypt(in,len,out,&ks);
+      for(int i=8; i<len; i+=8)
+        for(int j=0; j<8; j++)
+          out[j+i]^=in[j+i-8];
+      break;
+    }
 }
 
 // -- cEcmShare ----------------------------------------------------------------
@@ -526,6 +622,13 @@ struct NodeInfo {
 #define MAX_ECM_TIME 3000     // ms
 #define PING_TIME    120*1000 // ms
 
+#define CMD05_MODE_UNKNOWN 0
+#define CMD05_MODE_PLAIN   1
+#define CMD05_MODE_AES     2
+#define CMD05_MODE_CC      3
+#define CMD05_MODE_RC4     4
+#define CMD05_MODE_LEN0    5
+
 class cCardClientCCcam2 : public cCardClient , private cThread {
 private:
   cCCcamCrypt encr, decr;
@@ -535,13 +638,18 @@ private:
   char username[21], password[64], versstr[32], buildstr[32];
   bool login, emmProcessing, wantEmus;
   cTimeMs lastsend;
-  int pendingDCW, pendingEMM, keymaskpos;
+  int pendingDCW, pendingEMM, maxecmcount;
   //
   bool newcw;
   unsigned char cw[16];
   cMutex cwmutex;
   cCondVar cwwait;
   tThreadId readerTid;
+  //
+  int cmd05mode, cmd05off;
+  unsigned char cmd05aes[16], cmd0Baes[16];
+  cCCcamCrypt cmd05crypt;
+  cCmd0cCrypt cmd0Ccrypt;
   //
   void PacketAnalyzer(const struct CmdHeader *hdr, int length);
   int CryptRecv(unsigned char *data, int len, int to=-1);
@@ -565,7 +673,8 @@ cCardClientCCcam2::cCardClientCCcam2(const char *Name)
 :cCardClient(Name)
 ,cThread("CCcam2 reader")
 {
-  shareid=0; readerTid=0; pendingDCW=pendingEMM=keymaskpos=0; newcw=login=emmProcessing=false;
+  shareid=0; readerTid=0; pendingDCW=pendingEMM=maxecmcount=0; newcw=login=emmProcessing=false;
+  cmd05mode=CMD05_MODE_UNKNOWN; cmd05off=0;
   so.SetRWTimeout(10*1000);
 }
 
@@ -586,12 +695,14 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         {
         struct DcwAnswer *dcw=(struct DcwAnswer *)hdr;
         if(pendingDCW>0) pendingDCW--;
-        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x (pending %d, EMM %d, keymaskpos=%d)",shareid,pendingDCW,pendingEMM,keymaskpos);
-        unsigned char tempcw[16];
-        memcpy(tempcw,dcw->cw,16);
-        LDUMP(L_CC_CCCAM2DT,tempcw,16,"scrambled    CW");
-        cCCcamCrypt::ScrambleDcw(tempcw,nodeid,shareid);
-        LDUMP(L_CC_CCCAM2DT,tempcw,16,"un-scrambled CW");
+        PRINTF(L_CC_CCCAM2,"got CW, current shareid %08x (pending %d, EMM %d, maxecmcount=%d)",shareid,pendingDCW,pendingEMM,maxecmcount);
+        unsigned char tempcw[16], tempcw2[16];
+        memcpy(tempcw2,dcw->cw,16);
+        LDUMP(L_CC_CCCAM2DT,tempcw2,16,"scrambled    CW");
+        cCCcamCrypt::ScrambleDcw(tempcw2,nodeid,shareid);
+        LDUMP(L_CC_CCCAM2DT,tempcw2,16,"un-scrambled CW");
+        cmd0Ccrypt.Decrypt(tempcw2,16,tempcw);
+        LDUMP(L_CC_CCCAM2DT,tempcw,16, "after cmd0Ccryp");
         if(cCCcamCrypt::DcwChecksum(tempcw) || pendingDCW==0) {
           cwmutex.Lock();
           newcw=true;
@@ -601,7 +712,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
           }
         else PRINTF(L_CC_CCCAM2,"pending DCW, skipping bad CW");
         decr.Decrypt(tempcw,tempcw,16);
-        if(keymaskpos>0 && --keymaskpos<=2) {
+        if(maxecmcount>0 && --maxecmcount<2) {
           PRINTF(L_CC_CCCAM2,"disconnecting due to key limit...");
           Logout();
           }
@@ -643,14 +754,55 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
       case 5:
         {
         PRINTF(L_CC_CCCAM2,"got CMD 05 (payload length=%d)",plen);
-        if(plen>0) {
+        unsigned char resp[4+256];
+        struct GenericCmd *gen=(struct GenericCmd *)resp;
+        memset(resp,0,4);
+        gen->header.cmd=5;
+        int mode=cmd05mode;
+        if(plen==0) mode=CMD05_MODE_LEN0;
+        else if(plen==256) {
           LDUMP(L_CC_CCCAM2DT,((struct GenericCmd *)hdr)->payload,plen,"CMD 05 payload");
-          keymaskpos=60;
+          PRINTF(L_CC_CCCAM2EX,"CMD 05 mode %d",mode);
+          switch(mode) {
+            case CMD05_MODE_PLAIN:
+              memcpy(gen->payload,((struct GenericCmd *)hdr)->payload,256);
+              break;
+            case CMD05_MODE_AES:
+              {
+              cAES aes;
+              LDUMP(L_CC_CCCAM2EX,cmd05aes,sizeof(cmd05aes),"%s: cmd 05 aes key",name);
+              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"%s: cmd 05 aes in",name);
+              aes.SetKey(cmd05aes);
+              aes.Encrypt(((struct GenericCmd *)hdr)->payload,256,gen->payload);
+              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"%s: cmd 05 aes out",name);
+              break;
+              }
+            case CMD05_MODE_CC:
+              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"%s: cmd 05 cc in",name);
+              cmd05crypt.Encrypt(((struct GenericCmd *)hdr)->payload,gen->payload,256);
+              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"%s: cmd 05 cc out",name);
+              break;
+            case CMD05_MODE_RC4:
+              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"%s: cmd 05 rc4 in",name);
+              cmd05crypt.Decrypt(((struct GenericCmd *)hdr)->payload,gen->payload,256);
+              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"%s: cmd 05 rc4 out",name);
+              break;
+            default:
+              mode=CMD05_MODE_UNKNOWN;
+              break;
+            }
           }
-        else
-          keymaskpos=0;
-        static const struct CmdHeader resp = { 0,5,0 };
-        if(!CryptSend((unsigned char *)&resp,sizeof(resp)))
+        else mode=CMD05_MODE_UNKNOWN;
+
+        if(mode==CMD05_MODE_UNKNOWN) {
+          if(!maxecmcount) maxecmcount=50;
+          }
+        else maxecmcount=0;
+
+        int l=(mode==CMD05_MODE_UNKNOWN || mode==CMD05_MODE_LEN0) ? 4:4+256;
+        PRINTF(L_CC_CCCAM2EX,"sending empty CMD 05 response (len=%d)",l);
+        SETCMDLEN(&gen->header,l);
+        if(!CryptSend((unsigned char *)gen,l))
           PRINTF(L_CC_CCCAM2,"failed to send cmd 05 response");
         break;
         }
@@ -693,7 +845,98 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
       case 8:
         {
         struct ServerInfo *srv=(struct ServerInfo *)hdr;
-        LDUMP(L_CC_LOGIN,srv->nodeid,sizeof(srv->nodeid),"%s: server version %s build %s nodeid",name,srv->version,srv->build);
+        if(plen==0x48) {
+          LDUMP(L_CC_LOGIN,srv->nodeid,sizeof(srv->nodeid),"%s: server version %s build %s nodeid",name,srv->version,srv->build);
+          memcpy(cmd0Baes+0,srv->nodeid,8);
+          memcpy(cmd0Baes+8,srv->version,8);
+          LDUMP(L_CC_CCCAM2EX,cmd0Baes,sizeof(cmd0Baes),"%s: cmd 0B aes key",name);
+          cmd05mode=CMD05_MODE_UNKNOWN;
+          }
+        else if(plen>=0x00 && plen<=0x1f) {
+          cmd05off=srv->header.cmdlen;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 offset now %d",cmd05off);
+          }
+        else if((plen>=0x10 && plen<=0x1f) || (plen>=0x24 && plen<=0x2b)) {
+          cmd05crypt.Init(((struct GenericCmd *)hdr)->payload,plen);
+          cmd05mode=CMD05_MODE_RC4;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now RC4");
+          }
+        else if(plen==0x20) {
+          memcpy(cmd05aes,((struct GenericCmd *)hdr)->payload+cmd05off,sizeof(cmd05aes));
+          cmd05mode=CMD05_MODE_AES;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=%d)",cmd05off);
+          }
+        else if(plen==0x21) {
+          cmd05crypt.Init(((struct GenericCmd *)hdr)->payload+cmd05off,plen);
+          cmd05mode=CMD05_MODE_RC4;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now CC (offset=%d)",cmd05off);
+          }
+        else if(plen==0x22) {
+          cmd05mode=CMD05_MODE_PLAIN;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now PLAIN");
+          }
+        else if(plen==0x23) {
+          cmd05mode=CMD05_MODE_UNKNOWN;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now UNKNOWN");
+          }
+        else if(plen==0x2c) {
+          memcpy(cmd05aes,((struct GenericCmd *)hdr)->payload+strlen(password),sizeof(cmd05aes));
+          cmd05mode=CMD05_MODE_AES;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=password)");
+          }
+        else if(plen==0x2d) {
+          memcpy(cmd05aes,((struct GenericCmd *)hdr)->payload+strlen(username),sizeof(cmd05aes));
+          cmd05mode=CMD05_MODE_AES;
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=username)");
+          }
+        else {
+          PRINTF(L_CC_CCCAM2,"unknown format of serverinfo");
+          }
+        break;
+        }
+      case 0xb:
+        {
+        PRINTF(L_CC_CCCAM2,"got CMD 0b (payload length=%d)",plen);
+        unsigned char resp[4+16];
+        struct GenericCmd *gen=(struct GenericCmd *)resp;
+        memset(resp,0,4);
+        gen->header.cmd=0xb;
+        LDUMP(L_CC_CCCAM2EX,cmd0Baes,sizeof(cmd0Baes),"%s: cmd 0b aes key",name);
+        LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,16,"%s: cmd 0b aes in",name);
+        cAES aes;
+        aes.SetKey(cmd0Baes);
+        aes.Encrypt(((struct GenericCmd *)hdr)->payload,16,gen->payload);
+        LDUMP(L_CC_CCCAM2EX,gen->payload,16,"%s: cmd 0b aes out",name);
+        PRINTF(L_CC_CCCAM2EX,"sending empty CMD 0b response");
+        SETCMDLEN(&gen->header,sizeof(resp));
+        if(!CryptSend((unsigned char *)gen,sizeof(resp)))
+          PRINTF(L_CC_CCCAM2,"failed to send cmd 0b response");
+        break;
+        }
+      case 0xc:
+        {
+        PRINTF(L_CC_CCCAM2,"got CMD 0c (payload length=%d)",plen);
+        unsigned char *out=AUTOMEM(plen);
+        LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,plen,"%s: cmd 0c in",name);
+        cmd0Ccrypt.Decrypt(((struct GenericCmd *)hdr)->payload,plen,out);
+        LDUMP(L_CC_CCCAM2EX,out,plen,"%s: cmd 0c out",name);
+        switch(out[0]) {
+          case 0: cmd0Ccrypt.SetMode(CMD0C_MODE_RC6); break;
+          case 1: cmd0Ccrypt.SetMode(CMD0C_MODE_RC4); break;
+          case 2: cmd0Ccrypt.SetMode(CMD0C_MODE_CC); break;
+          case 3: cmd0Ccrypt.SetMode(CMD0C_MODE_AES); break;
+          case 4: cmd0Ccrypt.SetMode(CMD0C_MODE_IDEA); break;
+          default: cmd0Ccrypt.SetMode(CMD0C_MODE_PLAIN); break;
+          }
+        cmd0Ccrypt.SetKey(out,plen);
+        break;
+        }
+      case 0xd:
+        {
+        PRINTF(L_CC_CCCAM2,"got CMD 0d (payload length=%d)",plen);
+        unsigned char *out=AUTOMEM(plen);
+        cmd0Ccrypt.Decrypt(((struct GenericCmd *)hdr)->payload,plen,out);
+        cmd0Ccrypt.SetKey(out,plen);
         break;
         }
       case 0xff:
@@ -793,7 +1036,9 @@ void cCardClientCCcam2::Logout(void)
   shares.Clear();
   emmProcessing=false;
   shares.Unlock();
-  pendingDCW=pendingEMM=keymaskpos=0;
+  pendingDCW=pendingEMM=maxecmcount=0;
+  cmd05mode=CMD05_MODE_UNKNOWN; cmd05off=0;
+  cmd0Ccrypt.Reset();
   PRINTF(L_CC_CCCAM2EX,"logout done");
 }
 
