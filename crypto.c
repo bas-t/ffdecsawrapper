@@ -149,6 +149,16 @@ int cIDEA::Encrypt(const unsigned char *data, int len, unsigned char *crypt, Ide
   return len;
 }
 
+void cIDEA::EcbEncrypt(const unsigned char *data, int len, unsigned char *crypt, IdeaKS *ks) const
+{
+  len/=8;
+  while(len>0) {
+    idea_ecb_encrypt(data,crypt,ks);
+    data+=8;
+    crypt+=8;
+    }
+}
+
 // -- cRSA ---------------------------------------------------------------------
 
 bool cRSA::Input(cBN *d, const unsigned char *in, int n, bool LE) const
@@ -424,4 +434,83 @@ bool cAES::Decrypt(unsigned char *data, int len) const
     return true;
     }
   return false;
+}
+
+bool cAES::Decrypt(const unsigned char *data, int len, unsigned char *decrypt) const
+{
+  if(active) {
+    for(int i=0; i<len; i+=16) AES_decrypt(data+i,decrypt+i,(const AES_KEY *)&dkey);
+    return true;
+    }
+  return false;
+}
+
+// -- cRC6 ---------------------------------------------------------------------
+
+/*
+ * This code implements the RC6-32/20 block cipher.
+ *
+ * The algorithm is due to Ron Rivest and RSA Labs. This code is based on code
+ * which was written by Martin Hinner <mhi@penguin.cz> in 1999, no copyright is
+ * claimed.
+ */
+
+#define RC6_WORDSIZE	32
+#define RC6_P32		0xB7E15163L
+#define RC6_Q32		0x9E3779B9L
+
+unsigned int cRC6::rol(unsigned int v, unsigned int cnt)
+{
+  cnt&=(RC6_WORDSIZE-1);
+  return (v<<cnt) | (v>>(RC6_WORDSIZE-cnt));
+}
+
+unsigned int cRC6::ror(unsigned int v, unsigned int cnt)
+{
+  cnt&=(RC6_WORDSIZE-1);
+  return (v>>cnt) | (v<<(RC6_WORDSIZE-cnt));
+}
+
+void cRC6::SetKey(const unsigned char *Key, int len)
+{
+  key[0]=RC6_P32;
+  for(int v=1; v<RC6_MAX; v++) key[v]=key[v-1]+RC6_Q32;
+  len/=4;
+  unsigned int a=0, b=0, *l=AUTOARRAY(unsigned int,len);
+  memcpy(l,Key,len*4);
+  for(int i=0,j=0,v=3*(len>RC6_MAX ? len : RC6_MAX) ; v>0; v--) {
+    a=key[i]=rol(key[i]+a+b,3);
+    b=  l[j]=rol(  l[j]+a+b,a+b);
+    i++; i%=RC6_MAX;
+    j++; j%=len;
+    }
+}
+
+void cRC6::Decrypt(unsigned char *data)
+{
+  Decrypt(data,data);
+}
+
+void cRC6::Decrypt(const unsigned char *in, unsigned char *out)
+{
+  unsigned int *l=(unsigned int *)in;
+  unsigned int a, b, c, d;
+  a=l[0]-key[RC6_MAX-2];
+  b=l[1];
+  c=l[2]-key[RC6_MAX-1];
+  d=l[3];
+  for(int i=RC6_ROUNDS; i>0; i--) {
+    unsigned int t=a;
+    unsigned int u=b;
+    a=d; d=c; b=t; c=u;
+    u=rol((d*(2*d+1)),5);
+    t=rol((b*(2*b+1)),5);
+    c=ror(c-key[2*i+1],t)^u;
+    a=ror(a-key[2*i  ],u)^t;
+    }
+  l=(unsigned int *)out;
+  l[0]=a;
+  l[1]=b-key[0];
+  l[2]=c;
+  l[3]=d-key[1];
 }
