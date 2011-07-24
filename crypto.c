@@ -90,6 +90,7 @@ int cBN::PutLE(unsigned char *out, int n) const
 #ifndef OPENSSL_HAS_IDEA
 #warning ** openssl lacks IDEA support. Using deprecated static support code. Update your openssl package.
 #include "support/i_cbc.c"
+#include "support/i_ecb.c"
 #include "support/i_skey.c"
 #endif
 
