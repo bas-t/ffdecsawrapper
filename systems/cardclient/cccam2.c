@@ -42,10 +42,11 @@ class cCCcamCrypt {
 private:
   unsigned char keytable[256];
   unsigned char state, counter, sum;
+  bool log;
   //
   static void Swap(unsigned char *p1, unsigned char *p2);
 public:
-  void Init(const unsigned char *key, int length);
+  void Init(const unsigned char *key, int length, bool l=false);
   void Decrypt(const unsigned char *in, unsigned char *out, int length);
   void Encrypt(const unsigned char *in, unsigned char *out, int length);
   static void ScrambleDcw(unsigned char *data, const unsigned char *nodeid, unsigned int shareid);
@@ -54,8 +55,9 @@ public:
   static void Xor(unsigned char *data, int length);
   };
 
-void cCCcamCrypt::Init(const unsigned char *key, int length)
+void cCCcamCrypt::Init(const unsigned char *key, int length, bool l)
 {
+  log=l;
   for(int pos=0; pos<=255; pos++) keytable[pos]=pos;
   int result=0;
   unsigned char curr_char=0;
@@ -65,7 +67,7 @@ void cCCcamCrypt::Init(const unsigned char *key, int length)
     result=(result+1)%length;
     }
   state=key[0]; counter=0; sum=0;
-  LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt init state=%d table",state);
+  if(log) LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt init state=%d table",state);
 }
 
 void cCCcamCrypt::Decrypt(const unsigned char *in, unsigned char *out, int length)
@@ -76,7 +78,7 @@ void cCCcamCrypt::Decrypt(const unsigned char *in, unsigned char *out, int lengt
     out[pos]=in[pos] ^ state ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
     state^=out[pos];
     }
-  LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt init state=%d table",state);
+  if(log) LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt decrypt state=%d table",state);
 }
 
 void cCCcamCrypt::Encrypt(const unsigned char *in, unsigned char *out, int length)
@@ -91,7 +93,7 @@ void cCCcamCrypt::Encrypt(const unsigned char *in, unsigned char *out, int lengt
     out[pos]=in[pos] ^ state ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
     state^=in[pos];
     }
-  LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt init state=%d table",state);
+  if(log) LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt encrypt state=%d table",state);
 }
 
 void cCCcamCrypt::Swap(unsigned char *p1, unsigned char *p2)
@@ -204,7 +206,7 @@ void cCmd0cCrypt::SetKey(const unsigned char *key, int l)
       break;
     case CMD0C_MODE_RC4:
     case CMD0C_MODE_CC:
-      cc.Init(buff,32);
+      cc.Init(buff,32,true);
       break;
     case CMD0C_MODE_AES:
       aes.SetKey(buff);
@@ -777,18 +779,18 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
               LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 aes in");
               aes.SetKey(cmd05aes);
               aes.Encrypt(((struct GenericCmd *)hdr)->payload,256,gen->payload);
-              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 aes out");
+              LDUMP(L_CC_CCCAM2EX,gen->payload,256,"cmd 05 aes out");
               break;
               }
             case CMD05_MODE_CC:
               LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 cc in");
               cmd05crypt.Encrypt(((struct GenericCmd *)hdr)->payload,gen->payload,256);
-              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 cc out");
+              LDUMP(L_CC_CCCAM2EX,gen->payload,256,"cmd 05 cc out");
               break;
             case CMD05_MODE_RC4:
               LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 rc4 in");
               cmd05crypt.Decrypt(((struct GenericCmd *)hdr)->payload,gen->payload,256);
-              LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 rc4 out");
+              LDUMP(L_CC_CCCAM2EX,gen->payload,256,"cmd 05 rc4 out");
               break;
             default:
               mode=CMD05_MODE_UNKNOWN;
@@ -860,7 +862,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
           PRINTF(L_CC_CCCAM2EX,"cmd 05 offset now %d",cmd05off);
           }
         else if((plen>=0x10 && plen<=0x1f) || (plen>=0x24 && plen<=0x2b)) {
-          cmd05crypt.Init(((struct GenericCmd *)hdr)->payload,plen);
+          cmd05crypt.Init(((struct GenericCmd *)hdr)->payload,plen,true);
           cmd05mode=CMD05_MODE_RC4;
           PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now RC4");
           LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,plen,"cmd 05 key payload");
@@ -873,7 +875,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
           LDUMP(L_CC_CCCAM2EX,cmd05aes,sizeof(cmd05aes),"cmd 05 aes key");
           }
         else if(plen==0x21) {
-          cmd05crypt.Init(((struct GenericCmd *)hdr)->payload+cmd05off,plen);
+          cmd05crypt.Init(((struct GenericCmd *)hdr)->payload+cmd05off,plen,true);
           cmd05mode=CMD05_MODE_RC4;
           PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now CC (offset=%d)",cmd05off);
           LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,plen,"cmd 05 key payload");
