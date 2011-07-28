@@ -857,8 +857,8 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
           LDUMP(L_CC_CCCAM2EX,cmd0Baes,sizeof(cmd0Baes),"cmd 0B aes key");
           cmd05mode=CMD05_MODE_UNKNOWN;
           }
-        else if(plen>=0x00 && plen<=0x1f) {
-          cmd05off=srv->header.cmdlen;
+        else if(plen>=0x00 && plen<=0x0f) {
+          cmd05off=plen;
           PRINTF(L_CC_CCCAM2EX,"cmd 05 offset now %d",cmd05off);
           }
         else if((plen>=0x10 && plen<=0x1f) || (plen>=0x24 && plen<=0x2b)) {
