@@ -48,6 +48,7 @@ private:
 public:
   void Init(const unsigned char *key, int length, bool l=false);
   void Decrypt(const unsigned char *in, unsigned char *out, int length);
+  void DecryptRC4(const unsigned char *in, unsigned char *out, int length);
   void Encrypt(const unsigned char *in, unsigned char *out, int length);
   static void ScrambleDcw(unsigned char *data, const unsigned char *nodeid, unsigned int shareid);
   static bool DcwChecksum(const unsigned char *data);
@@ -79,6 +80,17 @@ void cCCcamCrypt::Decrypt(const unsigned char *in, unsigned char *out, int lengt
     state^=out[pos];
     }
   if(log) LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"cccrypt decrypt state=%d table",state);
+}
+
+void cCCcamCrypt::DecryptRC4(const unsigned char *in, unsigned char *out, int length)
+{
+  for(int pos=0; pos<length; pos++) {
+    sum+=keytable[++counter];
+    Swap(keytable+counter,keytable+sum);
+    out[pos]=in[pos] ^ keytable[(keytable[sum]+keytable[counter])&0xFF];
+    state^=out[pos];
+    }
+  if(log) LDUMP(L_CC_CCCAM2EX,keytable,sizeof(keytable),"rc4crypt decrypt state=%d table",state);
 }
 
 void cCCcamCrypt::Encrypt(const unsigned char *in, unsigned char *out, int length)
@@ -789,7 +801,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
               break;
             case CMD05_MODE_RC4:
               LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,256,"cmd 05 rc4 in");
-              cmd05crypt.Decrypt(((struct GenericCmd *)hdr)->payload,gen->payload,256);
+              cmd05crypt.DecryptRC4(((struct GenericCmd *)hdr)->payload,gen->payload,256);
               LDUMP(L_CC_CCCAM2EX,gen->payload,256,"cmd 05 rc4 out");
               break;
             default:
@@ -920,7 +932,7 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         aes.SetKey(cmd0Baes);
         aes.Encrypt(((struct GenericCmd *)hdr)->payload,16,gen->payload);
         LDUMP(L_CC_CCCAM2EX,gen->payload,16,"cmd 0b aes out");
-        PRINTF(L_CC_CCCAM2EX,"sending empty cmd 0b response");
+        PRINTF(L_CC_CCCAM2EX,"sending cmd 0b response");
         SETCMDLEN(&gen->header,sizeof(resp));
         if(!CryptSend((unsigned char *)gen,sizeof(resp)))
           PRINTF(L_CC_CCCAM2,"failed to send cmd 0b response");
