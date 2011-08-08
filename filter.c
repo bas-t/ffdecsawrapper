@@ -27,43 +27,30 @@
 
 #include <linux/dvb/dmx.h>
 
+#include <vdr/device.h>
 #include <vdr/tools.h>
 
 #include "filter.h"
-#include "sc.h"
 #include "misc.h"
 #include "log-core.h"
 
 // -- cPidFilter ------------------------------------------------------------------
 
-cPidFilter::cPidFilter(const char *Id, int Num, int DvbNum, unsigned int IdleTime)
+cPidFilter::cPidFilter(const char *Id, int Num, cDevice *Device, unsigned int IdleTime)
 {
-  dvbNum=DvbNum;
+  device=Device;
   idleTime=IdleTime;
-  id=0; fd=-1; active=false; forceRun=false; userData=0;
+  id=0; fd=-1; forceRun=false; userData=0;
   id=bprintf("%s/%d",Id,Num);
-  PRINTF(L_CORE_ACTION,"new filter '%s' on card %d (%d ms)",id,dvbNum,idleTime);
+  PRINTF(L_CORE_ACTION,"new filter '%s' (%d ms)",id,idleTime);
 }
 
 cPidFilter::~cPidFilter()
 {
   cMutexLock lock(this);
-  if(fd>=0) {
-    Stop();
-    close(fd);
-    }
-  PRINTF(L_CORE_ACTION,"filter '%s' on card %d removed",id,dvbNum);
+  Stop();
+  PRINTF(L_CORE_ACTION,"filter '%s' removed",id);
   free(id);
-}
-
-bool cPidFilter::Open(void)
-{
-  cMutexLock lock(this);
-  if(fd<0) {
-    fd=cSoftCAM::FilterHandle(dvbNum);
-    if(fd>=0) return true;
-    }
-  return false;
 }
 
 void cPidFilter::Flush(void)
@@ -75,28 +62,17 @@ void cPidFilter::Flush(void)
     }
 }
 
-void cPidFilter::Start(int Pid, int Section, int Mask, int Mode, bool Crc)
+void cPidFilter::Start(int Pid, int Section, int Mask)
 {
   cMutexLock lock(this);
+  Stop();
+  fd=device->OpenFilter(Pid,Section,Mask);
   if(fd>=0) {
-    Stop();
-    struct dmx_sct_filter_params FilterParams;
-    memset(&FilterParams,0,sizeof(FilterParams));
-    FilterParams.filter.filter[0]=Section;
-    FilterParams.filter.mask[0]=Mask;
-    FilterParams.filter.mode[0]=Mode;
-    FilterParams.flags=DMX_IMMEDIATE_START;
-    if(Crc) FilterParams.flags|=DMX_CHECK_CRC;
-    FilterParams.pid=Pid;
-    if(ioctl(fd,DMX_SET_FILTER,&FilterParams)<0) {
-      PRINTF(L_GEN_ERROR,"filter '%s': DMX_SET_FILTER failed: %s",id,strerror(errno));
-      return;
-      }
     pid=Pid;
-    active=true;
 
     LBSTART(L_CORE_ACTION);
-    LBPUT("filter '%s' -> pid=0x%04x sct=0x%02x/0x%02x/0x%02x crc=%d matching",id,Pid,Section,Mask,Mode,Crc);
+    LBPUT("filter '%s' -> pid=0x%04x sct=0x%02x/0x%02x matching",id,Pid,Section,Mask);
+    int Mode=0;
     int mam =Mask &  (~Mode);
     int manm=Mask & ~(~Mode);
     for(int i=0; i<256; i++) {
@@ -112,10 +88,7 @@ void cPidFilter::Start(int Pid, int Section, int Mask, int Mode, bool Crc)
 void cPidFilter::Stop(void)
 {
   cMutexLock lock(this);
-  if(fd>=0) {
-    CHECK(ioctl(fd,DMX_STOP));
-    active=false;
-    }
+  if(fd>=0) { device->CloseFilter(fd); fd=-1; }
 }
 
 void cPidFilter::SetBuffSize(int BuffSize)
@@ -144,15 +117,15 @@ void cPidFilter::Wakeup(void)
 
 int cPidFilter::Pid(void)
 {
-  return active ? pid : -1;
+  return Active() ? pid : -1;
 }
 
 // -- cAction ------------------------------------------------------------------
 
-cAction::cAction(const char *Id, int DvbNum)
+cAction::cAction(const char *Id, cDevice *Device, const char *DevId)
 {
-  id=bprintf("%s %d",Id,DvbNum);
-  dvbNum=DvbNum;
+  device=Device; devId=DevId;
+  id=bprintf("%s %s",Id,DevId);
   unique=0; pri=-1;
   SetDescription("%s filter",id);
 }
@@ -165,27 +138,24 @@ cAction::~cAction()
   free(id);
 }
 
-cPidFilter *cAction::CreateFilter(const char *Id, int Num, int DvbNum, int IdleTime)
+cPidFilter *cAction::CreateFilter(int Num, int IdleTime)
 {
-  return new cPidFilter(Id,Num,DvbNum,IdleTime);
+  return new cPidFilter(id,Num,device,IdleTime);
 }
 
 cPidFilter *cAction::NewFilter(int IdleTime)
 {
   Lock();
-  cPidFilter *filter=CreateFilter(id,unique++,dvbNum,IdleTime);
-  if(filter && filter->Open()) {
+  cPidFilter *filter=CreateFilter(unique++,IdleTime);
+  if(filter) {
     if(!Active()) {
       Start();
       PRINTF(L_CORE_ACTION,"%s: started",id);
       }
     filters.Add(filter);
     }
-  else {
-    PRINTF(L_CORE_ACTION,"%s: filter '%s' failed to open",id,filter?filter->id:"XxX");
-    delete filter;
-    filter=0;
-    }
+  else
+    PRINTF(L_CORE_ACTION,"%s: failed to create filter",id);
   Unlock();
   return filter;
 }
@@ -238,12 +208,13 @@ void cAction::Action(void)
         }
       int num=0;
       cPidFilter *filter;
-      for(filter=filters.First(); filter; filter=filters.Next(filter)) {
-        memset(&pfd[num],0,sizeof(struct pollfd));
-        pfd[num].fd=filter->fd;
-        pfd[num].events=POLLIN;
-        num++;
-        }
+      for(filter=filters.First(); filter; filter=filters.Next(filter))
+        if(filter->Active()) {
+          memset(&pfd[num],0,sizeof(struct pollfd));
+          pfd[num].fd=filter->fd;
+          pfd[num].events=POLLIN;
+          num++;
+          }
       Unlock();
 
       // now poll for data
@@ -261,7 +232,10 @@ void cAction::Action(void)
                 unsigned char buff[MAX_SECT_SIZE];
                 int n=read(filter->fd,buff,sizeof(buff));
                 if(n<0 && errno!=EAGAIN) {
-                  if(errno==EOVERFLOW) PRINTF(L_GEN_ERROR,"action %s read: Buffer overflow",filter->id);
+                  if(errno==EOVERFLOW) {
+                    filter->Flush();
+                    //PRINTF(L_GEN_ERROR,"action %s read: Buffer overflow",filter->id);
+                    }
                   else PRINTF(L_GEN_ERROR,"action %s read: %s",filter->id,strerror(errno));
                   }
                 if(n>0) {

@@ -23,6 +23,7 @@
 #include <vdr/thread.h>
 #include "misc.h"
 
+class cDevice;
 class cPidFilter;
 
 // ----------------------------------------------------------------
@@ -31,13 +32,16 @@ class cPidFilter;
 
 class cAction : protected cThread {
 private:
-  char *id;
-  int dvbNum, unique, pri;
+  const char *devId;
+  int unique, pri;
   cSimpleList<cPidFilter> filters;
 protected:
+  cDevice *device;
+  char *id;
+  //
   virtual void Process(cPidFilter *filter, unsigned char *data, int len)=0;
   virtual void Action(void);
-  virtual cPidFilter *CreateFilter(const char *Id, int Num, int DvbNum, int IdleTime);
+  virtual cPidFilter *CreateFilter(int Num, int IdleTime);
   //
   cPidFilter *NewFilter(int IdleTime);
   cPidFilter *IdleFilter(void);
@@ -45,7 +49,7 @@ protected:
   void DelAllFilter(void);
   void Priority(int Pri);
 public:
-  cAction(const char *Id, int DvbNum);
+  cAction(const char *Id, cDevice *Device, const char *DevId);
   virtual ~cAction();
   };
 
@@ -54,30 +58,27 @@ public:
 class cPidFilter : public cSimpleItem, private cMutex {
 friend class cAction;
 private:
-  int dvbNum;
+  cDevice *device;
   unsigned int idleTime;
   cTimeMs lastTime;
   bool forceRun;
-  //
-  bool Open(void);
 protected:
   char *id;
   int fd;
   int pid;
-  bool active;
 public:
   void *userData;
   //
-  cPidFilter(const char *Id, int Num, int DvbNum, unsigned int IdleTime);
+  cPidFilter(const char *Id, int Num, cDevice *Device, unsigned int IdleTime);
   virtual ~cPidFilter();
   void Flush(void);
-  virtual void Start(int Pid, int Section, int Mask, int Mode, bool Crc);
+  virtual void Start(int Pid, int Section, int Mask);
   void Stop(void);
-  void Wakeup(void);
   void SetBuffSize(int BuffSize);
+  void Wakeup(void);
   int SetIdleTime(unsigned int IdleTime);
   int Pid(void);
-  bool Active(void) { return active; }
+  bool Active(void) { return fd>=0; }
   };
 
 #endif //___FILTER_H

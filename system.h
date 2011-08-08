@@ -38,6 +38,7 @@ class cSystems;
 class cLogger;
 class cOpts;
 class cHookManager;
+class cCam;
 
 // ----------------------------------------------------------------
 
@@ -71,7 +72,8 @@ public:
 class cLogHook : public cSimpleItem {
 friend class cHookManager;
 private:
-  int cardNum, id;
+//  int cardNum, id;
+  int id;
   const char *name;
   cTimeMs delay;
   bool bailOut;
@@ -92,12 +94,13 @@ class cSystem : public cSimpleItem {
 friend class cKeySnoop;
 private:
   static int foundKeys, newKeys;
-  int pri, cardNum;
+  int pri;
   cLastKey lastkey;
   char *lastTxt;
   char currentKeyStr[48];
   struct EcmCheck *check;
   cEcmInfo *logecm;
+  cCam *cam;
 protected:
   const char *name;
   unsigned char cw[16];
@@ -113,25 +116,31 @@ protected:
 public:
   cSystem(const char *Name, int Pri);
   virtual ~cSystem();
+  void SetOwner(cCam *Cam) { cam=Cam; }
+  static void CaidsChanged(void);
+  //
   virtual int CheckECM(const cEcmInfo *ecm, const unsigned char *data, bool sync);
   virtual void CheckECMResult(const cEcmInfo *ecm, const unsigned char *data, bool result);
   virtual bool ProcessECM(const cEcmInfo *ecm, unsigned char *buffer)=0;
   virtual void ProcessEMM(int pid, int caid, const unsigned char *buffer) {};
   virtual void ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len);
   virtual void ParseCAT(cPids *pids, const unsigned char *buffer, int source, int transponder);
+  //
+  void AddHook(cLogHook *hook);
+  bool TriggerHook(int id);
+  //
   unsigned char *CW(void) { return cw; }
   void DoLog(bool Log) { doLog=Log; }
   int Pri(void) { return pri; }
   const char *CurrentKeyStr(void) { return currentKeyStr; }
   const char *Name(void) { return name; }
-  int CardNum(void) { return cardNum; }
-  void CardNum(int CardNum) { cardNum=CardNum; }
   int MaxEcmTry(void) { return maxEcmTry; }
   bool HasLogger(void) { return hasLogger; }
   bool NeedsLogger(void) { return needsLogger; }
   bool Local(void) { return local; }
   bool NeedsData(void) { return needsDescrData; }
   bool Constant(void) { return constant; }
+  //
   static void FoundKey(void) { foundKeys++; }
   static void NewKey(void) { newKeys++; }
   static void KeyStats(int &fk, int &nk) { fk=foundKeys; nk=newKeys; }

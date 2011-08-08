@@ -174,7 +174,7 @@ public:
   ~cCardClientCCcam();
   virtual bool Init(const char *CfgDir);
   virtual bool Login(void);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw);
   };
 
 static cCardClientLinkReg<cCardClientCCcam> __ncd("cccam");
@@ -218,10 +218,16 @@ bool cCardClientCCcam::Login(void)
   return true;
 }
 
-bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)
+bool cCardClientCCcam::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)
 {
   cMutexLock lock(this);
   if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;
+
+  if(ecm->dvbAdapter<0 || ecm->dvbFrontend!=0) {
+    PRINTF(L_CC_CCCAM,"cannot handle DVB adapter %d, frontend %d",ecm->dvbAdapter,ecm->dvbFrontend);
+    return false;
+    }
+  int cardnum=ecm->dvbAdapter;
 
   cCCcamCard *c=&card[cardnum];
   int timeout=3000;

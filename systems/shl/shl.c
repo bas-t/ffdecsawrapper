@@ -55,7 +55,11 @@ static const struct LogModule lm_sys = {
   };
 ADD_MODULE(L_SYS,lm_sys)
 
-// evil hack, but it's not worth to put much effort in a dead system ...
+// This system is dead.
+// Not worth to invest time to keep it compilig....
+
+#if 0
+
 static cTimeMs __time;
 #define time_ms() ((int)__time.Elapsed())
 
@@ -657,3 +661,5 @@ bool cSystemLinkShl::CanHandle(unsigned short SysId)
   SysId&=0xFFF0;
   return SYSTEM_CAN_HANDLE(SysId);
 }
+
+#endif //#if 0

@@ -25,7 +25,6 @@
 
 #include "system.h"
 #include "cc.h"
-#include "sc.h"
 #include "misc.h"
 #include "opts.h"
 #include "log-core.h"
@@ -67,7 +66,7 @@ bool cCardClient::Immediate(void)
 
 void cCardClient::CaidsChanged(void)
 {
-  cSoftCAM::CaidsChanged();
+  cSystem::CaidsChanged();
 }
 
 bool cCardClient::ParseStdConfig(const char *config, int *num)
@@ -212,7 +211,7 @@ bool cSystemCardClient::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
     if(cc) {
       cTimeMs start;
       int id=cc->msECM.Get(data,SCT_LEN(data),cw);
-      if(id==0 || (id>0 && cc->ProcessECM(ecm,data,cw,CardNum()))) {
+      if(id==0 || (id>0 && cc->ProcessECM(ecm,data,cw))) {
         int dur=start.Elapsed();
         if(dur>2000) {
           char bb[32];

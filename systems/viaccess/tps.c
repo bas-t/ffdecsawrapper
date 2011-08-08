@@ -28,7 +28,7 @@
 #include "opentv.h"
 #include "st20.h"
 
-#include "sc.h"
+#include "global.h"
 #include "scsetup.h"
 #include "system-common.h"
 #include "filter.h"
@@ -127,7 +127,7 @@ cSatTimeHook::cSatTimeHook(cTransponderTime *Ttime)
 :cLogHook(HOOK_SATTIME,"sattime")
 {
   ttime=Ttime;
-  pids.AddPid(0x14,0x71,0xff,0x03);
+  pids.AddPid(0x14,0x70,0xfc);
   ttime->SetHasHandler(true);
 }
 
@@ -161,21 +161,19 @@ private:
   static cMutex mutex;
   static cSimpleList<cTransponderTime> list;
   //
-  int cardNum;
   cTransponderTime *ttime;
   //
   void CheckHandler(void);
 public:
-  cSatTime(int CardNum, int Source, int Transponder);
-  time_t Now(void);
+  cSatTime(int Source, int Transponder);
+  time_t Now(cSystem *sys);
   };
 
 cMutex cSatTime::mutex;
 cSimpleList<cTransponderTime> cSatTime::list;
 
-cSatTime::cSatTime(int CardNum, int Source, int Transponder)
+cSatTime::cSatTime(int Source, int Transponder)
 {
-  cardNum=CardNum;
   cMutexLock lock(&mutex);
   for(ttime=list.First(); ttime; ttime=list.Next(ttime))
     if(ttime->Is(Source,Transponder)) break;
@@ -185,24 +183,19 @@ cSatTime::cSatTime(int CardNum, int Source, int Transponder)
     PRINTF(L_SYS_TIME,"%x:%x: created new transpondertime",Source,Transponder);
     }
   else PRINTF(L_SYS_TIME,"%x:%x: using existing transpondertime",Source,Transponder);
-  CheckHandler();
 }
 
-time_t cSatTime::Now(void)
-{
-  CheckHandler();
-  return ttime ? ttime->Now() : -1;
-}
-
-void cSatTime::CheckHandler(void)
+time_t cSatTime::Now(cSystem *sys)
 {
   if(ttime) {
-    if(!cSoftCAM::TriggerHook(cardNum,HOOK_SATTIME) && !ttime->HasHandler()) {
+    if(!sys->TriggerHook(HOOK_SATTIME) && !ttime->HasHandler()) {
       cSatTimeHook *hook=new cSatTimeHook(ttime);
-      cSoftCAM::AddHook(cardNum,hook);
+      sys->AddHook(hook);
       PRINTF(L_SYS_TIME,"added hook");
       }
+    return ttime->Now();
     }
+  return -1;
 }
 
 // -- cOpenTVModule ------------------------------------------------------------
@@ -572,7 +565,7 @@ const cTpsKey *cTpsKeys::GetV2Key(int id)
   return 0;
 }
 
-void cTpsKeys::Check(time_t now, int cardnum)
+void cTpsKeys::Check(time_t now, cSystem *sys)
 {
   checkMutex.Lock();
   if(first==0 && last==0 && Count()>0)
@@ -591,9 +584,9 @@ void cTpsKeys::Check(time_t now, int cardnum)
   if(tpsAuMode==AU_STREAM && lastAu.Elapsed()>(nokey ? TPSAU_TIME/60 : TPSAU_TIME)) {
     if(ScSetup.AutoUpdate>0) {
       PRINTF(L_SYS_TPSAU,"TPS AU triggered");
-      if(!cSoftCAM::TriggerHook(cardnum,HOOK_TPSAU)) {
+      if(!sys->TriggerHook(HOOK_TPSAU)) {
         cTpsAuHook *hook=new cTpsAuHook;
-        cSoftCAM::AddHook(cardnum,hook);
+        sys->AddHook(hook);
         PRINTF(L_SYS_TPSAU,"TPS AU hook added");
         }
       }
@@ -989,7 +982,7 @@ void cTpsAuHook::Process(int pid, unsigned char *data)
             PRINTF(L_SYS_TPSAU,"got PMT pid %04x for SID %04x",pmtpid,AUSID);
             cPid *pid=pids.First();
             if(pid && pid->filter) {
-              pid->filter->Start(pmtpid,0x02,0xFF,0x00,false);
+              pid->filter->Start(pmtpid,0x02,0xFF);
               pid->filter->Flush();
               }
             else PRINTF(L_GEN_DEBUG,"internal: no pid/filter in cTpsAuHook/pat");
@@ -1010,7 +1003,7 @@ void cTpsAuHook::Process(int pid, unsigned char *data)
             PRINTF(L_SYS_TPSAU,"got AU pid %04x",aupid);
             cPid *pid=pids.First();
             if(pid && pid->filter) {
-              pid->filter->Start(aupid,0x87,0xFF,0x00,false);
+              pid->filter->Start(aupid,0x87,0xFF);
               pid->filter->Flush();
               }
             else PRINTF(L_GEN_DEBUG,"internal: no pid/filter in cTpsAuHook/pmt");
@@ -1161,17 +1154,17 @@ cTPS::~cTPS()
   delete sattime;
 }
 
-int cTPS::Decrypt(int cardNum, int Source, int Transponder, unsigned char *data, int len)
+int cTPS::Decrypt(cSystem *sys, int Source, int Transponder, unsigned char *data, int len)
 {
   if(!sattime) {
-    sattime=new cSatTime(cardNum,Source,Transponder);
+    sattime=new cSatTime(Source,Transponder);
     if(!sattime) {
       PRINTF(L_SYS_TPS,"failed to create time class");
       return -1;
       }
     }
-  time_t now=sattime->Now();
-  tpskeys.Check(now,cardNum);
+  time_t now=sattime->Now(sys);
+  tpskeys.Check(now,sys);
   if(now<0) return -1;
 
   const cTpsKey *k=tpskeys.GetKey(now);

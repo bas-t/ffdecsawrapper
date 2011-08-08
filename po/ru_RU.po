@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: VDR 1.5.9\n"
 "Report-Msgid-Bugs-To: <noone@nowhere.org>\n"
-"POT-Creation-Date: 2010-12-12 13:24+0100\n"
+"POT-Creation-Date: 2011-08-06 20:19+0200\n"
 "PO-Revision-Date: 2009-05-14 19:33+0100\n"
 "Last-Translator: somebody\n"
 "Language-Team: ru\n"
@@ -14,6 +14,9 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-5\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: KBabel 1.11.4\n"
+
+msgid "(none)"
+msgstr "(нет)"
 
 msgid "Key update"
 msgstr "Обновление ключа"
@@ -106,9 +109,6 @@ msgstr "Действительно перезагрузить файлы?"
 
 msgid "Active! Can't reload files now"
 msgstr "Занят! Не могу перезагрузить файлы"
-
-msgid "(none)"
-msgstr "(нет)"
 
 msgid "active CAIDs"
 msgstr "активные CAID"

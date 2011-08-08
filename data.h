@@ -202,18 +202,18 @@ public:
 
 class cPid : public cSimpleItem {
 public:
-  int pid, sct, mask, mode;
+  int pid, sct, mask;
   cPidFilter *filter;
   //
-  cPid(int Pid, int Section, int Mask, int Mode);
+  cPid(int Pid, int Section, int Mask);
   };
 
 // ----------------------------------------------------------------
 
 class cPids : public cSimpleList<cPid> {
 public:
-  void AddPid(int Pid, int Section, int Mask, int Mode=0);
-  bool HasPid(int Pid, int Section, int Mask, int Mode=0);
+  void AddPid(int Pid, int Section, int Mask);
+  bool HasPid(int Pid, int Section, int Mask);
   };
 
 // ----------------------------------------------------------------
@@ -237,6 +237,7 @@ public:
   int prgId, grPrgId, source, transponder;
   cRewriter *rewriter;
   int rewriterId;
+  int dvbAdapter, dvbFrontend;
   //
   cEcmInfo(void);
   cEcmInfo(const cEcmInfo *e);
@@ -244,6 +245,7 @@ public:
   ~cEcmInfo();
   virtual cString ToString(bool hide=false) { return ""; }
   bool Compare(const cEcmInfo *e);
+  void SetDvb(int DvbAdapter, int DvbFrontend);
   void SetSource(int GrPrgId, int Source, int Transponder);
   void SetName(const char *Name);
   void SetDataIdx(int idx);

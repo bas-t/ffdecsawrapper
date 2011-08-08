@@ -39,7 +39,7 @@ public:
   cCardClientGbox(const char *Name); 
   virtual bool Init(const char *CfgDir); 
   virtual bool Login(void);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw);
   }; 
  
 static cCardClientLinkReg<cCardClientGbox> __ncd("gbox");
@@ -76,7 +76,7 @@ int cCardClientGbox::GetMsg(int cmd, unsigned char *buff, int len)
   return n;
 }
 
-bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)
+bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)
 {
   cMutexLock lock(this);
   if((!so.Connected() && !Login()) || !CanHandle(ecm->caId)) return false;

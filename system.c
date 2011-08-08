@@ -25,8 +25,9 @@
 
 #include <openssl/md5.h>
 
-#include "sc.h"
 #include "system.h"
+#include "cam.h"
+#include "global.h"
 #include "data.h"
 #include "override.h"
 #include "opts.h"
@@ -98,7 +99,7 @@ int cSystem::newKeys=0;
 cSystem::cSystem(const char *Name, int Pri)
 {
   name=Name; pri=Pri;
-  currentKeyStr[0]=0; doLog=true; cardNum=-1; logecm=0;
+  currentKeyStr[0]=0; doLog=true; cam=0; logecm=0;
   check=new struct EcmCheck;
   memset(check,0,sizeof(struct EcmCheck));
   memset(cw,0,sizeof(cw));
@@ -114,19 +115,34 @@ cSystem::cSystem(const char *Name, int Pri)
 cSystem::~cSystem()
 {
   delete check;
-  if(logecm) cSoftCAM::SetLogStatus(cardNum,logecm,false);
+  if(logecm && cam) cam->LogEcmStatus(logecm,false);
   delete logecm;
 }
 
 void cSystem::StartLog(const cEcmInfo *ecm, int caid)
 {
   if(!logecm || logecm->caId!=caid) {
-    if(logecm) cSoftCAM::SetLogStatus(cardNum,logecm,false);
+    if(logecm && cam) cam->LogEcmStatus(logecm,false);
     delete logecm;
     logecm=new cEcmInfo(ecm);
     logecm->caId=caid; logecm->emmCaId=0;
-    cSoftCAM::SetLogStatus(cardNum,logecm,true);
+    if(cam) cam->LogEcmStatus(logecm,true);
     }
+}
+
+void cSystem::AddHook(cLogHook *hook)
+{
+  if(cam) cam->AddHook(hook);
+}
+
+bool cSystem::TriggerHook(int id)
+{
+  return cam && cam->TriggerHook(id);
+}
+
+void cSystem::CaidsChanged(void)
+{
+  cGlobal::CaidsChanged();
 }
 
 void cSystem::ParseCADescriptor(cSimpleList<cEcmInfo> *ecms, unsigned short sysId, int source, const unsigned char *data, int len)
@@ -166,10 +182,11 @@ void cSystem::ParseCAT(cPids *pids, const unsigned char *buffer, int source, int
           }
         break;
       case 0x05: // Viaccess style (88/8c/8d/8e)
-        pids->AddPid(pid,0x8B,0xFE,0x07); // mismatching 89/8f
+        pids->AddPid(pid,0x88,0xF9); // mismatching 8a
+        pids->AddPid(pid,0x8D,0xFF);
         break;
       case 0x0d: // Cryptoworks style (82/84/86/88/89)
-        pids->AddPid(pid,0x80,0xFF,0x06);
+        pids->AddPid(pid,0x82,0xF9); // mismatching 80
         pids->AddPid(pid,0x88,0xFE);
         break;
       case 0x18: // Nagra style (82/83)

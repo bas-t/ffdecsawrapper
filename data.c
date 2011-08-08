@@ -544,29 +544,28 @@ void cStructLoaders::Purge(void)
 
 // -- cPid ---------------------------------------------------------------------
 
-cPid::cPid(int Pid, int Section, int Mask, int Mode)
+cPid::cPid(int Pid, int Section, int Mask)
 {
   pid=Pid;
   sct=Section;
   mask=Mask;
-  mode=Mode;
   filter=0;
 }
 
 // -- cPids --------------------------------------------------------------------
 
-void cPids::AddPid(int Pid, int Section, int Mask, int Mode)
+void cPids::AddPid(int Pid, int Section, int Mask)
 {
-  if(!HasPid(Pid,Section,Mask,Mode)) {
-    cPid *pid=new cPid(Pid,Section,Mask,Mode);
+  if(!HasPid(Pid,Section,Mask)) {
+    cPid *pid=new cPid(Pid,Section,Mask);
     Add(pid);
     }
 }
 
-bool cPids::HasPid(int Pid, int Section, int Mask, int Mode)
+bool cPids::HasPid(int Pid, int Section, int Mask)
 {
   for(cPid *pid=First(); pid; pid=Next(pid))
-    if(pid->pid==Pid && pid->sct==Section && pid->mask==Mask && pid->mode==Mode)
+    if(pid->pid==Pid && pid->sct==Section && pid->mask==Mask)
       return true;
   return false;
 }
@@ -593,6 +592,7 @@ cEcmInfo::cEcmInfo(const cEcmInfo *e)
   transponder=e->transponder;
   rewriterId=e->rewriterId;
   SetRewriter();
+  dvbAdapter=e->dvbAdapter; dvbFrontend=e->dvbFrontend;
 }
 
 cEcmInfo::cEcmInfo(const char *Name, int Pid, int CaId, int ProvId)
@@ -617,12 +617,18 @@ void cEcmInfo::Setup(void)
   prgId=grPrgId=source=transponder=-1;
   ecm_table=0x80; emmCaId=0;
   rewriter=0; rewriterId=0;
+  dvbAdapter=dvbFrontend=-1;
 }
 
 bool cEcmInfo::Compare(const cEcmInfo *e)
 {
   return grPrgId==e->grPrgId && source==e->source && transponder==e->transponder &&
          caId==e->caId && ecm_pid==e->ecm_pid && provId==e->provId;
+}
+
+void cEcmInfo::SetDvb(int DvbAdapter, int DvbFrontend)
+{
+  dvbAdapter=DvbAdapter; dvbFrontend=DvbFrontend;
 }
 
 void cEcmInfo::SetSource(int GrPrgId, int Source, int Transponder)

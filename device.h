@@ -20,71 +20,13 @@
 #ifndef ___DEVICE_H
 #define ___DEVICE_H
 
-#include <linux/dvb/ca.h>
 #include <vdr/dvbdevice.h>
 #include <vdr/thread.h>
-#include "misc.h"
-
-typedef int caid_t;
 
 class cCam;
 class cDeCSA;
 class cDeCsaTSBuffer;
 class cScCiAdapter;
-
-// ----------------------------------------------------------------
-
-class cCaDescr {
-private:
-  unsigned char *descr;
-  int len;
-public:
-  cCaDescr(void);
-  cCaDescr(const cCaDescr &arg);
-  ~cCaDescr();
-  const unsigned char *Get(int &l) const;
-  void Set(const cCaDescr *d);
-  void Set(const unsigned char *de, int l);
-  void Clear(void);
-  bool operator== (const cCaDescr &arg) const;
-  void Join(const cCaDescr *cd, bool rev=false);
-  cString ToString(void);
-  };
-
-// ----------------------------------------------------------------
-
-class cPrgPid : public cSimpleItem {
-private:
-  bool proc;
-public:
-  int type, pid;
-  cCaDescr caDescr;
-  //
-  cPrgPid(int Type, int Pid) { type=Type; pid=Pid; proc=false; }
-  bool Proc(void) const { return proc; }
-  void Proc(bool is) { proc=is; };
-  };
-
-// ----------------------------------------------------------------
-
-class cPrg : public cSimpleItem {
-private:
-  bool isUpdate, pidCaDescr;
-  //
-  void Setup(void);
-public:
-  int sid, source, transponder;
-  cSimpleList<cPrgPid> pids;
-  cCaDescr caDescr;
-  //
-  cPrg(void);
-  cPrg(int Sid, bool IsUpdate);
-  bool IsUpdate(void) const { return isUpdate; }
-  bool HasPidCaDescr(void) const { return pidCaDescr; }
-  void SetPidCaDescr(bool val) { pidCaDescr=val; }
-  bool SimplifyCaDescr(void);
-  void DumpCaDescr(int c);
-  };
 
 // ----------------------------------------------------------------
 
@@ -113,16 +55,13 @@ public:
 class cScDevice : public cDvbDevice {
 friend class cScDevices;
 private:
-  cDeCSA *decsa;
   cDeCsaTSBuffer *tsBuffer;
   cMutex tsMutex;
-  cScCiAdapter *ciadapter;
-  cCiAdapter *hwciadapter;
   cCam *cam;
+  cCiAdapter *hwciadapter;
   int fd_dvr, fd_ca, fd_ca2;
   bool softcsa, fullts;
-  cMutex cafdMutex;
-  cTimeMs lastDump;
+  char devId[8];
   //
 #ifndef SASC
   void LateInit(void);
@@ -145,13 +84,6 @@ public:
 #ifndef SASC
   virtual bool HasCi(void);
 #endif //SASC
-  virtual bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
-  virtual bool SetCaPid(ca_pid_t *ca_pid);
-  int FilterHandle(void);
-  void DumpAV7110(void);
-  cCam *Cam(void) { return cam; }
-  bool SoftCSA(bool live);
-  void CaidsChanged(void);
   };
 
 #endif // ___DEVICE_H

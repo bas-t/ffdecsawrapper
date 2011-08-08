@@ -26,6 +26,7 @@
 #include "data.h"
 #include "crypto.h"
 
+class cSystem;
 class cSatTime;
 class cTpsAuHook;
 class cOpenTVModule;
@@ -61,7 +62,7 @@ private:
 public:
   cTPS(void);
   ~cTPS();
-  int Decrypt(int cardNum, int Source, int Transponder, unsigned char *data, int len);
+  int Decrypt(cSystem *sys, int Source, int Transponder, unsigned char *data, int len);
   void PostProc(unsigned char *cw);
   };
 
@@ -119,7 +120,7 @@ public:
   ~cTpsKeys();
   const cTpsKey *GetKey(time_t t);
   const cTpsKey *GetV2Key(int id);
-  void Check(time_t now, int cardnum);
+  void Check(time_t now, cSystem *sys);
   };
 
 extern cTpsKeys tpskeys;

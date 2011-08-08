@@ -78,7 +78,7 @@ public:
   virtual bool Login(void)=0;
   virtual bool Immediate(void);
   virtual bool CanHandle(unsigned short SysId);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)=0;
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)=0;
   virtual bool ProcessEMM(int caSys, const unsigned char *data) { return false; }
   const char *Name(void) { return name; }
   };

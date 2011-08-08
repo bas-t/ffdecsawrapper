@@ -56,7 +56,7 @@ public:
   virtual bool Init(const char *config);
   virtual bool Login(void);
   virtual bool Immediate(void);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw);
   virtual bool ProcessEMM(int caSys, const unsigned char *source);
   };
 
@@ -200,7 +200,7 @@ bool cCardClientCommon::ProcessEMM(int caSys, const unsigned char *source)
   return false;
 }
 
-bool cCardClientCommon::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum)
+bool cCardClientCommon::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw)
 {
   Lock();
   bool res=false;
@@ -442,7 +442,7 @@ public:
   cCardClientCamd35(const char *Name);
   virtual bool Init(const char *config);
   virtual bool Login(void);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
 
@@ -673,7 +673,7 @@ bool cCardClientCamd35::ProcessEMM(int caSys, const unsigned char *data)
   return false;
 }
 
-bool cCardClientCamd35::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw, int cardnum)
+bool cCardClientCamd35::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *cw)
 {
   bool res=false;
   const int length=SCT_LEN(data);

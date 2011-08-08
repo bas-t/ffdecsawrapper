@@ -20,11 +20,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 
+#include <vdr/device.h>
 #include <vdr/channels.h>
 #include <vdr/thread.h>
+#include <vdr/ringbuffer.h>
 
 #include "cam.h"
+#include "global.h"
 #include "device.h"
 #include "scsetup.h"
 #include "filter.h"
@@ -33,6 +37,7 @@
 #include "override.h"
 #include "misc.h"
 #include "log-core.h"
+#include "FFdecsa/FFdecsa.h"
 
 #define IDLE_SLEEP          0 // idleTime when sleeping
 #define IDLE_GETCA        200 // idleTime when waiting for ca descriptors
@@ -155,26 +160,26 @@ void cLogStats::Action(void)
 // -- cHookManager -------------------------------------------------------------
 
 class cHookManager : public cAction {
-  int cardNum;
+  const char *devId;
   cSimpleList<cLogHook> hooks;
   //
-  cPidFilter *AddFilter(int Pid, int Section, int Mask, int Mode, int IdleTime, bool Crc);
+  cPidFilter *AddFilter(int Pid, int Section, int Mask, int IdleTime);
   void ClearHooks(void);
   void DelHook(cLogHook *hook);
 protected:
   virtual void Process(cPidFilter *filter, unsigned char *data, int len);
 public:
-  cHookManager(int CardNum);
+  cHookManager(cDevice *Device, const char *DevId);
   virtual ~cHookManager();
   void AddHook(cLogHook *hook);
   bool TriggerHook(int id);
   void Down(void);
   };
 
-cHookManager::cHookManager(int CardNum)
-:cAction("hookmanager",CardNum)
+cHookManager::cHookManager(cDevice *Device, const char *DevId)
+:cAction("hookmanager",Device,DevId)
 {
-  cardNum=CardNum;
+  devId=DevId;
   Priority(10);
 }
 
@@ -207,12 +212,11 @@ bool cHookManager::TriggerHook(int id)
 void cHookManager::AddHook(cLogHook *hook)
 {
   Lock();
-  PRINTF(L_CORE_HOOK,"%d: starting hook '%s' (%04x)",cardNum,hook->name,hook->id);
+  PRINTF(L_CORE_HOOK,"%s: starting hook '%s' (%04x)",devId,hook->name,hook->id);
   hook->delay.Set(CHAIN_HOLD);
-  hook->cardNum=cardNum;
   hooks.Add(hook);
   for(cPid *pid=hook->pids.First(); pid; pid=hook->pids.Next(pid)) {
-    cPidFilter *filter=AddFilter(pid->pid,pid->sct,pid->mask,pid->mode,CHAIN_HOLD/8,false);
+    cPidFilter *filter=AddFilter(pid->pid,pid->sct,pid->mask,CHAIN_HOLD/8);
     if(filter) {
       filter->userData=(void *)hook;
       pid->filter=filter;
@@ -223,7 +227,7 @@ void cHookManager::AddHook(cLogHook *hook)
 
 void cHookManager::DelHook(cLogHook *hook)
 {
-  PRINTF(L_CORE_HOOK,"%d: stopping hook '%s' (%04x)",cardNum,hook->name,hook->id);
+  PRINTF(L_CORE_HOOK,"%s: stopping hook '%s' (%04x)",devId,hook->name,hook->id);
   for(cPid *pid=hook->pids.First(); pid; pid=hook->pids.Next(pid)) {
     cPidFilter *filter=pid->filter;
     if(filter) {
@@ -234,15 +238,15 @@ void cHookManager::DelHook(cLogHook *hook)
   hooks.Del(hook);
 }
 
-cPidFilter *cHookManager::AddFilter(int Pid, int Section, int Mask, int Mode, int IdleTime, bool Crc)
+cPidFilter *cHookManager::AddFilter(int Pid, int Section, int Mask, int IdleTime)
 {
   cPidFilter *filter=NewFilter(IdleTime);
   if(filter) {
     filter->SetBuffSize(32768);
-    filter->Start(Pid,Section,Mask,Mode,Crc);
-    PRINTF(L_CORE_HOOK,"%d: added filter pid=0x%.4x sct=0x%.2x/0x%.2x/0x%.2x idle=%d crc=%d",cardNum,Pid,Section,Mask,Mode,IdleTime,Crc);
+    filter->Start(Pid,Section,Mask);
+    PRINTF(L_CORE_HOOK,"%s: added filter pid=0x%.4x sct=0x%.2x/0x%.2x idle=%d",devId,Pid,Section,Mask,IdleTime);
     }
-  else PRINTF(L_GEN_ERROR,"no free slot or filter failed to open for hookmanager %d",cardNum);
+  else PRINTF(L_GEN_ERROR,"no free slot or filter failed to open for hookmanager %s",devId);
   return filter;
 }
 
@@ -257,7 +261,7 @@ void cHookManager::Process(cPidFilter *filter, unsigned char *data, int len)
         if(hook->bailOut || hook->delay.TimedOut()) DelHook(hook);
         }
       }
-    else PRINTF(L_CORE_HOOK,"%d: incomplete section %d != %d",cardNum,len,SCT_LEN(data));
+    else PRINTF(L_CORE_HOOK,"%s: incomplete section %d != %d",devId,len,SCT_LEN(data));
     }
   else {
     cLogHook *hook=(cLogHook *)(filter->userData);
@@ -269,20 +273,22 @@ void cHookManager::Process(cPidFilter *filter, unsigned char *data, int len)
 
 class cLogChain : public cSimpleItem {
 public:
-  int cardNum, caid, source, transponder;
+  cCam *cam;
+  const char *devId;
+  int caid, source, transponder;
   bool softCSA, active, delayed;
   cTimeMs delay;
   cPids pids;
   cSimpleList<cSystem> systems;
   //
-  cLogChain(int CardNum, bool soft, int src, int tr);
+  cLogChain(cCam *Cam, const char *DevId, bool soft, int src, int tr);
   void Process(int pid, const unsigned char *data);
   bool Parse(const unsigned char *cat);
   };
 
-cLogChain::cLogChain(int CardNum, bool soft, int src, int tr)
+cLogChain::cLogChain(cCam *Cam, const char *DevId, bool soft, int src, int tr)
 {
-  cardNum=CardNum; softCSA=soft; source=src; transponder=tr;
+  cam=Cam; devId=DevId; softCSA=soft; source=src; transponder=tr;
   active=delayed=false;
 }
 
@@ -299,7 +305,7 @@ bool cLogChain::Parse(const unsigned char *cat)
   if(cat[0]==0x09) {
     caid=WORD(cat,2,0xFFFF);
     LBSTARTF(L_CORE_AU);
-    LBPUT("%d: chain caid %04x",cardNum,caid);
+    LBPUT("%s: chain caid %04x",devId,caid);
     cSystem *sys;
     if(systems.Count()>0) {
       LBPUT(" ++");
@@ -313,7 +319,7 @@ bool cLogChain::Parse(const unsigned char *cat)
         while((sys=cSystems::FindBySysId(caid,!softCSA,Pri))) {
           Pri=sys->Pri();
           if(sys->HasLogger()) {
-            sys->CardNum(cardNum);
+            sys->SetOwner(cam);
             sys->ParseCAT(&pids,cat,source,transponder);
             systems.Add(sys);
             LBPUT(" %s(%d)",sys->Name(),sys->Pri());
@@ -325,7 +331,7 @@ bool cLogChain::Parse(const unsigned char *cat)
       }
     if(systems.Count()==0) LBPUT(" none available");
     for(cPid *pid=pids.First(); pid; pid=pids.Next(pid))
-       LBPUT(" [%04x-%02x/%02x/%02x]",pid->pid,pid->sct,pid->mask,pid->mode);
+       LBPUT(" [%04x-%02x/%02x]",pid->pid,pid->sct,pid->mask);
     LBEND();
     if(systems.Count()>0 && pids.Count()>0)
       return true;
@@ -337,7 +343,8 @@ bool cLogChain::Parse(const unsigned char *cat)
 
 class cLogger : public cAction {
 private:
-  int cardNum;
+  cCam *cam;
+  const char *devId;
   bool softCSA, up;
   cSimpleList<cLogChain> chains;
   cSimpleList<cEcmInfo> active;
@@ -350,7 +357,7 @@ private:
   ePreMode prescan;
   cTimeMs pretime;
   //
-  cPidFilter *AddFilter(int Pid, int Section, int Mask, int Mode, int IdleTime, bool Crc);
+  cPidFilter *AddFilter(int Pid, int Section, int Mask, int IdleTime);
   void SetChains(void);
   void ClearChains(void);
   void StartChain(cLogChain *chain);
@@ -359,7 +366,7 @@ private:
 protected:
   virtual void Process(cPidFilter *filter, unsigned char *data, int len);
 public:
-  cLogger(int CardNum, bool soft);
+  cLogger(cCam *Cam, cDevice *Device, const char *DevId, bool soft);
   virtual ~cLogger();
   void EcmStatus(const cEcmInfo *ecm, bool on);
   void Up(void);
@@ -367,10 +374,10 @@ public:
   void PreScan(int src, int tr);
   };
 
-cLogger::cLogger(int CardNum, bool soft)
-:cAction("logger",CardNum)
+cLogger::cLogger(cCam *Cam, cDevice *Device, const char *DevId, bool soft)
+:cAction("logger",Device,DevId)
 {
-  cardNum=CardNum; softCSA=soft;
+  cam=Cam; devId=DevId; softCSA=soft;
   catfilt=0; up=false; prescan=pmNone;
   Priority(10);
 }
@@ -384,9 +391,9 @@ void cLogger::Up(void)
 {
   Lock();
   if(!up) {
-    PRINTF(L_CORE_AUEXTRA,"%d: UP",cardNum);
+    PRINTF(L_CORE_AUEXTRA,"%s: UP",devId);
     catVers=-1;
-    catfilt=AddFilter(1,0x01,0xFF,0,0,true);
+    catfilt=AddFilter(1,0x01,0xFF,0);
     up=true;
     }
   Unlock();
@@ -396,7 +403,7 @@ void cLogger::Down(void)
 {
   Lock();
   if(up) {
-    PRINTF(L_CORE_AUEXTRA,"%d: DOWN",cardNum);
+    PRINTF(L_CORE_AUEXTRA,"%s: DOWN",devId);
     ClearChains();
     DelAllFilter();
     catfilt=0; up=false; prescan=pmNone;
@@ -415,7 +422,7 @@ void cLogger::PreScan(int src, int tr)
 void cLogger::EcmStatus(const cEcmInfo *ecm, bool on)
 {
   Lock();
-  PRINTF(L_CORE_AUEXTRA,"%d: ecm prgid=%d caid=%04x prov=%.4x %s",cardNum,ecm->prgId,ecm->caId,ecm->provId,on ? "active":"inactive");
+  PRINTF(L_CORE_AUEXTRA,"%s: ecm prgid=%d caid=%04x prov=%.4x %s",devId,ecm->prgId,ecm->caId,ecm->provId,on ? "active":"inactive");
   source=ecm->source; transponder=ecm->transponder;
   cEcmInfo *e;
   if(on) {
@@ -462,13 +469,13 @@ void cLogger::ClearChains(void)
 void cLogger::StartChain(cLogChain *chain)
 {
   if(chain->delayed)
-    PRINTF(L_CORE_AUEXTRA,"%d: restarting delayed chain %04x",cardNum,chain->caid);
+    PRINTF(L_CORE_AUEXTRA,"%s: restarting delayed chain %04x",devId,chain->caid);
   chain->delayed=false;
   if(!chain->active) {
-    PRINTF(L_CORE_AU,"%d: starting chain %04x",cardNum,chain->caid);
+    PRINTF(L_CORE_AU,"%s: starting chain %04x",devId,chain->caid);
     chain->active=true;
     for(cPid *pid=chain->pids.First(); pid; pid=chain->pids.Next(pid)) {
-      cPidFilter *filter=AddFilter(pid->pid,pid->sct,pid->mask,pid->mode,CHAIN_HOLD/8,false);
+      cPidFilter *filter=AddFilter(pid->pid,pid->sct,pid->mask,CHAIN_HOLD/8);
       if(filter) {
         filter->userData=(void *)chain;
         pid->filter=filter;
@@ -481,7 +488,7 @@ void cLogger::StopChain(cLogChain *chain, bool force)
 {
   if(chain->active) {
     if(force || (chain->delayed && chain->delay.TimedOut())) {
-      PRINTF(L_CORE_AU,"%d: stopping chain %04x",cardNum,chain->caid);
+      PRINTF(L_CORE_AU,"%s: stopping chain %04x",devId,chain->caid);
       chain->active=false;
       for(cPid *pid=chain->pids.First(); pid; pid=chain->pids.Next(pid)) {
         cPidFilter *filter=pid->filter;
@@ -492,22 +499,22 @@ void cLogger::StopChain(cLogChain *chain, bool force)
         }
       }
     else if(!chain->delayed) {
-      PRINTF(L_CORE_AUEXTRA,"%d: delaying chain %04x",cardNum,chain->caid);
+      PRINTF(L_CORE_AUEXTRA,"%s: delaying chain %04x",devId,chain->caid);
       chain->delayed=true;
       chain->delay.Set(CHAIN_HOLD);
       }
     }
 }
 
-cPidFilter *cLogger::AddFilter(int Pid, int Section, int Mask, int Mode, int IdleTime, bool Crc)
+cPidFilter *cLogger::AddFilter(int Pid, int Section, int Mask, int IdleTime)
 {
   cPidFilter *filter=NewFilter(IdleTime);
   if(filter) {
     if(Pid>1) filter->SetBuffSize(KILOBYTE(64));
-    filter->Start(Pid,Section,Mask,Mode,Crc);
-    PRINTF(L_CORE_AUEXTRA,"%d: added filter pid=0x%.4x sct=0x%.2x/0x%.2x/0x%.2x idle=%d crc=%d",cardNum,Pid,Section,Mask,Mode,IdleTime,Crc);
+    filter->Start(Pid,Section,Mask);
+    PRINTF(L_CORE_AUEXTRA,"%s: added filter pid=0x%.4x sct=0x%.2x/0x%.2x idle=%d",devId,Pid,Section,Mask,IdleTime);
     }
-  else PRINTF(L_GEN_ERROR,"no free slot or filter failed to open for logger %d",cardNum);
+  else PRINTF(L_GEN_ERROR,"no free slot or filter failed to open for logger %s",devId);
   return filter;
 }
 
@@ -522,7 +529,7 @@ void cLogger::ProcessCat(unsigned char *data, int len)
       if(chain)
         chain->Parse(&data[i]);
       else {
-        chain=new cLogChain(cardNum,softCSA,source,transponder);
+        chain=new cLogChain(cam,devId,softCSA,source,transponder);
         if(chain->Parse(&data[i]))
           chains.Add(chain);
         else
@@ -538,7 +545,7 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
     if(filter==catfilt) {
       int vers=(data[5]&0x3E)>>1;
       if(data[0]==0x01 && vers!=catVers) {
-        PRINTF(L_CORE_AUEXTRA,"%d: got CAT version %02x",cardNum,vers);
+        PRINTF(L_CORE_AUEXTRA,"%s: got CAT version %02x",devId,vers);
         catVers=vers;
         HEXDUMP(L_HEX_CAT,data,len,"CAT vers %02x",catVers);
         ClearChains();
@@ -563,7 +570,7 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
           if(chain->delayed) StopChain(chain,false);
           }
         }
-      else PRINTF(L_CORE_AU,"%d: incomplete section %d != %d",cardNum,len,SCT_LEN(data));
+      else PRINTF(L_CORE_AU,"%s: incomplete section %d != %d",devId,len,SCT_LEN(data));
       }
     }
   else {
@@ -714,6 +721,197 @@ bool cEcmCache::ParseLinePlain(const char *line)
   return true;
 }
 
+// -- cCaDescr -----------------------------------------------------------------
+
+class cCaDescr {
+private:
+  unsigned char *descr;
+  int len;
+public:
+  cCaDescr(void);
+  cCaDescr(const cCaDescr &arg);
+  ~cCaDescr();
+  const unsigned char *Get(int &l) const;
+  void Set(const cCaDescr *d);
+  void Set(const unsigned char *de, int l);
+  void Clear(void);
+  bool operator== (const cCaDescr &arg) const;
+  void Join(const cCaDescr *cd, bool rev=false);
+  cString ToString(void);
+  };
+
+cCaDescr::cCaDescr(void)
+{
+  descr=0; len=0;
+}
+
+cCaDescr::cCaDescr(const cCaDescr &cd)
+{
+  descr=0; len=0;
+  Set(cd.descr,cd.len);
+}
+
+cCaDescr::~cCaDescr()
+{
+  Clear();
+}
+
+const unsigned char *cCaDescr::Get(int &l) const
+{
+  l=len;
+  return descr;
+}
+
+void cCaDescr::Set(const cCaDescr *d)
+{
+  Set(d->descr,d->len);
+}
+
+void cCaDescr::Set(const unsigned char *de, int l)
+{
+  Clear();
+  if(l) {
+    descr=MALLOC(unsigned char,l);
+    if(descr) {
+      memcpy(descr,de,l);
+      len=l;
+      }
+    }
+}
+
+void cCaDescr::Clear(void)
+{
+  free(descr); descr=0; len=0;
+}
+
+void cCaDescr::Join(const cCaDescr *cd, bool rev)
+{
+  if(cd->descr) {
+    int l=len+cd->len;
+    unsigned char *m=MALLOC(unsigned char,l);
+    if(m) {
+      if(!rev) {
+        if(descr) memcpy(m,descr,len);
+        memcpy(m+len,cd->descr,cd->len);
+        }
+      else {
+        memcpy(m,cd->descr,cd->len);
+        if(descr) memcpy(m+cd->len,descr,len);
+        }
+      Clear();
+      descr=m; len=l;
+      }
+    }
+}
+
+bool cCaDescr::operator== (const cCaDescr &cd) const
+{
+  return len==cd.len && (len==0 || memcmp(descr,cd.descr,len)==0);
+}
+
+cString cCaDescr::ToString(void)
+{
+  if(!descr) return "<empty>";
+  char *str=AUTOARRAY(char,len*3+8);
+  int q=sprintf(str,"%02X",descr[0]);
+  for(int i=1; i<len; i++) q+=sprintf(str+q," %02X",descr[i]);
+  return str;
+}
+
+// -- cPrgPid ------------------------------------------------------------------
+
+class cPrgPid : public cSimpleItem {
+private:
+  bool proc;
+public:
+  int type, pid;
+  cCaDescr caDescr;
+  //
+  cPrgPid(int Type, int Pid) { type=Type; pid=Pid; proc=false; }
+  bool Proc(void) const { return proc; }
+  void Proc(bool is) { proc=is; };
+  };
+
+// -- cPrg ---------------------------------------------------------------------
+
+class cPrg : public cSimpleItem {
+private:
+  bool isUpdate, pidCaDescr;
+  //
+  void Setup(void);
+public:
+  int sid, source, transponder;
+  cSimpleList<cPrgPid> pids;
+  cCaDescr caDescr;
+  //
+  cPrg(void);
+  cPrg(int Sid, bool IsUpdate);
+  bool IsUpdate(void) const { return isUpdate; }
+  bool HasPidCaDescr(void) const { return pidCaDescr; }
+  void SetPidCaDescr(bool val) { pidCaDescr=val; }
+  bool SimplifyCaDescr(void);
+  void DumpCaDescr(int c);
+  };
+
+cPrg::cPrg(void)
+{
+  Setup();
+}
+
+cPrg::cPrg(int Sid, bool IsUpdate)
+{
+  Setup();
+  sid=Sid; isUpdate=IsUpdate;
+}
+
+void cPrg::Setup(void)
+{
+  sid=-1; source=-1; transponder=-1;
+  isUpdate=pidCaDescr=false;
+}
+
+void cPrg::DumpCaDescr(int c)
+{
+  PRINTF(c,"prgca: %s",*caDescr.ToString());
+  for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
+    PRINTF(c,"pidca %04x: %s",pid->pid,*pid->caDescr.ToString());
+}
+
+bool cPrg::SimplifyCaDescr(void)
+{
+//XXX
+PRINTF(L_CORE_PIDS,"SimplyCa entry pidCa=%d",HasPidCaDescr());
+DumpCaDescr(L_CORE_PIDS);
+//XXX
+
+  if(HasPidCaDescr()) {
+    bool equal=true;
+    if(pids.Count()>1) {
+      cPrgPid *pid0=pids.First();
+      for(cPrgPid *pid1=pids.Next(pid0); pid1; pid1=pids.Next(pid1))
+        if(!(pid0->caDescr==pid1->caDescr)) { equal=false; break; }
+      }
+    if(equal) {
+      cPrgPid *pid=pids.First();
+      caDescr.Join(&pid->caDescr);
+      for(; pid; pid=pids.Next(pid)) pid->caDescr.Clear();
+      SetPidCaDescr(false);
+      }
+    }
+  if(HasPidCaDescr()) {
+    for(cPrgPid *pid=pids.First(); pid; pid=pids.Next(pid))
+      pid->caDescr.Join(&caDescr,true);
+    caDescr.Clear();
+    }
+
+//XXX
+PRINTF(L_CORE_PIDS,"SimplyCa exit pidCa=%d",HasPidCaDescr());
+DumpCaDescr(L_CORE_PIDS);
+//XXX
+
+  return HasPidCaDescr();
+}
+
 // -- cEcmPri ------------------------------------------------------------------
 
 class cEcmPri : public cSimpleItem {
@@ -726,7 +924,8 @@ public:
 
 class cEcmHandler : public cSimpleItem, public cAction {
 private:
-  int cardNum, cwIndex;
+  const char *devId;
+  int cwIndex;
   cCam *cam;
   char *id;
   cTimeMs idleTime;
@@ -767,7 +966,7 @@ private:
 protected:
   virtual void Process(cPidFilter *filter, unsigned char *data, int len);
 public:
-  cEcmHandler(cCam *Cam, int CardNum, int cwindex);
+  cEcmHandler(cCam *Cam, cDevice *Device, const char *DevId, int cwindex);
   virtual ~cEcmHandler();
   void Stop(void);
   void SetPrg(cPrg *Prg);
@@ -780,17 +979,17 @@ public:
   const char *Id(void) const { return id; }
   };
 
-cEcmHandler::cEcmHandler(cCam *Cam, int CardNum, int cwindex)
-:cAction("ecmhandler",CardNum)
+cEcmHandler::cEcmHandler(cCam *Cam, cDevice *Device, const char *DevId, int cwindex)
+:cAction("ecmhandler",Device,DevId)
 ,failed(32,0)
 {
   cam=Cam;
-  cardNum=CardNum;
+  devId=DevId;
   cwIndex=cwindex;
   sys=0; filter=0; ecm=0; ecmPri=0; mode=-1;
   trigger=ecmUpd=false; triggerMode=-1;
   filterSource=filterTransponder=0; filterCwIndex=-1; filterSid=-1;
-  id=bprintf("%d.%d",cardNum,cwindex);
+  id=bprintf("%s.%d",devId,cwindex);
 }
 
 cEcmHandler::~cEcmHandler()
@@ -835,7 +1034,7 @@ void cEcmHandler::ShiftCwIndex(int cwindex)
   if(cwIndex!=cwindex) {
     PRINTF(L_CORE_PIDS,"%s: shifting cwIndex from %d to %d",id,cwIndex,cwindex);
     free(id);
-    id=bprintf("%d.%d",cardNum,cwindex);
+    id=bprintf("%s.%d",devId,cwindex);
     dataMutex.Lock();
     trigger=true;
     cwIndex=cwindex;
@@ -1218,7 +1417,7 @@ cEcmInfo *cEcmHandler::JumpEcm(void)
     if(ecmPri->ecm!=ecm) {
       StopEcm();
       ecm=ecmPri->ecm;
-      filter->Start(ecm->ecm_pid,ecm->ecm_table,0xfe,0,false);
+      filter->Start(ecm->ecm_pid,ecm->ecm_table,0xfe);
       cam->LogEcmStatus(ecm,true);
       }
     else {
@@ -1230,7 +1429,8 @@ cEcmInfo *cEcmHandler::JumpEcm(void)
       if(dolog) PRINTF(L_GEN_DEBUG,"internal: handler %s, no system found for ident %04x (caid %04x pri %d)",id,ecmPri->sysIdent,ecmPri->ecm->caId,ecmPri->pri);
       return JumpEcm();
       }
-    sys->DoLog(dolog!=0); sys->CardNum(cardNum);
+    sys->DoLog(dolog!=0);
+    sys->SetOwner(cam);
     failed.SetMaxFail(sys->MaxEcmTry());
 
     if(dolog) PRINTF(L_CORE_ECM,"%s: try system %s (%04x) id %04x with ecm %x%s (pri=%d)",
@@ -1289,6 +1489,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
             while((n=ecms.First())) {
               ecms.Del(n,false);
               n->SetSource(filterSid,filterSource,filterTransponder);
+              n->SetDvb(cam->Adapter(),cam->Frontend());
               n->AddCaDescr(&buff[index],buff[index+1]+2);
               overrides.UpdateEcm(n,dolog);
               LBSTARTF(L_CORE_ECM);
@@ -1330,38 +1531,803 @@ void cEcmHandler::ParseCAInfo(int SysId)
   PRINTF(L_CORE_ECMPROC,"%s: ecmPri list end",id);
 }
 
+// --- cChannelCaids -----------------------------------------------------------
+
+#ifndef SASC
+
+class cChannelCaids : public cSimpleItem {
+private:
+  int prg, source, transponder;
+  int numcaids;
+  caid_t caids[MAX_CI_SLOT_CAIDS+1];
+public:
+  cChannelCaids(cChannel *channel);
+  bool IsChannel(cChannel *channel);
+  void Sort(void);
+  void Del(caid_t caid);
+  bool HasCaid(caid_t caid);
+  bool Same(cChannelCaids *ch, bool full);
+  void HistAdd(unsigned short *hist);
+  void Dump(const char *devId);
+  const caid_t *Caids(void) { caids[numcaids]=0; return caids; }
+  int NumCaids(void) { return numcaids; }
+  int Source(void) const { return source; }
+  int Transponder(void) const { return transponder; }
+  };
+
+cChannelCaids::cChannelCaids(cChannel *channel)
+{
+  prg=channel->Sid(); source=channel->Source(); transponder=channel->Transponder();
+  numcaids=0;
+  for(const caid_t *ids=channel->Caids(); *ids; ids++)
+    if(numcaids<MAX_CI_SLOT_CAIDS) caids[numcaids++]=*ids;
+  Sort();
+}
+
+bool cChannelCaids::IsChannel(cChannel *channel)
+{
+  return prg==channel->Sid() && source==channel->Source() && transponder==channel->Transponder();
+}
+
+void cChannelCaids::Sort(void)
+{
+  caid_t tmp[MAX_CI_SLOT_CAIDS];
+  int c=0xFFFF;
+  for(int i=0; i<numcaids; i++) {
+    int d=0;
+    for(int j=0; j<numcaids; j++) if(caids[j]>d && caids[j]<c) d=caids[j];
+    tmp[i]=d; c=d;
+    }
+  memcpy(caids,tmp,sizeof(caids));
+}
+
+void cChannelCaids::Del(caid_t caid)
+{
+  for(int i=0; i<numcaids; i++)
+    if(caids[i]==caid) {
+      numcaids--; caids[i]=caids[numcaids];
+      if(numcaids>0) Sort();
+      caids[numcaids]=0;
+      break;
+      }
+}
+
+bool cChannelCaids::HasCaid(caid_t caid)
+{
+  for(int i=0; i<numcaids; i++) if(caids[i]==caid) return true;
+  return false;
+}
+
+bool cChannelCaids::Same(cChannelCaids *ch, bool full)
+{
+  if(full && (source!=ch->source || transponder!=ch->transponder)) return false;
+  if(numcaids!=ch->numcaids) return false;
+  return memcmp(caids,ch->caids,numcaids*sizeof(caid_t))==0;
+}
+
+void cChannelCaids::HistAdd(unsigned short *hist)
+{
+  for(int i=numcaids-1; i>=0; i--) hist[caids[i]]++;
+}
+
+void cChannelCaids::Dump(const char *devId)
+{
+  LBSTART(L_CORE_CAIDS);
+  LBPUT("%s: channel %d/%x/%x",devId,prg,source,transponder);
+  for(const caid_t *ids=Caids(); *ids; ids++) LBPUT(" %04x",*ids);
+  LBEND();
+}
+
+// --- cChannelList ------------------------------------------------------------
+
+class cChannelList : public cSimpleList<cChannelCaids> {
+private:
+  const char *devId;
+public:
+  cChannelList(const char *DevId);
+  void Unique(bool full);
+  void CheckIgnore(void);
+  int Histo(void);
+  void Purge(int caid, bool fullch);
+  };
+
+cChannelList::cChannelList(const char *DevId)
+{
+  devId=DevId;
+}
+
+void cChannelList::CheckIgnore(void)
+{
+  char *cache=MALLOC(char,0x10000);
+  if(!cache) return;
+  memset(cache,0,sizeof(char)*0x10000);
+  int cTotal=0, cHits=0;
+  for(cChannelCaids *ch=First(); ch; ch=Next(ch)) {
+    const caid_t *ids=ch->Caids();
+    while(*ids) {
+      int pri=0;
+      if(overrides.Ignore(ch->Source(),ch->Transponder(),*ids))
+        ch->Del(*ids);
+      else {
+        char c=cache[*ids];
+        if(c==0) cache[*ids]=c=(cSystems::FindIdentBySysId(*ids,false,pri) ? 1 : -1);
+        else cHits++;
+        cTotal++;
+        if(c<0) {
+          for(cChannelCaids *ch2=Next(ch); ch2; ch2=Next(ch2)) ch2->Del(*ids);
+          ch->Del(*ids);
+          }
+        else ids++;
+        }
+      }
+    }
+  free(cache);
+  PRINTF(L_CORE_CAIDS,"%s: after check",devId);
+  for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->Dump(devId);
+  PRINTF(L_CORE_CAIDS,"%s: check cache usage: %d requests, %d hits, %d%% hits",devId,cTotal,cHits,(cTotal>0)?(cHits*100/cTotal):0);
+}
+
+void cChannelList::Unique(bool full)
+{
+  for(cChannelCaids *ch1=First(); ch1; ch1=Next(ch1)) {
+    for(cChannelCaids *ch2=Next(ch1); ch2;) {
+      if(ch1->Same(ch2,full) || ch2->NumCaids()<1) {
+        cChannelCaids *t=Next(ch2);
+        Del(ch2);
+        ch2=t;
+        }
+      else ch2=Next(ch2);
+      }
+    }
+  if(Count()==1 && First() && First()->NumCaids()<1) Del(First());
+  PRINTF(L_CORE_CAIDS,"%s: after unique (%d)",devId,full);
+  for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->Dump(devId);
+}
+
+int cChannelList::Histo(void)
+{
+  int h=-1;
+  unsigned short *hist=MALLOC(unsigned short,0x10000);
+  if(hist) {
+    memset(hist,0,sizeof(unsigned short)*0x10000);
+    for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->HistAdd(hist);
+    int c=0;
+    for(int i=0; i<0x10000; i++)
+      if(hist[i]>c) { h=i; c=hist[i]; }
+    free(hist);
+    }
+  else PRINTF(L_GEN_ERROR,"malloc failed in cChannelList::Histo");
+  return h;
+}
+
+void cChannelList::Purge(int caid, bool fullch)
+{
+  for(cChannelCaids *ch=First(); ch;) {
+    if(!fullch) ch->Del(caid);
+    if(ch->NumCaids()<=0 || (fullch && ch->HasCaid(caid))) {
+      cChannelCaids *t=Next(ch);
+      Del(ch);
+      ch=t;
+      }
+    else ch=Next(ch);
+    }
+  if(Count()>0) {
+    PRINTF(L_CORE_CAIDS,"%s: still left",devId);
+    for(cChannelCaids *ch=First(); ch; ch=Next(ch)) ch->Dump(devId);
+    }
+}
+
+// -- cCiFrame -----------------------------------------------------------------
+
+#define LEN_OFF 2
+
+cCiFrame::cCiFrame(void)
+{
+  rb=0; mem=0; len=alen=glen=0;
+}
+
+cCiFrame::~cCiFrame()
+{
+  free(mem);
+}
+
+unsigned char *cCiFrame::GetBuff(int l)
+{
+  if(!mem || l>alen) {
+    free(mem); mem=0; alen=0;
+    mem=MALLOC(unsigned char,l+LEN_OFF);
+    if(mem) alen=l;
+    }
+  len=l;
+  if(!mem) {
+    PRINTF(L_GEN_DEBUG,"internal: ci-frame alloc failed");
+    return 0;
+    }
+  return mem+LEN_OFF;
+}
+
+void cCiFrame::Put(void)
+{
+  if(rb && mem) {
+    *((short *)mem)=len;
+    rb->Put(mem,len+LEN_OFF);
+    }
+}
+
+unsigned char *cCiFrame::Get(int &l)
+{
+  if(rb) {
+    int c;
+    unsigned char *data=rb->Get(c);
+    if(data) {
+      if(c>LEN_OFF) {
+        int s=*((short *)data);
+        if(c>=s+LEN_OFF) {
+          l=glen=s;
+          return data+LEN_OFF;
+          }
+        }
+      LDUMP(L_GEN_DEBUG,data,c,"internal: ci rb frame sync got=%d avail=%d -",c,rb->Available());
+      rb->Clear();
+      }
+    }
+  return 0;
+}
+
+int cCiFrame::Avail(void)
+{
+  return rb ? rb->Available() : 0;
+}
+
+void cCiFrame::Del(void)
+{
+  if(rb && glen) {
+    rb->Del(glen+LEN_OFF);
+    glen=0;
+    }
+}
+
+// -- cScCamSlot ---------------------------------------------------------------
+
+#define TDPU_SIZE_INDICATOR 0x80
+
+#define CAID_TIME       300000 // time between caid scans
+#define TRIGGER_TIME     10000 // min. time between caid scan trigger
+#define SLOT_CAID_CHECK  10000
+#define SLOT_RESET_TIME    600
+
+class cScCamSlot : public cCamSlot {
+private:
+  cCam *cam;
+  unsigned short caids[MAX_CI_SLOT_CAIDS+1];
+  int slot, version;
+  const char *devId;
+  cTimeMs checkTimer;
+  bool reset, doReply;
+  cTimeMs resetTimer;
+  eModuleStatus lastStatus;
+  cRingBufferLinear rb;
+  cCiFrame frame;
+  //
+  int GetLength(const unsigned char * &data);
+  int LengthSize(int n);
+  void SetSize(int n, unsigned char * &p);
+  void CaInfo(int tcid, int cid);
+  bool Check(void);
+public:
+  cScCamSlot(cCam *Cam, const char *DevId, int Slot);
+  void Process(const unsigned char *data, int len);
+  eModuleStatus Status(void);
+  bool Reset(bool log=true);
+  cCiFrame *Frame(void) { return &frame; }
+  };
+
+cScCamSlot::cScCamSlot(cCam *Cam, const char *DevId, int Slot)
+:cCamSlot(Cam)
+,checkTimer(-SLOT_CAID_CHECK-1000)
+,rb(KILOBYTE(4),5+LEN_OFF,false,"SC-CI slot answer")
+{
+  cam=Cam; devId=DevId; slot=Slot;
+  version=0; caids[0]=0; doReply=false; lastStatus=msReset;
+  frame.SetRb(&rb);
+  Reset(false);
+}
+
+eModuleStatus cScCamSlot::Status(void)
+{
+  eModuleStatus status;
+  if(reset) {
+    status=msReset;
+    if(resetTimer.TimedOut()) reset=false;
+    }
+  else if(caids[0]) status=msReady;
+  else {
+    status=msPresent; //msNone;
+    Check();
+    }
+  if(status!=lastStatus) {
+    static const char *stext[] = { "none","reset","present","ready" };
+    PRINTF(L_CORE_CI,"%s.%d: status '%s'",devId,slot,stext[status]);
+    lastStatus=status;
+    }
+  return status;
+}
+
+bool cScCamSlot::Reset(bool log)
+{
+  reset=true; resetTimer.Set(SLOT_RESET_TIME);
+  rb.Clear();
+  if(log) PRINTF(L_CORE_CI,"%s.%d: reset",devId,slot);
+  return true;
+}
+
+bool cScCamSlot::Check(void)
+{
+  bool res=false;
+  bool dr=cam->IsSoftCSA(false) || ScSetup.ConcurrentFF>0;
+  if(dr!=doReply && !IsDecrypting()) {
+    PRINTF(L_CORE_CI,"%s.%d: doReply changed, reset triggered",devId,slot);
+    Reset(false);
+    doReply=dr;
+    }
+  if(checkTimer.TimedOut()) {
+    if(version!=cam->GetCaids(slot,0,0)) {
+      version=cam->GetCaids(slot,caids,MAX_CI_SLOT_CAIDS);
+      PRINTF(L_CORE_CI,"%s.%d: now using CAIDs version %d",devId,slot,version);
+      res=true;
+      }
+    checkTimer.Set(SLOT_CAID_CHECK);
+    }
+  return res;
+}
+
+int cScCamSlot::GetLength(const unsigned char * &data)
+{
+  int len=*data++;
+  if(len&TDPU_SIZE_INDICATOR) {
+    int i;
+    for(i=len&~TDPU_SIZE_INDICATOR, len=0; i>0; i--) len=(len<<8) + *data++;
+    }
+  return len;
+}
+
+int cScCamSlot::LengthSize(int n)
+{
+  return n<TDPU_SIZE_INDICATOR?1:3;
+}
+
+void cScCamSlot::SetSize(int n, unsigned char * &p)
+{
+  if(n<TDPU_SIZE_INDICATOR) *p++=n;
+  else { *p++=2|TDPU_SIZE_INDICATOR; *p++=n>>8; *p++=n&0xFF; }
+}
+
+void cScCamSlot::CaInfo(int tcid, int cid)
+{
+  int cn=0;
+  for(int i=0; caids[i]; i++) cn+=2;
+  int n=cn+8+LengthSize(cn);
+  unsigned char *p;
+  if(!(p=frame.GetBuff(n+1+LengthSize(n)))) return;
+  *p++=0xa0;
+  SetSize(n,p);
+  *p++=tcid;
+  *p++=0x90;
+  *p++=0x02; *p++=cid>>8; *p++=cid&0xff;
+  *p++=0x9f; *p++=0x80;   *p++=0x31; // AOT_CA_INFO
+  SetSize(cn,p);
+  for(int i=0; caids[i]; i++) { *p++=caids[i]>>8; *p++=caids[i]&0xff; }
+  frame.Put();
+  PRINTF(L_CORE_CI,"%s.%d sending CA info",devId,slot);
+}
+
+void cScCamSlot::Process(const unsigned char *data, int len)
+{
+  const unsigned char *save=data;
+  data+=3;
+  int dlen=GetLength(data);
+  if(dlen>len-(data-save)) {
+    PRINTF(L_CORE_CI,"%s.%d TDPU length exceeds data length",devId,slot);
+    dlen=len-(data-save);
+    }
+  int tcid=data[0];
+
+  if(Check()) CaInfo(tcid,0x01);
+
+  if(dlen<8 || data[1]!=0x90) return;
+  int cid=(data[3]<<8)+data[4];
+  int tag=(data[5]<<16)+(data[6]<<8)+data[7];
+  data+=8;
+  dlen=GetLength(data);
+  if(dlen>len-(data-save)) {
+    PRINTF(L_CORE_CI,"%s.%d tag length exceeds data length",devId,slot);
+    dlen=len-(data-save);
+    }
+  switch(tag) {
+    case 0x9f8030: // AOT_CA_INFO_ENQ
+      CaInfo(tcid,cid);
+      break;
+
+    case 0x9f8032: // AOT_CA_PMT
+      if(dlen>=6) {
+        int ca_lm=data[0];
+        int ci_cmd=-1;
+        cPrg *prg=new cPrg((data[1]<<8)+data[2],ca_lm==5);
+        int ilen=(data[4]<<8)+data[5];
+        LBSTARTF(L_CORE_CI);
+        LBPUT("%s.%d CA_PMT decoding len=%x lm=%x prg=%d len=%x",devId,slot,dlen,ca_lm,(data[1]<<8)+data[2],ilen);
+        data+=6; dlen-=6;
+        LBPUT("/%x",dlen);
+        if(ilen>0 && dlen>=ilen) {
+          ci_cmd=data[0];
+          if(ilen>1)
+            prg->caDescr.Set(&data[1],ilen-1);
+          LBPUT(" ci_cmd(G)=%02x",ci_cmd);
+          }
+        data+=ilen; dlen-=ilen;
+        while(dlen>=5) {
+          cPrgPid *pid=new cPrgPid(data[0],(data[1]<<8)+data[2]);
+          prg->pids.Add(pid);
+          ilen=(data[3]<<8)+data[4];
+          LBPUT(" pid=%d,%x len=%x",data[0],(data[1]<<8)+data[2],ilen);
+          data+=5; dlen-=5;
+          LBPUT("/%x",dlen);
+          if(ilen>0 && dlen>=ilen) {
+            ci_cmd=data[0];
+            if(ilen>1) {
+              pid->caDescr.Set(&data[1],ilen-1);
+              prg->SetPidCaDescr(true);
+              }
+            LBPUT(" ci_cmd(S)=%x",ci_cmd);
+            }
+          data+=ilen; dlen-=ilen;
+          }
+        LBEND();
+        PRINTF(L_CORE_CI,"%s.%d got CA pmt ciCmd=%d caLm=%d",devId,slot,ci_cmd,ca_lm);
+        if(doReply && (ci_cmd==0x03 || (ci_cmd==0x01 && ca_lm==0x03))) {
+          unsigned char *b;
+          if((b=frame.GetBuff(4+11))) {
+            b[0]=0xa0; b[2]=tcid;
+            b[3]=0x90;
+            b[4]=0x02; b[5]=cid<<8; b[6]=cid&0xff;
+            b[7]=0x9f; b[8]=0x80; b[9]=0x33; // AOT_CA_PMT_REPLY
+            b[11]=prg->sid<<8;
+            b[12]=prg->sid&0xff;
+            b[13]=0x00;
+            b[14]=0x81; 	// CA_ENABLE
+            b[10]=4; b[1]=4+9;
+            frame.Put();
+            PRINTF(L_CORE_CI,"%s.%d answer to query",devId,slot);
+            }
+          }
+        if(prg->sid!=0) {
+          if(ci_cmd==0x04) {
+            PRINTF(L_CORE_CI,"%s.%d stop decrypt",devId,slot);
+            cam->Stop();
+            }
+          if(ci_cmd==0x01 || (ci_cmd==-1 && (ca_lm==0x04 || ca_lm==0x05))) {
+            PRINTF(L_CORE_CI,"%s.%d set CAM decrypt (prg %d)",devId,slot,prg->sid);
+            cam->AddPrg(prg);
+            }
+          }
+        delete prg;
+        }
+      break;
+    }
+}
+
+#endif //SASC
+
+// -- cCams --------------------------------------------------------------------
+
+class cCams : public cSimpleList<cCam> {
+public:
+  cMutex listMutex;
+  //
+  void Register(cCam *cam);
+  void Unregister(cCam *cam);
+  };
+
+static cCams cams;
+
+void cCams::Register(cCam *cam)
+{
+  cMutexLock lock(&listMutex);
+  Add(cam);
+}
+
+void cCams::Unregister(cCam *cam)
+{
+  cMutexLock lock(&listMutex);
+  Del(cam,false);
+}
+
+// -- cGlobal ------------------------------------------------------------------
+
+char *cGlobal::CurrKeyStr(int camindex, int num, const char **id)
+{
+  cMutexLock lock(&cams.listMutex);
+  char *str=0;
+  cCam *c;
+  for(c=cams.First(); c && camindex>0; c=cams.Next(c), camindex--);
+  if(c) {
+    str=c->CurrentKeyStr(num,id);
+    if(!str && num==0) str=strdup(tr("(none)"));
+    }
+  return str;
+}
+
+void cGlobal::HouseKeeping(void)
+{
+  cMutexLock lock(&cams.listMutex);
+  for(cCam *c=cams.First(); c; c=cams.Next(c)) c->HouseKeeping();
+}
+
+bool cGlobal::Active(bool log)
+{
+  cMutexLock lock(&cams.listMutex);
+  for(cCam *c=cams.First(); c; c=cams.Next(c)) if(c->Active(log)) return true;
+  return false;
+}
+
+void cGlobal::CaidsChanged(void)
+{
+  cMutexLock lock(&cams.listMutex);
+  PRINTF(L_CORE_CAIDS,"caid list rebuild triggered");
+  for(cCam *c=cams.First(); c; c=cams.Next(c)) c->CaidsChanged();
+}
+
 // -- cCam ---------------------------------------------------------------
 
-cCam::cCam(cScDevice *dev, int CardNum)
+struct TPDU {
+  unsigned char slot;
+  unsigned char tcid;
+  unsigned char tag;
+  unsigned char len;
+  unsigned char data[1];
+  };
+
+cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Cafd, bool SoftCSA, bool FullTS)
 {
-  device=dev; cardNum=CardNum;
+  device=Device; adapter=Adapter; frontend=Frontend; devId=DevId; cafd=Cafd;
+  softcsa=SoftCSA; fullts=FullTS;
+  tcid=0; rebuildcaids=false;
+  memset(version,0,sizeof(version));
+  memset(slots,0,sizeof(slots));
+  SetDescription("SC-CI adapter on device %s",devId);
+  rb=new cRingBufferLinear(KILOBYTE(8),6+LEN_OFF,false,"SC-CI adapter read");
+  if(rb) {
+    rb->SetTimeouts(0,CAM_READ_TIMEOUT);
+    frame.SetRb(rb);
+    BuildCaids(true);
+    slots[0]=new cScCamSlot(this,devId,0);
+    Start();
+    }
+  else PRINTF(L_GEN_ERROR,"failed to create ringbuffer for SC-CI adapter %s.",devId);
+
+  decsa=new cDeCSA(devId);
+
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;
   memset(lastCW,0,sizeof(lastCW));
   memset(indexMap,0,sizeof(indexMap));
   memset(splitSid,0,sizeof(splitSid));
+  cams.Register(this);
 }
 
 cCam::~cCam()
 {
+  cams.Unregister(this);
   handlerList.Clear();
   delete hookman;
   delete logger;
+  Cancel(3);
+  ciMutex.Lock();
+  delete rb; rb=0;
+  ciMutex.Unlock();
+  delete decsa; decsa=0;
+}
+
+bool cCam::OwnSlot(const cCamSlot *slot) const
+{
+  if(slots[0]==slot) return true;
+  //for(int i=0; i<MAX_CI_SLOTS; i++) if(slots[i]==slot) return true;
+  return false;
+}
+
+int cCam::GetCaids(int slot, unsigned short *Caids, int max)
+{
+  BuildCaids(false);
+  cMutexLock lock(&ciMutex);
+  if(Caids) {
+    int i;
+    for(i=0; i<MAX_CI_SLOT_CAIDS && i<max && caids[i]; i++) Caids[i]=caids[slot][i];
+    Caids[i]=0;
+    }
+  return version[slot];
+}
+
+void cCam::CaidsChanged(void)
+{
+  rebuildcaids=true;
+}
+
+void cCam::BuildCaids(bool force)
+{
+  if(caidTimer.TimedOut() || force || (rebuildcaids && triggerTimer.TimedOut())) {
+    PRINTF(L_CORE_CAIDS,"%s: building caid lists",devId);
+    cChannelList list(devId);
+    Channels.Lock(false);
+    for(cChannel *channel=Channels.First(); channel; channel=Channels.Next(channel)) {
+      if(!channel->GroupSep() && channel->Ca()>=CA_ENCRYPTED_MIN && device->ProvidesTransponder(channel)) {
+        cChannelCaids *ch=new cChannelCaids(channel);
+        if(ch) list.Add(ch);
+        }
+      }
+    Channels.Unlock();
+    list.Unique(true);
+    list.CheckIgnore();
+    list.Unique(false);
+
+    int n=0, h;
+    caid_t c[MAX_CI_SLOT_CAIDS+1];
+    memset(c,0,sizeof(c));
+    do {
+      if((h=list.Histo())<0) break;
+      c[n++]=h;
+      LBSTART(L_CORE_CAIDS);
+      LBPUT("%s: added %04x caids now",devId,h); for(int i=0; i<n; i++) LBPUT(" %04x",c[i]);
+      LBEND();
+      list.Purge(h,false);
+      } while(n<MAX_CI_SLOT_CAIDS && list.Count()>0);
+    c[n]=0;
+    if(n==0) PRINTF(L_CORE_CI,"%s: no active CAIDs",devId);
+    else if(list.Count()>0) PRINTF(L_GEN_ERROR,"too many CAIDs. You should ignore some CAIDs.");
+
+    ciMutex.Lock();
+    if((version[0]==0 && c[0]!=0) || memcmp(caids[0],c,sizeof(caids[0]))) {
+      memcpy(caids[0],c,sizeof(caids[0]));
+      version[0]++;
+      if(version[0]>0) {
+        LBSTART(L_CORE_CI);
+        LBPUT("card %s, slot %d (v=%2d) caids:",devId,0,version[0]);
+        for(int i=0; caids[0][i]; i++) LBPUT(" %04x",caids[0][i]);
+        LBEND();
+        }
+      }
+    ciMutex.Unlock();
+
+    caidTimer.Set(CAID_TIME);
+    triggerTimer.Set(TRIGGER_TIME);
+    rebuildcaids=false;
+    }
+}
+
+int cCam::Read(unsigned char *Buffer, int MaxLength)
+{
+  cMutexLock lock(&ciMutex);
+  if(rb && Buffer && MaxLength>0) {
+    int s;
+    unsigned char *data=frame.Get(s);
+    if(data) {
+      if(s<=MaxLength) memcpy(Buffer,data,s);
+      else PRINTF(L_GEN_DEBUG,"internal: sc-ci %s rb frame size exceeded %d",devId,s);
+      frame.Del();
+      if(Buffer[2]!=0x80 || LOG(L_CORE_CIFULL)) {
+        LDUMP(L_CORE_CI,Buffer,s,"%s.%d <-",devId,Buffer[0]);
+        readTimer.Set();
+        }
+      return s;
+      }
+    }
+  else cCondWait::SleepMs(CAM_READ_TIMEOUT);
+  if(LOG(L_CORE_CIFULL) && readTimer.Elapsed()>2000) {
+    PRINTF(L_CORE_CIFULL,"%s: read heartbeat",devId);
+    readTimer.Set();
+    }
+  return 0;
+}
+
+#define TPDU(data,slot)   do { unsigned char *_d=(data); _d[0]=(slot); _d[1]=tcid; } while(0)
+#define TAG(data,tag,len) do { unsigned char *_d=(data); _d[0]=(tag); _d[1]=(len); } while(0)
+#define SB_TAG(data,sb)   do { unsigned char *_d=(data); _d[0]=0x80; _d[1]=0x02; _d[2]=tcid; _d[3]=(sb); } while(0)
+
+void cCam::Write(const unsigned char *buff, int len)
+{
+  cMutexLock lock(&ciMutex);
+  if(buff && len>=5) {
+    struct TPDU *tpdu=(struct TPDU *)buff;
+    int slot=tpdu->slot;
+    cCiFrame *slotframe=slots[slot]->Frame();
+    if(buff[2]!=0xA0 || buff[3]>0x01 || LOG(L_CORE_CIFULL))
+      LDUMP(L_CORE_CI,buff,len,"%s.%d ->",devId,slot);
+    if(slots[slot]) {
+      switch(tpdu->tag) {
+        case 0x81: // T_RCV
+          {
+          int s;
+          unsigned char *d=slotframe->Get(s);
+          if(d) {
+            unsigned char *b;
+            if((b=frame.GetBuff(s+6))) {
+              TPDU(b,slot);
+              memcpy(b+2,d,s);
+              slotframe->Del(); // delete from rb before Avail()
+              SB_TAG(b+2+s,slotframe->Avail()>0 ? 0x80:0x00);
+              frame.Put();
+              }
+            else slotframe->Del();
+            }
+          break;
+          }
+        case 0x82: // T_CREATE_TC
+          {
+          tcid=tpdu->data[0];
+          unsigned char *b;
+          static const unsigned char reqCAS[] = { 0xA0,0x07,0x01,0x91,0x04,0x00,0x03,0x00,0x41 };
+          if((b=slotframe->GetBuff(sizeof(reqCAS)))) {
+            memcpy(b,reqCAS,sizeof(reqCAS));
+            b[2]=tcid;
+            slotframe->Put();
+            }
+          if((b=frame.GetBuff(9))) {
+            TPDU(b,slot);
+            TAG(&b[2],0x83,0x01); b[4]=tcid;
+            SB_TAG(&b[5],slotframe->Avail()>0 ? 0x80:0x00);
+            frame.Put();
+            }
+          break;
+          }
+        case 0xA0: // T_DATA_LAST
+          {
+          slots[slot]->Process(buff,len);
+          unsigned char *b;
+          if((b=frame.GetBuff(6))) {
+            TPDU(b,slot);
+            SB_TAG(&b[2],slotframe->Avail()>0 ? 0x80:0x00);
+            frame.Put();
+            }
+          break;
+          }
+        }
+      }
+    }
+  else PRINTF(L_CORE_CIFULL,"%s: short write (buff=%d len=%d)",devId,buff!=0,len);
+}
+
+bool cCam::Reset(int Slot)
+{
+  cMutexLock lock(&ciMutex);
+  PRINTF(L_CORE_CI,"%s: reset of slot %d requested",devId,Slot);
+  return slots[Slot] ? slots[Slot]->Reset():false;
+}
+
+eModuleStatus cCam::ModuleStatus(int Slot)
+{
+  cMutexLock lock(&ciMutex);
+  bool enable=ScSetup.CapCheck(device->CardIndex());
+  if(!enable) Stop();
+  return (enable && slots[Slot]) ? slots[Slot]->Status():msNone;
+}
+
+bool cCam::Assign(cDevice *Device, bool Query)
+{
+  return Device ? (Device==device) : true;
 }
 
 bool cCam::IsSoftCSA(bool live)
 {
-  return device->SoftCSA(live);
+  return softcsa && (!fullts || !live);
 }
 
 void cCam::Tune(const cChannel *channel)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   if(source!=channel->Source() || transponder!=channel->Transponder()) {
     source=channel->Source(); transponder=channel->Transponder();
-    PRINTF(L_CORE_PIDS,"%d: now tuned to source %x(%s) transponder %x",cardNum,source,*cSource::ToString(source),transponder);
+    PRINTF(L_CORE_PIDS,"%s: now tuned to source %x(%s) transponder %x",devId,source,*cSource::ToString(source),transponder);
     Stop();
     }
-  else PRINTF(L_CORE_PIDS,"%d: tune to same source/transponder",cardNum);
+  else PRINTF(L_CORE_PIDS,"%s: tune to same source/transponder",devId);
 }
 
 void cCam::PostTune(void)
@@ -1374,19 +2340,19 @@ void cCam::PostTune(void)
 
 void cCam::SetPid(int type, int pid, bool on)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   int oldA=liveApid, oldV=liveVpid;
   if(type==1) liveVpid=on ? pid:0;
   else if(type==0) liveApid=on ? pid:0;
   else if(liveVpid==pid && on) liveVpid=0;
   else if(liveApid==pid && on) liveApid=0;
   if(oldA!=liveApid || oldV!=liveVpid)
-    PRINTF(L_CORE_PIDS,"%d: livepids video=%04x audio=%04x",cardNum,liveVpid,liveApid);
+    PRINTF(L_CORE_PIDS,"%s: livepids video=%04x audio=%04x",devId,liveVpid,liveApid);
 }
 
 void cCam::Stop(void)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   for(cEcmHandler *handler=handlerList.First(); handler; handler=handlerList.Next(handler))
     handler->Stop();
   if(logger) logger->Down();
@@ -1396,7 +2362,7 @@ void cCam::Stop(void)
 
 void cCam::AddPrg(cPrg *prg)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   bool islive=false;
   for(cPrgPid *pid=prg->pids.First(); pid; pid=prg->pids.Next(pid))
     if(pid->pid==liveVpid || pid->pid==liveApid) {
@@ -1405,10 +2371,10 @@ void cCam::AddPrg(cPrg *prg)
       }
   bool needZero=!IsSoftCSA(islive) && (islive || !ScSetup.ConcurrentFF);
   bool noshift=IsSoftCSA(true) || (prg->IsUpdate() && prg->pids.Count()==0);
-  PRINTF(L_CORE_PIDS,"%d: %s SID %d (zero=%d noshift=%d)",cardNum,prg->IsUpdate()?"update":"add",prg->sid,needZero,noshift);
+  PRINTF(L_CORE_PIDS,"%s: %s SID %d (zero=%d noshift=%d)",devId,prg->IsUpdate()?"update":"add",prg->sid,needZero,noshift);
   if(prg->pids.Count()>0) {
     LBSTART(L_CORE_PIDS);
-    LBPUT("%d: pids",cardNum);
+    LBPUT("%s: pids",devId);
     for(cPrgPid *pid=prg->pids.First(); pid; pid=prg->pids.Next(pid))
       LBPUT(" %s=%04x",TYPENAME(pid->type),pid->pid);
     LBEND();
@@ -1422,14 +2388,14 @@ void cCam::AddPrg(cPrg *prg)
   if(!isSplit) {
     cEcmHandler *handler=GetHandler(prg->sid,needZero,noshift);
     if(handler) {
-      PRINTF(L_CORE_PIDS,"%d: found handler for SID %d (%s idle=%d idx=%d)",cardNum,prg->sid,handler->Id(),handler->IsIdle(),handler->CwIndex());
+      PRINTF(L_CORE_PIDS,"%s: found handler for SID %d (%s idle=%d idx=%d)",devId,prg->sid,handler->Id(),handler->IsIdle(),handler->CwIndex());
       prg->source=source;
       prg->transponder=transponder;
       handler->SetPrg(prg);
       }
     }
   else {
-    PRINTF(L_CORE_PIDS,"%d: SID %d is handled as splitted",cardNum,prg->sid);
+    PRINTF(L_CORE_PIDS,"%s: SID %d is handled as splitted",devId,prg->sid);
     // first update the splitSid list
     if(prg->pids.Count()==0) { // delete
       for(int i=0; splitSid[i]; i++)
@@ -1437,7 +2403,7 @@ void cCam::AddPrg(cPrg *prg)
           memmove(&splitSid[i],&splitSid[i+1],sizeof(splitSid[0])*(MAX_SPLIT_SID-i));
           break;
           }
-      PRINTF(L_CORE_PIDS,"%d: deleted from list",cardNum);
+      PRINTF(L_CORE_PIDS,"%s: deleted from list",devId);
       }
     else { // add
       bool has=false;
@@ -1447,13 +2413,13 @@ void cCam::AddPrg(cPrg *prg)
         if(i<MAX_SPLIT_SID) {
           splitSid[i]=prg->sid;
           splitSid[i+1]=0;
-          PRINTF(L_CORE_PIDS,"%d: added to list",cardNum);
+          PRINTF(L_CORE_PIDS,"%s: added to list",devId);
           }
-        else PRINTF(L_CORE_PIDS,"%d: split SID list overflow",cardNum);
+        else PRINTF(L_CORE_PIDS,"%s: split SID list overflow",devId);
         }
       }
     LBSTART(L_CORE_PIDS);
-    LBPUT("%d: split SID list now:",cardNum);
+    LBPUT("%s: split SID list now:",devId);
     for(int i=0; i<=MAX_SPLIT_SID; i++) LBPUT(" %d",splitSid[i]);
     LBEND();
     // prepare an empty prg head
@@ -1465,7 +2431,7 @@ void cCam::AddPrg(cPrg *prg)
     cPrgPid *first;
     while((first=prg->pids.First())) {
       LBSTARTF(L_CORE_PIDS);
-      LBPUT("%d: group %d pids",cardNum,group);
+      LBPUT("%s: group %d pids",devId,group);
       prg->pids.Del(first,false);
       work.caDescr.Set(&first->caDescr);
       first->caDescr.Clear();
@@ -1498,7 +2464,7 @@ void cCam::AddPrg(cPrg *prg)
       // otherwise get the group-sid handler
       if(!handler) handler=GetHandler(grsid,needZero,noshift);
       if(handler) {
-        PRINTF(L_CORE_PIDS,"%d: found handler for group-SID %d (%s idle=%d idx=%d)",cardNum,grsid,handler->Id(),handler->IsIdle(),handler->CwIndex());
+        PRINTF(L_CORE_PIDS,"%s: found handler for group-SID %d (%s idle=%d idx=%d)",devId,grsid,handler->Id(),handler->IsIdle(),handler->CwIndex());
         work.sid=grsid;
         handler->SetPrg(&work);
         }
@@ -1514,7 +2480,7 @@ void cCam::AddPrg(cPrg *prg)
         int gr=sid/SIDGRP_SHIFT;
         sid%=SIDGRP_SHIFT;
         if(sid==prg->sid && gr>=group) {
-          PRINTF(L_CORE_PIDS,"%d: idle group handler %s idx=%d",cardNum,handler->Id(),handler->CwIndex());
+          PRINTF(L_CORE_PIDS,"%s: idle group handler %s idx=%d",devId,handler->Id(),handler->CwIndex());
           work.sid=handler->Sid();
           handler->SetPrg(&work);
           }
@@ -1525,16 +2491,17 @@ void cCam::AddPrg(cPrg *prg)
 
 bool cCam::HasPrg(int prg)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   for(cEcmHandler *handler=handlerList.First(); handler; handler=handlerList.Next(handler))
     if(!handler->IsIdle() && handler->Sid()==prg)
       return true;
   return false;
 }
 
-char *cCam::CurrentKeyStr(int num)
+char *cCam::CurrentKeyStr(int num, const char **id)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
+  if(id) *id=devId;
   cEcmHandler *handler;
   for(handler=handlerList.First(); handler; handler=handlerList.Next(handler))
     if(--num<0) return handler->CurrentKeyStr();
@@ -1543,10 +2510,10 @@ char *cCam::CurrentKeyStr(int num)
 
 bool cCam::Active(bool log)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   for(cEcmHandler *handler=handlerList.First(); handler; handler=handlerList.Next(handler))
     if(!handler->IsIdle()) {
-      if(log) PRINTF(L_GEN_INFO,"handler %s on card %d is not idle",handler->Id(),cardNum);
+      if(log) PRINTF(L_GEN_INFO,"handler %s on card %s is not idle",handler->Id(),devId);
       return true;
       }
   return false;
@@ -1554,7 +2521,7 @@ bool cCam::Active(bool log)
 
 void cCam::HouseKeeping(void)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   for(cEcmHandler *handler=handlerList.First(); handler;) {
     cEcmHandler *next=handlerList.Next(handler);
     if(handler->IsRemoveable()) RemHandler(handler);
@@ -1568,24 +2535,24 @@ void cCam::HouseKeeping(void)
 
 void cCam::LogStartup(void)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   if(!logger && ScSetup.AutoUpdate) {
-    logger=new cLogger(cardNum,IsSoftCSA(false));
+    logger=new cLogger(this,device,devId,IsSoftCSA(false));
     LogStatsUp();
     }
 }
 
 void cCam::LogEcmStatus(const cEcmInfo *ecm, bool on)
 {
-  cMutexLock lock(this);
+  cMutexLock lock(&camMutex);
   if(on) LogStartup();
   if(logger) logger->EcmStatus(ecm,on);
 }
 
 void cCam::AddHook(cLogHook *hook)
 {
-  cMutexLock lock(this);
-  if(!hookman) hookman=new cHookManager(cardNum);
+  cMutexLock lock(&camMutex);
+  if(!hookman) hookman=new cHookManager(device,devId);
   if(hookman) hookman->AddHook(hook);
 }
 
@@ -1600,8 +2567,8 @@ void cCam::SetCWIndex(int pid, int index)
     ca_pid_t ca_pid;
     ca_pid.pid=pid;
     ca_pid.index=index;
-    PRINTF(L_CORE_PIDS,"%d: descrambling pid %04x on index %x",cardNum,pid,index);
-    if(!device->SetCaPid(&ca_pid))
+    PRINTF(L_CORE_PIDS,"%s: descrambling pid %04x on index %x",devId,pid,index);
+    if(!SetCaPid(&ca_pid))
       if(index>0) {
         PRINTF(L_GEN_ERROR,"CA_SET_PID failed (%s). Expect a black screen/bad recording. Do you use the patched DVB driver?",strerror(errno));
         PRINTF(L_GEN_WARN,"Adjusting 'Concurrent FF streams' to NO");
@@ -1622,7 +2589,7 @@ void cCam::WriteCW(int index, unsigned char *cw, bool force)
       memcpy(&last[0],&cw[0],8);
       ca_descr.parity=0;
       memcpy(ca_descr.cw,&cw[0],8);
-      if(!device->SetCaDescr(&ca_descr,force))
+      if(!SetCaDescr(&ca_descr,force))
         PRINTF(L_GEN_ERROR,"CA_SET_DESCR failed (%s). Expect a black screen.",strerror(errno));
       }
 
@@ -1630,15 +2597,115 @@ void cCam::WriteCW(int index, unsigned char *cw, bool force)
       memcpy(&last[8],&cw[8],8);
       ca_descr.parity=1;
       memcpy(ca_descr.cw,&cw[8],8);
-      if(!device->SetCaDescr(&ca_descr,force))
+      if(!SetCaDescr(&ca_descr,force))
         PRINTF(L_GEN_ERROR,"CA_SET_DESCR failed (%s). Expect a black screen.",strerror(errno));
       }
     }
 }
 
+bool cCam::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+{
+#ifndef SASC
+  if(!softcsa || (fullts && ca_descr->index==0)) {
+    cMutexLock lock(&cafdMutex);
+    return ioctl(cafd,CA_SET_DESCR,ca_descr)>=0;
+    }
+  else if(decsa) return decsa->SetDescr(ca_descr,initial);
+#endif // !SASC
+  return false;
+}
+
+bool cCam::SetCaPid(ca_pid_t *ca_pid)
+{
+#ifndef SASC
+  if(!softcsa || (fullts && ca_pid->index==0)) {
+    cMutexLock lock(&cafdMutex);
+    return ioctl(cafd,CA_SET_PID,ca_pid)>=0;
+    }
+  else if(decsa) return decsa->SetCaPid(ca_pid);
+#endif // !SASC
+  return false;
+}
+
+#ifndef SASC
+static unsigned int av7110_read(int fd, unsigned int addr)
+{
+  ca_pid_t arg;
+  arg.pid=addr;
+  ioctl(fd,CA_GET_MSG,&arg);
+  return arg.index;
+}
+#endif // !SASC
+
+#if 0
+static void av7110_write(int fd, unsigned int addr, unsigned int val)
+{
+  ca_pid_t arg;
+  arg.pid=addr;
+  arg.index=val;
+  ioctl(fd,CA_SEND_MSG,&arg);
+}
+#endif
+
 void cCam::DumpAV7110(void)
 {
-  device->DumpAV7110();
+#ifndef SASC
+  if(LOG(L_CORE_AV7110)) {
+#define CODEBASE (0x2e000404+0x1ce00)
+    cMutexLock lock(&cafdMutex);
+    if(device->HasDecoder() && lastDump.Elapsed()>20000) {
+      lastDump.Set();
+      static unsigned int handles=0, hw_handles=0;
+      static const unsigned int code[] = {
+        0xb5100040,0x4a095a12,0x48094282,0xd00b4b09,0x20000044,
+        0x5b1c4294,0xd0033001,0x281cdbf8,0xe001f7fe,0xfd14bc10
+        };
+      static const unsigned int mask[] = {
+        0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,
+        0xffffffff,0xffffffff,0xffffffff,0xfffff800,0xf800ffff
+        };
+      if(!handles) {
+        handles=1;
+        PRINTF(L_CORE_AV7110,"searching handle tables");
+        for(int i=0; i<0x2000; i+=4) {
+          int j;
+          for(j=0; j<20; j+=4) {
+            int r=av7110_read(cafd,CODEBASE+i+j);
+            if((r&mask[j/4])!=(code[j/4]&mask[j/4])) break;
+            }
+          if(j==20) {
+            handles=av7110_read(cafd,CODEBASE+i+44);
+            hw_handles=av7110_read(cafd,CODEBASE+i+52);
+            PRINTF(L_CORE_AV7110,"found handles=%08x hw_handles=%08x at 0x%08x",handles,hw_handles,CODEBASE+i);
+            if((handles>>16)!=0x2e08 || (hw_handles>>16)!=0x2e08) {
+              PRINTF(L_CORE_AV7110,"seems to be invalid");
+              }
+            break;
+            }
+          }
+        }
+
+      unsigned int hdl=0, hwhdl=0;
+      PRINTF(L_CORE_AV7110,"         : 64000080 64000400");
+      for(int i=0; i<=31; i++) {
+        unsigned int off80 =av7110_read(cafd,0x64000080+i*4);
+        unsigned int off400=av7110_read(cafd,0x64000400+i*8);
+        LBSTART(L_CORE_AV7110);
+        LBPUT("handle %2d: %08x %08x %s pid=%04x idx=%d",
+          i,off80,off400,off80&0x2000?"ACT":"---",off80&0x1fff,(off400&0x1e)>>1);
+        if(handles>1 && i<=27) {
+          if((i&1)==0) {
+            hdl=av7110_read(cafd,handles+i*2);
+            hwhdl=av7110_read(cafd,hw_handles+i*2);
+            }
+          unsigned int s=((~i)&1)<<4;
+          LBPUT(" | %02d hdl=%04x hwfilt=%04x",i,(hdl>>s)&0xffff,(hwhdl>>s)&0xffff);
+          }
+        LBEND();
+        }
+      }
+    }
+#endif // !SASC
 }
 
 int cCam::GetFreeIndex(void)
@@ -1660,7 +2727,7 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
       idlehandler=handler;
     }
   LBSTART(L_CORE_PIDS);
-  LBPUT("%d: SID=%d zero=%d |",cardNum,sid,needZero);
+  LBPUT("%s: SID=%d zero=%d |",devId,sid,needZero);
   if(sidhandler) LBPUT(" sid=%d/%d/%d",sidhandler->CwIndex(),sidhandler->Sid(),sidhandler->IsIdle());
   else LBPUT(" sid=-/-/-");
   if(zerohandler) LBPUT(" zero=%d/%d/%d",zerohandler->CwIndex(),zerohandler->Sid(),zerohandler->IsIdle());
@@ -1672,10 +2739,10 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
   if(sidhandler) {
     if(needZero && sidhandler->CwIndex()!=0 && !noshift) {
       if(!sidhandler->IsIdle())
-        PRINTF(L_CORE_ECM,"%d: shifting cwindex on non-idle handler.",cardNum);
+        PRINTF(L_CORE_ECM,"%s: shifting cwindex on non-idle handler.",devId);
       if(zerohandler) {
         if(!zerohandler->IsIdle())
-          PRINTF(L_CORE_ECM,"%d: shifting non-idle zero handler. This shouldn't happen!",cardNum);
+          PRINTF(L_CORE_ECM,"%s: shifting non-idle zero handler. This shouldn't happen!",devId);
         zerohandler->ShiftCwIndex(sidhandler->CwIndex());
         sidhandler->ShiftCwIndex(0);
         }
@@ -1684,19 +2751,19 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
         indexMap[sidhandler->CwIndex()]=0;
         sidhandler->ShiftCwIndex(0);
         }
-      else PRINTF(L_CORE_ECM,"%d: zero index not free.",cardNum);
+      else PRINTF(L_CORE_ECM,"%s: zero index not free.",devId);
       }
 
     if(!needZero && sidhandler->CwIndex()==0 && !noshift) {
       if(!sidhandler->IsIdle())
-        PRINTF(L_CORE_ECM,"%d: shifting cwindex on non-idle handler.",cardNum);
+        PRINTF(L_CORE_ECM,"%s: shifting cwindex on non-idle handler.",devId);
       int idx=GetFreeIndex();
       if(idx>=0) {
         indexMap[idx]=1;
         sidhandler->ShiftCwIndex(idx);
         indexMap[0]=0;
         }
-      else PRINTF(L_CORE_ECM,"%d: no free cwindex. Can't free zero index.",cardNum);
+      else PRINTF(L_CORE_ECM,"%s: no free cwindex. Can't free zero index.",devId);
       }
 
     return sidhandler;
@@ -1704,7 +2771,7 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
 
   if(needZero && zerohandler) {
     if(!zerohandler->IsIdle())
-      PRINTF(L_CORE_ECM,"%d: changing SID on non-idle zero handler. This shouldn't happen!",cardNum);
+      PRINTF(L_CORE_ECM,"%s: changing SID on non-idle zero handler. This shouldn't happen!",devId);
     return zerohandler;
     }
   
@@ -1715,7 +2782,7 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
         indexMap[idlehandler->CwIndex()]=0;
         idlehandler->ShiftCwIndex(0);
         }
-      else PRINTF(L_CORE_ECM,"%d: zero index not free. (2)",cardNum);
+      else PRINTF(L_CORE_ECM,"%s: zero index not free. (2)",devId);
       }
     if(!needZero && idlehandler->CwIndex()==0 && !noshift) {
       int idx=GetFreeIndex();
@@ -1724,10 +2791,10 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
         idlehandler->ShiftCwIndex(idx);
         indexMap[0]=0;
         }
-      else PRINTF(L_CORE_ECM,"%d: no free cwindex. Can't free zero index. (2)",cardNum);
+      else PRINTF(L_CORE_ECM,"%s: no free cwindex. Can't free zero index. (2)",devId);
       }
     if((needZero ^ (idlehandler->CwIndex()==0)))
-      PRINTF(L_CORE_ECM,"%d: idlehandler index doesn't match needZero",cardNum);
+      PRINTF(L_CORE_ECM,"%s: idlehandler index doesn't match needZero",devId);
     return idlehandler;
     }
 
@@ -1738,15 +2805,15 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
     indexMap[0]=0;
     if(idx<0) {
       idx=0;
-      PRINTF(L_CORE_ECM,"%d: can't respect !needZero for new handler",cardNum);
+      PRINTF(L_CORE_ECM,"%s: can't respect !needZero for new handler",devId);
       }
     }
   if(idx<0) {
-    PRINTF(L_CORE_ECM,"%d: no free cwindex",cardNum);
+    PRINTF(L_CORE_ECM,"%s: no free cwindex",devId);
     return 0;
     }
   indexMap[idx]=1;
-  idlehandler=new cEcmHandler(this,cardNum,idx);
+  idlehandler=new cEcmHandler(this,device,devId,idx);
   handlerList.Add(idlehandler);
   return idlehandler;
 }
@@ -1754,7 +2821,204 @@ cEcmHandler *cCam::GetHandler(int sid, bool needZero, bool noshift)
 void cCam::RemHandler(cEcmHandler *handler)
 {
   int idx=handler->CwIndex();
-  PRINTF(L_CORE_PIDS,"%d: removing %s on cw index %d",cardNum,handler->Id(),idx);
+  PRINTF(L_CORE_PIDS,"%s: removing %s on cw index %d",devId,handler->Id(),idx);
   handlerList.Del(handler);
   indexMap[idx]=0;
+}
+
+// -- cDeCSA -------------------------------------------------------------------
+
+#define MAX_STALL_MS 70
+
+#define MAX_REL_WAIT 100 // time to wait if key in used on set
+#define MAX_KEY_WAIT 500 // time to wait if key not ready on change
+
+#define FL_EVEN_GOOD 1
+#define FL_ODD_GOOD  2
+#define FL_ACTIVITY  4
+
+
+cDeCSA::cDeCSA(const char *DevId)
+:stall(MAX_STALL_MS)
+{
+  devId=DevId;
+  cs=get_suggested_cluster_size();
+  PRINTF(L_CORE_CSA,"%s: clustersize=%d rangesize=%d",devId,cs,cs*2+5);
+  range=MALLOC(unsigned char *,(cs*2+5));
+  memset(keys,0,sizeof(keys));
+  memset(pidmap,0,sizeof(pidmap));
+  ResetState();
+}
+
+cDeCSA::~cDeCSA()
+{
+  for(int i=0; i<MAX_CSA_IDX; i++)
+    if(keys[i]) free_key_struct(keys[i]);
+  free(range);
+}
+
+void cDeCSA::ResetState(void)
+{
+  PRINTF(L_CORE_CSA,"%s: reset state",devId);
+  memset(even_odd,0,sizeof(even_odd));
+  memset(flags,0,sizeof(flags));
+  lastData=0;
+}
+
+void cDeCSA::SetActive(bool on)
+{
+  if(!on && active) ResetState();
+  active=on;
+  PRINTF(L_CORE_CSA,"%s: set active %s",devId,active?"on":"off");
+}
+
+bool cDeCSA::GetKeyStruct(int idx)
+{
+  if(!keys[idx]) keys[idx]=get_key_struct();
+  return keys[idx]!=0;
+}
+
+bool cDeCSA::SetDescr(ca_descr_t *ca_descr, bool initial)
+{
+  cMutexLock lock(&mutex);
+  int idx=ca_descr->index;
+  if(idx<MAX_CSA_IDX && GetKeyStruct(idx)) {
+    if(!initial && active && ca_descr->parity==(even_odd[idx]&0x40)>>6) {
+      if(flags[idx] & (ca_descr->parity?FL_ODD_GOOD:FL_EVEN_GOOD)) {
+        PRINTF(L_CORE_CSA,"%s.%d: %s key in use (%d ms)",devId,idx,ca_descr->parity?"odd":"even",MAX_REL_WAIT);
+        if(wait.TimedWait(mutex,MAX_REL_WAIT)) PRINTF(L_CORE_CSA,"%s.%d: successfully waited for release",devId,idx);
+        else PRINTF(L_CORE_CSA,"%s.%d: timed out. setting anyways",devId,idx);
+        }
+      else PRINTF(L_CORE_CSA,"%s.%d: late key set...",devId,idx);
+      }
+    LDUMP(L_CORE_CSA,ca_descr->cw,8,"%s.%d: %4s key set",devId,idx,ca_descr->parity?"odd":"even");
+    if(ca_descr->parity==0) {
+      set_even_control_word(keys[idx],ca_descr->cw);
+      if(!CheckNull(ca_descr->cw,8)) flags[idx]|=FL_EVEN_GOOD|FL_ACTIVITY;
+      else PRINTF(L_CORE_CSA,"%s.%d: zero even CW",devId,idx);
+      wait.Broadcast();
+      }
+    else {
+      set_odd_control_word(keys[idx],ca_descr->cw);
+      if(!CheckNull(ca_descr->cw,8)) flags[idx]|=FL_ODD_GOOD|FL_ACTIVITY;
+      else PRINTF(L_CORE_CSA,"%s.%d: zero odd CW",devId,idx);
+      wait.Broadcast();
+      }
+    }
+  return true;
+}
+
+bool cDeCSA::SetCaPid(ca_pid_t *ca_pid)
+{
+  cMutexLock lock(&mutex);
+  if(ca_pid->index<MAX_CSA_IDX && ca_pid->pid<MAX_CSA_PIDS) {
+    pidmap[ca_pid->pid]=ca_pid->index;
+    PRINTF(L_CORE_CSA,"%s.%d: set pid %04x",devId,ca_pid->index,ca_pid->pid);
+    }
+  return true;
+}
+
+bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
+{
+  cMutexLock lock(&mutex);
+  int r=-2, ccs=0, currIdx=-1;
+  bool newRange=true;
+  range[0]=0;
+  len-=(TS_SIZE-1);
+  int l;
+  for(l=0; l<len; l+=TS_SIZE) {
+    if(data[l]!=TS_SYNC_BYTE) {       // let higher level cope with that
+      PRINTF(L_CORE_CSA,"%s: garbage in TS buffer",devId);
+      if(ccs) force=true;             // prevent buffer stall
+      break;
+      }
+    unsigned int ev_od=data[l+3]&0xC0;
+    if(ev_od==0x80 || ev_od==0xC0) { // encrypted
+      int idx=pidmap[((data[l+1]<<8)+data[l+2])&(MAX_CSA_PIDS-1)];
+      if(currIdx<0 || idx==currIdx) { // same or no index
+        currIdx=idx;
+        if(ccs==0 && ev_od!=even_odd[idx]) {
+          even_odd[idx]=ev_od;
+          wait.Broadcast();
+          PRINTF(L_CORE_CSA,"%s.%d: change to %s key",devId,idx,(ev_od&0x40)?"odd":"even");
+          bool doWait=false;
+          if(ev_od&0x40) {
+            flags[idx]&=~FL_EVEN_GOOD;
+            if(!(flags[idx]&FL_ODD_GOOD)) doWait=true;
+            }
+          else {
+            flags[idx]&=~FL_ODD_GOOD;
+            if(!(flags[idx]&FL_EVEN_GOOD)) doWait=true;
+            }
+          if(doWait) {
+            PRINTF(L_CORE_CSA,"%s.%d: %s key not ready (%d ms)",devId,idx,(ev_od&0x40)?"odd":"even",MAX_KEY_WAIT);
+            if(flags[idx]&FL_ACTIVITY) {
+              flags[idx]&=~FL_ACTIVITY;
+              if(wait.TimedWait(mutex,MAX_KEY_WAIT)) PRINTF(L_CORE_CSA,"%s.%d: successfully waited for key",devId,idx);
+              else PRINTF(L_CORE_CSA,"%s.%d: timed out. proceeding anyways",devId,idx);
+              }
+            else PRINTF(L_CORE_CSA,"%s.%d: not active. wait skipped",devId,idx);
+            }
+          }
+        if(newRange) {
+          r+=2; newRange=false;
+          range[r]=&data[l];
+          range[r+2]=0;
+          }
+        range[r+1]=&data[l+TS_SIZE];
+        if(++ccs>=cs) break;
+        }
+      else newRange=true;             // other index, create hole
+      }
+    else {                            // unencrypted
+      // nothing, we don't create holes for unencrypted packets
+      }
+    }
+  int scanTS=l/TS_SIZE;
+  int stallP=ccs*100/scanTS;
+
+  LBSTART(L_CORE_CSAVERB);
+  LBPUT("%s: %s-%d-%d : %d-%d-%d stall=%d :: ",
+        devId,data==lastData?"SAME":"MOVE",(len+(TS_SIZE-1))/TS_SIZE,force,
+        currIdx,ccs,scanTS,stallP);
+  for(int l=0; l<len; l+=TS_SIZE) {
+    if(data[l]!=TS_SYNC_BYTE) break;
+    unsigned int ev_od=data[l+3]&0xC0;
+    if(ev_od&0x80) {
+      int pid=(data[l+1]<<8)+data[l+2];
+      int idx=pidmap[pid&(MAX_CSA_PIDS-1)];
+      LBPUT("%s/%x/%d ",(ev_od&0x40)?"o":"e",pid,idx);
+      }
+    else {
+      LBPUT("*/%x ",(data[l+1]<<8)+data[l+2]);
+      }
+    }
+  LBEND();
+
+  if(r>=0 && ccs<cs && !force) {
+    if(lastData==data && stall.TimedOut()) {
+      PRINTF(L_CORE_CSAVERB,"%s: stall timeout -> forced",devId);
+      force=true;
+      }
+    else if(stallP<=10 && scanTS>=cs) {
+      PRINTF(L_CORE_CSAVERB,"%s: flow factor stall -> forced",devId);
+      force=true;
+      }
+    }
+  lastData=data;
+
+  if(r>=0) {                          // we have some range
+    if(ccs>=cs || force) {
+      if(GetKeyStruct(currIdx)) {
+        int n=decrypt_packets(keys[currIdx],range);
+        PRINTF(L_CORE_CSAVERB,"%s.%d: decrypting ccs=%3d cs=%3d %s -> %3d decrypted",devId,currIdx,ccs,cs,ccs>=cs?"OK ":"INC",n);
+        if(n>0) {
+          stall.Set(MAX_STALL_MS);
+          return true;
+          }
+        }
+      }
+    else PRINTF(L_CORE_CSAVERB,"%s.%d: incomplete ccs=%3d cs=%3d",devId,currIdx,ccs,cs);
+    }
+  return false;
 }

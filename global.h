@@ -17,26 +17,17 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#ifndef ___SC_H
-#define ___SC_H
-
-class cEcmInfo;
-class cLogHook;
+#ifndef ___GLOBAL_H
+#define ___GLOBAL_H
 
 // ----------------------------------------------------------------
 
-class cSoftCAM {
+class cGlobal {
 public:
-  static bool Load(const char *cfgdir);
-  static void Shutdown(void);
-  //
   static bool Active(bool log);
-  static char *CurrKeyStr(int CardNum, int num);
-  static void SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on);
-  static void AddHook(int CardNum, cLogHook *hook);
-  static bool TriggerHook(int CardNum, int id);
+  static void HouseKeeping(void);
+  static char *CurrKeyStr(int cardindex, int num, const char **id);
   static void CaidsChanged(void);
-  static int FilterHandle(int CardNum);
   };
 
-#endif // ___SC_H
+#endif // ___GLOBAL_H

@@ -295,7 +295,7 @@ void cSystemIrd::ProcessEMM(int pid, int caid, const unsigned char *data)
   int slen=buffer[index-1]-5; // save packet length, 5 signature bytes
   int maxIndex=index+slen;
   if(maxIndex>n-5) {
-    PRINTF(L_SYS_EMM,"%d: bad packet length (%d > %d)",CardNum(),maxIndex,n-5);
+    PRINTF(L_SYS_EMM,"bad packet length (%d > %d)",maxIndex,n-5);
     maxIndex=n-5;
     }
   bool badnano=false;
@@ -372,13 +372,13 @@ void cSystemIrd::ProcessEMM(int pid, int caid, const unsigned char *data)
         break;
 
       default:
-        PRINTF(L_SYS_EMM,"%d: unhandled nano 0x%02x",CardNum(),nano);
+        PRINTF(L_SYS_EMM,"unhandled nano 0x%02x",nano);
         break;
       }
     index+=nlen+2;
     }
   if(badnano || index!=maxIndex) {
-    PRINTF(L_SYS_EMM,"%d: bad nano/bad paket",CardNum());
+    PRINTF(L_SYS_EMM,"bad nano/bad paket");
     return;
     }
 

@@ -868,7 +868,7 @@ void cSystemNagra::ProcessEMM(int pid, int caid, const unsigned char *buffer)
   const int id=buffer[10]*256+buffer[11];
   static const unsigned char tester[] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x4B };
   if(memcmp(&buffer[3],tester,sizeof(tester)) || SCT_LEN(buffer)<(12+9+64)) {
-    PRINTF(L_SYS_EMM,"%d: not a valid EMM structure",CardNum());
+    PRINTF(L_SYS_EMM,"not a valid EMM structure");
     return;
     }
   const int pkey=(buffer[12]&3);
@@ -943,24 +943,24 @@ void cSystemNagra::ProcessEMM(int pid, int caid, const unsigned char *buffer)
         const int romNr=emmdata[i]&0x0F;
         if(!emu || !emu->Matches(romNr,id)) {
           delete emu; emu=0;
-          PRINTF(L_SYS_EMM,"%d: setting defaults for ROM %d",CardNum(),romNr);
+          PRINTF(L_SYS_EMM,"setting defaults for ROM %d",romNr);
           switch(romNr) {
             case 3:  emu=new cEmuRom3;  break;
             case 7:  emu=new cEmuRom7;  break;
             case 10: emu=new cEmuRom10; break;
             case 11: emu=new cEmuRom11; break;
-            default: PRINTF(L_SYS_EMM,"%d: unsupported ROM",CardNum()); return;
+            default: PRINTF(L_SYS_EMM,"unsupported ROM"); return;
             }
           if(!emu || !emu->Init(romNr,id)) {
             delete emu; emu=0;
-            PRINTF(L_SYS_EMM,"%d: initialization failed for ROM %d",CardNum(),romNr);
+            PRINTF(L_SYS_EMM,"initialization failed for ROM %d",romNr);
             return;
             }
           }
         unsigned char ki[2];
         if((gotKeys=emu->GetOpKeys(emmdata,ki,key0,key1))) {
           keyId=(ki[0]<<8)+ki[1];
-          PRINTF(L_SYS_EMM,"%d: got keys for %04X (ROM %d)",CardNum(),keyId,romNr);
+          PRINTF(L_SYS_EMM,"got keys for %04X (ROM %d)",keyId,romNr);
           }
         unsigned char select[3], pkset[3][15];
         select[0]=(keyId>>8)|0x01; // always high id for ECM RSA keys
@@ -968,7 +968,7 @@ void cSystemNagra::ProcessEMM(int pid, int caid, const unsigned char *buffer)
         select[2]=0; // type 0
         if(emu->GetPkKeys(&select[0],&pkset[0][0])) {
           int pkKeyId=((select[0]<<8)+select[1]);
-          PRINTF(L_SYS_EMM,"%d: got PK keys for %04X (ROM %d)",CardNum(),pkKeyId,romNr);
+          PRINTF(L_SYS_EMM,"got PK keys for %04X (ROM %d)",pkKeyId,romNr);
           for(int i=0; i<3; i++) {
             CreateRSAPair(pkset[i],0,e1,n1);
             FoundKey();
@@ -998,12 +998,12 @@ void cSystemNagra::ProcessEMM(int pid, int caid, const unsigned char *buffer)
         i+=10;
         if(++nrKeys==2) {
           gotKeys=true;
-          PRINTF(L_SYS_EMM,"%d: got keys for %04X (plain)",CardNum(),keyId);
+          PRINTF(L_SYS_EMM,"got keys for %04X (plain)",keyId);
           break;
           }
         }
       else {
-        PRINTF(L_SYS_EMM,"%d: ignored nano %02x",CardNum(),emmdata[i]);
+        PRINTF(L_SYS_EMM,"ignored nano %02x",emmdata[i]);
         break;
         }
       }

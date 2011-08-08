@@ -20,18 +20,24 @@
 #ifndef ___CAM_H
 #define ___CAM_H
 
+#include <linux/dvb/ca.h>
+#include <vdr/ci.h>
 #include <vdr/thread.h>
 #include "data.h"
 #include "misc.h"
 
 class cChannel;
+class cRingBufferLinear;
+class cDevice;
 
 class cEcmHandler;
 class cEcmData;
 class cLogger;
 class cHookManager;
 class cLogHook;
-class cScDevice;
+class cScCamSlot;
+class cCiFrame;
+class cDeCSA;
 class cPrg;
 
 // ----------------------------------------------------------------
@@ -53,13 +59,61 @@ extern cEcmCache ecmcache;
 
 // ----------------------------------------------------------------
 
+class cCiFrame {
+private:
+  cRingBufferLinear *rb;
+  unsigned char *mem;
+  int len, alen, glen;
+public:
+  cCiFrame(void);
+  ~cCiFrame();
+  void SetRb(cRingBufferLinear *Rb) { rb=Rb; }
+  unsigned char *GetBuff(int l);
+  void Put(void);
+  unsigned char *Get(int &l);
+  void Del(void);
+  int Avail(void);
+  };
+
+// ----------------------------------------------------------------
+
+typedef int caid_t;
+
+#define MAX_CI_SLOTS      8
+#ifdef VDR_MAXCAID
+#define MAX_CI_SLOT_CAIDS VDR_MAXCAID
+#else
+#define MAX_CI_SLOT_CAIDS 16
+#endif
+
 #define MAX_CW_IDX        16
 #define MAX_SPLIT_SID     16
 
-class cCam : private cMutex {
+class cCam : public cCiAdapter, public cSimpleItem {
 private:
-  int cardNum;
-  cScDevice *device;
+  cDevice *device;
+  cMutex ciMutex;
+  const char *devId;
+  int adapter, frontend;
+  cRingBufferLinear *rb;
+  cScCamSlot *slots[MAX_CI_SLOTS];
+  cCiFrame frame;
+  //
+  cDeCSA *decsa;
+  int cafd;
+  cMutex cafdMutex;
+  bool softcsa, fullts;
+  //
+  cTimeMs caidTimer, triggerTimer;
+  int version[MAX_CI_SLOTS];
+  caid_t caids[MAX_CI_SLOTS][MAX_CI_SLOT_CAIDS+1];
+  int tcid;
+  bool rebuildcaids;
+  //
+  cTimeMs readTimer, writeTimer;
+  cTimeMs lastDump;
+  //
+  cMutex camMutex;
   cSimpleList<cEcmHandler> handlerList;
   cLogger *logger;
   cHookManager *hookman;
@@ -67,17 +121,36 @@ private:
   int splitSid[MAX_SPLIT_SID+1];
   unsigned char indexMap[MAX_CW_IDX], lastCW[MAX_CW_IDX][2*8];
   //
+  void BuildCaids(bool force);
   cEcmHandler *GetHandler(int sid, bool needZero, bool noshift);
   void RemHandler(cEcmHandler *handler);
   int GetFreeIndex(void);
   void LogStartup(void);
+protected:
+  virtual int Read(unsigned char *Buffer, int MaxLength);
+  virtual void Write(const unsigned char *Buffer, int Length);
+  virtual bool Reset(int Slot);
+  virtual eModuleStatus ModuleStatus(int Slot);
+  virtual bool Assign(cDevice *Device, bool Query=false);
 public:
-  cCam(cScDevice *dev, int CardNum);
+  cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Cafd, bool SoftCSA, bool FullTS);
   virtual ~cCam();
+  // CI adapter API
+  int GetCaids(int slot, unsigned short *Caids, int max);
+  void CaidsChanged(void);
+  virtual bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
+  virtual bool SetCaPid(ca_pid_t *ca_pid);
+  void Stop(void);
+  void AddPrg(cPrg *prg);
+  bool HasPrg(int prg);
   // EcmHandler API
   void WriteCW(int index, unsigned char *cw, bool force);
   void SetCWIndex(int pid, int index);
   void DumpAV7110(void);
+  bool IsSoftCSA(bool live);
+  int Adapter(void) { return adapter; }
+  int Frontend(void) { return frontend; }
+  // System API
   void LogEcmStatus(const cEcmInfo *ecm, bool on);
   void AddHook(cLogHook *hook);
   bool TriggerHook(int id);
@@ -87,14 +160,40 @@ public:
   void Tune(const cChannel *channel);
   void PostTune(void);
   void SetPid(int type, int pid, bool on);
-  void Stop(void);
-  void AddPrg(cPrg *prg);
-  bool HasPrg(int prg);
-  char *CurrentKeyStr(int num);
-  //
-  bool IsSoftCSA(bool live);
+  char *CurrentKeyStr(int num, const char **id);
+  bool OwnSlot(const cCamSlot *slot) const;
+  cDeCSA *DeCSA(void) const { return decsa; }
   };
 
 void LogStatsDown(void);
+
+// ----------------------------------------------------------------
+
+#define MAX_CSA_PIDS 8192
+#define MAX_CSA_IDX  16
+
+class cDeCSA {
+private:
+  int cs;
+  unsigned char **range, *lastData;
+  unsigned char pidmap[MAX_CSA_PIDS];
+  void *keys[MAX_CSA_IDX];
+  unsigned int even_odd[MAX_CSA_IDX], flags[MAX_CSA_IDX];
+  cMutex mutex;
+  cCondVar wait;
+  cTimeMs stall;
+  bool active;
+  const char *devId;
+  //
+  bool GetKeyStruct(int idx);
+  void ResetState(void);
+public:
+  cDeCSA(const char *DevId);
+  ~cDeCSA();
+  bool Decrypt(unsigned char *data, int len, bool force);
+  bool SetDescr(ca_descr_t *ca_descr, bool initial);
+  bool SetCaPid(ca_pid_t *ca_pid);
+  void SetActive(bool on);
+  };
 
 #endif // ___CAM_H

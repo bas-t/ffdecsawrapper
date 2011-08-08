@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
     printf("\n");
 
     max=5;
-    for(mode=0; mode<256; mode++) {
+    int mode=0;
+    //for(mode=0; mode<256; mode++) {
       for(mask=0; mask<256; mask++) {
         mam =mask &  (~mode);
         manm=mask & ~(~mode);
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
             }
           }
         }
-      }
+      //}
     printf("no exact settings found\n");
     exit(1);
     }

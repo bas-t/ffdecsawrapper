@@ -38,11 +38,11 @@
 #include <vdr/tools.h>
 #include <vdr/config.h>
 
-#include "sc.h"
 #include "scsetup.h"
 #include "filter.h"
 #include "system.h"
 #include "cam.h"
+#include "global.h"
 #include "device.h"
 #include "smartcard.h"
 #include "data.h"
@@ -525,6 +525,34 @@ void cOpts::Create(cOsdMenu *menu)
     }
 }
 
+// --- cSoftCAM ---------------------------------------------------------------
+
+class cSoftCAM {
+public:
+  static bool Load(const char *cfgdir);
+  static void Shutdown(void);
+  };
+
+bool cSoftCAM::Load(const char *cfgdir)
+{
+  if(!Feature.KeyFile()) keys.Disable();
+  if(!Feature.SmartCard()) smartcards.Disable();
+  cStructLoaders::Load(false);
+  if(Feature.KeyFile() && keys.Count()<1)
+    PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
+  if(!cSystems::Init(cfgdir)) return false;
+  srand(time(0));
+  return true;
+}
+
+void cSoftCAM::Shutdown(void)
+{
+  cStructLoaders::Save(true);
+  cSystems::Clean();
+  smartcards.Shutdown();
+  keys.SafeClear();
+}
+
 // --- cMenuInfoSc -------------------------------------------------------------
 
 class cMenuInfoSc : public cOsdMenu {
@@ -537,19 +565,22 @@ cMenuInfoSc::cMenuInfoSc(void)
 :cOsdMenu(tr("SoftCAM"),25)
 {
   Add(new cScInfoItem(tr("Current keys:")));
-  for(int d=0; d<MAXDVBDEVICES; d++) {
-    int n=0;
+  int d=0, n;
+  do {
+    n=0;
     char *ks;
     do {
-      if((ks=cSoftCAM::CurrKeyStr(d,n))) {
+      const char *id;
+      if((ks=cGlobal::CurrKeyStr(d,n,&id))) {
         char buffer[32];
-        snprintf(buffer,sizeof(buffer),"  [%s %d:%d]","DVB",d+1,n+1);
+        snprintf(buffer,sizeof(buffer),"  [%s.%d]",id,n);
         Add(new cScInfoItem(buffer,ks));
         free(ks);
+        n++;
         }
-      n++;
       } while(ks);
-    }
+    d++;
+    } while(n>0);
   if(Feature.KeyFile()) {
     Add(new cScInfoItem(tr("Key update status:")));
     int fk, nk;
@@ -901,7 +932,7 @@ eOSState cMenuSetupSc::ProcessKey(eKeys Key)
 
     case osUser9:
       state=osContinue;
-      if(!cSoftCAM::Active(true)) {
+      if(!cGlobal::Active(true)) {
         if(Interface->Confirm(tr("Really reload files?"))) {
           Store();
           cSoftCAM::Load(cfgdir);
@@ -987,80 +1018,6 @@ bool cScSetup::CapCheck(int n)
   return false;
 }
 
-// --- cSoftCAM ---------------------------------------------------------------
-
-bool cSoftCAM::Load(const char *cfgdir)
-{
-  if(!Feature.KeyFile()) keys.Disable();
-  if(!Feature.SmartCard()) smartcards.Disable();
-  cStructLoaders::Load(false);
-  if(Feature.KeyFile() && keys.Count()<1)
-    PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
-  if(!cSystems::Init(cfgdir)) return false;
-  srand(time(0));
-  return true;
-}
-
-void cSoftCAM::Shutdown(void)
-{
-  cStructLoaders::Save(true);
-  cSystems::Clean();
-  smartcards.Shutdown();
-  keys.SafeClear();
-}
-
-char *cSoftCAM::CurrKeyStr(int CardNum, int num)
-{
-  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
-  char *str=0;
-  if(dev) {
-    if(dev->Cam()) str=dev->Cam()->CurrentKeyStr(num);
-    if(!str && num==0 && ScSetup.CapCheck(CardNum)) str=strdup(tr("(none)"));
-    }
-  return str;
-}
-
-bool cSoftCAM::Active(bool log)
-{
-  for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
-    if(dev && dev->Cam() && dev->Cam()->Active(log)) return true;
-    }
-  return false;
-}
-
-void cSoftCAM::SetLogStatus(int CardNum, const cEcmInfo *ecm, bool on)
-{
-  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
-  if(dev && dev->Cam()) dev->Cam()->LogEcmStatus(ecm,on);
-}
-
-void cSoftCAM::AddHook(int CardNum, cLogHook *hook)
-{
-  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
-  if(dev && dev->Cam()) dev->Cam()->AddHook(hook);
-}
-
-bool cSoftCAM::TriggerHook(int CardNum, int id)
-{
-  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
-  return dev && dev->Cam() && dev->Cam()->TriggerHook(id);
-}
-
-void cSoftCAM::CaidsChanged(void)
-{
-  for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
-    if(dev) dev->CaidsChanged();
-    }
-}
-
-int cSoftCAM::FilterHandle(int CardNum)
-{
-  cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(CardNum));
-  return dev ? dev->FilterHandle() : -1;
-}
-
 // --- cScHousekeeper ----------------------------------------------------------
 
 class cScHousekeeper : public cThread {
@@ -1088,17 +1045,12 @@ void cScHousekeeper::Action(void)
   while(Running()) {
     if(++c==20) {
       c=0;
-      for(int n=cDevice::NumDevices(); --n>=0;) {
-        cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
-        if(dev && dev->Cam()) dev->Cam()->HouseKeeping();
-        }
+      cGlobal::HouseKeeping();
       }
-
     if(Feature.KeyFile()) keys.HouseKeeping();
-    if(!cSoftCAM::Active(false)) cStructLoaders::Purge();
+    if(!cGlobal::Active(false)) cStructLoaders::Purge();
     cStructLoaders::Load(true);
     cStructLoaders::Save();
-
     cCondWait::SleepMs(987);
     }
 }
@@ -1415,7 +1367,7 @@ const char **cScPlugin::SVDRPHelpPages(void)
 cString cScPlugin::SVDRPCommand(const char *Command, const char *Option, int &ReplyCode)
 {
   if(!strcasecmp(Command,"RELOAD")) {
-    if(cSoftCAM::Active(true)) {
+    if(cGlobal::Active(true)) {
       ReplyCode=550;
       return "Softcam active. Can't reload files now";
       }

@@ -32,7 +32,7 @@ public:
   cCardClientAroureos(const char *Name);
   virtual bool Init(const char *config);
   virtual bool Login(void);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw);
   virtual bool ProcessEMM(int caSys, const unsigned char *source);
   };
 
@@ -99,7 +99,7 @@ bool cCardClientAroureos::ProcessEMM(int caSys, const unsigned char *source)
   return false;
 }
 
-bool cCardClientAroureos::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw, int cardnum)
+bool cCardClientAroureos::ProcessECM(const cEcmInfo *ecm, const unsigned char *source, unsigned char *cw)
 {
   cMutexLock lock(this);
   so.Flush();

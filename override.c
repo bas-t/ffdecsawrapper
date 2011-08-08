@@ -24,7 +24,7 @@
 #include <vdr/sources.h>
 
 #include "override.h"
-#include "sc.h"
+#include "global.h"
 #include "misc.h"
 #include "log-core.h"
 
@@ -563,7 +563,7 @@ void cOverrides::PreLoad(void)
 
 void cOverrides::PostLoad(void)
 {
-  if(caidTrigger) cSoftCAM::CaidsChanged();
+  if(caidTrigger) cGlobal::CaidsChanged();
 }
 
 cOverride *cOverrides::ParseLine(char *line)

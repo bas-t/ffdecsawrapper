@@ -680,7 +680,7 @@ public:
   virtual bool Init(const char *CfgDir);
   virtual bool Login(void);
   virtual bool CanHandle(unsigned short SysId);
-  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum);
+  virtual bool ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw);
   virtual bool ProcessEMM(int caSys, const unsigned char *data);
   };
 
@@ -1147,12 +1147,12 @@ bool cCardClientCCcam2::Login(void)
   return true;
 }
 
-bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw, int cardnum)
+bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *data, unsigned char *Cw)
 {
   cMutexLock lock(this);
   if(!so.Connected() && !Login()) { Logout(); return false; }
   if(!CanHandle(ecm->caId)) return false;
-  PRINTF(L_CC_CCCAM2,"%d: ECM caid %04x prov %04x sid %d pid %04x",cardnum,ecm->caId,ecm->provId,ecm->prgId,ecm->ecm_pid);
+  PRINTF(L_CC_CCCAM2,"ECM caid %04x prov %04x sid %d pid %04x",ecm->caId,ecm->provId,ecm->prgId,ecm->ecm_pid);
   int sctlen=SCT_LEN(data);
   if(sctlen>=256) {
     PRINTF(L_CC_CCCAM2,"ECM data length >=256 not supported by CCcam");

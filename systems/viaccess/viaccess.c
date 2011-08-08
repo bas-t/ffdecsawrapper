@@ -385,7 +385,7 @@ bool cSystemViaccess::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
   if(ecm->provId==0x007c00) { // TPS
     maxEcmTry=4;
     mayHaveTps=true;
-    int num=tps.Decrypt(CardNum(),ecm->source,ecm->transponder,nanos,len);
+    int num=tps.Decrypt(this,ecm->source,ecm->transponder,nanos,len);
     if(num<0) return false;
     nanos+=num; len-=num;
     }
@@ -479,7 +479,7 @@ void cSystemViaccess::ProcessEMM(int pid, int caid, const unsigned char *data)
                   numKeys++;
                   }
                 else {
-                  PRINTF(L_SYS_EMM,"%d: key length mismatch %d!=%d",CardNum(),plen,(int)sizeof(newKey[0]));
+                  PRINTF(L_SYS_EMM,"key length mismatch %d!=%d",plen,(int)sizeof(newKey[0]));
                   cnt=scanlen;
                   }
                 break;
