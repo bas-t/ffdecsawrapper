@@ -344,7 +344,7 @@ cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
   cam=new cCam(this,Adapter);
 #endif // !SASC
 #if APIVERSNUM >= 10711
-  snprintf(devId,sizeof(devId),"%d/%d",Adapter,FrontEnd);
+  snprintf(devId,sizeof(devId),"%d/%d",Adapter,Frontend);
 #else
   snprintf(devId,sizeof(devId),"%d",Adapter);
 #endif
