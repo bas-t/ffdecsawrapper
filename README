@@ -70,6 +70,18 @@ this means to install openssl-devel package. You should use a openssl package
 with AES and IDEA enabled, as support for openssl without these will be removed
 in the near future.
 
+**** VDR 1.7.11+ notes ****
+If you want to use VDR 1.7.11+ together with a full-featured DVB card:
+- the source code for the dvbhddevice and/or dvbsddevice has to be available in
+  the VDR plugin source directory, i.e. at the parent directory level of this
+  plugin source. The presence of these plugin sources will be detected
+  automatically and support for them will be enabled at compile time.
+- the compiled dvbhddevice and/or dvbsddevice plugin libraries (i.e. the *.so
+  files) have to be available in the VDR plugin library directory at runtime.
+- DO NOT load the dvbhddevice and/or dvbsddevice on the VDR commandline (i.e.
+  with parameter -P). They will be loaded internaly from this plugin. It will
+  not work correctly if you load them from commandline!
+
 Now follow the VDR instruction to compile plugins (make plugins). Beside the
 core plugin (libvdr-sc.so), the make process (if successfull) creates an
 additional shared library object for every supported system (libsc-*.so). You

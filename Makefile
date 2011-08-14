@@ -117,6 +117,17 @@ ifdef WITH_PCSC
   LIBS     += -lpcsclite
 endif
 
+HAVE_SD := $(wildcard ../dvbsddevice/dvbsddevice.c)
+ifneq ($(strip $(HAVE_SD)),)
+  DEFINES += -DWITH_SDDVB
+  DEVPLUGTARGETS += $(LIBDIR)/libsc-dvbsddevice-$(SCAPIVERS).so.$(APIVERSION)
+endif
+HAVE_HD := $(wildcard ../dvbhddevice/dvbhddevice.c)
+ifneq ($(strip $(HAVE_HD)),)
+  DEFINES += -DWITH_HDDVB
+  DEVPLUGTARGETS += $(LIBDIR)/libsc-dvbhddevice-$(SCAPIVERS).so.$(APIVERSION)
+endif
+
 # max number of CAIDs per slot
 MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(VDRDIR)/ci.c)
 ifneq ($(strip $(MAXCAID)),)
@@ -153,7 +164,7 @@ ifdef STATIC
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).a
 SHAREDDEFINES += -DSTATICBUILD
 else
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
+BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre $(DEVPLUGTARGETS)
 endif
 BUILDTARGETS += $(FFDECSATEST) systems i18n
 
@@ -183,6 +194,18 @@ $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION): libvdr-$(PLUGIN).so
 
 $(LIBDIR)/libvdr-$(PLUGIN).a: $(OBJS)
 	$(AR) r $@ $(OBJS)
+
+libsc-dvbsddevice.so: device-sd.o
+	$(CXX) $(CXXFLAGS) -shared $< $(SHAREDLIBS) -o $@
+
+$(LIBDIR)/libsc-dvbsddevice-$(SCAPIVERS).so.$(APIVERSION): libsc-dvbsddevice.so
+	@cp -p $< $@
+
+libsc-dvbhddevice.so: device-hd.o
+	$(CXX) $(CXXFLAGS) -shared $< $(SHAREDLIBS) -o $@
+
+$(LIBDIR)/libsc-dvbhddevice-$(SCAPIVERS).so.$(APIVERSION): libsc-dvbhddevice.so
+	@cp -p $< $@
 
 $(FFDECSA) $(FFDECSATEST): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
 	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all

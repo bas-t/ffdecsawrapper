@@ -1066,7 +1066,7 @@ private:
 public:
   cScDll(const char *FileName);
   ~cScDll();
-  bool Load(void);
+  bool Load(bool check);
   };
 
 cScDll::cScDll(const char *FileName)
@@ -1081,14 +1081,15 @@ cScDll::~cScDll()
   free(fileName);
 }
 
-bool cScDll::Load(void)
+bool cScDll::Load(bool check)
 {
   char *base=rindex(fileName,'/');
   if(base) base++; else base=fileName;
   PRINTF(L_CORE_DYN,"loading library: %s",base);
   if(!handle) {
-    handle=dlopen(fileName,RTLD_NOW|RTLD_LOCAL);
+    handle=dlopen(fileName,RTLD_NOW|(check?RTLD_LOCAL:RTLD_GLOBAL));
     if(handle) {
+      if(!check) return true;
       dlerror();
       int *libapivers=(int *)dlsym(handle,"ScLibApiVersion");
       const char *error=dlerror();
@@ -1102,6 +1103,7 @@ bool cScDll::Load(void)
 
 // --- cScDlls -----------------------------------------------------------------
 
+#define LIBVDR_PREFIX "libvdr-"
 #define LIBSC_PREFIX  "libsc-"
 #define SO_INDICATOR   ".so."
 
@@ -1148,7 +1150,34 @@ bool cScDlls::Load(void)
   if((p=rindex(path,'/'))) *p=0;
   PRINTF(L_CORE_DYN,"library path %sn",path);
 
-  char pat[32];
+  char pat[64];
+#if APIVERSNUM >= 10711
+#ifdef WITH_SDDVB
+  {
+  snprintf(pat,sizeof(pat),"%s%s%s%s",LIBVDR_PREFIX,"dvbsddevice",SO_INDICATOR,APIVERSION);
+  cScDll *dll=new cScDll(AddDirectory(path,pat));
+  if(dll) {
+    if(dll->Load(false)) {
+      PRINTF(L_GEN_INFO,"VDR dvbsddevice plugin loaded as subplugin");
+      }
+    Ins(dll);
+    }
+  }
+#endif //WITH_SDDVB
+#ifdef WITH_HDDVB
+  {
+  snprintf(pat,sizeof(pat),"%s%s%s%s",LIBVDR_PREFIX,"dvbhddevice",SO_INDICATOR,APIVERSION);
+  cScDll *dll=new cScDll(AddDirectory(path,pat));
+  if(dll) {
+    if(dll->Load(false)) {
+      PRINTF(L_GEN_INFO,"VDR dvbhddevice plugin loaded as subplugin");
+      }
+    Ins(dll);
+    }
+  }
+#endif //WITH_HDDVB
+#endif //APIVERSNUM >= 10711
+
   snprintf(pat,sizeof(pat),"%s*-%d%s%s",LIBSC_PREFIX,SCAPIVERS,SO_INDICATOR,APIVERSION);
   bool res=true;
   cReadDir dir(path);
@@ -1157,7 +1186,7 @@ bool cScDlls::Load(void)
     if(!fnmatch(pat,e->d_name,FNM_PATHNAME|FNM_NOESCAPE)) {
       cScDll *dll=new cScDll(AddDirectory(path,e->d_name));
       if(dll) {
-        if(!dll->Load()) res=false;
+        if(!dll->Load(true)) res=false;
         Ins(dll);
         }
       }
@@ -1166,7 +1195,7 @@ bool cScDlls::Load(void)
   return res;
 }
 
-#endif
+#endif //STATICBUILD
 
 // --- cScPlugin ---------------------------------------------------------------
 

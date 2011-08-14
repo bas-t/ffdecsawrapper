@@ -45,24 +45,6 @@
 
 // -- cDeCsaTSBuffer -----------------------------------------------------------
 
-class cDeCsaTSBuffer : public cThread {
-private:
-  int f;
-  int cardIndex, size;
-  bool delivered;
-  cRingBufferLinear *ringBuffer;
-  //
-  cDeCSA *decsa;
-  bool scActive;
-  //
-  virtual void Action(void);
-public:
-  cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive);
-  ~cDeCsaTSBuffer();
-  uchar *Get(void);
-  void SetActive(bool ScActive);
-  };
-
 cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive)
 {
   SetDescription("TS buffer on device %d", CardIndex);
@@ -137,13 +119,58 @@ uchar *cDeCsaTSBuffer::Get(void)
   return NULL;
 }
 
-// --- cScDeviceProbe ----------------------------------------------------------
+// --- cScDevicePlugin ---------------------------------------------------------
 
-#define DEV_DVB_ADAPTER  "/dev/dvb/adapter"
-#define DEV_DVB_FRONTEND "frontend"
-#define DEV_DVB_DVR      "dvr"
-#define DEV_DVB_DEMUX    "demux"
-#define DEV_DVB_CA       "ca"
+static cSimpleList<cScDevicePlugin> devplugins;
+
+cScDevicePlugin::cScDevicePlugin(void)
+{
+  devplugins.Add(this);
+}
+
+cScDevicePlugin::~cScDevicePlugin()
+{
+  devplugins.Del(this,false);
+}
+
+// -- cScDvbDevice -------------------------------------------------------------
+
+#define SCDEVICE cScDvbDevice
+#define DVBDEVICE cDvbDevice
+#include "device-tmpl.c"
+#undef SCDEVICE
+#undef DVBDEVICE
+
+// -- cScDvbDevicePlugin -------------------------------------------------------
+
+class cScDvbDevicePlugin : public cScDevicePlugin {
+public:
+  virtual cDevice *Probe(int Adapter, int Frontend, uint32_t SubSystemId);
+  virtual bool LateInit(cDevice *dev);
+  virtual bool EarlyShutdown(cDevice *dev);
+  };
+
+cDevice *cScDvbDevicePlugin::Probe(int Adapter, int Frontend, uint32_t SubSystemId)
+{
+  PRINTF(L_GEN_DEBUG,"creating standard device %d/%d",Adapter,Frontend);
+  return new cScDvbDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
+}
+
+bool cScDvbDevicePlugin::LateInit(cDevice *dev)
+{
+  cScDvbDevice *d=dynamic_cast<cScDvbDevice *>(dev);
+  if(d) d->LateInit();
+  return d!=0;
+}
+
+bool cScDvbDevicePlugin::EarlyShutdown(cDevice *dev)
+{
+  cScDvbDevice *d=dynamic_cast<cScDvbDevice *>(dev);
+  if(d) d->EarlyShutdown();
+  return d!=0;
+}
+
+// --- cScDeviceProbe ----------------------------------------------------------
 
 #if APIVERSNUM >= 10711
 
@@ -154,6 +181,9 @@ public:
   virtual bool Probe(int Adapter, int Frontend);
   static void Install(void);
   static void Remove(void);
+#if APIVERSNUM < 10719
+  uint32_t GetSubsystemId(int Adapter, int Frontend);
+#endif
   };
 
 cScDeviceProbe *cScDeviceProbe::probe=0;
@@ -170,11 +200,37 @@ void cScDeviceProbe::Remove(void)
 
 bool cScDeviceProbe::Probe(int Adapter, int Frontend)
 {
-  PRINTF(L_GEN_DEBUG,"capturing device %d/%d",Adapter,Frontend);
-  new cScDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
-  return true;
+  uint32_t subid=GetSubsystemId(Adapter,Frontend);
+  PRINTF(L_GEN_DEBUG,"capturing device %d/%d (subsystem ID %08x)",Adapter,Frontend,subid);
+  for(cScDevicePlugin *dp=devplugins.First(); dp; dp=devplugins.Next(dp))
+    if(dp->Probe(Adapter,Frontend,subid)) return true;
+  return false;
 }
-#endif
+
+#if APIVERSNUM < 10719
+uint32_t cScDeviceProbe::GetSubsystemId(int Adapter, int Frontend)
+{
+  cString FileName;
+  cReadLine ReadLine;
+  FILE *f = NULL;
+  uint32_t SubsystemId = 0;
+  FileName = cString::sprintf("/sys/class/dvb/dvb%d.frontend%d/device/subsystem_vendor", Adapter, Frontend);
+  if ((f = fopen(FileName, "r")) != NULL) {
+     if (char *s = ReadLine.Read(f))
+        SubsystemId = strtoul(s, NULL, 0) << 16;
+     fclose(f);
+     }
+  FileName = cString::sprintf("/sys/class/dvb/dvb%d.frontend%d/device/subsystem_device", Adapter, Frontend);
+  if ((f = fopen(FileName, "r")) != NULL) {
+     if (char *s = ReadLine.Read(f))
+        SubsystemId |= strtoul(s, NULL, 0);
+     fclose(f);
+     }
+  return SubsystemId;
+}
+#endif //APIVERSNUM < 10719
+
+#endif //APIVERSNUM >= 10711
 
 // -- cScDevices ---------------------------------------------------------------
 
@@ -225,6 +281,8 @@ void cScDevices::OnPluginLoad(void)
 #endif
   if(vdr_nci && vdr_ud) { vdr_save_ud=*vdr_ud; *vdr_ud=1<<30; }
 #endif
+  // default device plugin must be last in the list
+  new cScDvbDevicePlugin;
 }
 
 void cScDevices::OnPluginUnload(void)
@@ -260,7 +318,7 @@ bool cScDevices::Initialize(void)
         if(f>=0) {
           close(f);
           PRINTF(L_GEN_DEBUG,"capturing device %d",i);
-          new cScDevice(i,0,cScDevices::DvbOpen(DEV_DVB_CA,i,0,O_RDWR));
+          devplugins.First()->Probe(i,0,0);
           found++;
           }
         else {
@@ -287,16 +345,18 @@ void cScDevices::Startup(void)
   if(ScSetup.ForceTransfer)
     SetTransferModeForDolbyDigital(2);
   for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
-    if(dev) dev->LateInit();
+    cDevice *dev=cDevice::GetDevice(n);
+    for(cScDevicePlugin *dp=devplugins.First(); dp; dp=devplugins.Next(dp))
+      if(dp->LateInit(dev)) break;
     }
 }
 
 void cScDevices::Shutdown(void)
 {
   for(int n=cDevice::NumDevices(); --n>=0;) {
-    cScDevice *dev=dynamic_cast<cScDevice *>(cDevice::GetDevice(n));
-    if(dev) dev->EarlyShutdown();
+    cDevice *dev=cDevice::GetDevice(n);
+    for(cScDevicePlugin *dp=devplugins.First(); dp; dp=devplugins.Next(dp))
+      if(dp->EarlyShutdown(dev)) break;
     }
 }
 
@@ -321,139 +381,3 @@ void cScDevices::SetForceBudget(int n) {}
 bool cScDevices::ForceBudget(int n) { return true; }
 
 #endif //SASC
-
-// -- cScDevice ----------------------------------------------------------------
-
-#if APIVERSNUM >= 10711
-#define DVB_DEV_SPEC adapter,frontend
-#else
-#define DVB_DEV_SPEC CardIndex(),0
-#endif
-
-cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
-#if APIVERSNUM >= 10711
-:cDvbDevice(Adapter,Frontend)
-#else
-:cDvbDevice(Adapter)
-#endif
-{
-  tsBuffer=0; softcsa=fullts=false;
-  cam=0; hwciadapter=0;
-  fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
-#ifdef SASC
-  cam=new cCam(this,Adapter);
-#endif // !SASC
-#if APIVERSNUM >= 10711
-  snprintf(devId,sizeof(devId),"%d/%d",Adapter,Frontend);
-#else
-  snprintf(devId,sizeof(devId),"%d",Adapter);
-#endif
-}
-
-cScDevice::~cScDevice()
-{
-#ifndef SASC
-  DetachAllReceivers();
-  Cancel(3);
-  EarlyShutdown();
-  if(fd_ca>=0) close(fd_ca);
-  if(fd_ca2>=0) close(fd_ca2);
-#else
-  delete cam;
-#endif // !SASC
-}
-
-#ifndef SASC
-
-void cScDevice::EarlyShutdown(void)
-{
-  SetCamSlot(0);
-  delete cam; cam=0;
-  delete hwciadapter; hwciadapter=0;
-}
-
-void cScDevice::LateInit(void)
-{
-  int n=CardIndex();
-  if(DeviceNumber()!=n)
-    PRINTF(L_GEN_ERROR,"CardIndex - DeviceNumber mismatch! Put SC plugin first on VDR commandline!");
-  softcsa=(fd_ca<0);
-  if(softcsa) {
-    if(HasDecoder()) PRINTF(L_GEN_ERROR,"Card %s is a full-featured card but no ca device found!",devId);
-    }
-  else if(cScDevices::ForceBudget(n)) {
-    PRINTF(L_GEN_INFO,"Budget mode forced on card %s",devId);
-    softcsa=true;
-    }
-  if(softcsa) {
-    if(IsPrimaryDevice() && HasDecoder()) {
-      PRINTF(L_GEN_INFO,"Enabling hybrid full-ts mode on card %s",devId);
-      fullts=true;
-      }
-    else PRINTF(L_GEN_INFO,"Using software decryption on card %s",devId);
-    }
-  if(fd_ca2>=0) hwciadapter=cDvbCiAdapter::CreateCiAdapter(this,fd_ca2);
-  cam=new cCam(this,DVB_DEV_SPEC,devId,fd_ca,softcsa,fullts);
-}
-
-bool cScDevice::HasCi(void)
-{
-  return cam || hwciadapter;
-}
-
-bool cScDevice::Ready(void)
-{
-  return (cam         ? cam->Ready():true) &&
-         (hwciadapter ? hwciadapter->Ready():true);
-}
-
-bool cScDevice::SetPid(cPidHandle *Handle, int Type, bool On)
-{
-  if(cam) cam->SetPid(Type,Handle->pid,On);
-  tsMutex.Lock();
-  if(tsBuffer) tsBuffer->SetActive(ScActive());
-  tsMutex.Unlock();
-  return cDvbDevice::SetPid(Handle,Type,On);
-}
-
-bool cScDevice::SetChannelDevice(const cChannel *Channel, bool LiveView)
-{
-  if(cam) cam->Tune(Channel);
-  bool ret=cDvbDevice::SetChannelDevice(Channel,LiveView);
-  if(ret && cam) cam->PostTune();
-  return ret;
-}
-
-bool cScDevice::ScActive(void)
-{
-  return cam && cam->OwnSlot(CamSlot());
-}
-
-bool cScDevice::OpenDvr(void)
-{
-  CloseDvr();
-  fd_dvr=cScDevices::DvbOpen(DEV_DVB_DVR,DVB_DEV_SPEC,O_RDONLY|O_NONBLOCK,true);
-  if(fd_dvr>=0) {
-    cDeCSA *decsa=cam ? cam->DeCSA() : 0;
-    tsMutex.Lock();
-    tsBuffer=new cDeCsaTSBuffer(fd_dvr,MEGABYTE(ScSetup.DeCsaTsBuffSize),CardIndex()+1,decsa,ScActive());
-    tsMutex.Unlock();
-    }
-  return fd_dvr>=0;
-}
-
-void cScDevice::CloseDvr(void)
-{
-  tsMutex.Lock();
-  delete tsBuffer; tsBuffer=0;
-  tsMutex.Unlock();
-  if(fd_dvr>=0) { close(fd_dvr); fd_dvr=-1; }
-}
-
-bool cScDevice::GetTSPacket(uchar *&Data)
-{
-  if(tsBuffer) { Data=tsBuffer->Get(); return true; }
-  return false;
-}
-
-#endif // !SASC

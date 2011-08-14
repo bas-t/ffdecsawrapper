@@ -22,11 +22,44 @@
 
 #include <vdr/dvbdevice.h>
 #include <vdr/thread.h>
+#include "misc.h"
 
-class cCam;
 class cDeCSA;
-class cDeCsaTSBuffer;
-class cScCiAdapter;
+
+// ----------------------------------------------------------------
+
+#define DEV_DVB_ADAPTER  "/dev/dvb/adapter"
+#define DEV_DVB_FRONTEND "frontend"
+#define DEV_DVB_DVR      "dvr"
+#define DEV_DVB_DEMUX    "demux"
+#define DEV_DVB_CA       "ca"
+#define DEV_DVB_OSD      "osd"
+
+#if APIVERSNUM >= 10711
+#define DVB_DEV_SPEC adapter,frontend
+#else
+#define DVB_DEV_SPEC CardIndex(),0
+#endif
+
+// ----------------------------------------------------------------
+
+class cDeCsaTSBuffer : public cThread {
+private:
+  int f;
+  int cardIndex, size;
+  bool delivered;
+  cRingBufferLinear *ringBuffer;
+  //
+  cDeCSA *decsa;
+  bool scActive;
+  //
+  virtual void Action(void);
+public:
+  cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive);
+  ~cDeCsaTSBuffer();
+  uchar *Get(void);
+  void SetActive(bool ScActive);
+  };
 
 // ----------------------------------------------------------------
 
@@ -52,38 +85,13 @@ public:
 
 // ----------------------------------------------------------------
 
-class cScDevice : public cDvbDevice {
-friend class cScDevices;
-private:
-  cDeCsaTSBuffer *tsBuffer;
-  cMutex tsMutex;
-  cCam *cam;
-  cCiAdapter *hwciadapter;
-  int fd_dvr, fd_ca, fd_ca2;
-  bool softcsa, fullts;
-  char devId[8];
-  //
-#ifndef SASC
-  void LateInit(void);
-  void EarlyShutdown(void);
-  bool ScActive(void);
-#endif //SASC
-  //
-protected:
-#ifndef SASC
-  virtual bool Ready(void);
-  virtual bool SetPid(cPidHandle *Handle, int Type, bool On);
-  virtual bool SetChannelDevice(const cChannel *Channel, bool LiveView);
-  virtual bool OpenDvr(void);
-  virtual void CloseDvr(void);
-  virtual bool GetTSPacket(uchar *&Data);
-#endif //SASC
+class cScDevicePlugin : public cSimpleItem {
 public:
-  cScDevice(int Adapter, int Frontend, int cafd);
-  ~cScDevice();
-#ifndef SASC
-  virtual bool HasCi(void);
-#endif //SASC
+  cScDevicePlugin(void);
+  virtual ~cScDevicePlugin();
+  virtual cDevice *Probe(int Adapter, int Frontend, uint32_t SubSystemId)=0;
+  virtual bool LateInit(cDevice *dev)=0;
+  virtual bool EarlyShutdown(cDevice *dev)=0;
   };
 
 #endif // ___DEVICE_H
