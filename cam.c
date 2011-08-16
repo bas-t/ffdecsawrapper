@@ -2105,7 +2105,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Ca
     }
   else PRINTF(L_GEN_ERROR,"failed to create ringbuffer for SC-CI adapter %s.",devId);
 
-  decsa=new cDeCSA(devId);
+  decsa=softcsa ? new cDeCSA(devId) : 0;
 
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;
   memset(lastCW,0,sizeof(lastCW));
