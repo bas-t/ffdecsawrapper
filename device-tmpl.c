@@ -21,17 +21,21 @@
 
 class SCDEVICE : public DVBDEVICE {
 private:
+#ifndef SASC
   cDeCsaTSBuffer *tsBuffer;
   cMutex tsMutex;
+#endif //!SASC
   cCam *cam;
+#ifndef SASC
   cCiAdapter *hwciadapter;
+#endif //!SASC
   int fd_dvr, fd_ca, fd_ca2;
   bool softcsa, fullts;
   char devId[8];
   //
 #ifndef SASC
   bool ScActive(void);
-#endif //SASC
+#endif //!SASC
 protected:
 #ifndef SASC
   virtual bool Ready(void);
@@ -40,7 +44,7 @@ protected:
   virtual bool OpenDvr(void);
   virtual void CloseDvr(void);
   virtual bool GetTSPacket(uchar *&Data);
-#endif //SASC
+#endif //!SASC
 public:
   SCDEVICE(int Adapter, int Frontend, int cafd);
   ~SCDEVICE();
@@ -48,7 +52,9 @@ public:
   virtual bool HasCi(void);
   void LateInit(void);
   void EarlyShutdown(void);
-#endif //SASC
+#else
+  cCam *Cam(void) { return cam; }
+#endif //!SASC
   };
 
 SCDEVICE::SCDEVICE(int Adapter, int Frontend, int cafd)
@@ -58,17 +64,19 @@ SCDEVICE::SCDEVICE(int Adapter, int Frontend, int cafd)
 :DVBDEVICE(Adapter)
 #endif
 {
-  tsBuffer=0; softcsa=fullts=false;
-  cam=0; hwciadapter=0;
+#ifndef SASC
+  tsBuffer=0; hwciadapter=0;
+#endif
+  cam=0; softcsa=fullts=false;
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
-#ifdef SASC
-  cam=new cCam(this,Adapter);
-#endif // !SASC
 #if APIVERSNUM >= 10711
   snprintf(devId,sizeof(devId),"%d/%d",Adapter,Frontend);
 #else
   snprintf(devId,sizeof(devId),"%d",Adapter);
 #endif
+#ifdef SASC
+  cam=new cCam(this,Adapter,0,devId,fd_ca,softcsa,fullts);
+#endif // !SASC
 }
 
 SCDEVICE::~SCDEVICE()
@@ -77,11 +85,12 @@ SCDEVICE::~SCDEVICE()
   DetachAllReceivers();
   Cancel(3);
   EarlyShutdown();
+#endif
   if(fd_ca>=0) close(fd_ca);
   if(fd_ca2>=0) close(fd_ca2);
-#else
+#ifdef SASC
   delete cam;
-#endif // !SASC
+#endif
 }
 
 #ifndef SASC

@@ -36,7 +36,6 @@ class cLogger;
 class cHookManager;
 class cLogHook;
 class cScCamSlot;
-class cCiFrame;
 class cDeCSA;
 class cPrg;
 
@@ -59,6 +58,7 @@ extern cEcmCache ecmcache;
 
 // ----------------------------------------------------------------
 
+#ifndef SASC
 class cCiFrame {
 private:
   cRingBufferLinear *rb;
@@ -73,6 +73,61 @@ public:
   unsigned char *Get(int &l);
   void Del(void);
   int Avail(void);
+  };
+#endif //!SASC
+
+// ----------------------------------------------------------------
+
+class cCaDescr {
+private:
+  unsigned char *descr;
+  int len;
+public:
+  cCaDescr(void);
+  cCaDescr(const cCaDescr &arg);
+  ~cCaDescr();
+  const unsigned char *Get(int &l) const;
+  void Set(const cCaDescr *d);
+  void Set(const unsigned char *de, int l);
+  void Clear(void);
+  bool operator== (const cCaDescr &arg) const;
+  void Join(const cCaDescr *cd, bool rev=false);
+  cString ToString(void);
+  };
+
+// ----------------------------------------------------------------
+
+class cPrgPid : public cSimpleItem {
+private:
+  bool proc;
+public:
+  int type, pid;
+  cCaDescr caDescr;
+  //
+  cPrgPid(int Type, int Pid) { type=Type; pid=Pid; proc=false; }
+  bool Proc(void) const { return proc; }
+  void Proc(bool is) { proc=is; };
+  };
+
+// ----------------------------------------------------------------
+
+class cPrg : public cSimpleItem {
+private:
+  bool isUpdate, pidCaDescr;
+  //
+  void Setup(void);
+public:
+  int sid, source, transponder;
+  cSimpleList<cPrgPid> pids;
+  cCaDescr caDescr;
+  //
+  cPrg(void);
+  cPrg(int Sid, bool IsUpdate);
+  bool IsUpdate(void) const { return isUpdate; }
+  bool HasPidCaDescr(void) const { return pidCaDescr; }
+  void SetPidCaDescr(bool val) { pidCaDescr=val; }
+  bool SimplifyCaDescr(void);
+  void DumpCaDescr(int c);
   };
 
 // ----------------------------------------------------------------
@@ -89,17 +144,23 @@ typedef int caid_t;
 #define MAX_CW_IDX        16
 #define MAX_SPLIT_SID     16
 
+#ifndef SASC
 class cCam : public cCiAdapter, public cSimpleItem {
+#else
+class cCam : public cSimpleItem {
+#endif
 private:
   cDevice *device;
-  cMutex ciMutex;
   const char *devId;
   int adapter, frontend;
+#ifndef SASC
+  cMutex ciMutex;
   cRingBufferLinear *rb;
   cScCamSlot *slots[MAX_CI_SLOTS];
   cCiFrame frame;
   //
   cDeCSA *decsa;
+#endif
   int cafd;
   cMutex cafdMutex;
   bool softcsa, fullts;
@@ -127,11 +188,13 @@ private:
   int GetFreeIndex(void);
   void LogStartup(void);
 protected:
+#ifndef SASC
   virtual int Read(unsigned char *Buffer, int MaxLength);
   virtual void Write(const unsigned char *Buffer, int Length);
   virtual bool Reset(int Slot);
   virtual eModuleStatus ModuleStatus(int Slot);
   virtual bool Assign(cDevice *Device, bool Query=false);
+#endif
 public:
   cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Cafd, bool SoftCSA, bool FullTS);
   virtual ~cCam();
@@ -161,13 +224,17 @@ public:
   void PostTune(void);
   void SetPid(int type, int pid, bool on);
   char *CurrentKeyStr(int num, const char **id);
+#ifndef SASC
   bool OwnSlot(const cCamSlot *slot) const;
   cDeCSA *DeCSA(void) const { return decsa; }
+#endif
   };
 
 void LogStatsDown(void);
 
 // ----------------------------------------------------------------
+
+#ifndef SASC
 
 #define MAX_CSA_PIDS 8192
 #define MAX_CSA_IDX  16
@@ -195,5 +262,6 @@ public:
   bool SetCaPid(ca_pid_t *ca_pid);
   void SetActive(bool on);
   };
+#endif //!SASC
 
 #endif // ___CAM_H

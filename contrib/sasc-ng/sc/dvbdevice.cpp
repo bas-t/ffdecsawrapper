@@ -32,6 +32,16 @@
 #define DEV_DVB_AUDIO     "audio"
 #define DEV_DVB_CA        "ca"
 
+class cDvbName {
+private:
+  char buffer[PATH_MAX];
+public:
+  cDvbName(const char *Name, int n) {
+    snprintf(buffer, sizeof(buffer), "%s%d/%s%d", DEV_DVB_ADAPTER, n, Name, 0);
+    }
+  const char *operator*() { return buffer; }
+  };
+
 // --- cDvbDevice ------------------------------------------------------------
 
 int cDvbDevice::devVideoOffset = -1;
@@ -76,21 +86,6 @@ bool cDvbDevice::HasDecoder(void) const
   return fd_video;
 }
 
-#include "include/vdr/plugin.h"
-#define SC_NAME "sc"
-#define SC_MAGIC { 0,'S','C',0xc4,0x5e,0xa1 }
-#define OP_PROVIDES 0
-#define OP_IGNORE   1
-
-struct ScLink {
-  char magic[6];
-  short op;
-  const cDevice *dev;
-  unsigned short *caids;
-  const cChannel *channel;
-  int num;
-  };
-
 cSpuDecoder *cDvbDevice::GetSpuDecoder(void)
 {
   return NULL;
@@ -115,7 +110,31 @@ bool cDvbDevice::SetPid(cPidHandle *Handle, int Type, bool On)
 
 int cDvbDevice::OpenFilter(u_short Pid, u_char Tid, u_char Mask)
 {
+  const char *FileName = *cDvbName(DEV_DVB_DEMUX, CardIndex());
+  int f = open(FileName, O_RDWR | O_NONBLOCK);
+  if (f >= 0) {
+     dmx_sct_filter_params sctFilterParams;
+     memset(&sctFilterParams, 0, sizeof(sctFilterParams));
+     sctFilterParams.pid = Pid;
+     sctFilterParams.timeout = 0;
+     sctFilterParams.flags = DMX_IMMEDIATE_START;
+     sctFilterParams.filter.filter[0] = Tid;
+     sctFilterParams.filter.mask[0] = Mask;
+     if (ioctl(f, DMX_SET_FILTER, &sctFilterParams) >= 0)
+        return f;
+     else {
+        esyslog("ERROR: can't set filter (pid=%d, tid=%02X, mask=%02X): %m", Pid, Tid, Mask);
+        close(f);
+        }
+     }
+  else
+     esyslog("ERROR: can't open filter handle on '%s'", FileName);
   return -1;
+}
+
+void cDvbDevice::CloseFilter(int Handle)
+{
+  close(Handle);
 }
 
 bool cDvbDevice::ProvidesSource(int Source) const

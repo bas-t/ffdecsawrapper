@@ -29,7 +29,16 @@
 #include "sasccam.h"
 #include "scsetup.h"
 
+// -- cScDevice -------------------------------------------------------------
+
+#define SCDEVICE cScDevice
+#define DVBDEVICE cDvbDevice
+#include "device-tmpl.c"
+#undef SCDEVICE
+#undef DVBDEVICE
+
 // -- cSascDvbDevice -------------------------------------------------------------
+
 class cSascDvbDevice : public cScDevice {
 private:
   int cardidx;

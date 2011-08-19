@@ -83,6 +83,7 @@ protected:
 
 protected:
   virtual int OpenFilter(u_short Pid, u_char Tid, u_char Mask);
+  virtual void CloseFilter(int Handle);
 
 // Common Interface facilities:
 

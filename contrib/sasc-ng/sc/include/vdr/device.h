@@ -306,6 +306,11 @@ public:
        ///< Opens a file handle for the given filter data.
        ///< A derived device that provides section data must
        ///< implement this function.
+  virtual void CloseFilter(int Handle);
+       ///< Closes a file handle that has previously been opened
+       ///< by OpenFilter(). If this is as simple as calling close(Handle),
+       ///< a derived class need not implement this function, because this
+       ///< is done by the default implementation.
   void AttachFilter(cFilter *Filter);
        ///< Attaches the given filter to this device.
   void Detach(cFilter *Filter);

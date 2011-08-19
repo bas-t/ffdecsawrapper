@@ -37,7 +37,9 @@
 #include "override.h"
 #include "misc.h"
 #include "log-core.h"
+#ifndef SASC
 #include "FFdecsa/FFdecsa.h"
+#endif
 
 #define IDLE_SLEEP          0 // idleTime when sleeping
 #define IDLE_GETCA        200 // idleTime when waiting for ca descriptors
@@ -723,23 +725,6 @@ bool cEcmCache::ParseLinePlain(const char *line)
 
 // -- cCaDescr -----------------------------------------------------------------
 
-class cCaDescr {
-private:
-  unsigned char *descr;
-  int len;
-public:
-  cCaDescr(void);
-  cCaDescr(const cCaDescr &arg);
-  ~cCaDescr();
-  const unsigned char *Get(int &l) const;
-  void Set(const cCaDescr *d);
-  void Set(const unsigned char *de, int l);
-  void Clear(void);
-  bool operator== (const cCaDescr &arg) const;
-  void Join(const cCaDescr *cd, bool rev=false);
-  cString ToString(void);
-  };
-
 cCaDescr::cCaDescr(void)
 {
   descr=0; len=0;
@@ -818,40 +803,7 @@ cString cCaDescr::ToString(void)
   return str;
 }
 
-// -- cPrgPid ------------------------------------------------------------------
-
-class cPrgPid : public cSimpleItem {
-private:
-  bool proc;
-public:
-  int type, pid;
-  cCaDescr caDescr;
-  //
-  cPrgPid(int Type, int Pid) { type=Type; pid=Pid; proc=false; }
-  bool Proc(void) const { return proc; }
-  void Proc(bool is) { proc=is; };
-  };
-
 // -- cPrg ---------------------------------------------------------------------
-
-class cPrg : public cSimpleItem {
-private:
-  bool isUpdate, pidCaDescr;
-  //
-  void Setup(void);
-public:
-  int sid, source, transponder;
-  cSimpleList<cPrgPid> pids;
-  cCaDescr caDescr;
-  //
-  cPrg(void);
-  cPrg(int Sid, bool IsUpdate);
-  bool IsUpdate(void) const { return isUpdate; }
-  bool HasPidCaDescr(void) const { return pidCaDescr; }
-  void SetPidCaDescr(bool val) { pidCaDescr=val; }
-  bool SimplifyCaDescr(void);
-  void DumpCaDescr(int c);
-  };
 
 cPrg::cPrg(void)
 {
@@ -879,11 +831,6 @@ void cPrg::DumpCaDescr(int c)
 
 bool cPrg::SimplifyCaDescr(void)
 {
-//XXX
-PRINTF(L_CORE_PIDS,"SimplyCa entry pidCa=%d",HasPidCaDescr());
-DumpCaDescr(L_CORE_PIDS);
-//XXX
-
   if(HasPidCaDescr()) {
     bool equal=true;
     if(pids.Count()>1) {
@@ -904,10 +851,8 @@ DumpCaDescr(L_CORE_PIDS);
     caDescr.Clear();
     }
 
-//XXX
-PRINTF(L_CORE_PIDS,"SimplyCa exit pidCa=%d",HasPidCaDescr());
-DumpCaDescr(L_CORE_PIDS);
-//XXX
+  PRINTF(L_CORE_PIDS,"Ca descriptors after simplify (pidCa=%d)",HasPidCaDescr());
+  DumpCaDescr(L_CORE_PIDS);
 
   return HasPidCaDescr();
 }
@@ -2016,7 +1961,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
 }
 
-#endif //SASC
+#endif //!SASC
 
 // -- cCams --------------------------------------------------------------------
 
@@ -2079,6 +2024,7 @@ void cGlobal::CaidsChanged(void)
 
 // -- cCam ---------------------------------------------------------------
 
+#ifndef SASC
 struct TPDU {
   unsigned char slot;
   unsigned char tcid;
@@ -2086,6 +2032,7 @@ struct TPDU {
   unsigned char len;
   unsigned char data[1];
   };
+#endif
 
 cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Cafd, bool SoftCSA, bool FullTS)
 {
@@ -2093,6 +2040,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Ca
   softcsa=SoftCSA; fullts=FullTS;
   tcid=0; rebuildcaids=false;
   memset(version,0,sizeof(version));
+#ifndef SASC
   memset(slots,0,sizeof(slots));
   SetDescription("SC-CI adapter on device %s",devId);
   rb=new cRingBufferLinear(KILOBYTE(8),6+LEN_OFF,false,"SC-CI adapter read");
@@ -2106,6 +2054,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Ca
   else PRINTF(L_GEN_ERROR,"failed to create ringbuffer for SC-CI adapter %s.",devId);
 
   decsa=softcsa ? new cDeCSA(devId) : 0;
+#endif //!SASC
 
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;
   memset(lastCW,0,sizeof(lastCW));
@@ -2120,13 +2069,16 @@ cCam::~cCam()
   handlerList.Clear();
   delete hookman;
   delete logger;
+#ifndef SASC
   Cancel(3);
   ciMutex.Lock();
   delete rb; rb=0;
   ciMutex.Unlock();
   delete decsa; decsa=0;
+#endif //!SASC
 }
 
+#ifndef SASC
 bool cCam::OwnSlot(const cCamSlot *slot) const
 {
   if(slots[0]==slot) return true;
@@ -2145,12 +2097,14 @@ int cCam::GetCaids(int slot, unsigned short *Caids, int max)
     }
   return version[slot];
 }
+#endif //!SASC
 
 void cCam::CaidsChanged(void)
 {
   rebuildcaids=true;
 }
 
+#ifndef SASC
 void cCam::BuildCaids(bool force)
 {
   if(caidTimer.TimedOut() || force || (rebuildcaids && triggerTimer.TimedOut())) {
@@ -2313,6 +2267,7 @@ bool cCam::Assign(cDevice *Device, bool Query)
 {
   return Device ? (Device==device) : true;
 }
+#endif //!SASC
 
 bool cCam::IsSoftCSA(bool live)
 {
@@ -2611,7 +2566,7 @@ bool cCam::SetCaDescr(ca_descr_t *ca_descr, bool initial)
     return ioctl(cafd,CA_SET_DESCR,ca_descr)>=0;
     }
   else if(decsa) return decsa->SetDescr(ca_descr,initial);
-#endif // !SASC
+#endif //!SASC
   return false;
 }
 
@@ -2623,7 +2578,7 @@ bool cCam::SetCaPid(ca_pid_t *ca_pid)
     return ioctl(cafd,CA_SET_PID,ca_pid)>=0;
     }
   else if(decsa) return decsa->SetCaPid(ca_pid);
-#endif // !SASC
+#endif //!SASC
   return false;
 }
 
@@ -2635,7 +2590,7 @@ static unsigned int av7110_read(int fd, unsigned int addr)
   ioctl(fd,CA_GET_MSG,&arg);
   return arg.index;
 }
-#endif // !SASC
+#endif //!SASC
 
 #if 0
 static void av7110_write(int fd, unsigned int addr, unsigned int val)
@@ -2705,7 +2660,7 @@ void cCam::DumpAV7110(void)
         }
       }
     }
-#endif // !SASC
+#endif //!SASC
 }
 
 int cCam::GetFreeIndex(void)
@@ -2827,6 +2782,8 @@ void cCam::RemHandler(cEcmHandler *handler)
 }
 
 // -- cDeCSA -------------------------------------------------------------------
+
+#ifndef SASC
 
 #define MAX_STALL_MS 70
 
@@ -3022,3 +2979,5 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
     }
   return false;
 }
+
+#endif //!SASC

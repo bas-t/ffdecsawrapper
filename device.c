@@ -28,11 +28,11 @@
 #include <vdr/ci.h>
 #include <vdr/dvbdevice.h>
 #include <vdr/thread.h>
+
 #ifndef SASC
 #include <vdr/dvbci.h>
-
 #include "FFdecsa/FFdecsa.h"
-#endif //SASC
+#endif //!SASC
 
 #include "device.h"
 #include "cam.h"
@@ -44,6 +44,8 @@
 #include "log-core.h"
 
 // -- cDeCsaTSBuffer -----------------------------------------------------------
+
+#ifndef SASC
 
 cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive)
 {
@@ -232,6 +234,8 @@ uint32_t cScDeviceProbe::GetSubsystemId(int Adapter, int Frontend)
 
 #endif //APIVERSNUM >= 10711
 
+#endif //!SASC
+
 // -- cScDevices ---------------------------------------------------------------
 
 int cScDevices::budget=0;
@@ -370,7 +374,7 @@ bool cScDevices::ForceBudget(int n)
    return budget && (budget&(1<<n));
 }
 
-#else //SASC
+#else //!SASC
 
 void cScDevices::OnPluginLoad(void) {}
 void cScDevices::OnPluginUnload(void) {}
@@ -380,4 +384,4 @@ void cScDevices::Shutdown(void) {}
 void cScDevices::SetForceBudget(int n) {}
 bool cScDevices::ForceBudget(int n) { return true; }
 
-#endif //SASC
+#endif //!SASC

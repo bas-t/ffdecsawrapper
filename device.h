@@ -43,6 +43,7 @@ class cDeCSA;
 
 // ----------------------------------------------------------------
 
+#ifndef SASC
 class cDeCsaTSBuffer : public cThread {
 private:
   int f;
@@ -60,6 +61,7 @@ public:
   uchar *Get(void);
   void SetActive(bool ScActive);
   };
+#endif
 
 // ----------------------------------------------------------------
 
@@ -85,6 +87,7 @@ public:
 
 // ----------------------------------------------------------------
 
+#ifndef SASC
 class cScDevicePlugin : public cSimpleItem {
 public:
   cScDevicePlugin(void);
@@ -93,5 +96,6 @@ public:
   virtual bool LateInit(cDevice *dev)=0;
   virtual bool EarlyShutdown(cDevice *dev)=0;
   };
+#endif //!SASC
 
 #endif // ___DEVICE_H
