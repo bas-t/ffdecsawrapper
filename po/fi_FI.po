@@ -149,7 +149,7 @@ msgid "ECM cache"
 msgstr "ECM-välimuisti"
 
 msgid "TS buffer size MB"
-msgstr ""
+msgstr "TS-puskurin koko (MB)"
 
 msgid "Active on DVB card"
 msgstr "Aktiivinen DVB-kortilla"
