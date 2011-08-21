@@ -259,6 +259,11 @@ int cDevice::OpenFilter(u_short Pid, u_char Tid, u_char Mask)
   return -1;
 }
 
+void cDevice::CloseFilter(int Handle)
+{
+  close(Handle);
+}
+
 void cDevice::AttachFilter(cFilter *Filter)
 {
 }

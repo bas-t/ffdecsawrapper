@@ -25,7 +25,9 @@
 #include <vdr/device.h>
 #include <vdr/channels.h>
 #include <vdr/thread.h>
+#ifndef SASC
 #include <vdr/ringbuffer.h>
+#endif
 
 #include "cam.h"
 #include "global.h"
