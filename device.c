@@ -139,9 +139,27 @@ cScDevicePlugin::~cScDevicePlugin()
 
 #define SCDEVICE cScDvbDevice
 #define DVBDEVICE cDvbDevice
+#if APIVERSNUM < 10711
+#define OWN_SETCA
+#endif
 #include "device-tmpl.c"
 #undef SCDEVICE
 #undef DVBDEVICE
+#undef OWN_SETCA
+
+#if APIVERSNUM < 10711
+bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+{
+  cMutexLock lock(&cafdMutex);
+  return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
+}
+
+bool cScDvbDevice::SetCaPid(ca_pid_t *ca_pid)
+{
+  cMutexLock lock(&cafdMutex);
+  return ioctl(fd_ca,CA_SET_PID,ca_pid)>=0;
+}
+#endif //APIVERSNUM < 10711
 
 // -- cScDvbDevicePlugin -------------------------------------------------------
 
@@ -150,6 +168,10 @@ public:
   virtual cDevice *Probe(int Adapter, int Frontend, uint32_t SubSystemId);
   virtual bool LateInit(cDevice *dev);
   virtual bool EarlyShutdown(cDevice *dev);
+#if APIVERSNUM < 10711
+  virtual bool SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial);
+  virtual bool SetCaPid(cDevice *dev, ca_pid_t *ca_pid);
+#endif
   };
 
 cDevice *cScDvbDevicePlugin::Probe(int Adapter, int Frontend, uint32_t SubSystemId)
@@ -171,6 +193,22 @@ bool cScDvbDevicePlugin::EarlyShutdown(cDevice *dev)
   if(d) d->EarlyShutdown();
   return d!=0;
 }
+
+#if APIVERSNUM < 10711
+bool cScDvbDevicePlugin::SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial)
+{
+  cScDvbDevice *d=dynamic_cast<cScDvbDevice *>(dev);
+  if(d) return d->SetCaDescr(ca_descr,initial);
+  return false;
+}
+
+bool cScDvbDevicePlugin::SetCaPid(cDevice *dev, ca_pid_t *ca_pid)
+{
+  cScDvbDevice *d=dynamic_cast<cScDvbDevice *>(dev);
+  if(d) return d->SetCaPid(ca_pid);
+  return d!=0;
+}
+#endif //APIVERSNUM < 10711
 
 // --- cScDeviceProbe ----------------------------------------------------------
 
