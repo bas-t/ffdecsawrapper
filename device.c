@@ -155,7 +155,7 @@ public:
 cDevice *cScDvbDevicePlugin::Probe(int Adapter, int Frontend, uint32_t SubSystemId)
 {
   PRINTF(L_GEN_DEBUG,"creating standard device %d/%d",Adapter,Frontend);
-  return new cScDvbDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
+  return new cScDvbDevice(this,Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
 }
 
 bool cScDvbDevicePlugin::LateInit(cDevice *dev)

@@ -42,9 +42,23 @@ SCAPIVERSTAG();
 #include "../dvbhddevice/dvbhdffdevice.h"
 #define SCDEVICE cScDvbHdFfDevice
 #define DVBDEVICE cDvbHdFfDevice
+#define OWN_SETCA
 #include "device-tmpl.c"
 #undef SCDEVICE
 #undef DVBDEVICE
+#undef OWN_SETCA
+
+bool cScDvbHdFfDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+{
+  cMutexLock lock(&cafdMutex);
+  return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
+}
+
+bool cScDvbHdFfDevice::SetCaPid(ca_pid_t *ca_pid)
+{
+  cMutexLock lock(&cafdMutex);
+  return ioctl(fd_ca,CA_SET_PID,ca_pid)>=0;
+}
 
 // -- cScHdDevicePlugin --------------------------------------------------------
 
@@ -53,6 +67,8 @@ public:
   virtual cDevice *Probe(int Adapter, int Frontend, uint32_t SubSystemId);
   virtual bool LateInit(cDevice *dev);
   virtual bool EarlyShutdown(cDevice *dev);
+  virtual bool SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial);
+  virtual bool SetCaPid(cDevice *dev, ca_pid_t *ca_pid);
   };
 
 static cScHdDevicePlugin _hddevplugin;
@@ -70,7 +86,7 @@ cDevice *cScHdDevicePlugin::Probe(int Adapter, int Frontend, uint32_t SubSystemI
       if(fd>=0) {
         close(fd);
         PRINTF(L_GEN_DEBUG,"creating HD-FF device %d/%d",Adapter,Frontend);
-        return new cScDvbHdFfDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
+        return new cScDvbHdFfDevice(this,Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
         }
       }
     }
@@ -89,6 +105,20 @@ bool cScHdDevicePlugin::EarlyShutdown(cDevice *dev)
   cScDvbHdFfDevice *d=dynamic_cast<cScDvbHdFfDevice *>(dev);
   if(d) d->EarlyShutdown();
   return d!=0;
+}
+
+bool cScHdDevicePlugin::SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial)
+{
+  cScDvbHdFfDevice *d=dynamic_cast<cScDvbHdFfDevice *>(dev);
+  if(d) return d->SetCaDescr(ca_descr,initial);
+  return false;
+}
+
+bool cScHdDevicePlugin::SetCaPid(cDevice *dev, ca_pid_t *ca_pid)
+{
+  cScDvbHdFfDevice *d=dynamic_cast<cScDvbHdFfDevice *>(dev);
+  if(d) return d->SetCaPid(ca_pid);
+  return false;
 }
 
 #endif //WITH_HDDVB

@@ -20,6 +20,7 @@
 #ifndef ___DEVICE_H
 #define ___DEVICE_H
 
+#include <linux/dvb/ca.h>
 #include <vdr/dvbdevice.h>
 #include <vdr/thread.h>
 #include "misc.h"
@@ -95,6 +96,9 @@ public:
   virtual cDevice *Probe(int Adapter, int Frontend, uint32_t SubSystemId)=0;
   virtual bool LateInit(cDevice *dev)=0;
   virtual bool EarlyShutdown(cDevice *dev)=0;
+  virtual bool SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial) { return false; }
+  virtual bool SetCaPid(cDevice *dev, ca_pid_t *ca_pid) { return false; }
+  virtual bool DumpAV(cDevice *dev) { return false; }
   };
 #endif //!SASC
 

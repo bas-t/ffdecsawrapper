@@ -38,6 +38,7 @@ class cLogHook;
 class cScCamSlot;
 class cDeCSA;
 class cPrg;
+class cScDevicePlugin;
 
 // ----------------------------------------------------------------
 
@@ -161,8 +162,7 @@ private:
   //
   cDeCSA *decsa;
 #endif
-  int cafd;
-  cMutex cafdMutex;
+  cScDevicePlugin *devplugin;
   bool softcsa, fullts;
   //
   cTimeMs caidTimer, triggerTimer;
@@ -172,7 +172,6 @@ private:
   bool rebuildcaids;
   //
   cTimeMs readTimer, writeTimer;
-  cTimeMs lastDump;
   //
   cMutex camMutex;
   cSimpleList<cEcmHandler> handlerList;
@@ -196,7 +195,7 @@ protected:
   virtual bool Assign(cDevice *Device, bool Query=false);
 #endif
 public:
-  cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, int Cafd, bool SoftCSA, bool FullTS);
+  cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, cScDevicePlugin *DevPlugin, bool SoftCSA, bool FullTS);
   virtual ~cCam();
   // CI adapter API
   int GetCaids(int slot, unsigned short *Caids, int max);

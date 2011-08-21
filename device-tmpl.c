@@ -26,10 +26,13 @@ private:
   cMutex tsMutex;
 #endif //!SASC
   cCam *cam;
+  cScDevicePlugin *devplugin;
 #ifndef SASC
   cCiAdapter *hwciadapter;
+  cTimeMs lastDump;
 #endif //!SASC
   int fd_dvr, fd_ca, fd_ca2;
+  cMutex cafdMutex;
   bool softcsa, fullts;
   char devId[8];
   //
@@ -46,8 +49,11 @@ protected:
   virtual bool GetTSPacket(uchar *&Data);
 #endif //!SASC
 public:
-  SCDEVICE(int Adapter, int Frontend, int cafd);
+  SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int cafd);
   ~SCDEVICE();
+  bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
+  bool SetCaPid(ca_pid_t *ca_pid);
+  void DumpAV(void);
 #ifndef SASC
   virtual bool HasCi(void);
   void LateInit(void);
@@ -57,7 +63,7 @@ public:
 #endif //!SASC
   };
 
-SCDEVICE::SCDEVICE(int Adapter, int Frontend, int cafd)
+SCDEVICE::SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int cafd)
 #if APIVERSNUM >= 10711
 :DVBDEVICE(Adapter,Frontend)
 #else
@@ -67,7 +73,7 @@ SCDEVICE::SCDEVICE(int Adapter, int Frontend, int cafd)
 #ifndef SASC
   tsBuffer=0; hwciadapter=0;
 #endif
-  cam=0; softcsa=fullts=false;
+  cam=0; devplugin=DevPlugin; softcsa=fullts=false;
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
 #if APIVERSNUM >= 10711
   snprintf(devId,sizeof(devId),"%d/%d",Adapter,Frontend);
@@ -75,7 +81,7 @@ SCDEVICE::SCDEVICE(int Adapter, int Frontend, int cafd)
   snprintf(devId,sizeof(devId),"%d",Adapter);
 #endif
 #ifdef SASC
-  cam=new cCam(this,Adapter,0,devId,fd_ca,softcsa,fullts);
+  cam=new cCam(this,Adapter,0,devId,devplugin,softcsa,fullts);
 #endif // !SASC
 }
 
@@ -92,6 +98,23 @@ SCDEVICE::~SCDEVICE()
   delete cam;
 #endif
 }
+
+#ifndef OWN_SETCA
+bool SCDEVICE::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+{
+  return false;
+}
+
+bool SCDEVICE::SetCaPid(ca_pid_t *ca_pid)
+{
+  return false;
+}
+#endif //!OWN_SETCA
+
+#ifndef OWN_DUMPAV
+void SCDEVICE::DumpAV(void)
+{}
+#endif
 
 #ifndef SASC
 
@@ -123,7 +146,7 @@ void SCDEVICE::LateInit(void)
     else PRINTF(L_GEN_INFO,"Using software decryption on card %s",devId);
     }
   if(fd_ca2>=0) hwciadapter=cDvbCiAdapter::CreateCiAdapter(this,fd_ca2);
-  cam=new cCam(this,DVB_DEV_SPEC,devId,fd_ca,softcsa,fullts);
+  cam=new cCam(this,DVB_DEV_SPEC,devId,devplugin,softcsa,fullts);
 }
 
 bool SCDEVICE::HasCi(void)
