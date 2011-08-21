@@ -50,6 +50,7 @@ SCAPIVERSTAG();
 
 bool cScDvbHdFfDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
+  if(!initial) cCondWait::SleepMs(150);
   cMutexLock lock(&cafdMutex);
   return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
 }
