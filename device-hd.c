@@ -37,7 +37,7 @@ SCAPIVERSTAG();
 #if APIVERSNUM >= 10711
 #ifdef WITH_HDDVB
 
-// -- cScDvbSdFfDevice ---------------------------------------------------------
+// -- cScDvbHdFfDevice ---------------------------------------------------------
 
 #include "../dvbhddevice/dvbhdffdevice.h"
 #define SCDEVICE cScDvbHdFfDevice
@@ -66,8 +66,12 @@ cDevice *cScHdDevicePlugin::Probe(int Adapter, int Frontend, uint32_t SubSystemI
     };
   for(uint32_t *sid=SubsystemIds; *sid; sid++) {
     if(*sid==SubSystemId) {
-      PRINTF(L_GEN_DEBUG,"creating HD-FF device %d/%d",Adapter,Frontend);
-      return new cScDvbHdFfDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
+      int fd=cScDevices::DvbOpen(DEV_DVB_OSD,Adapter,0,O_RDWR);
+      if(fd>=0) {
+        close(fd);
+        PRINTF(L_GEN_DEBUG,"creating HD-FF device %d/%d",Adapter,Frontend);
+        return new cScDvbHdFfDevice(Adapter,Frontend,cScDevices::DvbOpen(DEV_DVB_CA,Adapter,Frontend,O_RDWR));
+        }
       }
     }
   return 0;
