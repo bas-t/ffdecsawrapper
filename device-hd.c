@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 
 #ifndef SASC
 

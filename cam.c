@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <sys/ioctl.h>
 
 #include <vdr/device.h>
 #include <vdr/channels.h>
