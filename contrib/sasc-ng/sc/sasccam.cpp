@@ -29,47 +29,80 @@
 #include "sasccam.h"
 #include "scsetup.h"
 
-// -- cScDevice -------------------------------------------------------------
+// -- cScSascDevice ------------------------------------------------------------
 
-#define SCDEVICE cScDevice
+#define SCDEVICE cScSascDevice
 #define DVBDEVICE cDvbDevice
+#define OWN_SETCA
 #include "device-tmpl.c"
 #undef SCDEVICE
 #undef DVBDEVICE
-
-// -- cSascDvbDevice -------------------------------------------------------------
-
-class cSascDvbDevice : public cScDevice {
-private:
-  int cardidx;
-public:
-  cSascDvbDevice(int n, int cafd) :cScDevice(n, 0, cafd) {cardidx = n;}
-  ~cSascDvbDevice() {};
-  bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
-  bool SetCaPid(ca_pid_t *ca_pid);
-  };
+#undef OWN_SETCA
 
 extern void _SetCaDescr(int adapter, ca_descr_t *ca_descr);
-bool cSascDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
+extern void _SetCaPid(int adapter, ca_pid_t *ca_pid);
+
+bool cScSascDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
-  printf("Called cSascDvbDevice::SetCaDescr\n");
-  _SetCaDescr(cardidx, ca_descr);
+  printf("Called cScSascDevice::SetCaDescr\n");
+  _SetCaDescr(cardIndex,ca_descr);
   return true;
 }
 
-extern void _SetCaPid(int adapter, ca_pid_t *ca_pid);
-bool cSascDvbDevice::SetCaPid(ca_pid_t *ca_pid)
+bool cScSascDevice::SetCaPid(ca_pid_t *ca_pid)
 {
-  printf("Called cSascDvbDevice::SetCaPid\n");
-  _SetCaPid(cardidx, ca_pid);
+  printf("Called cScSascDevice::SetCaPid\n");
+  _SetCaPid(cardIndex,ca_pid);
   return true;
 }
+
+// -- cScSascDevicePlugin ------------------------------------------------------
+
+class cScSascDevicePlugin : public cScDevicePlugin {
+public:
+  virtual cDevice *Probe(int Adapter, int Frontend, uint32_t SubSystemId);
+  virtual bool LateInit(cDevice *dev);
+  virtual bool EarlyShutdown(cDevice *dev);
+  virtual bool SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial);
+  virtual bool SetCaPid(cDevice *dev, ca_pid_t *ca_pid);
+  };
+
+cDevice *cScSascDevicePlugin::Probe(int Adapter, int Frontend, uint32_t SubSystemId)
+{
+  return 0;
+}
+
+bool cScSascDevicePlugin::LateInit(cDevice *dev)
+{
+  return false;
+}
+
+bool cScSascDevicePlugin::EarlyShutdown(cDevice *dev)
+{
+  return false;
+}
+
+bool cScSascDevicePlugin::SetCaDescr(cDevice *dev, ca_descr_t *ca_descr, bool initial)
+{
+  cScSascDevice *d=dynamic_cast<cScSascDevice *>(dev);
+  if(d) return d->SetCaDescr(ca_descr,initial);
+  return false;
+}
+
+bool cScSascDevicePlugin::SetCaPid(cDevice *dev, ca_pid_t *ca_pid)
+{
+  cScSascDevice *d=dynamic_cast<cScSascDevice *>(dev);
+  if(d) return d->SetCaPid(ca_pid);
+  return false;
+}
+
+// -----------------------------------------------------------------------------
 
 //Functions to communicate with the cam from the outside world
 //Initialize the cam
 sascCam::sascCam(int devnum)
 {
-  dev = new cSascDvbDevice(devnum, -1);
+  dev = new cScSascDevice(new cScSascDevicePlugin,devnum,0,-1);
   cam = dev->Cam();
   ScSetup.ConcurrentFF=8;
 }
@@ -94,4 +127,3 @@ void sascCam::AddPrg(int sid, int *epid, const unsigned char *pmt, int pmtlen)
   }
   cam->AddPrg(prg);
 }
-    

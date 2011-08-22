@@ -1,10 +1,10 @@
 class cCam;
-class cSascDvbDevice;
+class cScSascDevice;
 
 class sascCam {
 private:
  cCam *cam;
- cSascDvbDevice *dev;
+ cScSascDevice *dev;
 public:
   sascCam(int devNum);
   void Stop();

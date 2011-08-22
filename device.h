@@ -88,7 +88,6 @@ public:
 
 // ----------------------------------------------------------------
 
-#ifndef SASC
 class cScDevicePlugin : public cSimpleItem {
 public:
   cScDevicePlugin(void);
@@ -100,6 +99,5 @@ public:
   virtual bool SetCaPid(cDevice *dev, ca_pid_t *ca_pid) { return false; }
   virtual bool DumpAV(cDevice *dev) { return false; }
   };
-#endif //!SASC
 
 #endif // ___DEVICE_H

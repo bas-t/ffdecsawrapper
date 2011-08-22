@@ -2040,7 +2040,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, cScDev
 {
   device=Device; devplugin=DevPlugin; adapter=Adapter; frontend=Frontend; devId=DevId;
   softcsa=SoftCSA; fullts=FullTS;
-  decsa=0; tcid=0; rebuildcaids=false;
+  tcid=0; rebuildcaids=false;
   memset(version,0,sizeof(version));
 #ifndef SASC
   memset(slots,0,sizeof(slots));
@@ -2055,7 +2055,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, cScDev
     }
   else PRINTF(L_GEN_ERROR,"failed to create ringbuffer for SC-CI adapter %s.",devId);
 
-  if(softcsa) decsa=new cDeCSA(devId);
+  decsa=softcsa ? new cDeCSA(devId) : 0;
 #endif //!SASC
 
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;

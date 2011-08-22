@@ -121,6 +121,8 @@ uchar *cDeCsaTSBuffer::Get(void)
   return NULL;
 }
 
+#endif //!SASC
+
 // --- cScDevicePlugin ---------------------------------------------------------
 
 static cSimpleList<cScDevicePlugin> devplugins;
@@ -136,6 +138,8 @@ cScDevicePlugin::~cScDevicePlugin()
 }
 
 // -- cScDvbDevice -------------------------------------------------------------
+
+#ifndef SASC
 
 #define SCDEVICE cScDvbDevice
 #define DVBDEVICE cDvbDevice
