@@ -365,11 +365,11 @@ bool cRewriterNagraBeta::Rewrite(unsigned char *&data, int &len)
 {
   unsigned char *d=Alloc(len+10);
   if(d) {
-    static const unsigned char tunnel[] = { 0xc9,0x00,0x00,0x00,0x01,0x10,0x10,0x00,0x48,0x12,0x07 };
+    static const unsigned char tunnel[] = { 0xc9,0x00,0x00,0x00,0x01,0x10,0x10,0x00,0x48,0x12 };
     d[0]=data[0];
-    SetSctLen(d,len+10);
+    SetSctLen(d,len+7);
     memcpy(&d[3],tunnel,sizeof(tunnel));
-    memcpy(&d[14],&data[4],len-4);
+    memcpy(&d[13],&data[3],len-3);
     if(len>0x88) { // assume N3
       d[3]=0xc7; d[11]=0x87;
       }
