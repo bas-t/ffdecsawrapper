@@ -144,14 +144,17 @@ cScDevicePlugin::~cScDevicePlugin()
 #define SCDEVICE cScDvbDevice
 #define DVBDEVICE cDvbDevice
 #if APIVERSNUM < 10711
+#define OWN_FULLTS
 #define OWN_SETCA
 #endif
 #include "device-tmpl.c"
-#undef SCDEVICE
-#undef DVBDEVICE
-#undef OWN_SETCA
 
 #if APIVERSNUM < 10711
+bool cScDvbDevice::CheckFullTs(void)
+{
+  return IsPrimaryDevice() && HasDecoder();
+}
+
 bool cScDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   cMutexLock lock(&cafdMutex);

@@ -43,13 +43,15 @@ SCAPIVERSTAG();
 #include "../dvbsddevice/dvbsdffdevice.h"
 #define SCDEVICE cScDvbSdFfDevice
 #define DVBDEVICE cDvbSdFfDevice
+#define OWN_FULLTS
 #define OWN_SETCA
 #define OWN_DUMPAV
 #include "device-tmpl.c"
-#undef SCDEVICE
-#undef DVBDEVICE
-#undef OWN_SETCA
-#undef OWN_DUMPAV
+
+bool cScDvbSdFfDevice::CheckFullTs(void)
+{
+  return IsPrimaryDevice() && HasDecoder();
+}
 
 bool cScDvbSdFfDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {

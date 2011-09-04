@@ -58,6 +58,7 @@ public:
   virtual bool HasCi(void);
   void LateInit(void);
   void EarlyShutdown(void);
+  bool CheckFullTs(void);
 #else
   cCam *Cam(void) { return cam; }
 #endif //!SASC
@@ -125,6 +126,13 @@ void SCDEVICE::EarlyShutdown(void)
   delete hwciadapter; hwciadapter=0;
 }
 
+#ifndef OWN_FULLTS
+bool SCDEVICE::CheckFullTs(void)
+{
+  return false;
+}
+#endif //!OWN_FULLTS
+
 void SCDEVICE::LateInit(void)
 {
   int n=CardIndex();
@@ -139,10 +147,8 @@ void SCDEVICE::LateInit(void)
     softcsa=true;
     }
   if(softcsa) {
-    if(IsPrimaryDevice() && HasDecoder()) {
-      PRINTF(L_GEN_INFO,"Enabling hybrid full-ts mode on card %s",devId);
-      fullts=true;
-      }
+    fullts=CheckFullTs();
+    if(fullts) PRINTF(L_GEN_INFO,"Enabling hybrid full-ts mode on card %s",devId);
     else PRINTF(L_GEN_INFO,"Using software decryption on card %s",devId);
     }
   if(fd_ca2>=0) hwciadapter=cDvbCiAdapter::CreateCiAdapter(this,fd_ca2);
@@ -210,3 +216,9 @@ bool SCDEVICE::GetTSPacket(uchar *&Data)
 }
 
 #endif // !SASC
+
+#undef SCDEVICE
+#undef DVBDEVICE
+#undef OWN_SETCA
+#undef OWN_DUMPAV
+#undef OWN_FULLTS

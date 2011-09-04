@@ -45,9 +45,6 @@ SCAPIVERSTAG();
 #define DVBDEVICE cDvbHdFfDevice
 #define OWN_SETCA
 #include "device-tmpl.c"
-#undef SCDEVICE
-#undef DVBDEVICE
-#undef OWN_SETCA
 
 bool cScDvbHdFfDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
