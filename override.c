@@ -134,7 +134,9 @@ bool cValidityRange::ParseSourceRange(const char *str)
   if((l=sscanf(str,"%a[^-:]-%a[^-:]",&s1,&s2))>=1) {
     if(s1 && (fromSource=cSource::FromString(s1))>0 &&
        (l<2 || (s2 && (toSource=cSource::FromString(s2))>0))) {
-      if(cSource::IsSat(fromSource) && (toSource<0 || (cSource::IsSat(toSource) && toSource>fromSource))) {
+      if((cSource::IsSat(fromSource) && (toSource<0 || (cSource::IsSat(toSource) && toSource>fromSource))) ||
+         (cSource::IsCable(fromSource) && toSource<0) ||
+         (cSource::IsTerr(fromSource) && toSource<0)) {
         res=true;
         }
       else PRINTF(L_CORE_LOAD,"override: SOURCE range error");
