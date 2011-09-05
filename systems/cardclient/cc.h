@@ -63,7 +63,7 @@ protected:
   const char *name;
   char hostname[64];
   int port;
-  bool emmAllowed;
+  int emmAllowed;
   int emmCaid[MAX_CC_CAID], emmMask[MAX_CC_CAID], numCaid;
   cMsgCache msECM, msEMM;
   //

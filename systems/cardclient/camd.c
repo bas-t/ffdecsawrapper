@@ -182,7 +182,7 @@ bool cCardClientCommon::ProcessEMM(int caSys, const unsigned char *source)
     if(MatchEMM(source)) {
       const int length=SCT_LEN(source);
       int id=msEMM.Get(source,length,0);
-      if(id>0) {
+      if(id>0 || emmAllowed>1) {
         unsigned char *buff=AUTOMEM(length+32);
         buff[0]=0x03;
         buff[1]=(caSys>>8);
@@ -654,7 +654,7 @@ bool cCardClientCamd35::ProcessEMM(int caSys, const unsigned char *data)
             if(len+off<=255) {
               memcpy(&cb->data[off],data,len);
               int id=msEMM.Get(&cb->data[0],len+off,0);
-              if(id>0) {
+              if(id>0 || emmAllowed>1) {
                 SendBlock(cb,len+off);
                 msEMM.Cache(id,true,0);
                 }

@@ -1236,7 +1236,7 @@ bool cCardClientCCcam2::ProcessEMM(int caSys, const unsigned char *data)
           while((d=ad.Assembled())) {
             int len=SCT_LEN(d);
             int id=s->Cache()->Get(d,len,0);
-            if(id>0) {
+            if(id>0 || emmAllowed>1) {
               if(len<256) {
                 unsigned char bb[sizeof(struct EmmRequest)+256];
                 struct EmmRequest *req=(struct EmmRequest *)bb;

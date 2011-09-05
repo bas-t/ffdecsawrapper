@@ -56,7 +56,7 @@ cCardClient::cCardClient(const char *Name)
 ,msEMM(32,0)
 {
   name=Name;
-  emmAllowed=false; emmCaid[0]=0x1700; emmMask[0]=0xFF00; numCaid=1;
+  emmAllowed=0; emmCaid[0]=0x1700; emmMask[0]=0xFF00; numCaid=1;
 }
 
 bool cCardClient::Immediate(void)
@@ -74,7 +74,8 @@ bool cCardClient::ParseStdConfig(const char *config, int *num)
   int n, emm=0;
   if(!num) num=&n;
   if(sscanf(config,"%63[^:]:%d:%d%n",hostname,&port,&emm,num)<3) return false;
-  if(emm>0) emmAllowed=true;
+  if(emm>0) emmAllowed=1;
+  if(emm==2) emmAllowed=2; // EMM caching disabled
   if(config[*num]=='/') {
     numCaid=0;
     do {

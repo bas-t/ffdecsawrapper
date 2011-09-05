@@ -508,7 +508,7 @@ bool cCardClientNewCamd::ProcessEMM(int caSys, const unsigned char *data)
       while((data=ad.Assembled())) {
         int len=SCT_LEN(data);
         int id=msEMM.Get(data,len,0);
-        if(id>0) {
+        if(id>0 || emmAllowed>1) {
           if(SendMessage(data,len,true,0)) {
             unsigned char buffer[CWS_NETMSGSIZE];
             len=ReceiveMessage(buffer,true);

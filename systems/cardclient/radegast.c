@@ -284,7 +284,7 @@ bool cCardClientRadegast::ProcessEMM(int caSys, const unsigned char *data)
       while((data=ad.Assembled())) {
         int len=SCT_LEN(data);
         int id=msEMM.Get(data,len,0);
-        if(id>0) {
+        if(id>0 || emmAllowed>1) {
           unsigned char buff[512];
           StartMsg(buff,0x41);			//
           AddNano(buff,0x42,2,caSys);		// EMM_CAID

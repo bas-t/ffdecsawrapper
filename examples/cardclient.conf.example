@@ -5,7 +5,7 @@
 # 'hostname' is the name of the server
 # 'port'     is the port on the server
 # 'emm'      is a flag to allow EMM transfers to the server
-#            (0=disabled 1=enabled)
+#            (0=disabled 1=enabled 2=enabled without caching)
 # 'caid'     (optional) caid on which this client should work
 # 'mask'     (optional) mask for caid e.g. caid=1700 mask=FF00 would allow
 #            anything between 1700 & 17FF.
