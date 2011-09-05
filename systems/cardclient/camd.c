@@ -694,11 +694,7 @@ bool cCardClientCamd35::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     cb->udp_header.cmd=0x00;
     cb->service.srvID=bswap_16(ecm->prgId);
     cb->service.casID=bswap_16(ecm->caId);
-    switch(ecm->caId>>8) {
-      case 0x18: n=(data[5]*256)+data[6]; break;
-      default: n=ecm->provId; break;
-      }
-    cb->service.prvID=bswap_32(n);
+    cb->service.prvID=bswap_32(ecm->provId);
     cb->service.pinID=pid;
     memcpy(&cb->data[0],data,length);
     if(SendBlock(cb,length)) {
