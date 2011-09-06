@@ -1947,7 +1947,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
             }
           }
         if(prg->sid!=0) {
-          if(ci_cmd==0x04) {
+          if(ci_cmd==0x04 || (ci_cmd==-1 && ca_lm==0x03)) {
             PRINTF(L_CORE_CI,"%s.%d stop decrypt",devId,slot);
             cam->Stop();
             }
