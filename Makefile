@@ -122,11 +122,13 @@ ifneq ($(strip $(HAVE_SD)),)
   DEFINES += -DWITH_SDDVB
   DEVPLUGTARGETS += $(LIBDIR)/libsc-dvbsddevice-$(SCAPIVERS).so.$(APIVERSION)
 endif
+DEVPLUGOBJS += device-sd.o
 HAVE_HD := $(wildcard ../dvbhddevice/dvbhddevice.c)
 ifneq ($(strip $(HAVE_HD)),)
   DEFINES += -DWITH_HDDVB
   DEVPLUGTARGETS += $(LIBDIR)/libsc-dvbhddevice-$(SCAPIVERS).so.$(APIVERSION)
 endif
+DEVPLUGOBJS += device-hd.o
 
 # max number of CAIDs per slot
 MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(VDRDIR)/ci.c)
@@ -251,7 +253,7 @@ clean-core:
 	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
-	@-rm -f $(OBJS) $(DEPFILE) version.c *.so *.tar.gz core* *~
+	@-rm -f $(OBJS) $(DEVPLUGOBJS) $(DEPFILE) version.c *.so *.tar.gz core* *~
 	@-rm -f $(PODIR)/*.mo
 
 clean-pre:
