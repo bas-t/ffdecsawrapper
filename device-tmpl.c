@@ -66,10 +66,14 @@ public:
 
 SCDEVICE::SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int cafd)
 #if APIVERSNUM >= 10711
+#ifdef OWN_DEVPARAMS
+:DVBDEVICE(Adapter,Frontend,OWN_DEVPARAMS)
+#else
 :DVBDEVICE(Adapter,Frontend)
+#endif //OWN_DEVPARAMS
 #else
 :DVBDEVICE(Adapter)
-#endif
+#endif //APIVERSNUM >= 10711
 {
 #ifndef SASC
   tsBuffer=0; hwciadapter=0;
@@ -228,3 +232,4 @@ bool SCDEVICE::GetTSPacket(uchar *&Data)
 #undef OWN_SETCA
 #undef OWN_DUMPAV
 #undef OWN_FULLTS
+#undef OWN_DEVPARAMS

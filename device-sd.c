@@ -46,6 +46,9 @@ SCAPIVERSTAG();
 #define OWN_FULLTS
 #define OWN_SETCA
 #define OWN_DUMPAV
+#if APIVERSNUM >= 10721
+#define OWN_DEVPARAMS false
+#endif
 #include "device-tmpl.c"
 
 bool cScDvbSdFfDevice::CheckFullTs(void)
