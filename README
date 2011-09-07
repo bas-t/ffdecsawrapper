@@ -78,9 +78,11 @@ If you want to use VDR 1.7.11+ together with a full-featured DVB card:
   automatically and support for them will be enabled at compile time.
 - the compiled dvbhddevice and/or dvbsddevice plugin libraries (i.e. the *.so
   files) have to be available in the VDR plugin library directory at runtime.
-- DO NOT load the dvbhddevice and/or dvbsddevice on the VDR commandline (i.e.
-  with parameter -P). They will be loaded internaly from this plugin. It will
-  not work correctly if you load them from commandline!
+- The dvbhddevice and/or dvbsddevice are loaded internaly from this pluign. It's
+  not necessary to load them on the VDR commandline (i.e. with parameter -P). If
+  however a device plugin implements additional methods (like a plugin setup
+  menu) it might be necessary to additionaly load it from VDR commandline AFTER
+  this plugin to enable the functionality.
 
 Now follow the VDR instruction to compile plugins (make plugins). Beside the
 core plugin (libvdr-sc.so), the make process (if successfull) creates an
