@@ -179,6 +179,12 @@ bool SCDEVICE::SetChannelDevice(const cChannel *Channel, bool LiveView)
 {
   if(cam) cam->Tune(Channel);
   bool ret=DVBDEVICE::SetChannelDevice(Channel,LiveView);
+  if(LiveView && IsPrimaryDevice() && Channel->Ca()>=CA_ENCRYPTED_MIN &&
+     !Transferring() &&
+     softcsa && !fullts) {
+    PRINTF(L_GEN_INFO,"Forcing transfermode on card %s",devId);
+    DVBDEVICE::SetChannelDevice(Channel,false); // force transfermode
+    }
   if(ret && cam) cam->PostTune();
   return ret;
 }
