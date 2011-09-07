@@ -561,7 +561,7 @@ void cCardClientCamd35::HandleEMMRequest(const struct CmdBlock *cb)
         case 0x01: SetCard(new cCardSeca(&req->ua[0])); break;
         case 0x0d: SetCard(new cCardCryptoworks(&req->ua[0])); break;
         case 0x05: SetCard(new cCardViaccess(&req->ua[0])); break;
-        case 0x18: SetCard(new cCardNagra2(&req->ua[3])); break;
+        case 0x18: SetCard(new cCardNagra2(&req->ua[2])); break;
         default:
           LBPUT(" (unhandled)");
           break;
