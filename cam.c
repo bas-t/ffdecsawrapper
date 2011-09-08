@@ -2561,9 +2561,9 @@ void cCam::WriteCW(int index, unsigned char *cw, bool force)
 
 bool cCam::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
-#ifndef SASC
   if(!softcsa || (fullts && ca_descr->index==0))
     return devplugin->SetCaDescr(device,ca_descr,initial);
+#ifndef SASC
   else if(decsa)
     return decsa->SetDescr(ca_descr,initial);
 #endif //!SASC
@@ -2572,9 +2572,9 @@ bool cCam::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 
 bool cCam::SetCaPid(ca_pid_t *ca_pid)
 {
-#ifndef SASC
   if(!softcsa || (fullts && ca_pid->index==0))
     return devplugin->SetCaPid(device,ca_pid);
+#ifndef SASC
   else if(decsa)
     return decsa->SetCaPid(ca_pid);
 #endif //!SASC
@@ -2583,9 +2583,7 @@ bool cCam::SetCaPid(ca_pid_t *ca_pid)
 
 void cCam::DumpAV7110(void)
 {
-#ifndef SASC
   devplugin->DumpAV(device);
-#endif //!SASC
 }
 
 int cCam::GetFreeIndex(void)

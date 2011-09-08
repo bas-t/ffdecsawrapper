@@ -35,9 +35,6 @@
 #define DVBDEVICE cDvbDevice
 #define OWN_SETCA
 #include "device-tmpl.c"
-#undef SCDEVICE
-#undef DVBDEVICE
-#undef OWN_SETCA
 
 extern void _SetCaDescr(int adapter, ca_descr_t *ca_descr);
 extern void _SetCaPid(int adapter, ca_pid_t *ca_pid);
