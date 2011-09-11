@@ -125,8 +125,11 @@ endif
 DEVPLUGOBJS += device-sd.o
 HAVE_HD := $(wildcard ../dvbhddevice/dvbhddevice.c)
 ifneq ($(strip $(HAVE_HD)),)
-  DEFINES += -DWITH_HDDVB
-  DEVPLUGTARGETS += $(LIBDIR)/libsc-dvbhddevice-$(SCAPIVERS).so.$(APIVERSION)
+  HDVERS := $(shell sed -ne '/*VERSION/ s/^.*=.*"\(.*\)".*$$/\1/p' ../dvbhddevice/dvbhddevice.c)
+  ifeq ($(findstring dag,$(HDVERS)),)
+    DEFINES += -DWITH_HDDVB
+    DEVPLUGTARGETS += $(LIBDIR)/libsc-dvbhddevice-$(SCAPIVERS).so.$(APIVERSION)
+  endif
 endif
 DEVPLUGOBJS += device-hd.o
 
