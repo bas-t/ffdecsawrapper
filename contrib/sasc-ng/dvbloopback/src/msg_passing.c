@@ -46,11 +46,16 @@ void msg_loop_init()
 {
   struct msgctrl *msgctrl;
   int priority;
+  int x;
   for (priority=0; priority <= MSG_HIGH_PRIORITY; priority++) {
     msgctrl = &message_control[priority];
     bzero(msgctrl, sizeof(struct msgctrl));
     INIT_LIST_HEAD(&msgctrl->msglist);
     INIT_LIST_HEAD(&msgctrl->empty_queue);
+    for (x = 0; x < 10; x++) {
+      struct msg *msg = (struct msg *)malloc(sizeof(struct msg));
+      list_add(&msg->list, &msgctrl->empty_queue);
+    }
     pthread_mutex_init(&msgctrl->mutex, NULL);
     pthread_cond_init(&msgctrl->cond, NULL);
   }
@@ -95,6 +100,8 @@ void * msg_loop(void * arg)
         list_del(&msg->list);
         break;
       }
+      if (!msg)
+        break;
       //If we've seen all elements on the queue, or the queue is empty,
       //we are done
       if(ptr == &msgctrl->msglist)

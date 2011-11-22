@@ -43,7 +43,7 @@ public:
 extern void _SetCaDescr(int adapter, ca_descr_t *ca_descr);
 bool cSascDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
-  printf("Called cSascDvbDevice::SetCaDescr\n");
+  //printf("Called cSascDvbDevice::SetCaDescr\n");
   _SetCaDescr(cardidx, ca_descr);
   return true;
 }
@@ -51,7 +51,7 @@ bool cSascDvbDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 extern void _SetCaPid(int adapter, ca_pid_t *ca_pid);
 bool cSascDvbDevice::SetCaPid(ca_pid_t *ca_pid)
 {
-  printf("Called cSascDvbDevice::SetCaPid\n");
+  //printf("Called cSascDvbDevice::SetCaPid\n");
   _SetCaPid(cardidx, ca_pid);
   return true;
 }
