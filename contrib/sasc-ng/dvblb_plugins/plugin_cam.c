@@ -260,6 +260,7 @@ void process_cam(struct msg *msg, unsigned int priority)
 
   if (sidmsg->calen == 0) {
     free_sidmsg(sidmsg);
+    msg->type = MSG_PROCESSED;
     return;
   }
   for(ch=Channels.First(); ch; ch=Channels.Next(ch)) {
@@ -280,6 +281,7 @@ void process_cam(struct msg *msg, unsigned int priority)
         }
       }
       free_sidmsg(sidmsg);
+      msg->type = MSG_PROCESSED;
       return;
     }
   } else {

@@ -41,14 +41,14 @@ extern void _SetCaPid(int adapter, ca_pid_t *ca_pid);
 
 bool cScSascDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
-  printf("Called cScSascDevice::SetCaDescr\n");
+  //printf("Called cScSascDevice::SetCaDescr\n");
   _SetCaDescr(cardIndex,ca_descr);
   return true;
 }
 
 bool cScSascDevice::SetCaPid(ca_pid_t *ca_pid)
 {
-  printf("Called cScSascDevice::SetCaPid\n");
+  //printf("Called cScSascDevice::SetCaPid\n");
   _SetCaPid(cardIndex,ca_pid);
   return true;
 }

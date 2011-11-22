@@ -123,11 +123,13 @@ void update_keys(int adpt, unsigned char keytype, int index, unsigned char *key,
           pthread_mutex_unlock(&csa->state_lock);
           return;
         }
+        pthread_mutex_lock(&csa->keylock);
         if(! csa->keyindex[index].valid) {
           csa->keyindex[index].valid = 1;
           csa->keyindex[index].status = 0;
           csa->keyindex[index].queued = 0;
         }
+        pthread_mutex_unlock(&csa->keylock);
         pop_entry_from_queue_l(pid_ll, &pidmap_empty_queue, struct pid, &list_lock);
         pid_ll->pid = pid;
         pid_ll->index = index;
@@ -146,7 +148,9 @@ void update_keys(int adpt, unsigned char keytype, int index, unsigned char *key,
           ll_find_elem(pid_ll, csa->pid_map, index, index, struct pid);
           if(pid_ll == NULL) {
             //no valid pids on this index
+            pthread_mutex_lock(&csa->keylock);
             csa->keyindex[index].status = 0;
+            pthread_mutex_unlock(&csa->keylock);
             if(list_empty(&csa->pid_map)) {
               //state = ENCRYPTED_NOT_READY;
               csa->state = NOT_ENCRYPTED;
