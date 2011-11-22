@@ -56,7 +56,7 @@ $(VDRDIR)/%.o: $(VDRDIR)/%.c
 
 ### Targets:
 
-all: testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU
+all: testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU testMutex
 
 testECM.o: testECM.c compat.h
 testECM: testECM.o $(SHAREDOBJS) $(NOBJS)
@@ -94,8 +94,12 @@ testINIT: testINIT.o $(SHAREDOBJS) $(NOBJS)
 
 filterhelper: filterhelper.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
+
+testMutex: testMutex.o
+	$(CXX) $(CXXFLAGS) $^ -lpthread -o $@
+
 clean:
 	@-rm -f *.o core* *~
 	@-rm -f testECM testEMM testN1Emu testN2Emu testN2RunEmu testTPS testExtAU testINIT
-	@-rm -f filterhelper
+	@-rm -f filterhelper testMutex
 	@-rm -f dump.txt
