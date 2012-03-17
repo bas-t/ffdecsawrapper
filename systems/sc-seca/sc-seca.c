@@ -319,6 +319,7 @@ bool cSmartCardSeca::Update(int pid, int caid, const unsigned char *data)
 {
   static unsigned char ins40[] = { 0xC1,0x40,0x00,0x00,0x00 }; 
 
+  if(data[0]==0x83) return false; // don't know how to handle
   if(blocker==0 || (data[0]==0x82 && blocker==2) || (data[0]==0x84 && blocker==1)) {
     cProviderScSeca *p=(cProviderScSeca *)FindProv(data);
     if(p && MatchEMM(data)) {

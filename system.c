@@ -174,9 +174,9 @@ void cSystem::ParseCAT(cPids *pids, const unsigned char *buffer, int source, int
     int pid=WORD(buffer,4,0x1FFF);
     if(overrides.AddEmmPids(caid,source,transponder,pids,pid)) return;
     switch(caid>>8) {
-      case 0x01: // Seca style (82/84)
+      case 0x01: // Seca style (82/83/84)
         if(buffer[1]>4) {
-          pids->AddPid(pid,0x82,0xFF); // Unique updates
+          pids->AddPid(pid,0x82,0xFE); // Unique/global updates
           for(int i=7, nn=buffer[6] ; nn ; nn--,i+=4)
             pids->AddPid(WORD(buffer,i,0x1FFF),0x84,0xFF); // Shared updates
           }

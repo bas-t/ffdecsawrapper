@@ -261,8 +261,8 @@ cCardSeca::cCardSeca(const unsigned char *u)
 
 bool cCardSeca::MatchEMM(const unsigned char *data)
 {
-  return TID(data)==0x82 &&
-         !memcmp(UA(data),ua,sizeof(ua));
+  return  TID(data)==0x83 ||
+         (TID(data)==0x82 && !memcmp(UA(data),ua,sizeof(ua)));
 }
 
 // -- cParseSeca ---------------------------------------------------------------
