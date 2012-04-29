@@ -50,7 +50,7 @@ TMPDIR = /tmp
 ### The C++ compiler and options:
 
 CXX      ?= g++
-CXXFLAGS ?= -O2 -g -fPIC -Wall -Woverloaded-virtual
+CXXFLAGS ?= -O2 -g -Wall -Woverloaded-virtual
 
 ### Includes and Defines
 
@@ -62,6 +62,7 @@ SHAREDLIBS    =
 
 ### Allow user defined options to overwrite defaults:
 
+include $(VDRDIR)/Make.global
 -include $(VDRDIR)/Make.config
 -include Make.config
 
