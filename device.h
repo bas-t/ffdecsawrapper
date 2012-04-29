@@ -29,7 +29,9 @@ class cDeCSA;
 
 // ----------------------------------------------------------------
 
+#ifndef DEV_DVB_ADAPTER
 #define DEV_DVB_ADAPTER  "/dev/dvb/adapter"
+#endif
 #define DEV_DVB_FRONTEND "frontend"
 #define DEV_DVB_DVR      "dvr"
 #define DEV_DVB_DEMUX    "demux"
