@@ -66,6 +66,9 @@ include $(VDRDIR)/Make.global
 -include $(VDRDIR)/Make.config
 -include Make.config
 
+# we need this ATM because of the helper.h macros...
+CXXFLAGS += -fno-strict-aliasing
+
 ### The version number of VDR (taken from VDR's "config.h"):
 
 VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
