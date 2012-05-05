@@ -24,6 +24,7 @@
 
 #include "system-common.h"
 #include "data.h"
+#include "opts.h"
 #include "helper.h"
 #include "crypto.h"
 #include "misc.h"
@@ -62,6 +63,8 @@ ADD_MODULE(L_SYS,lm_sys)
     if(i>__n) { LBFLUSH(); LBPUT("length exceeded %d != %d",i,__n); } \
     } \
   LBEND();
+
+int minEcmTime=150; // ms
 
 // -- cCwDes -------------------------------------------------------------------
 
@@ -422,6 +425,7 @@ cSystemCryptoworks::cSystemCryptoworks(void)
 
 bool cSystemCryptoworks::ProcessECM(const cEcmInfo *ecmInfo, unsigned char *data)
 {
+  cTimeMs minTime;
   int len=SCT_LEN(data);
   if(data[ECM_NANO_LEN]!=len-ECM_NANO_START) {
     PRINTF(L_SYS_ECM,"invalid ECM structure");
@@ -521,6 +525,8 @@ bool cSystemCryptoworks::ProcessECM(const cEcmInfo *ecmInfo, unsigned char *data
           memcpy(cw,&data[i+2],16);
           LDUMP(L_SYS_VERBOSE,cw,16,"cw:");
           ks.OK(pk);
+          int i=minEcmTime-minTime.Elapsed();
+          if(i>0) cCondWait::SleepMs(i);
           return true;
           }
         break;
@@ -550,6 +556,8 @@ static cSystemLinkCryptoworks staticInit;
 cSystemLinkCryptoworks::cSystemLinkCryptoworks(void)
 :cSystemLink(SYSTEM_NAME,SYSTEM_PRI)
 {
+  opts=new cOpts(SYSTEM_NAME,1);
+  opts->Add(new cOptInt("MinEcmTime",trNOOP("Cryptoworks: min. ECM processing time"),&minEcmTime,0,5000));
   Feature.NeedsKeyFile();
 }
 
