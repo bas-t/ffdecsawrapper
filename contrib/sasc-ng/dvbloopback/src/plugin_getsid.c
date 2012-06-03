@@ -55,6 +55,7 @@ struct filter {
   __u16 pid;
   int   fd;
   int used;
+  int pollretries;
   int parse_err;
 };
 
@@ -229,7 +230,7 @@ static int read_pat(unsigned char *pes, struct pat *pat, unsigned int size) {
       list_add(&sidnum->list, &filt->sids);
     } else {
       pat->has_nit = pid;
-      dprintf2("found NIT at PID: %d", pid);
+      dprintf2("found NIT at PID: %d\n", pid);
     }
   }
   return 0;
@@ -431,6 +432,7 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
 static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
   unsigned char pes[4096];
   struct pollfd  pfd, pollfd[MAX_SIMULTANEOUS_PMT];
+  int pollretries[MAX_SIMULTANEOUS_PMT];
   int pat_restart = 0, done = 0, size, i;
   int ret;
 
@@ -577,14 +579,21 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
           pollfd[count].fd=filt->fd;
           pollfd[count].events = POLLIN;
           pollfd[count].revents = 0;
+          pollretries[count] = filt->pollretries++;
           count++;
         }
       }
       dprintf3("polling %d fds\n", count);
       poll(pollfd, count, timeout);
       for(i = 0; i < count; i++) {
-        if(! (pollfd[i].revents & POLLIN))
+        if(! (pollfd[i].revents & POLLIN)) {
+          // stop waiting if no data comes for too long..
+          if (pollretries[i] >= 10) {
+            dprintf0("start: giving up wait for pid on filter %d, no data found...\n",i);
+            found++;
+          }
           continue;
+        }
         // read pmt
         while((size = read(pollfd[i].fd, pes, sizeof(pes))) >= 3) {
           struct filter *filt;
@@ -745,6 +754,8 @@ static void *read_sid(void *arg)
       } else {
         dprintf0("Didn't find sid for pid: %d\n", dmxcmd->pid);
       }
+    } else {
+        dprintf0("Didn't find sid for pid: %d\n", dmxcmd->pid);
     }
   }
 }
