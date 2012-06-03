@@ -64,7 +64,7 @@ ADD_MODULE(L_SYS,lm_sys)
     } \
   LBEND();
 
-int minEcmTime=150; // ms
+static int minEcmTime=150; // ms
 
 // -- cCwDes -------------------------------------------------------------------
 

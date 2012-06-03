@@ -22,6 +22,7 @@ contrib/sasc-ng/sasc-ng
 contrib/sasc-ng/objs/version.cpp
 contrib/sasc-ng/sc/config.h
 contrib/sasc-ng/sc/PLUGINS/src/sc-src
+contrib/sasc-ng/sc/locale
 contrib/sasc-ng/FFdecsa
 
 syntax: regexp
