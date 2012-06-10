@@ -230,6 +230,9 @@ bool cSystemCardClient::ProcessECM(const cEcmInfo *ecm, unsigned char *data)
         PRINTF(L_CC_CORE,"client %s (%s:%d) ECM failed (%d ms)",cc->Name(),cc->hostname,cc->port,(int)start.Elapsed());
         cc->msECM.Cache(id,false,cw);
         }
+      if(id<0) {
+        PRINTF(L_CC_CORE,"client %s (%s:%d) ECM already cached as failed",cc->Name(),cc->hostname,cc->port);
+        }
       }
     if(!cc) PRINTF(L_CC_CORE,"cc-loop");
     oldcc=cc;
