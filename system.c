@@ -443,8 +443,10 @@ cOpts *cSystems::GetSystemOpts(bool start)
 #define QUEUED 0x40
 #define WAIT   0x80
 
+#define HASHLEN 16
+
 struct Cache {
-  int crc;
+  unsigned char hash[HASHLEN];
   int mode;
   };
 
@@ -484,14 +486,14 @@ void cMsgCache::Clear(void)
   PRINTF(L_CORE_MSGCACHE,"%d/%p: clear",getpid(),this);
 }
 
-struct Cache *cMsgCache::FindMsg(int crc)
+struct Cache *cMsgCache::FindMsg(const unsigned char *hash) const
 {
   int i=ptr;
   while(1) {
     if(--i<0) i=numCache-1;
     struct Cache * const s=&caches[i];
     if(!s->mode) break;
-    if(s->crc==crc) return s;
+    if(!memcmp(s->hash,hash,HASHLEN)) return s;
     if(i==ptr) break;
     }
   return 0;
@@ -503,12 +505,12 @@ struct Cache *cMsgCache::FindMsg(int crc)
 // >0 - msg not cached, queue id
 int cMsgCache::Get(const unsigned char *msg, int len, unsigned char *store)
 {
-  unsigned char md[16];
-  int crc=crc32_le(0,MD5(msg,len,md),16);
+  unsigned char hash[HASHLEN];
+  MD5(msg,len,hash);
   cMutexLock lock(&mutex);
   if(!caches || (storeSize>0 && !stores)) return -1; // sanity
   struct Cache *s;
-  while((s=FindMsg(crc))) {
+  while((s=FindMsg(hash))) {
     if(!(s->mode&QUEUED)) break;
     s->mode|=WAIT;
     PRINTF(L_CORE_MSGCACHE,"%d/%p: msg already queued. waiting to complete",getpid(),this);
@@ -524,7 +526,7 @@ int cMsgCache::Get(const unsigned char *msg, int len, unsigned char *store)
       wait.Wait(mutex); // don't overwrite queued msg's
       }
     id=ptr+1;
-    s->crc=crc;
+    memcpy(s->hash,hash,HASHLEN);
     s->mode=QUEUED;
     PRINTF(L_CORE_MSGCACHE,"%d/%p: queued msg with id=%d",getpid(),this,id);
     ptr++; if(ptr>=numCache) { ptr=0; PRINTF(L_CORE_MSGCACHE,"msgcache: roll-over (%d)",numCache); }

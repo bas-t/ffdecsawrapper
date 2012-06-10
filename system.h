@@ -206,7 +206,7 @@ private:
   cMutex mutex;
   cCondVar wait;
   //
-  struct Cache *FindMsg(int crc);
+  struct Cache *FindMsg(const unsigned char *hash) const;
 public:
   cMsgCache(int NumCache, int StoreSize);
   ~cMsgCache();
