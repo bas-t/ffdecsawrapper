@@ -824,6 +824,7 @@ void cEcmHandler::Stop(void)
     prg.sid=-1;
     idleTime.Set();
     prg.pids.Clear();
+    prg.caDescr.Clear();
     trigger=true;
     }
   dataMutex.Unlock();
@@ -957,7 +958,7 @@ PRINTF(L_CORE_ECM,"%s: new caDescr: %s",id,*filterCaDescr.ToString());
 
     case 0:
       StopEcm();
-      if(IsIdle()) { mode=-1; break; }
+      if(filterSid<0 || IsIdle()) { mode=-1; break; }
 
       dolog=LOG_COUNT;
       NewEcm();
