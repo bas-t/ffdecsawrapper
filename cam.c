@@ -1946,16 +1946,16 @@ void cScCamSlot::Process(const unsigned char *data, int len)
             PRINTF(L_CORE_CI,"%s.%d answer to query",devId,slot);
             }
           }
-        if(prg->sid!=0) {
-          if(ci_cmd==0x04 || (ci_cmd==-1 && ca_lm==0x03)) {
-            PRINTF(L_CORE_CI,"%s.%d stop decrypt",devId,slot);
-            cam->Stop();
-            }
-          if(ci_cmd==0x01 || (ci_cmd==-1 && (ca_lm==0x04 || ca_lm==0x05))) {
-            PRINTF(L_CORE_CI,"%s.%d set CAM decrypt (prg %d)",devId,slot,prg->sid);
-            cam->AddPrg(prg);
-            }
+        else PRINTF(L_CORE_CI,"%s.%d answer to query surpressed",devId,slot);
+        if(ci_cmd==0x04 || (ci_cmd==-1 && prg->sid==0 && ca_lm==0x03)) {
+          PRINTF(L_CORE_CI,"%s.%d stop decrypt",devId,slot);
+          cam->Stop();
           }
+        else if(ci_cmd==0x01 || (ci_cmd==-1 && prg->sid!=0 && (ca_lm==0x03 || ca_lm==0x04 || ca_lm==0x05))) {
+          PRINTF(L_CORE_CI,"%s.%d set CAM decrypt (prg %d)",devId,slot,prg->sid);
+          cam->AddPrg(prg);
+          }
+        else PRINTF(L_CORE_CI,"%s.%d no action taken",devId,slot);
         delete prg;
         }
       break;
