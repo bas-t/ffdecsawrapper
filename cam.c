@@ -582,9 +582,71 @@ void cLogger::Process(cPidFilter *filter, unsigned char *data, int len)
     }
 }
 
+// -----------------------------------------------------------------------------
+
+#if APIVERSNUM >= 10713
+
+cString OldSourceToString(int Code)
+{
+  enum eSourceType {
+    stNone  = 0x0000,
+    stCable = 0x4000,
+    stSat   = 0x8000,
+    stTerr  = 0xC000,
+    st_Mask = 0xC000,
+    st_Neg  = 0x0800,
+    st_Pos  = 0x07FF,
+    };
+  char buffer[16];
+  char *q = buffer;
+  switch (Code & st_Mask) {
+    case stCable: *q++ = 'C'; break;
+    case stSat:   *q++ = 'S';
+                  {
+                    int pos = Code & ~st_Mask;
+                    q += snprintf(q, sizeof(buffer) - 2, "%u.%u", (pos & ~st_Neg) / 10, (pos & ~st_Neg) % 10); // can't simply use "%g" here since the silly 'locale' messes up the decimal point
+                    *q++ = (Code & st_Neg) ? 'E' : 'W';
+                  }
+                  break;
+    case stTerr:  *q++ = 'T'; break;
+    default:      *q++ = Code + '0'; // backward compatibility
+    }
+  *q = 0;
+  return buffer;
+}
+
+#else // APIVERSNUM >= 10713
+
+cString NewSourceToString(int Code)
+{
+  enum eSourceType {
+    stNone  = 0x00000000,
+    stAtsc  = ('A' << 24),
+    stCable = ('C' << 24),
+    stSat   = ('S' << 24),
+    stTerr  = ('T' << 24),
+    st_Mask = 0xFF000000,
+    st_Pos  = 0x0000FFFF,
+    };
+  char buffer[16];
+  char *q = buffer;
+  *q++ = (Code & st_Mask) >> 24;
+  int n = (Code & st_Pos);
+  if (n > 0x00007FFF)
+     n |= 0xFFFF0000;
+  if (n) {
+     q += snprintf(q, sizeof(buffer) - 2, "%u.%u", abs(n) / 10, abs(n) % 10); // can't simply use "%g" here since the silly 'locale' messes up the decimal point
+     *q++ = (n < 0) ? 'E' : 'W';
+     }
+  *q = 0;
+  return buffer;
+}
+
+#endif // APIVERSNUM >= 10713
+
 // -- cEcmData -----------------------------------------------------------------
 
-#define CACHE_VERS 1
+#define CACHE_VERS 2
 
 class cEcmData : public cEcmInfo {
 public:
@@ -596,13 +658,27 @@ public:
 
 bool cEcmData::Parse(const char *buf)
 {
-  char Name[64];
+  char Name[64], Source[64];
   int nu=0, num, vers=0;
   Name[0]=0;
-  if(sscanf(buf,"V%d:%d:%x:%x:%63[^:]:%x/%x:%x:%x/%x:%d:%d/%d%n",
-             &vers,&grPrgId,&source,&transponder,Name,&caId,&emmCaId,&provId,
-             &ecm_pid,&ecm_table,&rewriterId,&nu,&dataIdx,&num)>=13
-     && vers==CACHE_VERS) {
+  if(sscanf(buf,"V%d:%d:%63[^:]:%x:%63[^:]:%x/%x:%x:%x/%x:%d:%d/%d%n",
+             &vers,&grPrgId,Source,&transponder,Name,&caId,&emmCaId,&provId,
+             &ecm_pid,&ecm_table,&rewriterId,&nu,&dataIdx,&num)>=13) {
+    if(vers==CACHE_VERS) {
+      source=cSource::FromString(Source);
+      }
+    else if(vers==1) {
+      source=strtoul(Source,0,16);
+#if APIVERSNUM >= 10713
+      // check for old style source code
+      if(source<0x10000) source=cSource::FromString(OldSourceToString(source));
+#else
+      // check for new style source code
+      if(source>=0x10000) source=cSource::FromString(NewSourceToString(source));
+#endif
+      }
+    else return false;
+   
     SetName(Name);
     SetRewriter();
     prgId=grPrgId%SIDGRP_SHIFT;
@@ -629,8 +705,8 @@ cString cEcmData::ToString(bool hide)
     str=AUTOARRAY(char,10);
     sprintf(str,"0/%d:",dataIdx);
     }
-  return cString::sprintf("V%d:%d:%x:%x:%s:%x/%x:%x:%x/%x:%d:%s",
-                            CACHE_VERS,grPrgId,source,transponder,name,
+  return cString::sprintf("V%d:%d:%s:%x:%s:%x/%x:%x:%x/%x:%d:%s",
+                            CACHE_VERS,grPrgId,*cSource::ToString(source),transponder,name,
                             caId,emmCaId,provId,ecm_pid,ecm_table,rewriterId,
                             str);
 }
