@@ -221,6 +221,9 @@ if test "x$dvb_path" != "x"; then
   elif test -e "${dvb_path}/linux/include/linux/dvb/frontend.h"; then
     echo "DVB_DIR=${dvb_path}/linux" >> config.mak
     echo "Using DVB_DIR: ${dvb_path}/linux"
+  elif test -e "${dvb_path}/include/uapi/linux/dvb/frontend.h"; then
+    echo "DVB_DIR=${dvb_path}" >> config.mak
+    echo "Using DVB_DIR: ${dvb_path}"
   else
     echo "Could not find DVB headers within $dvb_path"
   fi

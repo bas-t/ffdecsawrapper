@@ -4,7 +4,7 @@ obj-m = chkdvb.o
 
 EXTRA_CFLAGS ?= -Idrivers/media/dvb/dvb-core/ -I$(PWD)
 
-BUILD_DIR := /lib/modules/$(shell uname -r)/build
+BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
 
 all: clean
 	make -C $(BUILD_DIR) M=$(PWD) V=1 modules

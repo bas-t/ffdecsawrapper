@@ -12,7 +12,7 @@ CXXFLAGS ?= -Wall -D__user=
 CFLAGS   ?= -Wall -D__user= 
 
 ifdef DVB_DIR
-  INCLUDES = -I$(DVB_DIR)/include
+  INCLUDES = -I$(SOURCE_DIR)/include/uapi -I$(SOURCE_DIR)/arch/x86/include -I$(SOURCE_DIR)/include
   DVB_MOD_DIR = DVB_DIR=$(DVB_DIR)
 endif
 
