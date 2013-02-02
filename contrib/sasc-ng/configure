@@ -78,7 +78,6 @@ show_help() {
   echo "                           yes: Try most common optimizations (default)"
   echo "                           long: Try all known optimizations"
   echo "                           no: Don't do any optimizations"
-  echo "  --ffdecsa_mode=<val>     use <val> optimization"
   echo "  -cxx=<c++ compiler>      command for C++ compilation (default: g++)"
   exit 0
 }
