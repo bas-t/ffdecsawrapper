@@ -10,7 +10,7 @@
 #include "include/vdr/dvbdevice.h"
 #include <errno.h>
 #include <limits.h>
-#include <linux/videodev.h>
+#include <libv4l1-videodev.h>
 #include <linux/dvb/audio.h>
 #include <linux/dvb/dmx.h>
 #include <linux/dvb/frontend.h>

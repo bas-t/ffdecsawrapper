@@ -8,7 +8,7 @@ include config.mak
 
 CC       ?= gcc
 CXX      ?= g++
-CXXFLAGS ?= -Wall -D__user= -Werror 
+CXXFLAGS ?= -Wall -D__user= 
 CFLAGS   ?= -Wall -D__user= 
 
 ifdef DVB_DIR
@@ -57,7 +57,7 @@ OBJ_LIBSI := objs/si_descriptor.o objs/si_section.o objs/si_si.o objs/si_util.o
 INC_DEPS := $(shell ls $(LBDIR)/*.h) dvbloopback/module/dvbloopback.h
 INC_DEPS_LB := $(shell ls dvblb_plugins/*.h)
 
-LIBS = -lpthread -lcrypto -lcrypt
+LIBS = -lpthread -lcrypto -lcrypt -lv4l1
 
 all: $(TOOL) libscanwrap.so
 

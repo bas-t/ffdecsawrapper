@@ -118,9 +118,9 @@ static void rvfree(void *mem, unsigned long size)
 /* This is a copy of dvb_usercopy.  We need to do this because it isn't exported
    by dvbdev
 */
-static int dvblb_usercopy(struct inode *inode, struct file *file,
+static int dvblb_usercopy(struct file *file,
 		     unsigned int cmd, unsigned long arg,
-		     int (*func)(struct inode *inode, struct file *file,
+		     int (*func)(struct file *file,
 		     unsigned int cmd, void *arg))
 {
 	char    sbuf[128];
@@ -180,7 +180,7 @@ static int dvblb_usercopy(struct inode *inode, struct file *file,
 	}
 
 	/* call driver */
-	if ((err = func(inode, file, cmd, parg)) == -ENOIOCTLCMD)
+	if ((err = func(file, cmd, parg)) == -ENOIOCTLCMD)
 		err = -EINVAL;
 
 	if (err < 0)
@@ -663,7 +663,7 @@ static ssize_t dvblb_read (struct file *f, char * buf, size_t count, loff_t *off
    dvb_generic_ioctl) which is called by dvblb_ioctl for device-0.  It is
    used to forward ioctl commands back to the userspace application
 */
-static int dvblb_looped_ioctl(struct inode *inode, struct file *f,
+static int dvblb_looped_ioctl(struct file *f,
 	unsigned int cmd, void *parg)
 {
 	int ret;
@@ -692,7 +692,7 @@ static int dvblb_looped_ioctl(struct inode *inode, struct file *f,
 	return ret;
 }
 
-static int dvblb_ioctl(struct inode *inode, struct file *f,
+static long dvblb_ioctl(struct file *f,
 	unsigned int cmd, unsigned long arg)
 {
 	void * parg = (void *)arg;
@@ -722,8 +722,7 @@ static int dvblb_ioctl(struct inode *inode, struct file *f,
 		/* This is the looped device */
 		if (lbdev->forward_dev)
 			return dvblb_forward_ioctl(lbdev, f, cmd, arg);
-
-		return dvblb_usercopy (inode, f, cmd, arg,
+			return dvblb_usercopy (f, cmd, arg,
 		                       dvbdev->kernel_ioctl);
 	}
 	/* This is the userspace control device */
@@ -978,7 +977,7 @@ static struct file_operations dvbdev_looped_fops = {
 	.write		= dvblb_write,
 	.poll		= dvblb_poll,
 	.mmap		= dvblb_mmap,
-	.ioctl		= dvblb_ioctl,
+	.unlocked_ioctl	= dvblb_ioctl,
 };
 
 static struct dvb_device dvbdev_looped = {
@@ -998,7 +997,7 @@ static struct file_operations dvbdev_userspace_fops = {
 	.write		= dvblb_write,
 	.poll		= dvblb_poll,
 	.mmap		= dvblb_mmap,
-	.ioctl		= dvblb_ioctl,
+        .unlocked_ioctl = dvblb_ioctl,
 };
 
 static struct dvb_device dvbdev_userspace = {

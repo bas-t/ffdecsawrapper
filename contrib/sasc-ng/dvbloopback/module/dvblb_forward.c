@@ -166,9 +166,9 @@ int dvblb_forward_ioctl(struct dvblb_devinfo *lbdev, struct file *f,
 	struct file *ftmp = find_forwardmap(lbdev, f->private_data);
 	if (!ftmp || IS_ERR(ftmp))
 		return -EFAULT;
-	if (lbdev->forward_dev->fops &&lbdev->forward_dev->fops->ioctl)
-		return lbdev->forward_dev->fops->ioctl(
-		           ftmp->f_dentry->d_inode, ftmp, cmd, arg);
+	if (lbdev->forward_dev->fops &&lbdev->forward_dev->fops->unlocked_ioctl)
+		return lbdev->forward_dev->fops->unlocked_ioctl(
+		           ftmp, cmd, arg);
 	return -EFAULT;
 }
 
