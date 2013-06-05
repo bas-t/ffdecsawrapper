@@ -208,13 +208,11 @@ if test "x$ffdecsa_opt" != "xno"; then
    echo "Choosing PARALLEL_MODE = ${MAX_MODE}"
    echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
 else
-   if test "x$ffdecsa_flags" = "x"; then
-     if test -f /proc/cpuinfo; then
-       get_cpu_optimization
-     fi
-   else
-     FLAGS=$ffdecsa_flags
+   if ! test -f /proc/cpuinfo; then
+     echo "\nYou should not set '--ffdecsa_mode='\n\nAborting...\n"
+     exit 1
    fi
+   get_cpu_optimization
    if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
      echo "Using PARALLEL_MODE = ${MAX_MODE}"
      echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
