@@ -78,6 +78,8 @@ show_help() {
   echo "                           yes: Try most common optimizations (default)"
   echo "                           long: Try all known optimizations"
   echo "                           no: Don't do any optimizations"
+  echo "  --ffdecsa_mode=<val>     use <val> optimization"
+  echo "                           like  --ffdecsa_mode=PARALLEL_128_SSE"
   echo "  -cxx=<c++ compiler>      command for C++ compilation (default: g++)"
   exit 0
 }
@@ -206,9 +208,18 @@ if test "x$ffdecsa_opt" != "xno"; then
    echo "Choosing PARALLEL_MODE = ${MAX_MODE}"
    echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
 else
-   if test "x$ffdecsa_flags" != "x"; then
-     echo "FFDECSA_OPTS = \"$ffdecsa_flags\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-   elif test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
+   if test "x$ffdecsa_flags" = "x"; then
+     if test -f /proc/cpuinfo; then
+       get_cpu_optimization
+     fi
+   else
+     FLAGS=$ffdecsa_flags
+   fi
+   if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
+     echo "Using PARALLEL_MODE = ${MAX_MODE}"
+     echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+   else
+     echo "Using PARALLEL_MODE = ${MAX_MODE}"
      echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
    fi
 fi
@@ -231,3 +242,4 @@ rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log
 echo "	$0 $*" >> config.log
+
