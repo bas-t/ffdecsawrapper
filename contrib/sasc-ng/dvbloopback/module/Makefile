@@ -8,24 +8,28 @@ ifdef DVB_DIR
      -I$(SOURCE_DIR)/include/uapi -I$(SOURCE_DIR)/arch/x86/include \
      -I$(DVB_DIR)/drivers/media/dvb-core
   DVB_SRC = $(DVB_DIR)
-  SYMVER = $(DVB_DIR)/../v4l/Module.symvers
+  SYMVER = /lib/modules/$(shell uname -r)/build/Module.symvers
   have_modver := $(wildcard $(SYMVER))
-endif
-EXTRA_CFLAGS += -Idrivers/media/dvb-core/ -I$(PWD)
-
-BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
-
-all: add_modver
+  BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
+  all: add_modver
+	./config_dvb_dvbdir.pl "BUILD_DIR=$(BUILD_DIR)" "EXTRA_CFLAGS=$(EXTRA_CFLAGS)"
+	make -C $(BUILD_DIR) M=$(PWD) modules
+else
+  EXTRA_CFLAGS += -Idrivers/media/dvb-core/ -I$(PWD)
+  SYMVER = /lib/modules/$(shell uname -r)/build/Module.symvers
+  have_modver := $(wildcard $(SYMVER))
+  BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
+  all: add_modver
 	./config_dvb.pl "BUILD_DIR=$(BUILD_DIR)" "EXTRA_CFLAGS=$(EXTRA_CFLAGS)"
 	make -C $(BUILD_DIR) M=$(PWD) modules
+endif
+
 ifeq ($(strip $(have_modver)),) 
 add_modver:
 	echo "Skipping Modver $(SYMVER)"
-
 else
 add_modver: $(SYMVER)
 	cp -f $(SYMVER) .
-	
 endif
 
 clean:
@@ -35,3 +39,4 @@ clean:
 	rm -f dvbdevwrap.h
 	rm -f dvbdev.h
 	rm -f Module.symvers
+
