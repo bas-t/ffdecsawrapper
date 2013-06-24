@@ -133,11 +133,11 @@ if [ $FIRST_DIGIT -eq 3 ]; then
   fi
 elif [ $FIRST_DIGIT -eq 2 ]; then
   if [ $SECOND_DIGIT -lt 6 ]; then
-    echo "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
+    echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
     exit 1
     if [ $SECOND_DIGIT -eq 6 ]; then
       if [ $PATCHLEVEL -lt 38 ]; then
-        echo "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
+        echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
         exit 1
       else
         echo "2.6.38 or higher kernel detected."
