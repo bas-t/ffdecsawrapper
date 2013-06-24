@@ -117,11 +117,31 @@ done
 
 # Get kernel version numbers
 
-	SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
+    SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
     FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
     SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
     PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
+# Distinguish between '3.6 or lower' and '3.7 or higher' kernels
+# If running kernel is < 2.6.38 abort
+
+if [ $FIRST_DIGIT -eq 3 ]; then
+  if [ $SECOND_DIGIT -lt 7 ]; then
+    echo "3.6.x or lower kernel detected"
+  else
+    echo "3.7.x or higher kernel detected"
+  fi
+elif [ $FIRST_DIGIT -eq 2 ]; then
+  if [ $SECOND_DIGIT -lt 6 ]; then
+    echo "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
+    exit 1
+  if [ $SECOND_DIGIT -eq 6 ]; then
+    if [ $PATCHLEVEL -lt 38 ]; then
+      echo "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
+      exit 1
+    fi
+  fi
+fi
 
 if test "x$CXX" = "x"; then
   CXX=g++
