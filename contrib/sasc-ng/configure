@@ -128,8 +128,10 @@ done
 if [ $FIRST_DIGIT -eq 3 ]; then
   if [ $SECOND_DIGIT -lt 7 ]; then
     echo "3.6.x or lower kernel detected."
+    cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
   else
     echo "3.7.x or higher kernel detected."
+    cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
   fi
 elif [ $FIRST_DIGIT -eq 2 ]; then
   if [ $SECOND_DIGIT -lt 6 ]; then
@@ -141,6 +143,7 @@ elif [ $FIRST_DIGIT -eq 2 ]; then
         exit 1
       else
         echo "2.6.38 or higher kernel detected."
+        cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
       fi
     fi
   fi

@@ -18,13 +18,12 @@ sub test_dvb_adapter(\@) {
   print "$cmd\n" if($debug);
 
   system("ln -sf chkdvb-2.6.v4l.c config-dvb/chkdvb.c");
-  system("ln -sf ../dvbdev-3.7.x.h config-dvb/dvbdev.h");
-   print "Assuming kernel 3.7.1 or later\n";
+  system("ln -sf ../dvbdev-2.6.38.h config-dvb/dvbdev.h");
    print "Using canned header\n";
     if(system("$cmd") == 0) {
     `echo "DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);" >> dvbdevwrap.h`; 
     `echo "#define wrap_dvb_reg_adapter(a, b, c) dvb_register_adapter(a, b, c, &dvblb_basedev->dev, adapter_nr)" >> dvbdevwrap.h`; 
-     system("ln -sf dvbdev-3.7.x.h dvbdev.h"); 
+     system("ln -sf dvbdev-2.6.38.h dvbdev.h"); 
     return 0;
   }
 }
