@@ -1,4 +1,4 @@
-This branch is based on revision 570. The stable one. Hence this branches name.
+This branch is based on revision 570. The stable one.
 
 It's sole purpose is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
 
