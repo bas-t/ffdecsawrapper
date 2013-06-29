@@ -122,18 +122,8 @@ done
     SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
     PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
-# Distinguish between '3.6 or lower' and '3.7 or higher' kernels
 # If running kernel is < 2.6.38 abort
-
-if [ $FIRST_DIGIT -eq 3 ]; then
-  if [ $SECOND_DIGIT -lt 7 ]; then
-    echo "3.6.x or lower kernel detected."
-    cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
-  else
-    echo "3.7.x or higher kernel detected."
-    cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
-  fi
-elif [ $FIRST_DIGIT -eq 2 ]; then
+if [ $FIRST_DIGIT -eq 2 ]; then
   if [ $SECOND_DIGIT -lt 6 ]; then
     echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
     exit 1
@@ -141,9 +131,6 @@ elif [ $FIRST_DIGIT -eq 2 ]; then
       if [ $PATCHLEVEL -lt 38 ]; then
         echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
         exit 1
-      else
-        echo "2.6.38 or higher kernel detected."
-        cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
       fi
     fi
   fi
@@ -258,6 +245,7 @@ else
 fi
 
 if test "x$dvb_path" != "x"; then
+  cp -f dvbloopback/module/config_dvb_dvbdir.pl dvbloopback/module/config_dvb.pl
   if test -e "${dvb_path}/include/linux/dvb/frontend.h"; then
     echo "DVB_DIR=${dvb_path}" >> config.mak
     echo "Using DVB_DIR: ${dvb_path}"
@@ -271,6 +259,25 @@ if test "x$dvb_path" != "x"; then
     echo "Could not find DVB headers within $dvb_path"
   fi
 fi
+
+if test "x$dvb_path" = "x"; then
+# Distinguish between '3.6 or lower' and '3.7 or higher' kernels
+  if [ $FIRST_DIGIT -eq 3 ]; then
+    if [ $SECOND_DIGIT -lt 7 ]; then
+      echo "`uname -r` kernel detected."
+      cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
+    else
+      echo "`uname -r` kernel detected."
+      cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
+    fi
+  else
+    if [ $FIRST_DIGIT -eq 2 ]; then
+      echo "`uname -r` kernel detected."
+      cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
+    fi
+  fi
+fi
+
 rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log
