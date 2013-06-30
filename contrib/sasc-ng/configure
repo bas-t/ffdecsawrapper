@@ -122,18 +122,10 @@ done
     SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
     PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
-# If running kernel is < 2.6.38 abort
-if [ $FIRST_DIGIT -eq 2 ]; then
-  if [ $SECOND_DIGIT -lt 6 ]; then
-    echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
-    exit 1
-    if [ $SECOND_DIGIT -eq 6 ]; then
-      if [ $PATCHLEVEL -lt 38 ]; then
-        echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 2.6.38\n\nAborting..."
-        exit 1
-      fi
-    fi
-  fi
+# If running kernel is < 3.x abort
+if [ $FIRST_DIGIT -lt 3 ]; then
+  echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 3.x\n\nAborting...\n"
+  exit 1
 fi
 
 if test "x$CXX" = "x"; then
@@ -269,11 +261,6 @@ if test "x$dvb_path" = "x"; then
     else
       echo "`uname -r` kernel detected."
       cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
-    fi
-  else
-    if [ $FIRST_DIGIT -eq 2 ]; then
-      echo "`uname -r` kernel detected."
-      cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
     fi
   fi
 fi
