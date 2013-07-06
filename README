@@ -2,13 +2,20 @@ This branch is based on revision 570. The stable one.
 
 It's sole purpose is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
 
-VDR uses other plugins now.
-
-You can use it with kernel version 2.6.38 and up, including more recent kernels (3.7.x and up)
+You can use it with kernel version 3.x and up, including more recent kernels (3.7.x and up)
 
 dvbdev.h is included for all cases, so you don't have to set --dvb-dir=/path/to/your/kernel/sources anymore. It is still possible though.
 
+If you are running Debian, you don't need to recompile your kernel anymore, the running kernel will be properly patched. Just checkout the debian branch.
+
+USAGE:
+git clone https://github.com/bas-t/sasc.git
+cd sasc/contrib/sasc-ng
+git checkout stable
+./configure <opts>
+make && make module
+
 If you know what FFDECSA optimisation is best for you, you can set it like:
 
-./configure --ffdecsa_mode=PARALLEL_128_SSE
+./configure --compiletype=release --ffdecsa_mode=PARALLEL_128_SSE
 
