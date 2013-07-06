@@ -1,4 +1,4 @@
-VERSION = 0.0.2
+VERSION = 1.0.0
 TOOL = sasc-ng
 SCVER = sc-src
 
@@ -144,6 +144,6 @@ objs/version.o: objs/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $(DEFINES) $<
 
 objs/version.cpp: FORCE
-	@echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Unknown) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
+	@echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Stable) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
 
 FORCE:

@@ -28,13 +28,13 @@ DISTFILE = .distvers
 HGARCHIVE = .hg_archival.txt
 RELEASE := $(shell grep 'define SC_RELEASE' version.h | awk '{ print $$3 }' | sed -e 's/[";]//g')
 SUBREL  := $(shell if test -d .hg; then \
-                     echo -n "HG-"; (hg identify 2>/dev/null || echo -n "Unknown") | sed -e 's/ .*//'; \
+                     echo -n "HG-"; (hg identify 2>/dev/null || echo -n "Stable") | sed -e 's/ .*//'; \
                    elif test -r $(HGARCHIVE); then \
                      echo -n "AR-"; grep "^node" $(HGARCHIVE) | awk '{ printf "%.12s",$$2 }'; \
                    elif test -r $(DISTFILE); then \
                      cat $(DISTFILE); \
                    else \
-                     echo -n "Unknown"; \
+                     echo -n "Stable"; \
                    fi)
 VERSION := $(RELEASE)-$(SUBREL)
 SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' version.h)
