@@ -1,6 +1,8 @@
-This branch is based on revision 570. The stable one.
+This branch is based on revision 570 from the original mercurial repo.
 
-It's sole purpose is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
+I've been told that this original repo will be closed soon, but the code will be available in this git repo in branch rev-620. Branch rev-570 is a checkout from rev-620 in the state it was when revision 570 was pushed.
+
+The sole purpose of this git repo is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
 
 You can use it with kernel version 3.x and up, including more recent kernels (3.7.x and up)
 
