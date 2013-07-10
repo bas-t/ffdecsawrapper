@@ -80,6 +80,9 @@ show_help() {
   echo "                           no: Don't do any optimizations"
   echo "  --ffdecsa_mode=<val>     use <val> optimization"
   echo "                           like  --ffdecsa_mode=PARALLEL_128_SSE"
+  echo "  --ffdecsa_flags=<val>    change ffdecsa compiler flags."
+  echo "                           Don't use this option unless you"
+  echo "                           exactly know what you are doing."
   echo "  -cxx=<c++ compiler>      command for C++ compilation (default: g++)"
   exit 0
 }
