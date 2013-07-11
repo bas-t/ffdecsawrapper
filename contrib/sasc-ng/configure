@@ -67,32 +67,33 @@ show_help() {
   echo
   echo "Standard options:"
   echo "  --help                   print this message"
-  echo "  --compiletype=<type>     specify compile type of release or debug,"
-  echo "                           default is debug"
-  echo "  --shared                 compile sc shared libs instaed of static"
-  echo "  --dvb-dir=<path>         use <path> for DVB headers"
+  echo "  --compiletype=<type>     [debug] specify compile type of release or debug,"
+  echo "  --shared                 compile sc shared libs instead of static"
+  echo "  --dvb_dir=<path>         use <path> for DVB headers"
   echo "  --auxserver              use auxserver with localhost:7777:auxserver"
   echo "  --auxserver=<host:port:password>"
   echo "                           use auxserver with given parms"
-  echo "  --optimize=<opts>        set FFDecsa optimiation detection"
-  echo "                           yes: Try most common optimizations (default)"
+  echo "  --optimize=<opts>        [yes] set FFDecsa optimiation detection"
+  echo "                           yes: Try most common optimizations"
   echo "                           long: Try all known optimizations"
   echo "                           no: Don't do any optimizations"
   echo "  --ffdecsa_mode=<val>     use <val> optimization"
   echo "                           like  --ffdecsa_mode=PARALLEL_128_SSE"
-  echo "  --ffdecsa_flags=<val>    change ffdecsa compiler flags."
+  echo "  --ffdecsa_flags=<val>    override ffdecsa compiler flags."
   echo "                           Don't use this option unless you"
   echo "                           exactly know what you are doing."
-  echo "  --cxx=<c++ compiler>      command for C++ compilation (default: g++)"
+  echo "  --cxx=<val>             [g++] command for C++ compilation"
   exit 0
 }
+
 MAX_MODE=PARALLEL_32_INT
 ffdecsa_opt="yes"
 compiletype_opt="debug"
+
 for opt do
   optval="${opt#*=}"
   case "$opt" in
-  --dvb-dir=*) dvb_path=`eval echo $optval`
+  --dvb_dir=*) dvb_path=`eval echo $optval`
   ;;
   --cxx=*) CXX="$optval"
   ;;
@@ -120,10 +121,10 @@ done
 
 # Get kernel version numbers
 
-    SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
-    FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
-    SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
-    PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
+SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
+FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
+SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
+PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
 # If running kernel is < 3.x abort
 if [ $FIRST_DIGIT -lt 3 ]; then
@@ -150,6 +151,7 @@ elif test "x$ffdecsa_opt" != "xno"; then
   echo "Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, no, long'"
   exit 1
 fi
+
 if test "x${TMPDIR}" = "x"; then
   TMPDIR="/tmp"
 fi
