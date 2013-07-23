@@ -1,19 +1,19 @@
-This branch is based on revision 570 from the original mercurial repo.
+This branch is based on revision 570 from the original mercurial repo. Revision 570 is the only 'stable' state of the original source.
 
 I've been told that this original repo will be closed soon, but the code will be available in this git repo in branch rev-620. Branch rev-570 is a checkout from rev-620 in the state it was when revision 570 was pushed.
 
 The sole purpose of this git repo is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
 
-You can use it with kernel version 3.x and up, including more recent kernels (3.7.x and up)
+You can use it with kernel version 3.x and up, including more recent kernels (3.7.x and up, but 3.10 is not yet supported)
 
-dvbdev.h is included for all cases, so you don't have to set --dvb_dir=/path/to/your/kernel/sources anymore. It is still possible though.
+dvbdev.h is included for all cases, so you must not set --dvb_dir=/path/to/your/kernel/sources anymore. This setting is now reserved for use in case that you have to compile and install newest dvb drivers from v4l.
 
 If you are running Debian, you don't need to recompile your kernel anymore, the running kernel will be properly patched. Just checkout the debian branch.
 
 USAGE:
 git clone https://github.com/bas-t/sasc.git
 cd sasc/contrib/sasc-ng
-git checkout stable
+git checkout stable (or debian)
 ./configure <opts>
 make && make module
 

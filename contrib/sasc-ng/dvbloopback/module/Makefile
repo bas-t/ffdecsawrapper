@@ -7,9 +7,12 @@ ifdef DVB_DIR
   EXTRA_CFLAGS = -I$(SOURCE_DIR) -I$(SOURCE_DIR)/include \
      -I$(SOURCE_DIR)/include/uapi -I$(SOURCE_DIR)/arch/x86/include \
      -I$(DVB_DIR)/drivers/media/dvb-core \
-     -I$(DVB_DIR)/drivers/media/dvb/dvb-core
+     -I$(DVB_DIR)/drivers/media/dvb/dvb-core \
+     -I$(DVB_DIR)
+  EXTRA_CFLAGS += -Idrivers/media/dvb-core/ -I$(PWD) \
+                  -Idrivers/media/dvb/dvb-core/
   DVB_SRC = $(DVB_DIR)
-  SYMVER = /lib/modules/$(shell uname -r)/build/Module.symvers
+  SYMVER = $(DVB_DIR)/../v4l/Module.symvers
   have_modver := $(wildcard $(SYMVER))
   BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
   all: add_modver
