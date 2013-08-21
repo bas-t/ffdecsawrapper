@@ -53,7 +53,6 @@
 #include <linux/dvb/ca.h>
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/version.h>
-#include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/cdev.h>
 #include <linux/platform_device.h>
