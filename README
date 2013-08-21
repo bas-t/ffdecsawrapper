@@ -21,3 +21,7 @@ If you know what FFDECSA optimisation is best for you, you can set it like:
 
 ./configure --compiletype=release --ffdecsa_mode=PARALLEL_128_SSE
 
+More info (in Dutch) is available at:
+
+www.lursen.org/wiki/MythTV_0.26_op_Debian_Wheezy
+
