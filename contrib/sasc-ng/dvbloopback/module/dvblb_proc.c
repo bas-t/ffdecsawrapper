@@ -30,7 +30,9 @@
 
 #include <linux/proc_fs.h>
 #include "dvblb_internal.h"
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #include "internal.h"
+#endif
 
 static struct proc_dir_entry *procdir;
 
