@@ -134,12 +134,6 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
-# If running kernel is > 3.9 ask for help, then abort
-if [ $SECOND_DIGIT -gt 9 ]; then
-  echo -e "Sadly 3.10 and higher kernels are not yet supported.\n\nThe procfs has changed in 3.10 and I don't know how to adjust the dvbloopback kernel module to this new situation.\n\nShould you be able to fix this, or know someone who can, you are most welcome to share your knowledge.\n\nPlease open a ticket at https://github.com/bas-t/sasc or send me a patch at tycholursen at gmail dot com or fork the repo and send me a pull request.\n\nAborting...\n"
-  exit 1
-fi
-
 if test "x$CXX" = "x"; then
   CXX=g++
 fi

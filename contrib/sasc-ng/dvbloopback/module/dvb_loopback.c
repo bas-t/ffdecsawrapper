@@ -49,6 +49,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/pagemap.h>
+#include <linux/slab.h>
 #include <linux/dvb/ca.h>
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/version.h>
