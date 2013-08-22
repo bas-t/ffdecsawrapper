@@ -30,7 +30,6 @@
 
 #include <linux/proc_fs.h>
 #include "dvblb_internal.h"
-#include "internal.h"
 
 static struct proc_dir_entry *procdir;
 
