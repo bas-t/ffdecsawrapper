@@ -180,24 +180,27 @@ fi
 
 # Install most dependencies
 
-if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
-  echo "\nMissing dependency libv4l-dev, marking for installation.\n"
-  apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
-fi
+if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
 
-if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
-  echo "\nMissing dependency libproc-processtable-perl, marking for installation.\n"
-  apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
-fi
+  if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
+    echo "\nMissing dependency libv4l-dev, marking for installation.\n"
+    apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+  fi
 
-if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
-  echo "\nMissing dependency libssl-dev, marking for installation.\n"
-  apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
-fi
+  if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
+    echo "\nMissing dependency libproc-processtable-perl, marking for installation.\n"
+    apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+  fi
 
-if ! dpkg-query -l build-essential > /dev/null 2>&1; then
-  echo "\nMissing dependency build-essential, marking for installation.\n"
-  apt-get install build-essential -y || die "Error installing dependency build-essential"
+  if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
+    echo "\nMissing dependency libssl-dev, marking for installation.\n"
+    apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+  fi
+
+  if ! dpkg-query -l build-essential > /dev/null 2>&1; then
+    echo "\nMissing dependency build-essential, marking for installation.\n"
+    apt-get install build-essential -y || die "Error installing dependency build-essential"
+  fi
 fi
 
 #
