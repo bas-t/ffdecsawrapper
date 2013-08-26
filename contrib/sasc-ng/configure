@@ -187,8 +187,6 @@ if test "x$dvb_path" != "x"; then
 
     ./debian
 
-  fi
-
 #
 # End Debian section
 #
