@@ -218,7 +218,17 @@ if test "x$dvb_path" != "x"; then
 
   elif echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
 
-    ./debian
+    ./kernelpatch
+
+  if [ $(echo $?) -eq 1 ]; then
+    echo "\nErrors encountered during kernel patch.\nFix the cause of the errors and run me again.\n"
+    confirmno "Do you want to continue anyway? [y/N]"
+    if [ $(echo $?) -eq 1 ]; then
+      git clean -xfd
+      echo "\nAborting...\n"
+      exit 1
+    fi
+  fi
 
 #
 # End Debian section II

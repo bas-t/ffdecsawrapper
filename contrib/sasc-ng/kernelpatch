@@ -21,6 +21,19 @@ confirmyes(){
     esac
 }
 
+confirmno(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
 # Get kernel version numbers
 
     SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
@@ -40,18 +53,28 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
-# Are we running Debian?
-# If so, patch dvb-core.ko
+# When using sasc, the kernel has to be patched.
+# Let's do it.
 
-if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
+  KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.bz2"
+  NEW_KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.xz"
+  BUILD_DIR=/lib/modules/`uname -r`/build
+  TEMPDIR=/usr/src/$SHORT_KERNEL
 
-  # When using sasc, the kernel has to be patched.
-  # Let's do it.
+echo "\nSasc needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\nIf you compiled a custom kernel, you should have patched it yourself.\n\n"
 
-    KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.bz2"
-    NEW_KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.xz"
-    BUILD_DIR=/lib/modules/`uname -r`/build
-    TEMPDIR=/usr/src/$SHORT_KERNEL
+confirmyes "Do you want me to patch a running Debian kernel and install missing dependencies?[Y/n]"
+
+if [ $(echo $?) -eq 0 ]; then
+
+  # Install linux-headers if we are running a Debian kernel
+
+  if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
+    echo "\nMissing dependency linux-headers-`uname -r`, marking for installation.\n"
+    apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+  fi
+
+
 
   echo "\n\n   WARNING!!!\n\n   If you have more then 4 DVB adapters, or planning to use more then 4,\n   your kernel cannot be patched.\n   So if you did not do so allready,\n   recompile your kernel with apropiate dvb-mutex patch,\n   and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'\n\n\nDo you want me to install linux-source-$SHORT_KERNEL?\nThis will remove any previously installed\nlinux-source packages and (re)install\nthe source for your current kernel.\n\nHaving done that, missing build dependencies\nwill be installed and your running kernel\nwill be patched for use with sasc.\n\nDon't forget to reboot to load new module once you are\ndone patching the kernel and compiling sasc and sasc module.\n"
 
@@ -95,7 +118,5 @@ if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
       fi
     fi
   fi
-else
-  echo "\nYou are not running Debian.\n\nAborting...\n"
 fi
 
