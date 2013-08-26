@@ -174,13 +174,43 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
+#
+# Begin Debian section I
+#
+
+# Install most dependencies
+
+if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
+  echo "\nMissing dependency libv4l-dev, marking for installation.\n"
+  apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+fi
+
+if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
+  echo "\nMissing dependency libproc-processtable-perl, marking for installation.\n"
+  apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+fi
+
+if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
+  echo "\nMissing dependency libssl-dev, marking for installation.\n"
+  apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+fi
+
+if ! dpkg-query -l build-essential > /dev/null 2>&1; then
+  echo "\nMissing dependency build-essential, marking for installation.\n"
+  apt-get install build-essential -y || die "Error installing dependency build-essential"
+fi
+
+#
+# End Debian section I
+#
+
 # Check for v4l drivers
 
 if test "x$dvb_path" != "x"; then
   echo "\n    WARNING!!!\n\nYou have set the --dvb_dir= option, indicating that you compiled and installed newest dvb drivers from v4l.\nThis means (should mean) that you patched the v4l sources with the apropriate dvb-mutex patch."
 
 #
-# Begin Debian section.
+# Begin Debian section II
 #
 
   elif echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
@@ -188,7 +218,7 @@ if test "x$dvb_path" != "x"; then
     ./debian
 
 #
-# End Debian section
+# End Debian section II
 #
 
 fi
