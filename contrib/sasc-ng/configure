@@ -321,29 +321,31 @@ if test "x$ffdecsa_opt" != "xno"; then
   echo "\nChoosing PARALLEL_MODE = ${MAX_MODE}"
   echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
 else
-   if test "x$ffdecsa_flags" = "x"; then
-     if test -f /proc/cpuinfo; then
-       get_cpu_optimization
-     fi
-   else
-     FLAGS=$ffdecsa_flags
-   fi
-   if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
-     echo "\nUsing PARALLEL_MODE = ${MAX_MODE}"
-     echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-   else
-     echo "\nUsing PARALLEL_MODE = ${MAX_MODE}"
-     echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-   fi
+  if test "x$ffdecsa_flags" = "x"; then
+    if test -f /proc/cpuinfo; then
+      get_cpu_optimization
+    fi
+  else
+    FLAGS=$ffdecsa_flags
+  fi
+
+  echo "\nUsing PARALLEL_MODE = ${MAX_MODE}"
+
+  if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
+    echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+  else
+    echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+  fi
 fi
 
+echo "\n`uname -r` kernel detected."
+
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
+
 if [ $FIRST_DIGIT -eq 3 ]; then
   if [ $SECOND_DIGIT -lt 7 ]; then
-    echo "\n`uname -r` kernel detected."
     cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
   else
-    echo "\n`uname -r` kernel detected."
     cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
   fi
 fi
@@ -352,5 +354,4 @@ rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log
 echo "	$0 $*" >> config.log
-echo "\n\n\nTime to run make && make module\n"
-
+echo "\n\nTime to run make && make module\n"
