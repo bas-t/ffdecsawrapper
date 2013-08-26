@@ -1,4 +1,6 @@
-The sole purpose of this git repo is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
+Due to 'Hollywood' legislation, the use of this software is illegal in most countrys!
+
+The purpose of this git repo is to make FFDECSA (via sasc's loopback interface) available for use with MythTV and such.
 
 You can use it with kernel version 3.x and up, including more recent kernels (3.7.x and up)
 
