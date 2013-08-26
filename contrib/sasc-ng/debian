@@ -1,0 +1,97 @@
+#!/bin/sh
+
+die(){
+    echo $1
+    exit 1
+}
+
+die_unknown(){
+    echo "Unknown option \"$1\"."
+    echo "See $0 --help for available options."
+    exit 1
+}
+
+confirmno(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
+confirmyes(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [Y/n]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        [nN][oO]|[nN])
+            false
+            ;;
+        *)
+            true
+            ;;
+    esac
+}
+  # Install most dependencies
+
+  if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
+    echo "\nMissing dependency libv4l-dev, marking for installation.\n"
+    apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+  fi
+
+  if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
+    echo "\nMissing dependency libproc-processtable-perl, marking for installation.\n"
+    apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+  fi
+
+  if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
+    echo "\nMissing dependency libssl-dev, marking for installation.\n"
+    apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+  fi
+
+  if ! dpkg-query -l build-essential > /dev/null 2>&1; then
+    echo "\nMissing dependency build-essential, marking for installation.\n"
+    apt-get install build-essential -y || die "Error installing dependency build-essential"
+  fi
+
+  # Check for v4l drivers
+
+  if test "x$dvb_path" != "x"; then
+    echo "\n    WARNING!!!\n\nYou have set the --dvb_dir= option, indicating that you compiled and installed newest dvb drivers from v4l.\nThis means (should mean) that you allready patched the v4l sources with the apropriate dvb-mutex patch.\nThe 'debian' section is aimed to patch your running debian kernel.\nYou don't need it if you use v4l drivers.\nIt's one or the other: patch the kernel or patch v4l sources.\n\n    Answer no to the question!"
+  fi
+
+  echo "\nSasc needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\nIf you compiled a custom kernel, you should have patched it yourself.\n\n"
+
+  confirmyes "Do you want me to patch a running Debian kernel and install missing dependencies?[Y/n]"
+
+  if [ $(echo $?) -eq 0 ]; then
+
+    # Install linux-headers if we are running a Debian kernel
+
+    if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
+      echo "\nMissing dependency linux-headers-`uname -r`, marking for installation.\n"
+      apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+    fi
+
+    # When using sasc, the kernel has to be patched.
+    echo "\nStarting patch routine...\n"
+    sleep 1
+    ./kernelpatch
+
+  if [ $(echo $?) -eq 1 ]; then
+    echo "\nErrors encountered during kernel patch.\nFix the cause of the errors and run me again.\n"
+    confirmno "Do you want to continue anyway? [y/N]"
+    if [ $(echo $?) -eq 1 ]; then
+      git clean -xfd
+      echo "\nAborting...\n"
+      exit 1
+    fi
+  fi
+fi

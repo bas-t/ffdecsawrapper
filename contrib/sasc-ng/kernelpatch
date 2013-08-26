@@ -1,0 +1,101 @@
+#!/bin/sh
+
+die(){
+    echo $1
+    exit 1
+}
+
+confirmyes(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [Y/n]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        [nN][oO]|[nN])
+            false
+            ;;
+        *)
+            true
+            ;;
+    esac
+}
+
+# Get kernel version numbers
+
+    SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
+    FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
+    SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
+    PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
+
+# Get OS and release info
+
+    OS=$( lsb_release -si )
+    RELEASE=$( lsb_release -sc )
+
+# Abort if running kernel is < 3.x
+
+if [ $FIRST_DIGIT -lt 3 ]; then
+  echo "The kernel you are running is not supported anymore.\n\nMinimum supported version is 3.x\n\nAborting..."
+  exit 1
+fi
+
+# Are we running Debian?
+# If so, patch dvb-core.ko
+
+if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
+
+  # When using sasc, the kernel has to be patched.
+  # Let's do it.
+
+    KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.bz2"
+    NEW_KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.xz"
+    BUILD_DIR=/lib/modules/`uname -r`/build
+    TEMPDIR=/usr/src/$SHORT_KERNEL
+
+  echo "\n\n   WARNING!!!\n\n   If you have more then 4 DVB adapters, or planning to use more then 4,\n   your kernel cannot be patched.\n   So if you did not do so allready,\n   recompile your kernel with apropiate dvb-mutex patch,\n   and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'\n\n\nDo you want me to install linux-source-$SHORT_KERNEL?\nThis will remove any previously installed\nlinux-source packages and (re)install\nthe source for your current kernel.\n\nHaving done that, missing build dependencies\nwill be installed and your running kernel\nwill be patched for use with sasc.\n\nDon't forget to reboot to load new module once you are\ndone patching the kernel and compiling sasc and sasc module.\n"
+
+  confirmyes "Proceed?[Y/n]"
+
+
+
+  if [ $(echo $?) -eq 0 ]; then
+    apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
+    apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
+    echo "\nBuilding patched dvb-core module for kernel `uname -r`\n\nPreparing, this may take a while...\n"
+    rm -rf $TEMPDIR
+    mkdir -p $TEMPDIR
+    if  [ $FIRST_DIGIT -eq 3 ]; then
+      if [ $SECOND_DIGIT -lt 7 ]; then
+        tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+        echo "\nBuilding and installing, please be patient...\n"
+        patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
+        make -C $BUILD_DIR M=$TEMPDIR modules
+        rm -f /lib/modules/`uname -r`/updates/dvb-core.ko > /dev/null 2>&1
+        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/
+        cp -f $TEMPDIR/dvbdev.h dvbloopback/module/dvbdev-orig.h
+        rm -rf $TEMPDIR
+        depmod -a
+      else
+        if  [ $SECOND_DIGIT -gt 9 ]; then
+          tar -xJf $NEW_KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        else
+          tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        fi
+        echo "\nBuilding and installing, please be patient...\n"
+        patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
+        make -C $BUILD_DIR M=$TEMPDIR modules
+        rm -f /lib/modules/`uname -r`/updates/dvb-core.ko > /dev/null 2>&1
+        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/
+        cp -f $TEMPDIR/dvbdev.h dvbloopback/module/dvbdev-orig.h
+        rm -rf $TEMPDIR
+        depmod -a
+      fi
+    fi
+  fi
+else
+  echo "\nYou are not running Debian.\n\nAborting...\n"
+fi
+

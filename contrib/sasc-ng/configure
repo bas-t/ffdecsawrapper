@@ -1,9 +1,43 @@
 #!/bin/sh
 
+die(){
+    echo $1
+    exit 1
+}
+
 die_unknown(){
     echo "Unknown option \"$1\"."
     echo "See $0 --help for available options."
     exit 1
+}
+
+confirmno(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
+confirmyes(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [Y/n]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        [nN][oO]|[nN])
+            false
+            ;;
+        *)
+            true
+            ;;
+    esac
 }
 
 #check whether option is supported by this cpu
@@ -22,46 +56,46 @@ check_cpu(){
 }
 
 #try to figure out best FFdecsa compiler options
-get_cpu_optimization() {
-   FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
-   arch=`uname -m`
-   processors_flags=`cat /proc/cpuinfo | grep "flags" | head -n 1`
-   vendor=`cat /proc/cpuinfo |grep "vendor_id" | head -n 1 | sed -e "s/.*:\W*//"`
-   gcc_ver=`$CXX -v 2>&1 | grep "gcc version" | head -n 1`
-   gcc_major=`echo $gcc_ver | sed -e 's/^gcc version \([0-9]*\)\..*/\1/'`
-   gcc_minor=`echo $gcc_ver | sed -e 's/^gcc version [0-9]*\.\([0-9]*\).*/\1/'`
-   if test $gcc_major -gt 4; then
-     ARCH="native"
-   elif test $gcc_major -eq 4 && test $gcc_minor -ge 2; then
-     ARCH="native"
-   elif test "x$arch" = "xx86_64"; then
-     if test "x$vendor" = "xAuthenticAMD"; then
-        ARCH="k8"
-     elif test "x$vendor" = "xGenuineIntel"; then
-        ARCH="nocona"
-     else
-        echo **WARNING** - Unknown vendor $vendor - assuming nocona
-        ARCH="nocona"
-     fi
-     FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
-   elif test "x$arch" = "xathlon-xp"; then
-     ARCH="athlon-xp"
-     FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
-   else
-     ARCH="pentium"
-   fi
-   OPTS=""
-   for opt in mmx sse sse2; do
-     if check_cpu $opt; then
-       OPTS="$OPTS $opt"
-       FLAGS="$FLAGS -m$opt"
-     fi
-   done
-   FLAGS="$FLAGS -march=$ARCH"
-   echo "Processor capabilities: $ARCH ($OPTS )"
+get_cpu_optimization(){
+  FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
+  arch=`uname -m`
+  processors_flags=`cat /proc/cpuinfo | grep "flags" | head -n 1`
+  vendor=`cat /proc/cpuinfo |grep "vendor_id" | head -n 1 | sed -e "s/.*:\W*//"`
+  gcc_ver=`$CXX -v 2>&1 | grep "gcc version" | head -n 1`
+  gcc_major=`echo $gcc_ver | sed -e 's/^gcc version \([0-9]*\)\..*/\1/'`
+  gcc_minor=`echo $gcc_ver | sed -e 's/^gcc version [0-9]*\.\([0-9]*\).*/\1/'`
+  if test $gcc_major -gt 4; then
+    ARCH="native"
+  elif test $gcc_major -eq 4 && test $gcc_minor -ge 2; then
+    ARCH="native"
+  elif test "x$arch" = "xx86_64"; then
+    if test "x$vendor" = "xAuthenticAMD"; then
+      ARCH="k8"
+    elif test "x$vendor" = "xGenuineIntel"; then
+      ARCH="nocona"
+    else
+      echo **WARNING** - Unknown vendor $vendor - assuming nocona
+      ARCH="nocona"
+    fi
+    FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
+  elif test "x$arch" = "xathlon-xp"; then
+    ARCH="athlon-xp"
+    FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
+  else
+    ARCH="pentium"
+  fi
+  OPTS=""
+  for opt in mmx sse sse2; do
+    if check_cpu $opt; then
+      OPTS="$OPTS $opt"
+      FLAGS="$FLAGS -m$opt"
+    fi
+  done
+  FLAGS="$FLAGS -march=$ARCH"
+  echo "\nProcessor capabilities: $ARCH ($OPTS )"
 }
 
-show_help() {
+show_help(){
   echo "Usage: configure [options]"
   echo "Options: [defaults in brackets after descriptions]"
   echo
@@ -128,16 +162,38 @@ FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
 SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
 PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
-# If running kernel is < 3.x abort
+# Get OS and release info
+
+    OS=$( lsb_release -si )
+    RELEASE=$( lsb_release -sc )
+
+# Abort if running kernel is < 3.x
+
 if [ $FIRST_DIGIT -lt 3 ]; then
-  echo -e "The kernel you are running is not supported anymore.\n\nMinimum supported version is 3.x\n\nAborting...\n"
+  echo "The kernel you are running is not supported anymore.\n\nMinimum supported version is 3.x\n\nAborting..."
   exit 1
 fi
+
+
+#
+# Begin Debian section.
+#
+
+if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
+
+  ./debian
+
+fi
+
+#
+# End Debian section
+#
 
 if test "x$CXX" = "x"; then
   CXX=g++
 fi
-echo "Using C++ compiler: $CXX"
+
+echo "\n\nUsing C++ compiler: $CXX"
 
 if test "x$ffdecsa_opt" = "xlong"; then
   FFDECSA_MODES="PARALLEL_32_INT PARALLEL_32_4CHAR PARALLEL_32_4CHARA \
@@ -150,7 +206,7 @@ elif test "x$ffdecsa_opt" = "xyes"; then
                  PARALLEL_64_MMX PARALLEL_128_2LONG PARALLEL_128_2MMX \
                  PARALLEL_128_SSE PARALLEL_128_SSE2"
 elif test "x$ffdecsa_opt" != "xno"; then
-  echo "Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, no, long'"
+  echo "\nBad option to --optimize '$ffdecsa_opt'.  Should be 'yes, no, long'"
   exit 1
 fi
 
@@ -161,12 +217,12 @@ fi
 echo "# Automatically generated by configure - do not modify" > config.mak
 
 if test "x$compiletype_opt" = "xrelease"; then
-  echo "Using compile type release"
+  echo "\nUsing compile type release"
   echo "RELEASE=1" >> config.mak
 elif test "x$compiletype_opt" = "xdebug"; then
-  echo "Using compile type debug"
+  echo "\nUsing compile type debug"
 else
-  echo "Bad option to --compiletype '$compiletype_opt'. Should be 'release, debug'"
+  echo "\nBad option to --compiletype '$compiletype_opt'. Should be 'release, debug'"
   exit 1
 fi
 
@@ -178,7 +234,7 @@ if test "x$auxserver_opt" != "x"; then
 fi
 
 if test "x$shared_opt" = "x1"; then
-  echo "Compiling sc for shared libraries"
+  echo "\nCompiling sc for shared libraries"
   echo "USE_DLOAD=1" >> config.mak
 fi
 
@@ -188,45 +244,45 @@ mkdir ${TMPDIR}
 #Test FFDECSA compile
 MAX_val=0
 if test "x$ffdecsa_opt" != "xno"; then
-   if test "x$ffdecsa_flags" = "x"; then
-     if test -f /proc/cpuinfo; then
-       get_cpu_optimization
-     fi
-   else
-     FLAGS=$ffdecsa_flags
-   fi
-   FFdecsaDIR="../../FFdecsa"
-   TMPOUT="${TMPDIR}/FFdecsa/out"
-   mkdir "${TMPDIR}/FFdecsa"
-   cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
-   echo "Trying various FFdecsa optimizations..."
-   for var in ${FFDECSA_MODES}; do
-     make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
-     if test $? -ne 0 ; then
-       echo "    ${var}: build failed"
-     else
-       rm -f ${TMPOUT}
-       sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
-       if test $? -ne 0; then
-         echo "    ${var}: test failed"
-       else
-         grep FAILED "${TMPOUT}" >/dev/null 2>&1
-         if test $? -ne 1; then
-           echo "    ${var}: test failed"
-         else
-           res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
-           echo "    ${var}: $res"
-           if test $res -gt $MAX_val; then
-             MAX_val=$res
-             MAX_MODE=$var
-           fi
-         fi
-       fi
-     fi
-     make -C "${TMPDIR}/FFdecsa" clean >/dev/null 2>&1
-   done
-   echo "Choosing PARALLEL_MODE = ${MAX_MODE}"
-   echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+  if test "x$ffdecsa_flags" = "x"; then
+    if test -f /proc/cpuinfo; then
+      get_cpu_optimization
+    fi
+  else
+    FLAGS=$ffdecsa_flags
+  fi
+  FFdecsaDIR="../../FFdecsa"
+  TMPOUT="${TMPDIR}/FFdecsa/out"
+  mkdir "${TMPDIR}/FFdecsa"
+  cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
+  echo "\nTrying various FFdecsa optimizations..."
+  for var in ${FFDECSA_MODES}; do
+    make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
+    if test $? -ne 0 ; then
+      echo "    ${var}: build failed"
+    else
+      rm -f ${TMPOUT}
+      sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
+      if test $? -ne 0; then
+        echo "    ${var}: test failed"
+      else
+        grep FAILED "${TMPOUT}" >/dev/null 2>&1
+        if test $? -ne 1; then
+          echo "    ${var}: test failed"
+        else
+          res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
+          echo "    ${var}: $res"
+          if test $res -gt $MAX_val; then
+            MAX_val=$res
+            MAX_MODE=$var
+          fi
+        fi
+      fi
+    fi
+  make -C "${TMPDIR}/FFdecsa" clean >/dev/null 2>&1
+  done
+  echo "\nChoosing PARALLEL_MODE = ${MAX_MODE}"
+  echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
 else
    if test "x$ffdecsa_flags" = "x"; then
      if test -f /proc/cpuinfo; then
@@ -236,40 +292,22 @@ else
      FLAGS=$ffdecsa_flags
    fi
    if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
-     echo "Using PARALLEL_MODE = ${MAX_MODE}"
+     echo "\nUsing PARALLEL_MODE = ${MAX_MODE}"
      echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
    else
-     echo "Using PARALLEL_MODE = ${MAX_MODE}"
+     echo "\nUsing PARALLEL_MODE = ${MAX_MODE}"
      echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
    fi
 fi
 
-if test "x$dvb_path" != "x"; then
-  cp -f dvbloopback/module/config_dvb_dvbdir.pl dvbloopback/module/config_dvb.pl
-  if test -e "${dvb_path}/include/linux/dvb/frontend.h"; then
-    echo "DVB_DIR=${dvb_path}" >> config.mak
-    echo "Using DVB_DIR: ${dvb_path}"
-  elif test -e "${dvb_path}/linux/include/linux/dvb/frontend.h"; then
-    echo "DVB_DIR=${dvb_path}/linux" >> config.mak
-    echo "Using DVB_DIR: ${dvb_path}/linux"
-  elif test -e "${dvb_path}/include/uapi/linux/dvb/frontend.h"; then
-    echo "DVB_DIR=${dvb_path}" >> config.mak
-    echo "Using DVB_DIR: ${dvb_path}"
-  else
-    echo "Could not find DVB headers within $dvb_path"
-  fi
-fi
-
-if test "x$dvb_path" = "x"; then
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
-  if [ $FIRST_DIGIT -eq 3 ]; then
-    if [ $SECOND_DIGIT -lt 7 ]; then
-      echo "`uname -r` kernel detected."
-      cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
-    else
-      echo "`uname -r` kernel detected."
-      cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
-    fi
+if [ $FIRST_DIGIT -eq 3 ]; then
+  if [ $SECOND_DIGIT -lt 7 ]; then
+    echo "\n`uname -r` kernel detected."
+    cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
+  else
+    echo "\n`uname -r` kernel detected."
+    cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
   fi
 fi
 
@@ -277,4 +315,5 @@ rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log
 echo "	$0 $*" >> config.log
+echo "\n\n\nTime to run make && make module\n"
 
