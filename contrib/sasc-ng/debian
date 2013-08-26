@@ -61,12 +61,6 @@ confirmyes(){
     apt-get install build-essential -y || die "Error installing dependency build-essential"
   fi
 
-  # Check for v4l drivers
-
-  if test "x$dvb_path" != "x"; then
-    echo "\n    WARNING!!!\n\nYou have set the --dvb_dir= option, indicating that you compiled and installed newest dvb drivers from v4l.\nThis means (should mean) that you allready patched the v4l sources with the apropriate dvb-mutex patch.\nThe 'debian' section is aimed to patch your running debian kernel.\nYou don't need it if you use v4l drivers.\nIt's one or the other: patch the kernel or patch v4l sources.\n\n    Answer no to the question!"
-  fi
-
   echo "\nSasc needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\nIf you compiled a custom kernel, you should have patched it yourself.\n\n"
 
   confirmyes "Do you want me to patch a running Debian kernel and install missing dependencies?[Y/n]"
