@@ -162,10 +162,12 @@ FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
 SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
 PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
+if [ -f /usr/bin/lsb_release ]; then
 # Get OS and release info
 
     OS=$( lsb_release -si )
     RELEASE=$( lsb_release -sc )
+fi
 
 # Abort if running kernel is < 3.x
 
