@@ -70,13 +70,36 @@ if [ $(echo $?) -eq 0 ]; then
   # Install linux-headers if we are running a Debian kernel
 
   if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
-    echo "\nMissing dependency linux-headers-`uname -r`, marking for installation.\n"
+    echo "
+Missing dependency linux-headers-`uname -r`, marking for installation.
+"
     apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
   fi
 
 
 
-  echo "\n\n   WARNING!!!\n\n   If you have more then 4 DVB adapters, or planning to use more then 4,\n   your kernel cannot be patched.\n   So if you did not do so allready,\n   recompile your kernel with apropiate dvb-mutex patch,\n   and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'\n\n\nDo you want me to install linux-source-$SHORT_KERNEL?\nThis will remove any previously installed\nlinux-source packages and (re)install\nthe source for your current kernel.\n\nHaving done that, missing build dependencies\nwill be installed and your running kernel\nwill be patched for use with sasc.\n\nDon't forget to reboot to load new module once you are\ndone patching the kernel and compiling sasc and sasc module.\n"
+  echo "
+
+   WARNING!!!
+
+   If you have more then 4 DVB adapters, or planning to use more then 4,
+   your kernel cannot be patched.\n   So if you did not do so allready,
+   recompile your kernel with apropiate dvb-mutex patch,
+   and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'
+
+
+Do you want me to install linux-source-$SHORT_KERNEL?
+This will remove any previously installed
+linux-source packages and (re)install
+the source for your current kernel.
+
+Having done that, missing build dependencies
+will be installed and your running kernel
+will be patched for use with sasc.
+
+Don't forget to reboot to load new module once you are
+done patching the kernel and compiling sasc and sasc module.
+"
 
   confirmyes "Proceed?[Y/n]"
 
@@ -85,13 +108,19 @@ if [ $(echo $?) -eq 0 ]; then
   if [ $(echo $?) -eq 0 ]; then
     apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
     apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
-    echo "\nBuilding patched dvb-core module for kernel `uname -r`\n\nPreparing, this may take a while...\n"
+    echo "
+Building patched dvb-core module for kernel `uname -r`
+
+Preparing, this may take a while...
+"
     rm -rf $TEMPDIR
     mkdir -p $TEMPDIR
     if  [ $FIRST_DIGIT -eq 3 ]; then
       if [ $SECOND_DIGIT -lt 7 ]; then
         tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        echo "\nBuilding and installing, please be patient...\n"
+        echo "
+Building and installing, please be patient...
+"
         patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
         make -C $BUILD_DIR M=$TEMPDIR modules
         rm -f /lib/modules/`uname -r`/updates/dvb-core.ko > /dev/null 2>&1
@@ -106,7 +135,9 @@ if [ $(echo $?) -eq 0 ]; then
         else
           tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
         fi
-        echo "\nBuilding and installing, please be patient...\n"
+        echo "
+Building and installing, please be patient...
+"
         patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
         make -C $BUILD_DIR M=$TEMPDIR modules
         rm -f /lib/modules/`uname -r`/updates/dvb-core.ko > /dev/null 2>&1

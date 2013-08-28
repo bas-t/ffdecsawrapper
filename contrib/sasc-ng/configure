@@ -199,7 +199,9 @@ Missing dependency libv4l-dev, marking for installation.
   fi
 
   if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
-    echo "\nMissing dependency libproc-processtable-perl, marking for installation.\n"
+    echo "
+Missing dependency libproc-processtable-perl, marking for installation.
+"
     apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
   fi
 
