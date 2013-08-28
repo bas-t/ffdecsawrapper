@@ -83,7 +83,8 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
    WARNING!!!
 
    If you have more then 4 DVB adapters, or planning to use more then 4,
-   your kernel cannot be patched.\n   So if you did not do so allready,
+   your kernel cannot be patched.
+   So if you did not do so allready,
    recompile your kernel with apropiate dvb-mutex patch,
    and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'
 
