@@ -11,7 +11,6 @@ If you are running Debian with a Debian kernel, you don't need to recompile your
 USAGE:
 git clone https://github.com/bas-t/sasc.git
 cd sasc/contrib/sasc-ng
-git checkout stable
 ./configure <opts>
 make && make module
 
