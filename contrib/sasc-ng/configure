@@ -183,8 +183,38 @@ Aborting...
   exit 1
 fi
 
+# Check for v4l drivers
+
+if test "x$dvb_path" != "x"; then
+  echo "
+
+
+    WARNING!!!
+
+You have set the --dvb_dir= option, indicating that you compiled
+and installed newest dvb drivers from v4l.This should mean that
+you patched the v4l sources with the apropriate dvb-mutex patch.
+
+If you are not sure, you probably did not.
+In that case answer no to the question and first have a look at:
+
+http://www.lursen.org/wiki/V4l_and_sasc
+"
+
+confirmyes "Proceed?[Y/n]"
+
+  if [ $(echo $?) -eq 1 ]; then
+    echo "
+You have chosen not to proceed.
+
+Aborting...
+"
+    exit 0
+  fi
+fi
+
 #
-# Begin Debian section I
+# Begin Debian Section
 #
 
 # Install most dependencies
@@ -220,27 +250,10 @@ Missing dependency build-essential, marking for installation.
   fi
 fi
 
-#
-# End Debian section I
-#
-
-# Check for v4l drivers
-
-if test "x$dvb_path" != "x"; then
-  echo "
-    WARNING!!!
-
-You have set the --dvb_dir= option, indicating that you compiled and installed newest dvb drivers from v4l.
-This means (should mean) that you patched the v4l sources with the apropriate dvb-mutex patch."
-
-#
-# Begin Debian section II
-#
-
-  elif echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
-
+if test "x$dvb_path" = "x"; then
+  if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
     ./kernelpatch
-
+  fi
   if [ $(echo $?) -eq 1 ]; then
     echo "
 Errors encountered during kernel patch.
@@ -255,12 +268,11 @@ Aborting...
       exit 1
     fi
   fi
-
-#
-# End Debian section II
-#
-
 fi
+
+#
+# End Debian Section
+#
 
 if test "x$CXX" = "x"; then
   CXX=g++
