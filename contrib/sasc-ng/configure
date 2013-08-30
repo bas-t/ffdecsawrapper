@@ -396,6 +396,10 @@ if [ $FIRST_DIGIT -eq 3 ]; then
   fi
 fi
 
+if test "x$dvb_path" = "x"; then
+  cp -f /lib/modules/$(shell uname -r)/build/Module.symvers dvbloopback/module/Module.symvers
+fi
+
 rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log

@@ -16,12 +16,12 @@ ifdef DVB_DIR
   have_modver := $(wildcard $(SYMVER))
   BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
   all: add_modver
-	./config_dvb_dvbdir.pl "BUILD_DIR=$(BUILD_DIR)" "EXTRA_CFLAGS=$(EXTRA_CFLAGS)"
+	./config_dvb.pl "BUILD_DIR=$(BUILD_DIR)" "EXTRA_CFLAGS=$(EXTRA_CFLAGS)"
 	make -C $(BUILD_DIR) M=$(PWD) modules
 else
   EXTRA_CFLAGS += -Idrivers/media/dvb-core/ -I$(PWD) \
                   -Idrivers/media/dvb/dvb-core/
-  SYMVER = /lib/modules/$(shell uname -r)/build/Module.symvers
+  SYMVER = $(PWD)Module.symvers
   have_modver := $(wildcard $(SYMVER))
   BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
   all: add_modver
@@ -34,7 +34,6 @@ add_modver:
 	echo "Skipping Modver $(SYMVER)"
 else
 add_modver: $(SYMVER)
-	cp -f $(SYMVER) .
 endif
 
 clean:
