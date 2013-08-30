@@ -390,7 +390,11 @@ echo "
 
 if [ $FIRST_DIGIT -eq 3 ]; then
   if [ $SECOND_DIGIT -lt 7 ]; then
-    cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
+    if test "x$dvb_path" != "x"; then
+      cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
+    else
+      cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
+    fi
   else
     cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
   fi
