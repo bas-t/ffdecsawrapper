@@ -397,7 +397,7 @@ if [ $FIRST_DIGIT -eq 3 ]; then
 fi
 
 if test "x$dvb_path" = "x"; then
-  cp -f /lib/modules/$(shell uname -r)/build/Module.symvers dvbloopback/module/Module.symvers
+  cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
 fi
 
 rm -rf "${TMPDIR}"
