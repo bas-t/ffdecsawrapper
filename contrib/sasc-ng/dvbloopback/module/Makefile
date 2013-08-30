@@ -21,7 +21,7 @@ ifdef DVB_DIR
 else
   EXTRA_CFLAGS += -Idrivers/media/dvb-core/ -I$(PWD) \
                   -Idrivers/media/dvb/dvb-core/
-  SYMVER = $(PWD)Module.symvers
+  SYMVER = $(PWD)/Module.symvers
   have_modver := $(wildcard $(SYMVER))
   BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
   all: add_modver
