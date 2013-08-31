@@ -1,5 +1,5 @@
 VERSION = 1.0.1
-TOOL = sasc-ng
+TOOL = ffdecsawrapper
 SCVER = sc-src
 
 include config.mak

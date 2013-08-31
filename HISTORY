@@ -1,5 +1,9 @@
 VDR Plugin 'sc' Revision History
 --------------------------------
+2013
+- Forked development branch.
+- Changed name of sasc-ng to ffdecsawrapper
+- Full hystory is at https://github.com/bas-t/ffdecsawrapper/commits/stable
 
 ..2009: Version 1.0.0
 - Forked development branch.

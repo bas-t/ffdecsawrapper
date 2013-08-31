@@ -53,7 +53,7 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
-# When using sasc, the kernel has to be patched.
+# When using ffdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
   KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.bz2"
@@ -61,7 +61,7 @@ fi
   BUILD_DIR=/lib/modules/`uname -r`/build
   TEMPDIR=/usr/src/$SHORT_KERNEL
 
-echo "\nSasc needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\nIf you compiled a custom kernel, you should have patched it yourself.\n\n"
+echo "\nffdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\nIf you compiled a custom kernel, you should have patched it yourself.\n\n"
 
 confirmyes "Do you want me to patch a running Debian kernel and install missing dependencies?[Y/n]"
 
@@ -96,10 +96,10 @@ the source for your current kernel.
 
 Having done that, missing build dependencies
 will be installed and your running kernel
-will be patched for use with sasc.
+will be patched for use with ffdecsawrapper.
 
 Don't forget to reboot to load new module once you are
-done patching the kernel and compiling sasc and sasc module.
+done patching the kernel and compiling ffdecsawrapper and ffdecsawrapper module.
 "
 
   confirmyes "Proceed?[Y/n]"

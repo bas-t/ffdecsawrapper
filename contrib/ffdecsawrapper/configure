@@ -361,7 +361,7 @@ Compiling sc for shared libraries"
   echo "USE_DLOAD=1" >> config.mak
 fi
 
-TMPDIR="${TMPDIR}/sasc-ng.${RANDOM}"
+TMPDIR="${TMPDIR}/ffdecsawrapper.${RANDOM}"
 mkdir ${TMPDIR}
 
 #Test FFDECSA compile
