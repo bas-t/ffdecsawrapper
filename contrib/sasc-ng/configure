@@ -308,6 +308,9 @@ if test "x$CXX" = "x"; then
 fi
 
 echo "
+`uname -r` kernel detected."
+
+echo "
 Using C++ compiler: $CXX"
 
 if test "x$ffdecsa_opt" = "xlong"; then
@@ -425,9 +428,6 @@ Using PARALLEL_MODE = ${MAX_MODE}"
     echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
   fi
 fi
-
-echo "
-`uname -r` kernel detected."
 
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
 # and get the right config_dvb.pl in place 
