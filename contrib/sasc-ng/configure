@@ -198,7 +198,7 @@ you patched the v4l sources with the apropriate dvb-mutex patch.
 If you are not sure, you probably did not.
 In that case answer no to the question and first have a look at:
 
-http://www.lursen.org/wiki/V4l_and_sasc
+http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 "
 
 confirmyes "Proceed?[Y/n]"
