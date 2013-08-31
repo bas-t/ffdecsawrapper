@@ -213,11 +213,40 @@ Aborting...
   fi
 fi
 
+# Get the right Module.symvers in place
+# Abort when it is not found
+
+if test "x$dvb_path" = "x"; then
+  if test -f /lib/modules/`uname -r`/build/Module.symvers; then
+    cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
+  else echo "
+ERROR!!!
+
+could not locate /lib/modules/`uname -r`/build/Module.symvers
+
+Aborting...
+"
+    exit 0
+  fi
+else
+  if test -f $dvb_path/../v4l/Module.symvers; then
+    cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
+  else echo "
+ERROR!!!
+
+could not locate $dvb_path/../v4l/Module.symvers
+
+Aborting...
+"
+    exit 0
+  fi
+fi
+
 #
 # Begin Debian Section
 #
 
-# Install most dependencies
+# Install dependencies
 
 if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
 
@@ -347,7 +376,8 @@ if test "x$ffdecsa_opt" != "xno"; then
   mkdir "${TMPDIR}/FFdecsa"
   cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
   echo "
-Trying various FFdecsa optimizations..."
+Trying various FFdecsa optimizations...
+"
   for var in ${FFDECSA_MODES}; do
     make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
     if test $? -ne 0 ; then
@@ -363,7 +393,8 @@ Trying various FFdecsa optimizations..."
           echo "    ${var}: test failed"
         else
           res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
-          echo "    ${var}: $res"
+          echo "
+    ${var}: $res"
           if test $res -gt $MAX_val; then
             MAX_val=$res
             MAX_MODE=$var
@@ -399,6 +430,7 @@ echo "
 `uname -r` kernel detected."
 
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
+# and get the right config_dvb.pl in place 
 
 if [ $FIRST_DIGIT -eq 3 ]; then
   if [ $SECOND_DIGIT -lt 7 ]; then
@@ -410,12 +442,6 @@ if [ $FIRST_DIGIT -eq 3 ]; then
   else
     cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
   fi
-fi
-
-if test "x$dvb_path" = "x"; then
-  cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
-else
-  cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
 fi
 
 rm -rf "${TMPDIR}"
