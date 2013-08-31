@@ -450,5 +450,17 @@ date >> config.log
 echo "	$0 $*" >> config.log
 echo "
 
-Time to run make && make module
+Everything looks ok!
+
+Just hit 'enter' to run
+make && make module
 "
+confirmyes "Start compiling now?[Y/n]"
+
+if [ $(echo $?) -eq 0 ]; then
+  make && make module
+else
+  echo "
+NOT starting compilation
+"
+fi
