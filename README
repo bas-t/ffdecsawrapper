@@ -2,7 +2,7 @@ Due to 'Hollywood' legislation, the use of this software is illegal in most coun
 
 The purpose of this git repo is to make FFDECSA (via ffdecsawrapper's loopback interface) available for use with MythTV and such.
 
-You can use it with kernel version 3.x and up, including more recent kernels (3.7.x and up)
+You can use it with kernel version 3.x and up, including more recent kernels (latest ok test: 3.11-rc6)
 
 dvbdev.h is included for all cases, so you must not set --dvb_dir=/path/to/your/kernel/sources anymore. This setting is now reserved for use in case that you have to compile and install newest dvb drivers from v4l. Mind you, if you do, you should apply proper dvb-mutex patch to your v4l sources prior to compiling. If you are not sure on how to do this, you can find basic instructions here:
 
