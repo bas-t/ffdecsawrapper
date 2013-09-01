@@ -277,11 +277,22 @@ Missing dependency build-essential, marking for installation.
 "
     apt-get install build-essential -y || die "Error installing dependency build-essential"
   fi
+
+  if uname -a | grep 'Debian' > /dev/null  2>&1; then
+    if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
+      echo "
+Missing dependency linux-headers-`uname -r`, marking for installation.
+"
+      apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+    fi
+  fi
 fi
 
 if test "x$dvb_path" = "x"; then
   if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
-    ./kernelpatch
+    if uname -a | grep 'Debian' > /dev/null  2>&1; then
+      ./kernelpatch
+    fi
   fi
   if [ $(echo $?) -eq 1 ]; then
     echo "
