@@ -12,7 +12,7 @@ If you are running Debian with a Debian kernel, you don't need to recompile your
 
 USAGE:
 git clone https://github.com/bas-t/ffdecsawrapper.git
-cd ffdecsawrapper/contrib/sasc-ng
+cd ffdecsawrapper/contrib/ffdecsawrapper
 ./configure <opts>
 make && make module
 
