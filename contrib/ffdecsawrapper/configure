@@ -446,15 +446,12 @@ fi
 
 if test "x$dvb_path" != "x"; then
   cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
-  cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/config-dvb/dvbdev.h
 else
   if [ $FIRST_DIGIT -eq 3 ]; then
     if [ $SECOND_DIGIT -lt 7 ]; then
       cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/dvbdev.h
-      cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/config-dvb/dvbdev.h
     else
       cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
-      cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/config-dvb/dvbdev.h
     fi
   fi
 fi
