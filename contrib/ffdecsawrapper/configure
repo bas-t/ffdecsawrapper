@@ -440,18 +440,22 @@ Using PARALLEL_MODE = ${MAX_MODE}"
   fi
 fi
 
+# Get the right dvbdev.h in place
+# When using v4l sources use supplied header. Else
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
-# and get the right config_dvb.pl in place 
 
-if [ $FIRST_DIGIT -eq 3 ]; then
-  if [ $SECOND_DIGIT -lt 7 ]; then
-    if test "x$dvb_path" != "x"; then
-      cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
+if test "x$dvb_path" != "x"; then
+  cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
+  cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/config-dvb/dvbdev.h
+else
+  if [ $FIRST_DIGIT -eq 3 ]; then
+    if [ $SECOND_DIGIT -lt 7 ]; then
+      cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/dvbdev.h
+      cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/config-dvb/dvbdev.h
     else
-      cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
+      cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
+      cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/config-dvb/dvbdev.h
     fi
-  else
-    cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
   fi
 fi
 
