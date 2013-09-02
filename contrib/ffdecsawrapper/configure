@@ -440,14 +440,15 @@ Using PARALLEL_MODE = ${MAX_MODE}"
   fi
 fi
 
+# Get the right config_dvb.pl in place, we have different dvbdev.h's to deal with.
+# When using v4l sources, allways use suplied headers. If not:
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
-# and get the right config_dvb.pl in place 
 
-if [ $FIRST_DIGIT -eq 3 ]; then
-  if [ $SECOND_DIGIT -lt 7 ]; then
-    if test "x$dvb_path" != "x"; then
-      cp -f dvbloopback/module/config_dvb_new.pl dvbloopback/module/config_dvb.pl
-    else
+if test "x$dvb_path" != "x"; then
+  cp -f dvbloopback/module/config_dvb_v4l.pl dvbloopback/module/config_dvb.pl
+else
+  if [ $FIRST_DIGIT -eq 3 ]; then
+    if [ $SECOND_DIGIT -lt 7 ]; then
       cp -f dvbloopback/module/config_dvb_old.pl dvbloopback/module/config_dvb.pl
     fi
   else
