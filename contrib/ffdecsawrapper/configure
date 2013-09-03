@@ -216,14 +216,28 @@ fi
 # Get the right dvbdev.h in place
 # Distinguish between '3.6 or lower' and '3.7 or higher' kernels
 
-if [ $SECOND_DIGIT -lt 7 ]; then
-  if test "x$dvb_path" != "x"; then
-    cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
-  else
-    cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/dvbdev.h
+if test "x$dvb_path" != "x"; then
+  if test -f $dvb_path/drivers/media/dvb-core/dvbdev.h; then
+    cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
+  elif test -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h; then
+    cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
+  else echo "
+ERROR!!!
+
+could not locate $dvb_path/drivers/media/dvb-core/dvbdev.h
+or
+could not locate $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
+
+Aborting...
+"
+    exit 0
   fi
 else
-  cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
+  if [ $SECOND_DIGIT -lt 7 ]; then
+    cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/dvbdev.h
+  else
+    cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
+  fi
 fi
 
 # Get the right Module.symvers in place
