@@ -98,7 +98,7 @@ Processor capabilities: $ARCH ($OPTS )"
 
 show_help(){
   echo "Usage: configure [options]"
-  echo "Options: [defaults in brackets after descriptions]"
+  echo "Options: [defaults, if any, in brackets after descriptions]"
   echo
   echo "Standard options:"
   echo "  --help                   print this message"
@@ -119,7 +119,7 @@ show_help(){
   echo "  --ffdecsa_flags=<val>    override ffdecsa compiler flags."
   echo "                           Don't use this option unless you"
   echo "                           exactly know what you are doing."
-  echo "  --cxx=<val>             [g++] command for C++ compilation"
+  echo "  --cxx=<val>              [g++] command for C++ compilation"
   exit 0
 }
 
