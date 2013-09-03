@@ -224,9 +224,11 @@ if test "x$dvb_path" != "x"; then
   else echo "
 ERROR!!!
 
-could not locate $dvb_path/drivers/media/dvb-core/dvbdev.h
-or
-could not locate $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
+Could not locate any of the following:
+
+$dvb_path/drivers/media/dvb-core/dvbdev.h
+
+$dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
 
 Aborting...
 "
