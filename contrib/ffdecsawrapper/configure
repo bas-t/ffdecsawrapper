@@ -214,9 +214,9 @@ Aborting...
 fi
 
 # Get the right dvbdev.h in place
-# If --dvb_dir= is set, use suplied header, else
+# If --dvb_dir= is set, use supplied header, else
 # distinguish between '3.6 or lower' and '3.7 or higher' kernels,
-# they use dufferent versions of dvbdev.h
+# they use different versions of dvbdev.h
 
 if test "x$dvb_path" != "x"; then
   if test -f $dvb_path/drivers/media/dvb-core/dvbdev.h; then
