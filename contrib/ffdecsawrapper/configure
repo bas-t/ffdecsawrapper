@@ -260,14 +260,6 @@ Aborting...
 else
   if test -f $dvb_path/../v4l/Module.symvers; then
     cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
-  else echo "
-ERROR!!!
-
-could not locate $dvb_path/../v4l/Module.symvers
-
-Aborting...
-"
-    exit 0
   fi
 fi
 
