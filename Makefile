@@ -2,7 +2,7 @@ VERSION = 1.1.0
 TOOL = ffdecsawrapper
 SCVER = sc-src
 
-$(shell touch config.mak )
+$(shell touch config.mak)
 include config.mak
 
 #DEFINES = -DNO_RINGBUF
