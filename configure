@@ -408,7 +408,7 @@ if test "x$ffdecsa_opt" != "xno"; then
   else
     FLAGS=$ffdecsa_flags
   fi
-  FFdecsaDIR="../../FFdecsa"
+  FFdecsaDIR="FFdecsa"
   TMPOUT="${TMPDIR}/FFdecsa/out"
   mkdir "${TMPDIR}/FFdecsa"
   cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
