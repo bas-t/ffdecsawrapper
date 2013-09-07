@@ -25,8 +25,8 @@ SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1
 
 ### The directory environment:
 
-VDRDIR = ../../..
-LIBDIR = ../../lib
+VDRDIR = ../..
+LIBDIR = ../lib
 SYSDIR = ./systems
 PREDIR = ./systems-pre
 TMPDIR = /tmp

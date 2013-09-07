@@ -1,6 +1,6 @@
 VERSION = 1.1.0
 TOOL = ffdecsawrapper
-SCVER = sc-src
+SCVER = src
 
 $(shell touch config.mak)
 include config.mak
@@ -20,7 +20,7 @@ endif
 DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
-SCDIR = sc/PLUGINS/src/$(SCVER)
+SCDIR = sc/PLUGINS/$(SCVER)
 SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual
 
 ifdef AUXSERVER_OPTS

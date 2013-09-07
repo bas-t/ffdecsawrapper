@@ -18,8 +18,8 @@
 
 ### The directory environment:
 
-LIBDIR = ../../../../lib
-PREDIR = ../../systems-pre
+LIBDIR = ../../../lib
+PREDIR = ../systems-pre
 
 ### Includes and Defines
 
