@@ -1,263 +1,135 @@
-#
-# Softcam plugin to VDR
-#
-# This code is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This code is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-# Or, point your browser to http://www.gnu.org/copyleft/gpl.html
+VERSION = 1.1.0
+TOOL = ffdecsawrapper
+SCVER = sc-src
 
-# The official name of this plugin.
-# This name will be used in the '-P...' option of VDR to load the plugin.
-# By default the main source file also carries this name.
-#
-PLUGIN = sc
+include config.mak
 
-### The version number of this plugin
+#DEFINES = -DNO_RINGBUF
 
-DISTFILE = .distvers
-HGARCHIVE = .hg_archival.txt
-RELEASE := $(shell grep 'define SC_RELEASE' version.h | awk '{ print $$3 }' | sed -e 's/[";]//g')
-SUBREL  := $(shell if test -d .hg; then \
-                     echo -n "HG-"; (hg identify 2>/dev/null || echo -n "Stable") | sed -e 's/ .*//'; \
-                   elif test -r $(HGARCHIVE); then \
-                     echo -n "AR-"; grep "^node" $(HGARCHIVE) | awk '{ printf "%.12s",$$2 }'; \
-                   elif test -r $(DISTFILE); then \
-                     cat $(DISTFILE); \
-                   else \
-                     echo -n "Stable"; \
-                   fi)
-VERSION := $(RELEASE)-$(SUBREL)
-SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' version.h)
-
-### The directory environment:
-
-VDRDIR = ../../..
-LIBDIR = ../../lib
-SYSDIR = ./systems
-PREDIR = ./systems-pre
-TMPDIR = /tmp
-
-### The C++ compiler and options:
-
+CC       ?= gcc
 CXX      ?= g++
-CXXFLAGS ?= -O2 -g -fPIC -Wall -Woverloaded-virtual
+CXXFLAGS ?= -Wall -D__user= 
+CFLAGS   ?= -Wall -D__user= 
 
-### Includes and Defines
-
-INCLUDES      = -I$(VDRDIR)/include
-DEFINES       = -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
-SHAREDDEFINES = -DAPIVERSNUM=$(APIVERSNUM) -D_GNU_SOURCE
-LIBS          = -lcrypto
-SHAREDLIBS    =
-
-### Allow user defined options to overwrite defaults:
-
--include $(VDRDIR)/Make.config
--include Make.config
-
-### The version number of VDR (taken from VDR's "config.h"):
-
-VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSION := $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-ifeq ($(strip $(APIVERSION)),)
-   APIVERSION = $(VDRVERSION)
-endif
-VDRVERSNUM := $(shell sed -ne '/define VDRVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSNUM := $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-ifeq ($(strip $(APIVERSNUM)),)
-   APIVERSNUM = $(VDRVERSNUM)
+ifdef DVB_DIR
+  INCLUDES = -I$(SOURCE_DIR)/include/uapi -I$(SOURCE_DIR)/arch/x86/include -I$(SOURCE_DIR)/include
+  DVB_MOD_DIR = DVB_DIR=$(DVB_DIR)
 endif
 
-### The object files (add further files here):
+DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
+INCLUDES += -Idvbloopback/module
+LBDIR = dvbloopback/src
+SCDIR = sc/PLUGINS/src/$(SCVER)
+SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual
 
-OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o device.o version.o \
-       smartcard.o network.o crypto.o system-common.o parse.o log.o \
-       override.o
-
-### Internationalization (I18N):
-
-PODIR     = po
-I18Npot   = $(PODIR)/$(PLUGIN).pot
-I18Nmo    = vdr-$(PLUGIN).mo
-I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/$(I18Nmo),$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
-LOCALEDIR = $(VDRDIR)/locale
-
-### VDR version dependant
-
-# test VDR version
-BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
-# test if PlayTsVideo() exists (e.g. TSplay patch)
-BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(VDRDIR)/include/vdr/device.h))
-
-ifneq ($(BYVERS)$(BYTSPL),)
-  SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+ifdef AUXSERVER_OPTS
+  DEFINES += ${AUXSERVER_OPTS}
 endif
 
-#
-# generic stuff
-#
+CXXFLAGS += -g
+CFLAGS   += -g
+SC_FLAGS += -g
 
-# smartcard default port (dropped)
-ifdef DEFAULT_PORT
-  $(error DEFAULT_PORT support was removed, use cardslot.conf)
-endif
-
-ifdef WITH_PCSC
-  DEFINES  += -DWITH_PCSC
-  LIBS     += -lpcsclite
-endif
-
-# max number of CAIDs per slot
-MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(VDRDIR)/ci.c)
-ifneq ($(strip $(MAXCAID)),)
-  DEFINES += -DVDR_MAXCAID=$(MAXCAID)
-endif
-
-# FFdeCSA
-CPUOPT     ?= pentium
-PARALLEL   ?= PARALLEL_32_INT
-CSAFLAGS   ?= -Wall -fPIC -g -O3 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops
-FFDECSADIR  = FFdecsa
-FFDECSA     = $(FFDECSADIR)/FFdecsa.o
-FFDECSATEST = $(FFDECSADIR)/FFdecsa_test.done
-
-# SASC
-ifdef SASC
-DEFINES += -DSASC
-FFDECSA =
-FFDECSATEST =
-endif
-
-# export for system makefiles
-export SCAPIVERS
-export APIVERSION
-export INCLUDES
-export SHAREDDEFINES
-export SHAREDLIBS
-export CXX
-export CXXFLAGS
-
-### Targets:
-
-ifdef STATIC
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).a
-SHAREDDEFINES += -DSTATICBUILD
+ifdef USE_DLOAD
+  SCLIBS = -Lsc/PLUGINS/lib `find sc/PLUGINS/lib/ -name "*.so" \
+           -exec basename {} \;|cut -d. -f1|sed -e 's/^lib//'|xargs -n 1 -i echo "-l{}"`
 else
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
+  SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
+	./sc/PLUGINS/lib/libvdr-sc.a
 endif
-BUILDTARGETS += $(FFDECSATEST) systems i18n
 
-all: $(BUILDTARGETS)
-.PHONY: i18n systems systems-pre contrib clean clean-core clean-systems clean-pre dist srcdist
+OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
+	plugin_showioctl.o plugin_legacysw.o plugin_dss.o plugin_cam.o \
+	plugin_ffdecsa.o plugin_scan.o version.o
 
-# Dependencies:
+OBJ_SC := misc.o dvbdevice.o osdbase.o menuitems.o device.o thread.o \
+	tools.o sasccam.o log.o vdrcompat.o libsi.a
+ifdef USE_DLOAD
+  OBJ_SC += dload.o
+endif
 
-MAKEDEP = g++ -MM -MG
-DEPFILE = .dependencies
-DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c)))
-$(DEPFILE): $(DEPFILES) $(wildcard *.h)
-	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(DEPFILES) > $@
+OBJS := $(foreach ob,$(OBJ) $(OBJ_SC), objs/$(ob)) FFdecsa/FFdecsa.o
+INCLUDES_SC := -I$(SCDIR) -I./sc/include
 
--include $(DEPFILE)
+INCLUDES_SI := -Isc/include/libsi
+OBJ_LIBSI := objs/si_descriptor.o objs/si_section.o objs/si_si.o objs/si_util.o
 
-# Rules
+INC_DEPS := $(shell ls $(LBDIR)/*.h) dvbloopback/module/dvbloopback.h
+INC_DEPS_LB := $(shell ls dvblb_plugins/*.h)
 
-%.o: %.c
-	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $<
+LIBS = -lpthread -lcrypto -lcrypt -lv4l1
 
-libvdr-$(PLUGIN).so: $(OBJS) $(FFDECSA)
-	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(FFDECSA) $(LIBS) $(SHAREDLIBS) -o $@
+all: $(TOOL) libscanwrap.so
 
-$(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION): libvdr-$(PLUGIN).so
-	@cp -p $< $@
+$(TOOL): $(OBJS) | sc-plugin
+	$(CXX) $(CFLAGS) -o $(TOOL) $(SCLIBS) $(OBJS) $(LIBS)
 
-$(LIBDIR)/libvdr-$(PLUGIN).a: $(OBJS)
-	$(AR) r $@ $(OBJS)
+libscanwrap.so: dvblb_plugins/scanwrap.c
+	$(CC) -fPIC -g -O2 -Wall -I. -nostdlib -shared -o $@ $< -ldl  -lc
 
-$(FFDECSA) $(FFDECSATEST): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
-	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all
+clean:
+	@git clean -xfd
+	@git reset --hard HEAD
 
-$(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
-	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --msgid-bugs-address='<noone@nowhere.org>' -o $@ `ls $^`
+link-sc-plugin:
+	@mkdir -p $(SCDIR)/systems-pre $(SCDIR)/po
 
-%.po: $(I18Npot)
-	msgmerge -U --no-wrap --no-location --backup=none -q $@ $<
-	@touch $@
+sc-plugin: link-sc-plugin
+	@if [ ! -d sc/PLUGINS/lib ]; then mkdir sc/PLUGINS/lib; fi
 
-%.mo: %.po
-	msgfmt -c -o $@ $<
+ifdef USE_DLOAD
+	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 all
+	$(MAKE) link-shared
+else
+	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 STATIC=1 all
+endif
 
-$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/$(I18Nmo): $(PODIR)/%.mo
-	@mkdir -p $(dir $@)
-	cp $< $@
+link-FFdecsa:
 
-i18n: $(I18Nmsgs)
+FFdecsa/FFdecsa.o: link-FFdecsa
+	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
 
-version.c: FORCE
-	@echo >$@.new "/* generated file, do not edit */"; \
-	 echo >>$@.new 'const char *ScVersion =' '"'$(VERSION)'";'; \
-	 diff $@.new $@ >$@.diff 2>&1; \
-	 if test -s $@.diff; then mv -f $@.new $@; fi; \
-	 rm -f $@.new $@.diff;
+module:
+	cd dvbloopback/module && $(MAKE) $(DVB_MOD_DIR)
+	@cp -f dvbloopback/module/dvbloopback.ko .
 
-systems:
-	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" all || exit 1; done
+link-shared:
+	@cd ./sc/PLUGINS/lib; \
+	for i in *.so.*; do \
+		link=`echo $$i|cut -d. -f-2`; \
+		if [ ! -e $$link ]; then \
+			ln -s $$i $$link; \
+		fi \
+	done
 
-systems-pre:
-	@for i in `ls -A -I ".*" $(PREDIR) | grep -- '-$(SCAPIVERS).so.$(APIVERSION)$$'`; do cp -p "$(PREDIR)/$$i" "$(LIBDIR)"; done
+strip-sc:
+	@cd ./sc/PLUGINS/lib; \
+	for i in *.so.*; do \
+		strip $$i; \
+	done
 
-contrib:
-	@$(MAKE) -C contrib all
+strip-sasc:
+	@strip sasc-ng
 
-clean-systems:
-	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" clean; done
+objs/libsi.a: $(OBJ_LIBSI)
+	ar ru $@ $(OBJ_LIBSI)
 
-clean-core:
-	@$(MAKE) -C testing clean
-	@$(MAKE) -C contrib clean
-	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
-	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
-	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
-	@-rm -f $(OBJS) $(DEPFILE) version.c *.so *.tar.gz core* *~
-	@-rm -f $(PODIR)/*.mo
+objs/%.o: $(LBDIR)/%.c $(INC_DEPS)
+	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-clean-pre:
-	@-find "$(PREDIR)" -type f -not -name ".empty" -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f
+objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB) | link-FFdecsa
+	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-clean: clean-core clean-systems
+objs/%.o: sc/%.cpp | link-sc-plugin
+	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) $(INCLUDES_SC) $(INCLUDES) $<
 
-dist: ARCHIVE := $(PLUGIN)-$(RELEASE)
-dist: clean-core
-	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" dist; done
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a * $(TMPDIR)/$(ARCHIVE)
-	@echo -n "release" >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
-	@path="$(TMPDIR)/$(ARCHIVE)/$(notdir $(SYSDIR))";\
-	 for i in `ls -A -I ".*" $$path`; do if [ -f "$$path/$$i/nonpublic.mk" ]; then rm -rf "$$path/$$i"; fi; if [ -f "$$path/$$i/nonpublic.sh" ]; then (cd $$path/$$i ; source ./nonpublic.sh ; rm ./nonpublic.sh); fi; done
-	@strip --strip-unneeded --preserve-dates $(TMPDIR)/$(ARCHIVE)/$(notdir $(PREDIR))/* || true
-	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Distribution package created as vdr-$(ARCHIVE).tar.gz
+objs/si_%.o: sc/libsi/%.c
+	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) $(INCLUDES_SI) $<
 
-copy: ARCHIVE := $(PLUGIN)-$(VERSION)
-copy: clean clean-pre
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a .hgtags .hgignore * $(TMPDIR)/$(ARCHIVE)
-	@echo -n $(SUBREL) | sed -e 's/HG-/CP-/' >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
-	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Full copy package created as vdr-$(ARCHIVE).tar.gz
+objs/version.o: objs/version.cpp
+	$(CXX) $(CXXFLAGS) -o $@ -c $(DEFINES) $<
+
+objs/version.cpp: FORCE
+	@echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Stable) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
 
 FORCE:
