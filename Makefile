@@ -72,6 +72,11 @@ clean:
 	@git clean -xfd
 	@git reset --hard HEAD
 
+update:
+	@git clean -xfd
+	@git reset --hard HEAD
+    @git pull
+
 link-sc-plugin:
 	@mkdir -p $(SCDIR)/systems-pre $(SCDIR)/po
 
