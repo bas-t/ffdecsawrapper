@@ -1,41 +1,25 @@
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
 #
-# Softcam plugin to VDR
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# This code is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This code is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-# Or, point your browser to http://www.gnu.org/copyleft/gpl.html
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see http://www.gnu.org/licenses/
+
 
 # The official name of this plugin.
-# This name will be used in the '-P...' option of VDR to load the plugin.
-# By default the main source file also carries this name.
 #
 PLUGIN = sc
 
 ### The version number of this plugin
 
-DISTFILE = .distvers
-HGARCHIVE = .hg_archival.txt
 RELEASE := $(shell grep 'define SC_RELEASE' version.h | awk '{ print $$3 }' | sed -e 's/[";]//g')
-SUBREL  := $(shell if test -d .hg; then \
-                     echo -n "HG-"; (hg identify 2>/dev/null || echo -n "Stable") | sed -e 's/ .*//'; \
-                   elif test -r $(HGARCHIVE); then \
-                     echo -n "AR-"; grep "^node" $(HGARCHIVE) | awk '{ printf "%.12s",$$2 }'; \
-                   elif test -r $(DISTFILE); then \
-                     cat $(DISTFILE); \
-                   else \
-                     echo -n "Stable"; \
-                   fi)
+SUBREL  := $(shell echo -n "Stable";)
 VERSION := $(RELEASE)-$(SUBREL)
 SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' version.h)
 
