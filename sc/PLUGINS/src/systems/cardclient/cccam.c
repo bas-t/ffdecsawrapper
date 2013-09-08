@@ -24,7 +24,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <vdr/pat.h>
+#include <ffdecsawrapper/pat.h>
 
 #include "cc.h"
 

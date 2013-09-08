@@ -1,11 +1,11 @@
-#include "include/vdr/plugin.h"
-#include "include/vdr/interface.h"
-#include "include/vdr/status.h"
-#include "include/vdr/skins.h"
-#include "include/vdr/channels.h"
-//#include "include/vdr/dvbci.h"
-#include "include/vdr/menu.h"
-#include "include/vdr/config.h"
+#include "include/ffdecsawrapper/plugin.h"
+#include "include/ffdecsawrapper/interface.h"
+#include "include/ffdecsawrapper/status.h"
+#include "include/ffdecsawrapper/skins.h"
+#include "include/ffdecsawrapper/channels.h"
+//#include "include/ffdecsawrapper/dvbci.h"
+#include "include/ffdecsawrapper/menu.h"
+#include "include/ffdecsawrapper/config.h"
 #include <ctype.h>
 
 cSetup Setup;

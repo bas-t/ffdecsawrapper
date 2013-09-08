@@ -23,7 +23,7 @@
 #include <crypt.h>
 #include <byteswap.h>
 
-#include <vdr/thread.h>
+#include <ffdecsawrapper/thread.h>
 
 #include "cc.h"
 #include "misc.h"

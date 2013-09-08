@@ -25,7 +25,7 @@
 
 #include <stdio.h>
 
-#include <vdr/pat.h>
+#include <ffdecsawrapper/pat.h>
 
 #include "cc.h" 
 #include "parse.h"

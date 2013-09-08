@@ -27,8 +27,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#include <vdr/thread.h>
-#include <vdr/tools.h>
+#include <ffdecsawrapper/thread.h>
+#include <ffdecsawrapper/tools.h>
 
 #include "network.h"
 #include "misc.h"

@@ -21,7 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <vdr/tools.h>
+#include <ffdecsawrapper/tools.h>
 
 #include <openssl/md5.h>
 

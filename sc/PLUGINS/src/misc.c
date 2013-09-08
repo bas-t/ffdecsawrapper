@@ -22,8 +22,8 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include <vdr/tools.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/tools.h>
+#include <ffdecsawrapper/thread.h>
 
 #include "misc.h"
 

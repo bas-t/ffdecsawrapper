@@ -21,7 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <vdr/sources.h>
+#include <ffdecsawrapper/sources.h>
 
 #include "override.h"
 #include "sc.h"

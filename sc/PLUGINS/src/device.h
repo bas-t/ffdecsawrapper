@@ -21,8 +21,8 @@
 #define ___DEVICE_H
 
 #include <linux/dvb/ca.h>
-#include <vdr/dvbdevice.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/dvbdevice.h>
+#include <ffdecsawrapper/thread.h>
 #include "misc.h"
 
 typedef int caid_t;

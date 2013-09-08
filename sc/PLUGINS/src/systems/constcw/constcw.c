@@ -21,8 +21,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <vdr/channels.h>
-#include <vdr/sources.h>
+#include <ffdecsawrapper/channels.h>
+#include <ffdecsawrapper/sources.h>
 
 #include "system.h"
 #include "system-common.h"

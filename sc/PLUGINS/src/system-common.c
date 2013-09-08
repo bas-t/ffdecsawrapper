@@ -22,7 +22,7 @@
 #include <malloc.h>
 #include <ctype.h>
 
-#include <vdr/tools.h>
+#include <ffdecsawrapper/tools.h>
 
 #include "system-common.h"
 #include "smartcard.h"

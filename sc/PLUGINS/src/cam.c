@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <vdr/channels.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/channels.h>
+#include <ffdecsawrapper/thread.h>
 
 #include "cam.h"
 #include "device.h"

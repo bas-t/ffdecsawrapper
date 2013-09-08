@@ -7,12 +7,12 @@
  * $Id: menuitems.c 1.19 2004/06/19 09:45:45 kls Exp $
  */
 
-#include "include/vdr/menuitems.h"
+#include "include/ffdecsawrapper/menuitems.h"
 #include <ctype.h>
-#include "include/vdr/plugin.h"
-#include "include/vdr/remote.h"
-#include "include/vdr/skins.h"
-#include "include/vdr/status.h"
+#include "include/ffdecsawrapper/plugin.h"
+#include "include/ffdecsawrapper/remote.h"
+#include "include/ffdecsawrapper/skins.h"
+#include "include/ffdecsawrapper/status.h"
 
 const char *FileNameChars = " abcdefghijklmnopqrstuvwxyz0123456789-.#~";
 

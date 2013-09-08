@@ -20,7 +20,7 @@
 #ifndef ___SYSTEM_CC_H
 #define ___SYSTEM_CC_H
 
-#include <vdr/thread.h>
+#include <ffdecsawrapper/thread.h>
 #include "system.h"
 #include "network.h"
 #include "misc.h"

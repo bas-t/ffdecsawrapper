@@ -411,7 +411,7 @@ void cOpts::Create(cOsdMenu *menu)
 //
 //
 
-#include <vdr/sources.h>
+#include <ffdecsawrapper/sources.h>
 
 cString cSource::ToString(int Code)
 {
@@ -474,7 +474,7 @@ int cSource::FromString(const char *s)
 //
 //
 
-#include <vdr/channels.h>
+#include <ffdecsawrapper/channels.h>
 
 int cChannel::Transponder(int Frequency, char Polarization)
 {

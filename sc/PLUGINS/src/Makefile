@@ -25,7 +25,7 @@ SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1
 
 ### The directory environment:
 
-VDRDIR = ../..
+BASEDIR = ../..
 LIBDIR = ../lib
 SYSDIR = ./systems
 PREDIR = ./systems-pre
@@ -38,7 +38,7 @@ CXXFLAGS ?= -O2 -g -fPIC -Wall -Woverloaded-virtual
 
 ### Includes and Defines
 
-INCLUDES      = -I$(VDRDIR)/include
+INCLUDES      = -I$(BASEDIR)/include
 DEFINES       = -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 SHAREDDEFINES = -DAPIVERSNUM=$(APIVERSNUM) -D_GNU_SOURCE
 LIBS          = -lcrypto
@@ -46,18 +46,18 @@ SHAREDLIBS    =
 
 ### Allow user defined options to overwrite defaults:
 
--include $(VDRDIR)/Make.config
+-include $(BASEDIR)/Make.config
 -include Make.config
 
-### The version number of VDR (taken from VDR's "config.h"):
+### The version number of FFdecsawrapper (taken from FFdecsawrapper's "config.h"):
 
-VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSION := $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
+APIVERSION := $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 ifeq ($(strip $(APIVERSION)),)
    APIVERSION = $(VDRVERSION)
 endif
-VDRVERSNUM := $(shell sed -ne '/define VDRVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSNUM := $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+VDRVERSNUM := $(shell sed -ne '/define VDRVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
+APIVERSNUM := $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 ifeq ($(strip $(APIVERSNUM)),)
    APIVERSNUM = $(VDRVERSNUM)
 endif
@@ -74,14 +74,14 @@ PODIR     = po
 I18Npot   = $(PODIR)/$(PLUGIN).pot
 I18Nmo    = vdr-$(PLUGIN).mo
 I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/$(I18Nmo),$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
-LOCALEDIR = $(VDRDIR)/locale
+LOCALEDIR = $(BASEDIR)/locale
 
 ### VDR version dependant
 
 # test VDR version
 BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
 # test if PlayTsVideo() exists (e.g. TSplay patch)
-BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(VDRDIR)/include/vdr/device.h))
+BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(BASEDIR)/include/ffdecsawrapper/device.h))
 
 ifneq ($(BYVERS)$(BYTSPL),)
   SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
@@ -102,7 +102,7 @@ ifdef WITH_PCSC
 endif
 
 # max number of CAIDs per slot
-MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(VDRDIR)/ci.c)
+MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(BASEDIR)/ci.c)
 ifneq ($(strip $(MAXCAID)),)
   DEFINES += -DVDR_MAXCAID=$(MAXCAID)
 endif

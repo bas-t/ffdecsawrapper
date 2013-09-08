@@ -23,8 +23,8 @@
 #include <time.h>
 #include <sys/time.h>
 
-#include <vdr/tools.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/tools.h>
+#include <ffdecsawrapper/thread.h>
 
 #include "log.h"
 #include "misc.h"

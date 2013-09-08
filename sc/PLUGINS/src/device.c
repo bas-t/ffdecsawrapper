@@ -25,12 +25,12 @@
 #include <dlfcn.h>
 
 #include <linux/dvb/ca.h>
-#include <vdr/channels.h>
-#include <vdr/ci.h>
-#include <vdr/dvbdevice.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/channels.h>
+#include <ffdecsawrapper/ci.h>
+#include <ffdecsawrapper/dvbdevice.h>
+#include <ffdecsawrapper/thread.h>
 #ifndef SASC
-#include <vdr/dvbci.h>
+#include <ffdecsawrapper/dvbci.h>
 
 #include "FFdecsa/FFdecsa.h"
 #endif //SASC

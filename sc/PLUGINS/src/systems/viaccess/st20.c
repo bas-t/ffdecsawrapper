@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <vdr/tools.h>
+#include <ffdecsawrapper/tools.h>
 
 #include "log-viaccess.h"
 #include "st20.h"

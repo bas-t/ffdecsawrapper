@@ -20,6 +20,6 @@
 #ifndef ___I18N_H
 #define ___I18N_H
 
-#include <vdr/i18n.h>
+#include <ffdecsawrapper/i18n.h>
 
 #endif //___I18N_H

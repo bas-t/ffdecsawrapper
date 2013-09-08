@@ -21,8 +21,8 @@
 #define __VIACCESS_TPS_H
 
 #include <time.h>
-#include <vdr/tools.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/tools.h>
+#include <ffdecsawrapper/thread.h>
 #include "data.h"
 #include "crypto.h"
 

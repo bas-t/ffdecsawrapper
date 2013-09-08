@@ -7,7 +7,7 @@
  * $Id: tools.c 1.97 2005/08/27 14:43:55 kls Exp $
  */
 
-#include "include/vdr/tools.h"
+#include "include/ffdecsawrapper/tools.h"
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -17,8 +17,8 @@
 #include <sys/vfs.h>
 #include <time.h>
 #include <unistd.h>
-#include "include/vdr/i18n.h"
-#include "include/vdr/thread.h"
+#include "include/ffdecsawrapper/i18n.h"
+#include "include/ffdecsawrapper/thread.h"
 
 int SysLogLevel = 3;
 

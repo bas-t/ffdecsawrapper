@@ -28,8 +28,8 @@
 #include <linux/serial.h>
 #include <ctype.h>
 
-#include <vdr/tools.h>
-#include <vdr/thread.h>
+#include <ffdecsawrapper/tools.h>
+#include <ffdecsawrapper/thread.h>
 
 #include "smartcard.h"
 #include "sc.h"

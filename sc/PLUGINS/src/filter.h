@@ -20,7 +20,7 @@
 #ifndef ___FILTER_H
 #define ___FILTER_H
 
-#include <vdr/thread.h>
+#include <ffdecsawrapper/thread.h>
 #include "misc.h"
 
 class cPidFilter;

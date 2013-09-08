@@ -27,7 +27,7 @@
 
 #include <linux/dvb/dmx.h>
 
-#include <vdr/tools.h>
+#include <ffdecsawrapper/tools.h>
 
 #include "filter.h"
 #include "sc.h"

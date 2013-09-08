@@ -1,7 +1,7 @@
 
 ### The directory environment:
 
-VDRDIR = ../../../..
+BASEDIR = ../../..
 
 ### The C++ compiler and options:
 
@@ -10,25 +10,25 @@ CXXFLAGS ?= -g -march=pentium3 -O2 -Wall -Woverloaded-virtual
 
 ### Includes and Defines
 
-INCLUDES = -I.. -I$(VDRDIR)/include
+INCLUDES = -I.. -I$(BASEDIR)/include
 DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOURCE
 
 ### Allow user defined options to overwrite defaults:
 
--include $(VDRDIR)/Make.config
+-include $(BASEDIR)/Make.config
 -include ../Make.config
 
 ### The version number of VDR (taken from VDR's "config.h"):
 
-APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
-APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(VDRDIR)/include/vdr/config.h)
+APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
+APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 
 ### VDR version dependant
 
 # test VDR version
 BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
 # test if PlayTsVideo() exists (e.g. TSplay patch)
-BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(VDRDIR)/include/vdr/device.h))
+BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(BASEDIR)/include/ffdecsawrapper/device.h))
 
 ifneq ($(BYVERS)$(BYTSPL),)
   DEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
@@ -37,16 +37,16 @@ endif
 ### The object files (add further files here):
 
 OBJS = misc.o log.o override.o data.o crypto.o parse.o system.o system-common.o smartcard.o network.o filter.o version.o
-SHAREDOBJS = compat.o $(VDRDIR)/tools.o $(VDRDIR)/thread.o
+SHAREDOBJS = compat.o $(BASEDIR)/tools.o $(BASEDIR)/thread.o
 LIBS = -lpthread -lrt -ljpeg -lcrypto
-DYNLIBS = -ldl $(VDRDIR)/libsi/libsi.a
+DYNLIBS = -ldl $(BASEDIR)/libsi/libsi.a
 
 NOBJS  = $(patsubst %.o,../%.o,$(OBJS))
 
 ### Implicit rules:
 
-$(VDRDIR)/%.o: $(VDRDIR)/%.c
-	make -C $(VDRDIR) $(@F)
+$(BASEDIR)/%.o: $(BASEDIR)/%.c
+	make -C $(BASEDIR) $(@F)
 
 ../%.o: ../%.c
 	make -C .. $(@F)

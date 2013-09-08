@@ -7,12 +7,12 @@
  * $Id: device.c 1.56 2004/06/19 08:51:05 kls Exp $
  */
 
-#include "include/vdr/device.h"
+#include "include/ffdecsawrapper/device.h"
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include "include/vdr/channels.h"
-#include "include/vdr/i18n.h"
+#include "include/ffdecsawrapper/channels.h"
+#include "include/ffdecsawrapper/i18n.h"
 
 // --- cDevice ---------------------------------------------------------------
 

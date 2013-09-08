@@ -20,8 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <vdr/thread.h>
-#include <vdr/tools.h>
+#include <ffdecsawrapper/thread.h>
+#include <ffdecsawrapper/tools.h>
 
 #include "system.h"
 #include "cc.h"

@@ -20,7 +20,7 @@
 #ifndef ___CAM_H
 #define ___CAM_H
 
-#include <vdr/thread.h>
+#include <ffdecsawrapper/thread.h>
 #include "data.h"
 #include "misc.h"
 

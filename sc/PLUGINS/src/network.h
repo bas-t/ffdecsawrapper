@@ -20,8 +20,8 @@
 #ifndef ___NETWORK_H
 #define ___NETWORK_H
 
-#include <vdr/thread.h>
-#include <vdr/tools.h>
+#include <ffdecsawrapper/thread.h>
+#include <ffdecsawrapper/tools.h>
 #include "misc.h"
 
 // ----------------------------------------------------------------

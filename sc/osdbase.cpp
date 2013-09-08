@@ -7,12 +7,12 @@
  * $Id: osdbase.c 1.14 2004/07/17 13:29:13 kls Exp $
  */
 
-#include "include/vdr/osdbase.h"
+#include "include/ffdecsawrapper/osdbase.h"
 #include <string.h>
-#include "include/vdr/device.h"
-#include "include/vdr/i18n.h"
-#include "include/vdr/remote.h"
-#include "include/vdr/status.h"
+#include "include/ffdecsawrapper/device.h"
+#include "include/ffdecsawrapper/i18n.h"
+#include "include/ffdecsawrapper/remote.h"
+#include "include/ffdecsawrapper/status.h"
 
 // --- cOsdItem --------------------------------------------------------------
 

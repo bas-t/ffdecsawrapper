@@ -20,7 +20,7 @@
 #ifndef ___SMARTCARD_H
 #define ___SMARTCARD_H
 
-#include <vdr/thread.h>
+#include <ffdecsawrapper/thread.h>
 #include "data.h"
 #include "misc.h"
 

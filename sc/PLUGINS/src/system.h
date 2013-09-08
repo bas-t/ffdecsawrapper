@@ -20,7 +20,7 @@
 #ifndef ___SYSTEM_H
 #define ___SYSTEM_H
 
-#include <vdr/tools.h>
+#include <ffdecsawrapper/tools.h>
 
 #include "data.h"
 #include "misc.h"

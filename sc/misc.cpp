@@ -1,5 +1,5 @@
-#include "include/vdr/channels.h"
-#include "include/vdr/device.h"
+#include "include/ffdecsawrapper/channels.h"
+#include "include/ffdecsawrapper/device.h"
 #include <ctype.h>
 #include <linux/dvb/ca.h>
 int cChannel::Transponder() const

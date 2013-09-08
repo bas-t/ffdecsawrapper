@@ -28,15 +28,15 @@
 #include <fnmatch.h>
 #endif
 
-#include <vdr/plugin.h>
-#include <vdr/menuitems.h>
-#include <vdr/status.h>
-#include <vdr/dvbdevice.h>
-#include <vdr/channels.h>
-#include <vdr/interface.h>
-#include <vdr/menu.h>
-#include <vdr/tools.h>
-#include <vdr/config.h>
+#include <ffdecsawrapper/plugin.h>
+#include <ffdecsawrapper/menuitems.h>
+#include <ffdecsawrapper/status.h>
+#include <ffdecsawrapper/dvbdevice.h>
+#include <ffdecsawrapper/channels.h>
+#include <ffdecsawrapper/interface.h>
+#include <ffdecsawrapper/menu.h>
+#include <ffdecsawrapper/tools.h>
+#include <ffdecsawrapper/config.h>
 
 #include "sc.h"
 #include "scsetup.h"

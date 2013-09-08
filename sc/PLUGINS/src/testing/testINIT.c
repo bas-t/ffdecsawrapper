@@ -6,7 +6,7 @@
 #include "system.h"
 #include "log.h"
 #include "compat.h"
-#include <vdr/sources.h>
+#include <ffdecsawrapper/sources.h>
 
 #include <libsi/section.h>
 SI::TOT __dummy;
