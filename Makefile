@@ -1,6 +1,5 @@
 VERSION = 1.1.0
 TOOL = ffdecsawrapper
-SCVER = src
 
 $(shell touch config.mak)
 include config.mak
@@ -20,7 +19,7 @@ endif
 DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
-SCDIR = sc/PLUGINS/$(SCVER)
+SCDIR = sc/PLUGINS/src
 SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual
 
 ifdef AUXSERVER_OPTS
@@ -136,6 +135,6 @@ objs/version.o: objs/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $(DEFINES) $<
 
 objs/version.cpp: FORCE
-	@echo 'const char *source_version =' '"'`(hg identify 2>/dev/null || echo -n Stable) | sed -e 's/ .*//'`'";' > .vers.new ; diff .vers.new $@ > .vers.diff 2>&1 ; if test -s .vers.diff ; then mv -f .vers.new $@ ; fi ; rm -f .vers.new .vers.diff
+	@echo 'const char *source_version = "Stable";' > objs/version.cpp
 
 FORCE:
