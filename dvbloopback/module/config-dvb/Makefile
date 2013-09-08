@@ -1,8 +1,8 @@
-#DVB_DIR = $(HOME)/hg/v4l-dvb/
 
 obj-m = chkdvb.o
 
-EXTRA_CFLAGS ?= -Idrivers/media/dvb/dvb-core/ -I$(PWD)
+EXTRA_CFLAGS ?= -Idrivers/media/dvb/dvb-core/ -I$(PWD) \
+                -Idrivers/media/dvb-core/
 
 BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
 

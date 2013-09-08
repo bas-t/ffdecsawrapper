@@ -15,7 +15,6 @@ sub test_dvb_adapter(\@) {
   $cmd = "cd config-dvb && make $vars" . ($debug ? "" : "2>/dev/null 1>/dev/null");
   print "$cmd\n" if($debug);
 
-  system("ln -sf chkdvb-2.6.v4l.c config-dvb/chkdvb.c");
     if(system("$cmd") == 0) {
     `echo "DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);" >> dvbdevwrap.h`; 
     `echo "#define wrap_dvb_reg_adapter(a, b, c) dvb_register_adapter(a, b, c, &dvblb_basedev->dev, adapter_nr)" >> dvbdevwrap.h`; 
