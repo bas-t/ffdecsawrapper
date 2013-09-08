@@ -1,8 +1,9 @@
-FFdecsa Revision History
+FFdecsawrapper Revision History
 --------------------------------
 2013
-- Forked development branch.
-- Changed name of sasc-ng to ffdecsawrapper
+- Forked development branch from mercurial repo at http://85.17.209.13:6100/sc
+- Checked out revision 570 and worked on top of that revision
+- Changed name of sasc-ng to FFdecsawrapper
 - Full hystory is at https://github.com/bas-t/ffdecsawrapper/commits/stable
 
 ..2009: Version 1.0.0
