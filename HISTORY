@@ -1,10 +1,18 @@
-FFdecsawrapper Revision History
---------------------------------
-2013
+FFdecsawrapper (former VDR sc plugin) Revision History
+---------------------------------------------------------
+
+2013: Version 1.1.0
+
 - Forked development branch from mercurial repo at http://85.17.209.13:6100/sc
 - Checked out revision 570 and worked on top of that revision
-- Changed name of sasc-ng to FFdecsawrapper
-- Full hystory is at https://github.com/bas-t/ffdecsawrapper/commits/stable
+- Dropped support for older kernels (2.x)
+- Make it compatible with newer kernels (3.10 and up)
+- Changed name from sasc-ng to FFdecsawrapper
+- Removed as much as possible the VDR specific code,
+  FFdecsawrapper is meant to be a standalone program, not a VDR plugin.
+- Full history is at https://github.com/bas-t/ffdecsawrapper/commits/stable
+
+-----------------------------------------------------------
 
 ..2009: Version 1.0.0
 - Forked development branch.
