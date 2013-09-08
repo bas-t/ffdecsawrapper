@@ -57,7 +57,7 @@ check_cpu(){
 
 #try to figure out best FFdecsa compiler options
 get_cpu_optimization(){
-  FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
+  FLAGS="FLAGS=-O2 -fexpensive-optimizations -funroll-loops"
   arch=`uname -m`
   processors_flags=`cat /proc/cpuinfo | grep "flags" | head -n 1`
   vendor=`cat /proc/cpuinfo |grep "vendor_id" | head -n 1 | sed -e "s/.*:\W*//"`
@@ -418,16 +418,19 @@ Trying various FFdecsa optimizations...
   for var in ${FFDECSA_MODES}; do
     make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
     if test $? -ne 0 ; then
-      echo "    ${var}: build failed"
+      echo "
+    ${var}: build failed"
     else
       rm -f ${TMPOUT}
       sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
       if test $? -ne 0; then
-        echo "    ${var}: test failed"
+        echo "
+    ${var}: test failed"
       else
         grep FAILED "${TMPOUT}" >/dev/null 2>&1
         if test $? -ne 1; then
-          echo "    ${var}: test failed"
+          echo "
+    ${var}: test failed"
         else
           res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
           echo "
