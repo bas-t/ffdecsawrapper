@@ -102,7 +102,7 @@ show_help(){
   echo
   echo "Standard options:"
   echo "  --help                   print this message"
-  echo "  --compiletype=<type>     [debug] specify compile type of release or debug,"
+  echo "  --compiletype=<type>     [release] specify compile type of release or debug,"
   echo "  --shared                 compile sc shared libs instead of static"
   echo "  --dvb_dir=<path>         use <path> for DVB headers, obsolete for normal use."
   echo "                           you have to use it if you compiled new v4l drivers,"
@@ -125,7 +125,7 @@ show_help(){
 
 MAX_MODE=PARALLEL_32_INT
 ffdecsa_opt="yes"
-compiletype_opt="debug"
+compiletype_opt="release"
 
 for opt do
   optval="${opt#*=}"
