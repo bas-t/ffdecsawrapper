@@ -57,7 +57,7 @@ check_cpu(){
 
 #try to figure out best FFdecsa compiler options
 get_cpu_optimization(){
-  FLAGS="FLAGS=-O2 -fexpensive-optimizations -funroll-loops"
+  FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
   arch=`uname -m`
   processors_flags=`cat /proc/cpuinfo | grep "flags" | head -n 1`
   vendor=`cat /proc/cpuinfo |grep "vendor_id" | head -n 1 | sed -e "s/.*:\W*//"`
