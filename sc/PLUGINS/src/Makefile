@@ -102,7 +102,7 @@ ifdef WITH_PCSC
 endif
 
 # max number of CAIDs per slot
-MAXCAID := $(shell sed -ne '/define MAXCASYSTEMIDS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' $(BASEDIR)/ci.c)
+MAXCAID = 64
 ifneq ($(strip $(MAXCAID)),)
   DEFINES += -DVDR_MAXCAID=$(MAXCAID)
 endif
