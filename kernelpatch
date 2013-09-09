@@ -63,7 +63,7 @@ fi
 
 echo "\nffdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\n\n"
 
-confirmyes "Do you want me to patch a running Debian kernel and install missing dependencies?[Y/n]"
+confirmyes "Do you want me to patch your running Debian kernel?[Y/n]"
 
 if [ $(echo $?) -eq 0 ]; then
 
@@ -83,8 +83,7 @@ This will remove any previously installed
 linux-source packages and (re)install
 the source for your current kernel.
 
-Having done that, missing build dependencies
-will be installed and your running Debian kernel
+Having done that, your running Debian kernel
 will be patched for use with ffdecsawrapper.
 
 Don't forget to reboot to load new module once you are
@@ -113,10 +112,9 @@ Building and installing, please be patient...
 "
         patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
         make -C $BUILD_DIR M=$TEMPDIR modules
-        rm -f /lib/modules/`uname -r`/updates/dvb-core.ko > /dev/null 2>&1
-        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/
-        cp -f $TEMPDIR/dvbdev.h dvbloopback/module/dvbdev-orig.h
+        rm -f /lib/modules/`uname -r`/updates/dvb/dvb-core/dvb-core.ko > /dev/null 2>&1
+        mkdir -p /lib/modules/`uname -r`/updates/dvb/dvb-core > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb/dvb-core
         rm -rf $TEMPDIR
         depmod -a
       else
@@ -130,10 +128,9 @@ Building and installing, please be patient...
 "
         patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
         make -C $BUILD_DIR M=$TEMPDIR modules
-        rm -f /lib/modules/`uname -r`/updates/dvb-core.ko > /dev/null 2>&1
-        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/
-        cp -f $TEMPDIR/dvbdev.h dvbloopback/module/dvbdev-orig.h
+        rm -f /lib/modules/`uname -r`/updates/dvb-core/dvb-core.ko > /dev/null 2>&1
+        mkdir -p /lib/modules/`uname -r`/updates/dvb-core > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb-core
         rm -rf $TEMPDIR
         depmod -a
       fi
