@@ -103,7 +103,6 @@ show_help(){
   echo "Standard options:"
   echo "  --help                   print this message"
   echo "  --compiletype=<type>     [release] specify compile type of release or debug,"
-  echo "  --shared                 compile sc shared libs instead of static"
   echo "  --dvb_dir=<path>         use <path> for DVB headers, obsolete for normal use."
   echo "                           you have to use it if you compiled new v4l drivers,"
   echo "                           like --dvb_dir=/usr/src/media_build/linux"
@@ -145,8 +144,6 @@ for opt do
   --auxserver=*) auxserver_opt="$optval"
   ;;
   --compiletype=*) compiletype_opt="$optval"
-  ;;
-  --shared) shared_opt="1"
   ;;
   --help) show_help
   ;;
@@ -377,12 +374,6 @@ if test "x$auxserver_opt" != "x"; then
     IFS=: read host port pass
     echo "AUXSERVER_OPTS=-DAUXSERVER_HOST=\\\"$host\\\" -DAUXSERVER_PORT=\\\"$port\\\" -DAUXSERVER_PASSWD=\\\"$pass\\\" -DUSE_AUXSERVER" >> config.mak
   }
-fi
-
-if test "x$shared_opt" = "x1"; then
-  echo "
-Compiling sc for shared libraries"
-  echo "USE_DLOAD=1" >> config.mak
 fi
 
 TMPDIR="${TMPDIR}/ffdecsawrapper.${RANDOM}"
