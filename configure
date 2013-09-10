@@ -292,7 +292,7 @@ fi
 if test "x$dvb_path" = "x"; then
   if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
     if uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
-#      ./kernelpatch-ubuntu
+      ./kernelpatch-ubuntu
     fi
   fi
   if [ $(echo $?) -eq 1 ]; then
