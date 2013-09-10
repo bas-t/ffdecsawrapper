@@ -164,7 +164,11 @@ Building and installing, please be patient...
           sudo rm -rf $TEMPDIR
           sudo depmod -a
         else
-          sudo tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          fi
           echo "
 Building and installing, please be patient...
 "
