@@ -53,6 +53,49 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
+# Install build dependencies for FFdecsawrapper
+
+if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
+
+  if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
+    echo "
+Missing dependency libv4l-dev, marking for installation.
+"
+    sudo apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+  fi
+
+  if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
+    echo "
+Missing dependency libproc-processtable-perl, marking for installation.
+"
+    sudo apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+  fi
+
+  if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
+    echo "
+Missing dependency libssl-dev, marking for installation.
+"
+    sudo apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+  fi
+
+  if ! dpkg-query -l build-essential > /dev/null 2>&1; then
+    echo "
+Missing dependency build-essential, marking for installation.
+"
+    sudo apt-get install build-essential -y || die "Error installing dependency build-essential"
+  fi
+
+  if uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
+    if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
+      echo "
+Missing dependency linux-headers-`uname -r`, marking for installation.
+"
+      sudo apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+    fi
+  fi
+
+
+
 # When using ffdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
@@ -61,13 +104,13 @@ fi
   BUILD_DIR=/lib/modules/`uname -r`/build
   TEMPDIR=/usr/src/$SHORT_KERNEL
 
-echo "\nFFdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a !!!UNMODIFIED!!! Ubuntu kernel, I can do that for you, if your sources.list is ok and the source for your kernel is available in the repo's.\nThis will also install any missing build dependensies.\n\n"
+  echo "\nFFdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a !!!UNMODIFIED!!! Ubuntu kernel, I can do that for you, if your sources.list is ok and the source for your kernel is available in the repo's.\nThis will also install any missing build dependencies.\n\n"
 
-confirmyes "Do you want me to patch your running Ubuntu kernel?[Y/n]"
+  confirmyes "Do you want me to patch your running Ubuntu kernel?[Y/n]"
 
-if [ $(echo $?) -eq 0 ]; then
+  if [ $(echo $?) -eq 0 ]; then
 
-  echo "
+    echo "
 
    WARNING!!!
 
@@ -92,45 +135,48 @@ done patching the kernel and compiling FFdecsawrapper.
 
   confirmyes "Proceed?[Y/n]"
 
+# Install build dependencies for patching the kernel
 
+    if [ $(echo $?) -eq 0 ]; then
+      sudo apt-get purge linux-source* -y && sudo apt-get build-dep linux --no-install-recommends -y
+      sudo apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
 
-  if [ $(echo $?) -eq 0 ]; then
-    sudo apt-get purge linux-source* -y && sudo apt-get build-dep linux --no-install-recommends -y
-    sudo apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
-    echo "
+# Compile the patched dvb-core.ko module and install it
+
+      echo "
 Building patched dvb-core module for kernel `uname -r`
 
 Preparing, this may take a while...
 "
-    sudo rm -rf $TEMPDIR
-    sudo mkdir -p $TEMPDIR
-    if  [ $FIRST_DIGIT -eq 3 ]; then
-      if [ $SECOND_DIGIT -lt 7 ]; then
-        sudo tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        echo "
+      sudo rm -rf $TEMPDIR
+      sudo mkdir -p $TEMPDIR
+      if  [ $FIRST_DIGIT -eq 3 ]; then
+        if [ $SECOND_DIGIT -lt 7 ]; then
+          sudo tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          echo "
 Building and installing, please be patient...
 "
-        sudo patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
-        sudo make -C $BUILD_DIR M=$TEMPDIR modules
-        sudo rm -f /lib/modules/`uname -r`/updates/dvb/dvb-core/dvb-core.ko > /dev/null 2>&1
-        sudo mkdir -p /lib/modules/`uname -r`/updates/dvb/dvb-core > /dev/null 2>&1
-        sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb/dvb-core
-        sudo rm -rf $TEMPDIR
-        sudo depmod -a
-      else
-        sudo tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        echo "
+          sudo patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
+          sudo make -C $BUILD_DIR M=$TEMPDIR modules
+          sudo rm -f /lib/modules/`uname -r`/updates/dvb/dvb-core/dvb-core.ko > /dev/null 2>&1
+          sudo mkdir -p /lib/modules/`uname -r`/updates/dvb/dvb-core > /dev/null 2>&1
+          sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb/dvb-core
+          sudo rm -rf $TEMPDIR
+          sudo depmod -a
+        else
+          sudo tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          echo "
 Building and installing, please be patient...
 "
-        sudo patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
-        sudo make -C $BUILD_DIR M=$TEMPDIR modules
-        sudo rm -f /lib/modules/`uname -r`/updates/dvb-core/dvb-core.ko > /dev/null 2>&1
-        sudo mkdir -p /lib/modules/`uname -r`/updates/dvb-core > /dev/null 2>&1
-        sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb-core
-        sudo rm -rf $TEMPDIR
-        sudo depmod -a
+          sudo patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
+          sudo make -C $BUILD_DIR M=$TEMPDIR modules
+          sudo rm -f /lib/modules/`uname -r`/updates/dvb-core/dvb-core.ko > /dev/null 2>&1
+          sudo mkdir -p /lib/modules/`uname -r`/updates/dvb-core > /dev/null 2>&1
+          sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb-core
+          sudo rm -rf $TEMPDIR
+          sudo depmod -a
+        fi
       fi
     fi
   fi
 fi
-
