@@ -56,12 +56,10 @@ fi
 # When using ffdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
-  KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.bz2"
-  NEW_KERNEL_TARBALL="/usr/src/linux-source-$SHORT_KERNEL.tar.xz"
   BUILD_DIR=/lib/modules/`uname -r`/build
   TEMPDIR=/usr/src/$SHORT_KERNEL
 
-echo "\nffdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a default Debian kernel (including those frome 'backports'), I can do that for you. This also works when you are running Stable with a kernel from Sid, if you have sid in your sources.list and the source for your kernel is available in the repo's.\n\n"
+echo "\nFFdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a !!!UNMODIFIED!!! Debian kernel (including those frome 'backports' or other branches, like 'sid'), I can do that for you, if your sources.list is ok and the source for your kernel is available in the repo's.\n\n"
 
 confirmyes "Do you want me to patch your running Debian kernel?[Y/n]"
 
@@ -118,10 +116,10 @@ Building and installing, please be patient...
         rm -rf $TEMPDIR
         depmod -a
       else
-        if  [ $SECOND_DIGIT -gt 9 ]; then
-          tar -xJf $NEW_KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        else
-          tar -xjf $KERNEL_TARBALL -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
         fi
         echo "
 Building and installing, please be patient...

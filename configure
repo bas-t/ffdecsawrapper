@@ -262,7 +262,7 @@ fi
 if test "x$dvb_path" = "x"; then
   if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
     if uname -a | grep 'Debian' > /dev/null  2>&1; then
-      ./kernelpatch
+      ./kernelpatch-debian
     fi
   fi
   if [ $(echo $?) -eq 1 ]; then
