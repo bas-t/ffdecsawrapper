@@ -152,9 +152,9 @@ Preparing, this may take a while...
       if  [ $FIRST_DIGIT -eq 3 ]; then
         if [ $SECOND_DIGIT -lt 7 ]; then
           if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
           elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
           fi
           echo "
 Building and installing, please be patient...
