@@ -10,11 +10,13 @@ http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 
 If you are running Debian with a Debian kernel, you don't need to recompile your kernel anymore, the running kernel will be properly patched. That is, if your sources.list is ok and the source for your Debian kernel is available from the repo's.
 
+As of now, sep 10 2013, Ubuntu users, like Debian users, don't need to recompile their Ubuntu kernels anymore. It will be done during configuration of FFdecsawrapper. Any missing build-deps for FFdecsawrapper and/or patching the kernel will also be 'automagically' installed.
+
 USAGE:
 git clone https://github.com/bas-t/ffdecsawrapper.git
 cd ffdecsawrapper
 ./configure <opts>
-make && make module
+
 
 If you know what FFDECSA optimisation is best for you, you can set it like:
 
