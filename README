@@ -1,16 +1,16 @@
-Due to 'Hollywood' legislation, the use of this software is illegal in most countrys! (but not in my country, hehe)
+Due to 'Hollywood' legislation, the use of this software is illegal in most countrys. (but not in my country, hehe)
 
-The purpose of this git repo is to make FFDECSA (via ffdecsawrapper's loopback interface) available for use with MythTV and such.
+The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.
 
 You can use it with kernel version 3.x and up, including more recent kernels (latest ok test: 3.11-rc7)
 
-dvbdev.h is included for all cases, so you must not set --dvb_dir=/path/to/your/kernel/sources anymore. This setting is now reserved for use in case that you have to compile and install newest dvb drivers from v4l (or TBS and other out of kernel drivers). Mind you, if you do, you should apply proper dvb-mutex patch to your sources prior to compiling. If you are not sure on how to do this, you can find basic instructions here:
+dvbdev.h is included for all kernels, so you must not set --dvb_dir=/path/to/your/kernel/sources anymore. This setting is now reserved for use in the special case that you have to compile and install newest dvb drivers from v4l (or TBS and other out of kernel drivers). Mind you, if you do, you should apply proper dvb-mutex patch to your sources prior to compiling. If you are not sure on how to do this, you can find basic instructions here:
 
 http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 
 If you are running Debian with a Debian kernel, you don't need to recompile your kernel anymore, the running kernel will be properly patched. That is, if your sources.list is ok and the source for your Debian kernel is available from the repo's.
 
-As of now, sep 10 2013, Ubuntu users, like Debian users, don't need to recompile their Ubuntu kernels anymore. It will be done during configuration of FFdecsawrapper. Any missing build-deps for FFdecsawrapper and/or patching the kernel will also be 'automagically' installed.
+As of now, sep 10 2013, Ubuntu users, like Debian users, don't need to recompile their kernels anymore. It will be done during configuration of FFdecsawrapper. Any missing build-deps for FFdecsawrapper and/or patching the kernel will also be 'automagically' installed.
 
 USAGE:
 git clone https://github.com/bas-t/ffdecsawrapper.git
@@ -18,11 +18,11 @@ cd ffdecsawrapper
 ./configure <opts>
 
 
-If you know what FFDECSA optimisation is best for you, you can set it like:
+If you know what FFdecsa optimisation is best for you, you can set it like:
 
 ./configure --ffdecsa_mode=PARALLEL_128_SSE
 
-CLEAN AND UPDATE SOURCES:
+CLEAN AND UPDATE THE SOURCE:
 make update
 
 
@@ -31,11 +31,8 @@ More info (in Dutch) is available at:
 www.lursen.org/wiki/MythTV_0.26_op_Debian_Wheezy
 
 
-
-
 ##############################################################################
 ##############################################################################
-
 
 
     This program is free software: you can redistribute it and/or modify
@@ -50,7 +47,6 @@ www.lursen.org/wiki/MythTV_0.26_op_Debian_Wheezy
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see http://www.gnu.org/licenses/
- 
  
  
  ##############################################################################
