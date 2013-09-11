@@ -224,7 +224,7 @@ if test "x$dvb_path" = "x"; then
     echo "
 Error(s) encountered during installing build-deps
 for FFdecsawrapper and/or running kernel patch.
-Fix the cause of the errors and run me again
+Fix the cause of the error(s) and run me again.
 "
     confirmno "Do you want to continue anyway? [y/N]"
     if [ $(echo $?) -eq 1 ]; then
@@ -255,7 +255,7 @@ if test "x$dvb_path" = "x"; then
     echo "
 Error(s) encountered during installing build-deps
 for FFdecsawrapper and/or running kernel patch.
-Fix the cause of the errors and run me again.
+Fix the cause of the error(s) and run me again.
 "
     confirmno "Do you want to continue anyway? [y/N]"
     if [ $(echo $?) -eq 1 ]; then

@@ -59,7 +59,7 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
-# Install dependencies
+# Install build dependencies for FFdecsawrapper
 
 if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
 
@@ -100,8 +100,7 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
     fi
   fi
 
-
-# When using ffdecsawrapper, the kernel has to be patched.
+# When using FFdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
   echo "\nFFdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a !!!UNMODIFIED!!! Debian kernel (including those frome 'backports' or other branches, like 'sid'), I can do that for you, if your sources.list is ok and the source for your kernel is available in the repo's.\n\n"
@@ -135,9 +134,14 @@ done patching the kernel and compiling ffdecsawrapper and ffdecsawrapper module.
 
     confirmyes "Proceed?[Y/n]"
 
+# Install build dependencies for patching the kernel
+
     if [ $(echo $?) -eq 0 ]; then
       apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
       apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
+
+# Compile the patched dvb-core.ko module and install it
+
       echo "
 Building patched dvb-core module for kernel `uname -r`
 

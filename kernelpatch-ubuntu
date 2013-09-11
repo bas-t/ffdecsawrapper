@@ -99,9 +99,7 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
     fi
   fi
 
-
-
-# When using ffdecsawrapper, the kernel has to be patched.
+# When using FFdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
   echo "\nFFdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a !!!UNMODIFIED!!! Ubuntu kernel, I can do that for you, if your sources.list is ok and the source for your kernel is available in the repo's.\nThis will also install any missing build dependencies.\n\n"
