@@ -46,6 +46,12 @@ confirmno(){
     OS=$( lsb_release -si )
     RELEASE=$( lsb_release -sc )
 
+# Define where to build and from what dir to build
+
+    BUILD_DIR=/lib/modules/`uname -r`/build
+    TEMPDIR=/usr/src/$SHORT_KERNEL
+
+
 # Abort if running kernel is < 3.x
 
 if [ $FIRST_DIGIT -lt 3 ]; then
@@ -98,9 +104,6 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 # When using ffdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
-  BUILD_DIR=/lib/modules/`uname -r`/build
-  TEMPDIR=/usr/src/$SHORT_KERNEL
-
   echo "\nFFdecsawrapper needs a patched dvb-core.ko kernel module.\nIf you are running a !!!UNMODIFIED!!! Debian kernel (including those frome 'backports' or other branches, like 'sid'), I can do that for you, if your sources.list is ok and the source for your kernel is available in the repo's.\n\n"
 
   confirmyes "Do you want me to patch your running Debian kernel?[Y/n]"
@@ -144,7 +147,11 @@ Preparing, this may take a while...
       mkdir -p $TEMPDIR
       if  [ $FIRST_DIGIT -eq 3 ]; then
         if [ $SECOND_DIGIT -lt 7 ]; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          fi
           echo "
 Building and installing, please be patient...
 "
