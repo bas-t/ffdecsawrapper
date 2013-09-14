@@ -18,6 +18,8 @@ DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOUR
 -include $(BASEDIR)/Make.config
 -include ../Make.config
 
+CXXFLAGS += -fno-strict-aliasing 
+
 ### The version number of VDR (taken from VDR's "config.h"):
 
 APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
