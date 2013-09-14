@@ -10,12 +10,7 @@ dvbloopback-objs := dvb_loopback.o dvblb_proc.o dvblb_forward.o
   all: add_modver
 	make -C $(BUILD_DIR) M=$(PWD) modules
 
-ifeq ($(strip $(have_modver)),) 
-add_modver:
-	echo "Skipping Modver $(SYMVER)"
-else
 add_modver: $(SYMVER)
-endif
 
 clean:
 	make -C $(BUILD_DIR) M=$(PWD) clean
