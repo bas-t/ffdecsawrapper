@@ -7,6 +7,7 @@ BASEDIR = ../../..
 
 CXX      ?= g++
 CXXFLAGS ?= -g -march=pentium3 -O2 -Wall -Woverloaded-virtual
+CXXFLAGS += -fno-strict-aliasing 
 
 ### Includes and Defines
 
@@ -18,23 +19,12 @@ DEFINES  = -DAPIVERSNUM=$(APIVERSNUM) -DAPIVERSION='"$(APIVERSION)"' -D_GNU_SOUR
 -include $(BASEDIR)/Make.config
 -include ../Make.config
 
-CXXFLAGS += -fno-strict-aliasing 
-
-### The version number of VDR (taken from VDR's "config.h"):
+### The version number of FFdecsawrapper (taken from FFdecsawrapper's "config.h"):
 
 APIVERSION = $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 APIVERSNUM = $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 
-### VDR version dependant
-
-# test VDR version
-BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
-# test if PlayTsVideo() exists (e.g. TSplay patch)
-BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(BASEDIR)/include/ffdecsawrapper/device.h))
-
-ifneq ($(BYVERS)$(BYTSPL),)
-  DEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
-endif
+DEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 
 ### The object files (add further files here):
 
