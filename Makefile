@@ -20,7 +20,7 @@ DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
 SCDIR = sc/PLUGINS/src
-SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual
+SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing
 
 ifdef AUXSERVER_OPTS
   DEFINES += ${AUXSERVER_OPTS}
