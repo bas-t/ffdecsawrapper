@@ -30,13 +30,8 @@ CXXFLAGS += -g
 CFLAGS   += -g
 SC_FLAGS += -g
 
-ifdef USE_DLOAD
-  SCLIBS = -Lsc/PLUGINS/lib `find sc/PLUGINS/lib/ -name "*.so" \
-           -exec basename {} \;|cut -d. -f1|sed -e 's/^lib//'|xargs -n 1 -i echo "-l{}"`
-else
-  SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
+SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
 	./sc/PLUGINS/lib/libvdr-sc.a
-endif
 
 OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 	plugin_showioctl.o plugin_legacysw.o plugin_dss.o plugin_cam.o \
@@ -44,9 +39,6 @@ OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 
 OBJ_SC := misc.o dvbdevice.o osdbase.o menuitems.o device.o thread.o \
 	tools.o sasccam.o log.o vdrcompat.o libsi.a
-ifdef USE_DLOAD
-  OBJ_SC += dload.o
-endif
 
 OBJS := $(foreach ob,$(OBJ) $(OBJ_SC), objs/$(ob)) FFdecsa/FFdecsa.o
 INCLUDES_SC := -I$(SCDIR) -I./sc/include
@@ -82,12 +74,7 @@ link-sc-plugin:
 sc-plugin: link-sc-plugin
 	@if [ ! -d sc/PLUGINS/lib ]; then mkdir sc/PLUGINS/lib; fi
 
-ifdef USE_DLOAD
-	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 all
-	$(MAKE) link-shared
-else
 	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 STATIC=1 all
-endif
 
 link-FFdecsa:
 
