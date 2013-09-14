@@ -394,7 +394,7 @@ struct CmdBlock {
     unsigned short pinID; // 16
     unsigned char pad2[2];// 18 XXXX
     } service;
-  unsigned char data[2];  // 20
+  unsigned char data[0];  // 20
   };
 
 #define CBSIZE(cb) (sizeof((cb)->udp_header)+sizeof((cb)->service))
