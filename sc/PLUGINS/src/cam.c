@@ -1373,6 +1373,7 @@ void cCam::Tune(const cChannel *channel)
 
 void cCam::PostTune(void)
 {
+  cMutexLock lock(this);
   if(ScSetup.PrestartAU) {
     LogStartup();
     if(logger) logger->PreScan(source,transponder);
@@ -1575,7 +1576,6 @@ void cCam::HouseKeeping(void)
 
 void cCam::LogStartup(void)
 {
-  cMutexLock lock(this);
   if(!logger && ScSetup.AutoUpdate) {
     logger=new cLogger(cardNum,IsSoftCSA(false));
     LogStatsUp();
