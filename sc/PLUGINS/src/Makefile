@@ -49,6 +49,9 @@ SHAREDLIBS    =
 -include $(BASEDIR)/Make.config
 -include Make.config
 
+### we need this ATM because of the helper.h macros...
+CXXFLAGS += -fno-strict-aliasing
+
 ### The version number of FFdecsawrapper (taken from FFdecsawrapper's "config.h"):
 
 VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
@@ -133,12 +136,8 @@ export CXXFLAGS
 
 ### Targets:
 
-ifdef STATIC
 BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).a
 SHAREDDEFINES += -DSTATICBUILD
-else
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION) systems-pre
-endif
 BUILDTARGETS += $(FFDECSATEST) systems i18n
 
 all: $(BUILDTARGETS)
