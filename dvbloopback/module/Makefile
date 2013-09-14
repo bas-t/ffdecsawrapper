@@ -8,7 +8,6 @@ dvbloopback-objs := dvb_loopback.o dvblb_proc.o dvblb_forward.o
   have_modver := $(SYMVER)
   BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
   all: add_modver
-	./config_dvb.pl "BUILD_DIR=$(BUILD_DIR)" "EXTRA_CFLAGS=$(EXTRA_CFLAGS)"
 	make -C $(BUILD_DIR) M=$(PWD) modules
 
 ifeq ($(strip $(have_modver)),) 
