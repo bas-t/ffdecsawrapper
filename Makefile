@@ -82,15 +82,6 @@ module:
 	cd dvbloopback/module && $(MAKE) $(DVB_MOD_DIR)
 	@cp -f dvbloopback/module/dvbloopback.ko .
 
-link-shared:
-	@cd ./sc/PLUGINS/lib; \
-	for i in *.so.*; do \
-		link=`echo $$i|cut -d. -f-2`; \
-		if [ ! -e $$link ]; then \
-			ln -s $$i $$link; \
-		fi \
-	done
-
 strip-sc:
 	@cd ./sc/PLUGINS/lib; \
 	for i in *.so.*; do \
