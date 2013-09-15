@@ -51,13 +51,10 @@ INC_DEPS_LB := $(shell ls dvblb_plugins/*.h)
 
 LIBS = -lpthread -lcrypto -lcrypt -lv4l1
 
-all: $(TOOL) libscanwrap.so
+all: $(TOOL)
 
 $(TOOL): $(OBJS) | sc-plugin
 	$(CXX) $(CFLAGS) -o $(TOOL) $(SCLIBS) $(OBJS) $(LIBS)
-
-libscanwrap.so: dvblb_plugins/scanwrap.c
-	$(CC) -fPIC -g -O2 -Wall -I. -nostdlib -shared -o $@ $< -ldl  -lc
 
 clean:
 	@git clean -xfd
