@@ -124,27 +124,27 @@ private:
   cMutex cafdMutex;
   cTimeMs lastDump;
   //
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   void LateInit(void);
   void EarlyShutdown(void);
   bool ScActive(void);
-#endif //SASC
+#endif //FFDECSAWRAPPER
   //
 protected:
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   virtual bool Ready(void);
   virtual bool SetPid(cPidHandle *Handle, int Type, bool On);
   virtual bool SetChannelDevice(const cChannel *Channel, bool LiveView);
   virtual bool OpenDvr(void);
   virtual void CloseDvr(void);
   virtual bool GetTSPacket(uchar *&Data);
-#endif //SASC
+#endif //FFDECSAWRAPPER
 public:
   cScDevice(int Adapter, int Frontend, int cafd);
   ~cScDevice();
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   virtual bool HasCi(void);
-#endif //SASC
+#endif //FFDECSAWRAPPER
   virtual bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   virtual bool SetCaPid(ca_pid_t *ca_pid);
   int FilterHandle(void);

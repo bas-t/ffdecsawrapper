@@ -54,15 +54,15 @@ CXXFLAGS += -fno-strict-aliasing
 
 ### The version number of FFdecsawrapper (taken from FFdecsawrapper's "config.h"):
 
-VDRVERSION := $(shell sed -ne '/define VDRVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
+FFDECSAWRAPPERVERSION := $(shell sed -ne '/define FFDECSAWRAPPERVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 APIVERSION := $(shell sed -ne '/define APIVERSION/ s/^.*"\(.*\)".*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 ifeq ($(strip $(APIVERSION)),)
-   APIVERSION = $(VDRVERSION)
+   APIVERSION = $(FFDECSAWRAPPERVERSION)
 endif
-VDRVERSNUM := $(shell sed -ne '/define VDRVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
+FFDECSAWRAPPERVERSNUM := $(shell sed -ne '/define FFDECSAWRAPPERVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 APIVERSNUM := $(shell sed -ne '/define APIVERSNUM/ s/^.[a-zA-Z ]*\([0-9]*\) .*$$/\1/p' $(BASEDIR)/include/ffdecsawrapper/config.h)
 ifeq ($(strip $(APIVERSNUM)),)
-   APIVERSNUM = $(VDRVERSNUM)
+   APIVERSNUM = $(FFDECSAWRAPPERVERSNUM)
 endif
 
 ### The object files (add further files here):
@@ -75,29 +75,16 @@ OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o device.o version.o \
 
 PODIR     = po
 I18Npot   = $(PODIR)/$(PLUGIN).pot
-I18Nmo    = vdr-$(PLUGIN).mo
+I18Nmo    = ffdecsawrapper-$(PLUGIN).mo
 I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/$(I18Nmo),$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
 LOCALEDIR = $(BASEDIR)/locale
 
-### VDR version dependant
-
-# test VDR version
-BYVERS = $(strip $(shell if test $(APIVERSNUM) -ge 010703; then echo "*"; fi))
-# test if PlayTsVideo() exists (e.g. TSplay patch)
-BYTSPL = $(strip $(shell grep -l 'PlayTsVideo' $(BASEDIR)/include/ffdecsawrapper/device.h))
-
-ifneq ($(BYVERS)$(BYTSPL),)
-  SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
-endif
+SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 
 #
 # generic stuff
 #
 
-# smartcard default port (dropped)
-ifdef DEFAULT_PORT
-  $(error DEFAULT_PORT support was removed, use cardslot.conf)
-endif
 
 ifdef WITH_PCSC
   DEFINES  += -DWITH_PCSC
@@ -106,9 +93,7 @@ endif
 
 # max number of CAIDs per slot
 MAXCAID = 64
-ifneq ($(strip $(MAXCAID)),)
-  DEFINES += -DVDR_MAXCAID=$(MAXCAID)
-endif
+DEFINES += -DFFDECSAWRAPPER_MAXCAID=$(MAXCAID)
 
 # FFdeCSA
 CPUOPT     ?= pentium
@@ -118,9 +103,9 @@ FFDECSADIR  = FFdecsa
 FFDECSA     = $(FFDECSADIR)/FFdecsa.o
 FFDECSATEST = $(FFDECSADIR)/FFdecsa_test.done
 
-# SASC
-ifdef SASC
-DEFINES += -DSASC
+# FFDECSAWRAPPER
+ifdef FFDECSAWRAPPER
+DEFINES += -DFFDECSAWRAPPER
 FFDECSA =
 FFDECSATEST =
 endif
@@ -136,7 +121,7 @@ export CXXFLAGS
 
 ### Targets:
 
-BUILDTARGETS = $(LIBDIR)/libvdr-$(PLUGIN).a
+BUILDTARGETS = $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a
 SHAREDDEFINES += -DSTATICBUILD
 BUILDTARGETS += $(FFDECSATEST) systems i18n
 
@@ -158,13 +143,13 @@ $(DEPFILE): $(DEPFILES) $(wildcard *.h)
 %.o: %.c
 	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $<
 
-libvdr-$(PLUGIN).so: $(OBJS) $(FFDECSA)
+libffdecsawrapper-$(PLUGIN).so: $(OBJS) $(FFDECSA)
 	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(FFDECSA) $(LIBS) $(SHAREDLIBS) -o $@
 
-$(LIBDIR)/libvdr-$(PLUGIN).so.$(APIVERSION): libvdr-$(PLUGIN).so
+$(LIBDIR)/libffdecsawrapper-$(PLUGIN).so.$(APIVERSION): libffdecsawrapper-$(PLUGIN).so
 	@cp -p $< $@
 
-$(LIBDIR)/libvdr-$(PLUGIN).a: $(OBJS)
+$(LIBDIR)/libffdecsawrapper-$(PLUGIN).a: $(OBJS)
 	$(AR) r $@ $(OBJS)
 
 $(FFDECSA) $(FFDECSATEST): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
@@ -210,7 +195,7 @@ clean-core:
 	@$(MAKE) -C contrib clean
 	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
-	@-rm -f $(LIBDIR)/libvdr-$(PLUGIN).a $(LIBDIR)/libsc-*.a
+	@-rm -f $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a $(LIBDIR)/libsc-*.a
 	@-rm -f $(OBJS) $(DEPFILE) version.c *.so *.tar.gz core* *~
 	@-rm -f $(PODIR)/*.mo
 
@@ -229,9 +214,9 @@ dist: clean-core
 	@path="$(TMPDIR)/$(ARCHIVE)/$(notdir $(SYSDIR))";\
 	 for i in `ls -A -I ".*" $$path`; do if [ -f "$$path/$$i/nonpublic.mk" ]; then rm -rf "$$path/$$i"; fi; if [ -f "$$path/$$i/nonpublic.sh" ]; then (cd $$path/$$i ; source ./nonpublic.sh ; rm ./nonpublic.sh); fi; done
 	@strip --strip-unneeded --preserve-dates $(TMPDIR)/$(ARCHIVE)/$(notdir $(PREDIR))/* || true
-	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
+	@tar czf ffdecsawrapper-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Distribution package created as vdr-$(ARCHIVE).tar.gz
+	@echo Distribution package created as ffdecsawrapper-$(ARCHIVE).tar.gz
 
 copy: ARCHIVE := $(PLUGIN)-$(VERSION)
 copy: clean clean-pre
@@ -239,8 +224,9 @@ copy: clean clean-pre
 	@mkdir $(TMPDIR)/$(ARCHIVE)
 	@cp -a .hgtags .hgignore * $(TMPDIR)/$(ARCHIVE)
 	@echo -n $(SUBREL) | sed -e 's/HG-/CP-/' >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
-	@tar czf vdr-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
+	@tar czf ffdecsawrapper-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
 	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Full copy package created as vdr-$(ARCHIVE).tar.gz
+	@echo Full copy package created as ffdecsawrapper-$(ARCHIVE).tar.gz
 
 FORCE:
+

@@ -31,7 +31,7 @@ CFLAGS   += -g
 SC_FLAGS += -g
 
 SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
-	./sc/PLUGINS/lib/libvdr-sc.a
+	./sc/PLUGINS/lib/libffdecsawrapper-sc.a
 
 OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 	plugin_showioctl.o plugin_legacysw.o plugin_dss.o plugin_cam.o \
@@ -71,7 +71,7 @@ link-sc-plugin:
 sc-plugin: link-sc-plugin
 	@if [ ! -d sc/PLUGINS/lib ]; then mkdir sc/PLUGINS/lib; fi
 
-	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" SASC=1 STATIC=1 all
+	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" FFDECSAWRAPPER=1 STATIC=1 all
 
 link-FFdecsa:
 
@@ -113,3 +113,4 @@ objs/version.cpp: FORCE
 	@echo 'const char *source_version = "Stable";' > objs/version.cpp
 
 FORCE:
+

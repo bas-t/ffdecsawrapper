@@ -17,7 +17,7 @@
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
  */
 
-#define SASC
+#define FFDECSAWRAPPER
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -85,4 +85,4 @@ void sascCam::AddPrg(int sid, int *epid, const unsigned char *pmt, int pmtlen)
   }
   cam->AddPrg(prg);
 }
-    
+

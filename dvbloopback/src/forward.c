@@ -425,11 +425,11 @@ int main(int argc, char *argv[])
         break;
       case 'p': 
         debug_port = atoi(optarg); 
-        break; 
+        break;
       case 'P':
         strncpy(pidfile, optarg, sizeof(pidfile)-1);
         pidfile[sizeof(pidfile)-1] = 0;
-        break;
+        break; 
       case 0:
         if(! longopt) {
           list_for_each(ptr, &plugin_cmdlist) {

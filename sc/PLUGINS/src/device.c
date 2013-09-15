@@ -29,12 +29,10 @@
 #include <ffdecsawrapper/ci.h>
 #include <ffdecsawrapper/dvbdevice.h>
 #include <ffdecsawrapper/thread.h>
-#ifndef SASC
-#include <ffdecsawrapper/dvbci.h>
-
+#ifndef FFDECSAWRAPPER
 #include "FFdecsa/FFdecsa.h"
-#endif //SASC
-
+#include <ffdecsawrapper/dvbci.h>
+#endif //FFDECSAWRAPPER
 #include "device.h"
 #include "cam.h"
 #include "scsetup.h"
@@ -46,8 +44,8 @@
 
 #define MAX_CI_SLOTS      8
 
-#ifdef VDR_MAXCAID
-#define MAX_CI_SLOT_CAIDS VDR_MAXCAID
+#ifdef FFDECSAWRAPPER_MAXCAID
+#define MAX_CI_SLOT_CAIDS FFDECSAWRAPPER_MAXCAID
 #else
 #define MAX_CI_SLOT_CAIDS 16
 #endif
@@ -195,7 +193,7 @@ DumpCaDescr(L_CORE_PIDS);
 
 // --- cChannelCaids -----------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 class cChannelCaids : public cSimpleItem {
 private:
@@ -1290,7 +1288,7 @@ uchar *cDeCsaTSBuffer::Get(void)
   return NULL;
 }
 
-#endif //SASC
+#endif //FFDECSAWRAPPER
 
 // --- cScDeviceProbe ----------------------------------------------------------
 
@@ -1349,7 +1347,7 @@ int cScDevices::DvbOpen(const char *Name, int a, int f, int Mode, bool ReportErr
   return fd;
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 #if APIVERSNUM < 10711
 static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
@@ -1463,7 +1461,7 @@ bool cScDevices::ForceBudget(int n)
    return budget && (budget&(1<<n));
 }
 
-#else //SASC
+#else //FFDECSAWRAPPER
 
 void cScDevices::OnPluginLoad(void) {}
 void cScDevices::OnPluginUnload(void) {}
@@ -1473,7 +1471,7 @@ void cScDevices::Shutdown(void) {}
 void cScDevices::SetForceBudget(int n) {}
 bool cScDevices::ForceBudget(int n) { return true; }
 
-#endif //SASC
+#endif //FFDECSAWRAPPER
 
 // -- cScDevice ----------------------------------------------------------------
 
@@ -1490,7 +1488,7 @@ cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
 :cDvbDevice(Adapter)
 #endif
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   decsa=0; tsBuffer=0; cam=0; fullts=false;
   ciadapter=0; hwciadapter=0;
   fd_ca=cafd; fd_ca2=dup(fd_ca); fd_dvr=-1;
@@ -1498,12 +1496,12 @@ cScDevice::cScDevice(int Adapter, int Frontend, int cafd)
 #else
   softcsa=fullts=false;
   cam=new cCam(this,Adapter);
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 }
 
 cScDevice::~cScDevice()
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   DetachAllReceivers();
   Cancel(3);
   EarlyShutdown();
@@ -1512,10 +1510,10 @@ cScDevice::~cScDevice()
   if(fd_ca2>=0) close(fd_ca2);
 #else
   delete cam;
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 void cScDevice::EarlyShutdown(void)
 {
@@ -1611,7 +1609,7 @@ bool cScDevice::GetTSPacket(uchar *&Data)
   return false;
 }
 
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 
 bool cScDevice::SoftCSA(bool live)
 {
@@ -1620,33 +1618,33 @@ bool cScDevice::SoftCSA(bool live)
 
 void cScDevice::CaidsChanged(void)
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   if(ciadapter) ciadapter->CaidsChanged();
   PRINTF(L_CORE_CAIDS,"caid list rebuild triggered");
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 }
 
 bool cScDevice::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   if(!softcsa || (fullts && ca_descr->index==0)) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_DESCR,ca_descr)>=0;
     }
   else if(decsa) return decsa->SetDescr(ca_descr,initial);
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
   return false;
 }
 
 bool cScDevice::SetCaPid(ca_pid_t *ca_pid)
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   if(!softcsa || (fullts && ca_pid->index==0)) {
     cMutexLock lock(&cafdMutex);
     return ioctl(fd_ca,CA_SET_PID,ca_pid)>=0;
     }
   else if(decsa) return decsa->SetCaPid(ca_pid);
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
   return false;
 }
 
@@ -1655,7 +1653,7 @@ int cScDevice::FilterHandle(void)
   return cScDevices::DvbOpen(DEV_DVB_DEMUX,DVB_DEV_SPEC,O_RDWR|O_NONBLOCK);
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 static unsigned int av7110_read(int fd, unsigned int addr)
 {
   ca_pid_t arg;
@@ -1663,7 +1661,7 @@ static unsigned int av7110_read(int fd, unsigned int addr)
   ioctl(fd,CA_GET_MSG,&arg);
   return arg.index;
 }
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 
 #if 0
 static void av7110_write(int fd, unsigned int addr, unsigned int val)
@@ -1677,7 +1675,7 @@ static void av7110_write(int fd, unsigned int addr, unsigned int val)
 
 void cScDevice::DumpAV7110(void)
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   if(LOG(L_CORE_AV7110)) {
 #define CODEBASE (0x2e000404+0x1ce00)
     cMutexLock lock(&cafdMutex);
@@ -1733,5 +1731,6 @@ void cScDevice::DumpAV7110(void)
         }
       }
     }
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 }
+
