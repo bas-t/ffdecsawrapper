@@ -35,7 +35,7 @@ SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
 
 OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 	plugin_showioctl.o plugin_legacysw.o plugin_dss.o plugin_cam.o \
-	plugin_ffdecsa.o plugin_scan.o version.o
+	plugin_ffdecsa.o version.o
 
 OBJ_SC := misc.o dvbdevice.o osdbase.o menuitems.o device.o thread.o \
 	tools.o sasccam.o log.o vdrcompat.o libsi.a
