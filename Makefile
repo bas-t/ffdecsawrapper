@@ -65,17 +65,10 @@ update:
 	@git reset --hard HEAD
 	@git pull
 
-link-sc-plugin:
-	@mkdir -p $(SCDIR)/systems-pre $(SCDIR)/po
-
-sc-plugin: link-sc-plugin
-	@if [ ! -d sc/PLUGINS/lib ]; then mkdir sc/PLUGINS/lib; fi
-
+sc-plugin:
 	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" FFDECSAWRAPPER=1 STATIC=1 all
 
-link-FFdecsa:
-
-FFdecsa/FFdecsa.o: link-FFdecsa
+FFdecsa/FFdecsa.o:
 	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
 
 module:
@@ -97,10 +90,10 @@ objs/libsi.a: $(OBJ_LIBSI)
 objs/%.o: $(LBDIR)/%.c $(INC_DEPS)
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB) | link-FFdecsa
+objs/%.o: dvblb_plugins/%.c $(INC_DEPS) $(INC_DEPS_LB)
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) -I$(LBDIR) $(INCLUDES) $<
 
-objs/%.o: sc/%.cpp | link-sc-plugin
+objs/%.o: sc/%.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) $(INCLUDES_SC) $(INCLUDES) $<
 
 objs/si_%.o: sc/libsi/%.c
