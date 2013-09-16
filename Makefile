@@ -75,15 +75,6 @@ module:
 	cd dvbloopback/module && $(MAKE) $(DVB_MOD_DIR)
 	@cp -f dvbloopback/module/dvbloopback.ko .
 
-strip-sc:
-	@cd ./sc/PLUGINS/lib; \
-	for i in *.so.*; do \
-		strip $$i; \
-	done
-
-strip-sasc:
-	@strip sasc-ng
-
 objs/libsi.a: $(OBJ_LIBSI)
 	ar ru $@ $(OBJ_LIBSI)
 
