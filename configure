@@ -217,16 +217,8 @@ fi
 if test "x$dvb_path" = "x"; then
   if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
     if uname -a | grep 'Debian' > /dev/null  2>&1; then
-      if  [ $FIRST_DIGIT -eq 3 ]; then
-        if [ $SECOND_DIGIT -lt 7 ]; then
-          if ! test -f /lib/modules/`uname -r`/updates/dvb/dvb-core/dvb-core.ko; then
-            ./kernelpatch-debian
-          fi
-        else
-          if ! test -f /lib/modules/`uname -r`/updates/dvb-core/dvb-core.ko; then
-            ./kernelpatch-debian
-          fi
-        fi
+      if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+        ./kernelpatch-debian
       fi
     fi
   fi
@@ -258,16 +250,8 @@ fi
 if test "x$dvb_path" = "x"; then
   if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
     if uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
-      if  [ $FIRST_DIGIT -eq 3 ]; then
-        if [ $SECOND_DIGIT -lt 7 ]; then
-          if ! test -f /lib/modules/`uname -r`/updates/dvb/dvb-core/dvb-core.ko; then
-            ./kernelpatch-ubuntu
-          fi
-        else
-          if ! test -f /lib/modules/`uname -r`/updates/dvb-core/dvb-core.ko; then
-            ./kernelpatch-ubuntu
-          fi
-        fi
+      if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+        ./kernelpatch-ubuntu
       fi
     fi
   fi
