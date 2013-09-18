@@ -160,9 +160,8 @@ Building and installing, please be patient...
 "
           sudo patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
           sudo make -C $BUILD_DIR M=$TEMPDIR modules
-          sudo rm -f /lib/modules/`uname -r`/updates/dvb/dvb-core/dvb-core.ko > /dev/null 2>&1
-          sudo mkdir -p /lib/modules/`uname -r`/updates/dvb/dvb-core > /dev/null 2>&1
-          sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb/dvb-core
+          sudo mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
+          sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
           sudo rm -rf $TEMPDIR
           sudo depmod -a
         else
@@ -176,9 +175,8 @@ Building and installing, please be patient...
 "
           sudo patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
           sudo make -C $BUILD_DIR M=$TEMPDIR modules
-          sudo rm -f /lib/modules/`uname -r`/updates/dvb-core/dvb-core.ko > /dev/null 2>&1
-          sudo mkdir -p /lib/modules/`uname -r`/updates/dvb-core > /dev/null 2>&1
-          sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/dvb-core
+          sudo mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
+          sudo /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
           sudo rm -rf $TEMPDIR
           sudo depmod -a
         fi
