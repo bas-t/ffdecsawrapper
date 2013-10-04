@@ -6,8 +6,9 @@ die(){
 }
 
 die_unknown(){
-    echo "Unknown option \"$1\"."
-    echo "See $0 --help for available options."
+    echo "Unknown option \"$1\".
+"
+    ./configure --help
     exit 1
 }
 
