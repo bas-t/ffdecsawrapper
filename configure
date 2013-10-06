@@ -238,6 +238,13 @@ fi
 # Install build dependencies for FFdecsawrapper
 
 if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
+  if ! dpkg-query -l gettext > /dev/null 2>&1; then
+    echo "
+Missing dependency gettext, marking for installation.
+"
+    apt-get install gettext -y || die "Error installing dependency gettext"
+  fi
+
   if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
     echo "
 Missing dependency libv4l-dev, marking for installation.
@@ -312,6 +319,13 @@ fi
 # Install build dependencies for FFdecsawrapper
 
 if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
+  if ! dpkg-query -l gettext > /dev/null 2>&1; then
+    echo "
+Missing dependency gettext, marking for installation.
+"
+    sudo apt-get install gettext -y || die "Error installing dependency gettext"
+  fi
+
   if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
     echo "
 Missing dependency libv4l-dev, marking for installation.
