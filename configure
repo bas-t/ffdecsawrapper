@@ -583,6 +583,17 @@ if test "x$tsbuffer" != "x"; then
   sed -i "s/DeCsaTsBuffSize=4/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
 fi
 
+if test "x$optimize_exp" != "x"; then
+  echo "
+You should not use the --optimize_exp option yet.
+
+Aborting...
+"
+# ./FFdecsa_optimizer
+  make clean > /dev/null 2>&1
+  exit 0
+fi
+
 rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log
