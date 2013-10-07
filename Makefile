@@ -60,6 +60,10 @@ clean:
 	@git clean -xfd
 	@git reset --hard HEAD
 
+distclean:
+	@git clean -xfd
+	@git reset --hard HEAD
+
 update:
 	@git clean -xfd
 	@git reset --hard HEAD
