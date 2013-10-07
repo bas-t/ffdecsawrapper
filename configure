@@ -244,6 +244,16 @@ fi
 # Install build dependencies for FFdecsawrapper
 
 if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
+  if ! echo "$( whoami)" | grep "root" > /dev/null 2>&1; then
+    echo "
+You should run as root.
+
+Aborting...
+"
+    make clean > /dev/null 2>&1
+    exit 0
+  fi
+
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
@@ -400,6 +410,18 @@ fi
 # End Ubuntu Section
 #
 
+# Experimental FFdecsa optimizing code
+if test "x$optimize_exp" != "x"; then
+  echo "
+You should not use the --optimize_exp option yet.
+
+Aborting...
+"
+# ./FFdecsa_optimizer
+  make clean > /dev/null 2>&1
+  exit 0
+fi
+
 # Get the right dvbdev.h in place
 # If --dvb_dir= is set, use supplied header, else
 # distinguish between '3.6 or lower' and '3.7 or higher' kernels,
@@ -421,6 +443,7 @@ $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
 
 Aborting...
 "
+    make clean > /dev/null 2>&1
     exit 0
   fi
 else
@@ -444,6 +467,7 @@ could not locate /lib/modules/`uname -r`/build/Module.symvers
 
 Aborting...
 "
+    make clean > /dev/null 2>&1
     exit 0
   fi
 else
@@ -531,22 +555,22 @@ Trying various FFdecsa optimizations...
       make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
       if test $? -ne 0 ; then
         echo "
-      ${var}: build failed"
+    ${var}: build failed"
       else
         rm -f ${TMPOUT}
         sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
         if test $? -ne 0; then
           echo "
-      ${var}: test failed"
+    ${var}: test failed"
         else
           grep FAILED "${TMPOUT}" >/dev/null 2>&1
           if test $? -ne 1; then
             echo "
-      ${var}: test failed"
+    ${var}: test failed"
           else
             res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
             echo "
-      ${var}: $res"
+    ${var}: $res"
             if test $res -gt $MAX_val; then
               MAX_val=$res
               MAX_MODE=$var
@@ -581,17 +605,6 @@ fi
 
 if test "x$tsbuffer" != "x"; then
   sed -i "s/DeCsaTsBuffSize=4/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
-fi
-
-if test "x$optimize_exp" != "x"; then
-  echo "
-You should not use the --optimize_exp option yet.
-
-Aborting...
-"
-# ./FFdecsa_optimizer
-  make clean > /dev/null 2>&1
-  exit 0
 fi
 
 rm -rf "${TMPDIR}"
