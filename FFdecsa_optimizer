@@ -640,7 +640,7 @@ if [ $_NOTEST -eq 0 ]; then
 fi
 
 if [ $_VERB -ge 1 ]; then
-  echo "### VDR-SC Makefile FFdeCSA OPTS ###"
+  echo "### FFdeCSA Fasted OPTS ###"
   if [ "$OwnFlags" != "" ]; then
     echo "Custom compiler flags are set."
     echo "Adapt the Makefile yourself!"
@@ -662,9 +662,9 @@ if [ $_VERB -ge 1 ]; then
 fi
 
 if [ "$OwnFlags" != "" ] || [ "$OLevel" != "" ]; then
-  echo "FLAGS=\"${IFLAGS}\" PARALLEL_MODE=${MAX_MODE}"
+  echo "FLAGS=\"${IFLAGS}\" PARALLEL_MODE=${MAX_MODE}" >> config.mak
 else
-  echo "FLAGS=\"$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE}"
+  echo "FLAGS=\"$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE}" >> config.mak
 fi
 echo ""
 
