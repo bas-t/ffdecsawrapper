@@ -662,9 +662,9 @@ if [ $_VERB -ge 1 ]; then
 fi
 
 if [ "$OwnFlags" != "" ] || [ "$OLevel" != "" ]; then
-  echo "FLAGS=\"${IFLAGS}\" PARALLEL_MODE=${MAX_MODE}" >> config.mak
+  echo "FFDECSA_OPTS = \"FLAGS=\"${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
 else
-  echo "FLAGS=\"$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE}" >> config.mak
+  echo "FFDECSA_OPTS = \"FLAGS=\"$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
 fi
 echo ""
 
