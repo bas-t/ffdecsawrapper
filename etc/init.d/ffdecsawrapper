@@ -6,7 +6,7 @@
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Loopback dvb interface
-# Description:       ffdecsawrapper provides a decrypted loopback interface on a real dvb interface.
+# Description:       FFdecsawrapper provides a decrypted loopback interface on a real dvb interface.
 ### END INIT INFO
 
 # Author: Bas-t
@@ -24,21 +24,28 @@ test "$ENABLED" != "0" || exit 0
 
 # If we have a hardware and/or BIOS problem, so the real adapters did not load correctly, die.
 if ! test -e /dev/dvb/adapter$ADAPTERS > /dev/null 2>&1; then
-echo -e "Can not load dvbloopback, your adapters did not initialise correct. \n"
-exit 1
+  echo -e "Can not load dvbloopback, your adapters did not initialise correct. \n"
+  exit 1
 fi
 
 # We want to start mythtv-backend from this script, not from rc*.d
+# or upstart
 if test -h /etc/rc1.d/*mythtv-backend; then
-update-rc.d -f mythtv-backend remove
+  update-rc.d -f mythtv-backend remove
+elif test -e /etc/init/mythtv-backend.conf; then
+  if ! test -e /etc/init/mythtv-backend.override; then
+    echo 'manual' > /etc/init/mythtv-backend.override
+  fi
 fi
-
 
 mkdir $PIDDIR > /dev/null 2>&1
 chown $USER.$USER $PIDDIR
 
 mkdir $LOGDIR > /dev/null 2>&1
 chown $USER.$USER $LOGDIR
+
+mkdir $CAMDIR > /dev/null 2>&1
+chown $USER.$USER -R $CAMDIR
 
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
@@ -97,49 +104,43 @@ d_start() {
 
         # When we need more time to load dvbloopback, enter a loop to try some more times.
         if ! DriverLoaded; then
-        COUNTER=0
-        while [  $COUNTER -lt $RUNLOOP ]; do
-             echo -e "\nTrying to load the dvbloopback kernel module once more...\n"
-             LoadDriver
-             sleep 1
-             if DriverLoaded; then
-                 COUNTER=$RUNLOOP
-             else
-                 sleep $(( $SECLOOP - 1 ))
-                 let COUNTER=COUNTER+1
-             fi
-        done
+          COUNTER=0
+          while [  $COUNTER -lt $RUNLOOP ]; do
+            echo -e "\nTrying to load the dvbloopback kernel module once more...\n"
+            LoadDriver
+            sleep 1
+          if DriverLoaded; then
+            COUNTER=$RUNLOOP
+          else
+            sleep $(( $SECLOOP - 1 ))
+            let COUNTER=COUNTER+1
+          fi
+          done
         fi
 
         if DriverLoaded; then
-            echo -e "dvbloopback succesfully loaded. \n"
+          echo -e "dvbloopback succesfully loaded. \n"
         else
-            echo -e "Could not load dvbloopback driver module. \n"
-            echo -e "Aborting ... \n"
-            exit 1
+          echo -e "Could not load dvbloopback driver module. \n"
+          echo -e "Aborting ... \n"
+          exit 1
         fi
 
         # Start ffdecsawrapper
         mv $LOGDIR/$LOG $LOGDIR/$LOG.old > /dev/null 2>&1
         if ! test -e $PIDDIR/$PID > /dev/null 2>&1; then 
-            echo -e "\nStarting $PROG \n"
-
-            start-stop-daemon --start --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
-
-            sleep $DELAY
-
-                 if ! test -e $PIDDIR/$PID > /dev/null 2>&1; then 
-                     echo -e " $PROG did not start. \n"
-                     exit 1
-                 else 
-                     echo -e "$PROG startup sequence completed. \n" 
-                 fi
-
+          echo -e "\nStarting $PROG \n"
+          start-stop-daemon --start --chuid $USER --nicelevel $NICE --exec $DAEMON -- $ARGS
+          sleep $DELAY
+          if ! test -e $PIDDIR/$PID > /dev/null 2>&1; then 
+            echo -e " $PROG did not start. \n"
+            exit 1
+          else 
+            echo -e "$PROG startup sequence completed. \n" 
+          fi
         else 
-
-            echo -e "$PROG is already running. \n\
-            \nUse /etc/init.d/ffdecsawrapper restart instead. \n"
-
+          echo -e "$PROG is already running. \n\
+          \nUse /etc/init.d/ffdecsawrapper restart instead. \n"
         fi
 
         # When needed, wait for Mysql Server.
@@ -147,24 +148,24 @@ d_start() {
         if ! test -f "/var/run/mysqld/mysqld.pid"; then
         COUNTER=0
           while [  $COUNTER -lt 30 ]; do
-          echo -e "Waiting for Mysql Server to come up...\n"
-          sleep 2
-             if test -f "/var/run/mysqld/mysqld.pid"; then
-             COUNTER=30
-             else
-             let COUNTER=COUNTER+1
-             fi
+            echo -e "Waiting for Mysql Server to come up...\n"
+            sleep 2
+            if test -f "/var/run/mysqld/mysqld.pid"; then
+              COUNTER=30
+            else
+              let COUNTER=COUNTER+1
+            fi
           done
-             if ! test -f "/var/run/mysqld/mysqld.pid"; then
-             rm -f $PIDDIR/$PID
-             echo -e "\nMysql Server is not running.\n
-             \nAborting...\n\nStopping $PROG\n"
-	     start-stop-daemon --stop --oknodo --chuid $USER --exec $DAEMON -- $ARGS
-             sleep $DELAY
-             # Unload dvbloopback
-               if DriverLoaded; then 
-                  echo -e "Unloading dvbloopback. \n"
-	          UnloadDriver
+            if ! test -f "/var/run/mysqld/mysqld.pid"; then
+              rm -f $PIDDIR/$PID
+              echo -e "\nMysql Server is not running.\n
+              \nAborting...\n\nStopping $PROG\n"
+	      start-stop-daemon --stop --oknodo --chuid $USER --exec $DAEMON -- $ARGS
+              sleep $DELAY
+              # Unload dvbloopback
+              if DriverLoaded; then 
+                 echo -e "Unloading dvbloopback. \n"
+	         UnloadDriver
                fi
              exit 1
            fi
@@ -173,30 +174,30 @@ d_start() {
         # Start MythTV Backend. (or restart, if it is already running)
         sleep 10
         if ! ps -C mythbackend > /dev/null 2>&1; then
-           if ! [ -L $MYTH ]; then
-               $MYTH start
-           else
-               service $UPSTARTMYTH start
-           fi
+          if ! [ -L $MYTH ]; then
+            $MYTH start
+          else
+            service $UPSTARTMYTH start
+          fi
         else
            sleep $DELAY
            if ! [ -L $MYTH ]; then
-               $MYTH stop
-               # Just in case it hangs:
-               killall -9 mythbackend > /dev/null 2>&1
-               sleep $DELAY
-               $MYTH start
-            else
-               service $UPSTARTMYTH stop
-               # Just in case it hangs:
-               killall -9 mythbackend > /dev/null 2>&1
-               sleep $DELAY
-               service $UPSTARTMYTH start
+             $MYTH stop
+             # Just in case it hangs:
+             killall -9 mythbackend > /dev/null 2>&1
+             sleep $DELAY
+             $MYTH start
+           else
+             service $UPSTARTMYTH stop
+             # Just in case it hangs:
+             killall -9 mythbackend > /dev/null 2>&1
+             sleep $DELAY
+             service $UPSTARTMYTH start
            fi
         fi
         if ps -C mythbackend > /dev/null 2>&1; then
-        echo -e ""
-        echo -e "Sucessfully started $UPSTARTMYTH\n"
+          echo -e ""
+          echo -e "Sucessfully started $UPSTARTMYTH\n"
         fi
 }
 
@@ -205,9 +206,9 @@ d_stop() {
         # Stop MythTV
         echo -e ""
         if ! [ -L $MYTH ]; then
-	$MYTH stop
+	  $MYTH stop
         else
-        service $UPSTARTMYTH stop
+          service $UPSTARTMYTH stop
         fi
         # Just in case it hangs:
 	killall -9 mythbackend > /dev/null 2>&1
@@ -219,10 +220,10 @@ d_stop() {
         echo -e ""
         echo -e "Stopping $PROG \n"
 	start-stop-daemon --stop --oknodo --chuid $USER --exec $DAEMON -- $ARGS
-        sleep 3
 
         # Unload dvbloopback
-        if DriverLoaded; then 
+        if DriverLoaded; then
+           sleep 5 
            echo -e "Unloading dvbloopback. \n"
 	   UnloadDriver
         fi
@@ -245,11 +246,10 @@ case "$1" in
         d_start
         log_end_msg $?
         ;;
-
-  *)
-         echo "Usage: $NAME {start|stop|restart|force-reload}" >&2 
-         exit 1
-         ;; 
+    *)
+        echo "Usage: $NAME {start|stop|restart|force-reload}" >&2 
+        exit 1
+        ;; 
 esac
 
 exit 0
