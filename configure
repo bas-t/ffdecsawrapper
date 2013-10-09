@@ -256,6 +256,15 @@ Aborting...
     exit 0
   fi
 
+  if test -f /usr/bin/g++-4.8 > /dev/null 2>&1; then
+    if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
+      echo "
+Missing dependency g++4.7, marking for installation.
+"
+      apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+    fi
+  fi
+
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
@@ -337,6 +346,16 @@ fi
 # Install build dependencies for FFdecsawrapper
 
 if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
+
+  if test -f /usr/bin/g++-4.8 > /dev/null 2>&1; then
+    if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
+      echo "
+Missing dependency g++4.7, marking for installation.
+"
+      sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+    fi
+  fi
+
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
@@ -472,7 +491,13 @@ else
 fi
 
 if test "x$CXX" = "x"; then
+  if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
+    if test -f /usr/bin/g++-4.8 2>&1 1>/dev/null; then
+      CXX=g++-4.7
+    fi
+  else
   CXX=g++
+  fi
 fi
 
 echo "

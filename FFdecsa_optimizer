@@ -22,7 +22,14 @@ FFdecsaDIR="./FFdecsa"
 OwnFlags=""
 
 # compiler
+OS=$( lsb_release -si )
+if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
+  if test -f /usr/bin/g++-4.8 2>&1 1>/dev/null; then
+    CC=g++-4.7
+  fi
+else
 CC=g++
+fi
 
 # some initial values
 OLevel=""
