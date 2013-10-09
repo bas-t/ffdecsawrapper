@@ -22,7 +22,7 @@ NUMADAPTERS="4"
                      # Number of seconds delay you need before (re)loading dvbloopback and other components.
                      # On Debian 2 or 3 is fine
 
-DELAY="2"
+DELAY="3"
 
                      # How nice we are. (must be positive or 0, we don't run as root
                      # Setting it to a positive value makes sure that your system will be 
@@ -65,7 +65,7 @@ CAMDIR="/etc/camfiles"
                      # This probably has something to do with the (lack of) 'vmalloc' settings in /etc/default/grub.
                      # But I did not test it yet.
 
-OPTS="--daemon --cam-budget --sid-allpid --sid-nocache --sid-filt 20 --buffer 16M"
+OPTS="--daemon --cam-budget --sid-allpid --sid-filt 20 --buffer 16M"
 
                       # Pid dir
 
