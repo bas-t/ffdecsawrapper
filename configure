@@ -491,12 +491,14 @@ else
 fi
 
 if test "x$CXX" = "x"; then
-  if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
+  if [ $OS = Ubuntu ] || [ $OS = Debian ] ; then
     if test -f /usr/bin/g++-4.8 2>&1 1>/dev/null; then
       CXX=g++-4.7
+    else
+      CXX=g++
     fi
   else
-  CXX=g++
+    CXX=g++
   fi
 fi
 
