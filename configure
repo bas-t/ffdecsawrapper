@@ -431,11 +431,6 @@ fi
 # End Ubuntu Section
 #
 
-# Experimental FFdecsa optimizing code
-if test "x$optimize_exp" != "x"; then
- ./FFdecsa_optimizer
-fi
-
 # Get the right dvbdev.h in place
 # If --dvb_dir= is set, use supplied header, else
 # distinguish between '3.6 or lower' and '3.7 or higher' kernels,
@@ -500,6 +495,13 @@ if test "x$CXX" = "x"; then
   else
     CXX=g++
   fi
+fi
+
+# Experimental FFdecsa optimizing code
+if test "x$optimize_exp" != "x"; then
+  CCC=$CXX
+  export CCC
+ ./FFdecsa_optimizer
 fi
 
 echo "
