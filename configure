@@ -246,8 +246,8 @@ fi
 # Install build dependencies for FFdecsawrapper
 
 if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
-  if [ $OS = Debian ] ; then
-    if ! echo "$( whoami)" | grep "root" > /dev/null 2>&1; then
+  if [ $OS == Debian ] ; then
+    if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
       echo "
 You should run as root.
 
@@ -266,8 +266,7 @@ Missing dependency g++4.7, marking for installation.
       if [ $OS == Debian ] ; then
         apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
       else
-        sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7
-"
+        sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
       fi
     fi
   fi
@@ -581,7 +580,7 @@ echo "CXX=$CXX" >> config.mak
 date >> config.log
 echo "	$0 $*" >> config.log
 
-if [ $OS = Ubuntu ] || [ $OS = Debian ] ; then
+if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
   echo "
 
 Everything looks ok!
