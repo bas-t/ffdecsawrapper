@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 die(){
     echo $1
@@ -240,20 +240,22 @@ Aborting...
 fi
 
 #
-# Begin Debian Section
+# Begin Debian/Ubuntu Section
 #
 
 # Install build dependencies for FFdecsawrapper
 
-if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
-  if ! echo "$( whoami)" | grep "root" > /dev/null 2>&1; then
-    echo "
+if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
+  if [ $OS = Debian ] ; then
+    if ! echo "$( whoami)" | grep "root" > /dev/null 2>&1; then
+      echo "
 You should run as root.
 
 Aborting...
 "
-    make clean > /dev/null 2>&1
-    exit 0
+      make clean > /dev/null 2>&1
+      exit 0
+    fi
   fi
 
   if test -f /usr/bin/g++-4.8 > /dev/null 2>&1; then
@@ -261,7 +263,12 @@ Aborting...
       echo "
 Missing dependency g++4.7, marking for installation.
 "
-      apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+      if [ $OS == Debian ] ; then
+        apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+      else
+        sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7
+"
+      fi
     fi
   fi
 
@@ -269,35 +276,55 @@ Missing dependency g++4.7, marking for installation.
     echo "
 Missing dependency gettext, marking for installation.
 "
-    apt-get install gettext -y || die "Error installing dependency gettext"
+    if [ $OS == Debian ] ; then
+      apt-get install gettext -y || die "Error installing dependency gettext"
+    else
+      sudo apt-get install gettext -y || die "Error installing dependency gettext"
+    fi
   fi
 
   if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
     echo "
 Missing dependency libv4l-dev, marking for installation.
 "
-    apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+    if [ $OS == Debian ] ; then
+      apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+    else
+      sudo apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
+    fi
   fi
 
   if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
     echo "
 Missing dependency libproc-processtable-perl, marking for installation.
 "
-    apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+    if [ $OS == Debian ] ; then
+      apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+    else
+      sudo apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
+    fi
   fi
 
   if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
     echo "
 Missing dependency libssl-dev, marking for installation.
 "
-    apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+    if [ $OS == Debian ] ; then
+      apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+    else
+      sudo apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
+    fi
   fi
 
   if ! dpkg-query -l build-essential > /dev/null 2>&1; then
     echo "
 Missing dependency build-essential, marking for installation.
 "
-    apt-get install build-essential -y || die "Error installing dependency build-essential"
+    if [ $OS == Debian ] ; then
+      apt-get install build-essential -y || die "Error installing dependency build-essential"
+    else
+      sudo apt-get install build-essential -y || die "Error installing dependency build-essential"
+    fi
   fi
 
   if uname -a | grep 'Debian' > /dev/null  2>&1; then
@@ -308,88 +335,6 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
       apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
     fi
   fi
-fi
-
-if test "x$dvb_path" = "x"; then
-  if echo $OS | grep 'Debian' 2>&1 1>/dev/null; then
-    if uname -a | grep 'Debian' > /dev/null  2>&1; then
-      if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-        ./kernelpatch-debian
-      fi
-    fi
-  fi
-  if [ $(echo $?) -eq 1 ]; then
-    echo "
-Error(s) encountered during installing build-deps
-for FFdecsawrapper and/or running kernel patch.
-Fix the cause of the error(s) and run me again.
-"
-    confirmno "Do you want to continue anyway? [y/N]"
-    if [ $(echo $?) -eq 1 ]; then
-      git clean -xfd
-      echo "
-Aborting...
-"
-      exit 1
-    fi
-  fi
-fi
-
-#
-# End Debian Section
-#
-
-#
-# Begin Ubuntu Section
-#
-
-# Install build dependencies for FFdecsawrapper
-
-if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
-
-  if test -f /usr/bin/g++-4.8 > /dev/null 2>&1; then
-    if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
-      echo "
-Missing dependency g++4.7, marking for installation.
-"
-      sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
-    fi
-  fi
-
-  if ! dpkg-query -l gettext > /dev/null 2>&1; then
-    echo "
-Missing dependency gettext, marking for installation.
-"
-    sudo apt-get install gettext -y || die "Error installing dependency gettext"
-  fi
-
-  if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
-    echo "
-Missing dependency libv4l-dev, marking for installation.
-"
-    sudo apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
-  fi
-
-  if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
-    echo "
-Missing dependency libproc-processtable-perl, marking for installation.
-"
-    sudo apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
-  fi
-
-  if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
-    echo "
-Missing dependency libssl-dev, marking for installation.
-"
-    sudo apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
-  fi
-
-  if ! dpkg-query -l build-essential > /dev/null 2>&1; then
-    echo "
-Missing dependency build-essential, marking for installation.
-"
-    sudo apt-get install build-essential -y || die "Error installing dependency build-essential"
-  fi
 
   if uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
     if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
@@ -399,37 +344,39 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
       sudo apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
     fi
   fi
-fi
 
-
-if test "x$dvb_path" = "x"; then
-  if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
-    if uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
+  if test "x$dvb_path" = "x"; then
+    if uname -a | grep 'Debian' > /dev/null  2>&1; then
+      if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+        ./kernelpatch-debian
+      fi
+    elif uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
       if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
         ./kernelpatch-ubuntu
       fi
     fi
-  fi
-  if [ $(echo $?) -eq 1 ]; then
-    echo "
+    if [ $(echo $?) -eq 1 ]; then
+      echo "
 Error(s) encountered during installing build-deps
 for FFdecsawrapper and/or running kernel patch.
 Fix the cause of the error(s) and run me again.
 "
-    confirmno "Do you want to continue anyway? [y/N]"
-    if [ $(echo $?) -eq 1 ]; then
-      git clean -xfd
-      echo "
+      confirmno "Do you want to continue anyway? [y/N]"
+      if [ $(echo $?) -eq 1 ]; then
+        git clean -xfd
+        echo "
 Aborting...
 "
-      exit 1
+        exit 1
+      fi
     fi
   fi
 fi
 
 #
-# End Ubuntu Section
+# End Debian/Ubuntu Section
 #
+
 
 # Get the right dvbdev.h in place
 # If --dvb_dir= is set, use supplied header, else
@@ -633,7 +580,9 @@ rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 date >> config.log
 echo "	$0 $*" >> config.log
-echo "
+
+if [ $OS = Ubuntu ] || [ $OS = Debian ] ; then
+  echo "
 
 Everything looks ok!
 
@@ -642,10 +591,28 @@ make && make module
 "
 confirmyes "Start compiling now?[Y/n]"
 
-if [ $(echo $?) -eq 0 ]; then
-  make && make module
-else
-  echo "
+  if [ $(echo $?) -eq 0 ]; then
+    make && make module
+  else
+    echo "
 NOT starting compilation
 "
+  fi
+else
+  echo "
+
+Everything looks ok!
+
+Just hit 'enter' to run
+make && make module
+"
+confirmyes "Start compiling now?[Y/n]"
+
+  if [ $(echo $?) -eq 0 ]; then
+    make && make module
+  else
+    echo "
+NOT starting compilation
+"
+  fi
 fi
