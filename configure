@@ -592,6 +592,39 @@ confirmyes "Start compiling now?[Y/n]"
 
   if [ $(echo $?) -eq 0 ]; then
     make && make module
+    if [ $(echo $?) -eq 0 ]; then
+      echo "
+Do you want to install ffdecsawrapper and dvbloopback module?
+"
+confirmyes "Yes, install everything now![Y/n]"
+      if [ $(echo $?) -eq 0 ]; then
+        if [ $OS == Debian ] ; then
+          if test -e /etc/init.d/ffdecsawrapper; then
+            /etc/init.d/ffdecsawrapper stop
+            sleep 3
+            rmmod dvbloopback > /dev/null 2>&1
+          fi
+          rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+          rm -f /usr/bin/ffdecsawrapper
+          cp -f ffdecsawrapper /usr/bin
+          mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
+          /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+          depmod -a
+        else
+          if test -e /etc/init.d/ffdecsawrapper; then
+            sudo /etc/init.d/ffdecsawrapper stop
+            sudo sleep 3
+            sudo rmmod dvbloopback > /dev/null 2>&1
+          fi
+          sudo rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+          sudo rm -f /usr/bin/ffdecsawrapper
+          sudo cp -f ffdecsawrapper /usr/bin
+          sudo mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
+          sudo /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+          sudo depmod -a
+        fi
+      fi
+    fi
   else
     echo "
 NOT starting compilation
