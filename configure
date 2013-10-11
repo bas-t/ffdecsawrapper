@@ -610,6 +610,9 @@ confirmyes "Yes, install everything now![Y/n]"
           mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
           /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
           depmod -a
+          if test -e /etc/init.d/ffdecsawrapper; then
+            /etc/init.d/ffdecsawrapper start
+          fi
         else
           if test -e /etc/init.d/ffdecsawrapper; then
             sudo /etc/init.d/ffdecsawrapper stop
@@ -622,6 +625,9 @@ confirmyes "Yes, install everything now![Y/n]"
           sudo mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
           sudo /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
           sudo depmod -a
+          if test -e /etc/init.d/ffdecsawrapper; then
+            sudo /etc/init.d/ffdecsawrapper start
+          fi
         fi
       fi
     fi
