@@ -258,16 +258,14 @@ Aborting...
     fi
   fi
 
-  if test -f /usr/bin/g++-4.8 > /dev/null 2>&1; then
-    if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
-      echo "
+  if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
+    echo "
 Missing dependency g++4.7, marking for installation.
 "
-      if [ $OS == Debian ] ; then
-        apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
-      else
-        sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
-      fi
+    if [ $OS == Debian ] ; then
+      apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+    else
+      sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
     fi
   fi
 
