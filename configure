@@ -667,6 +667,6 @@ confirmyes "Start compiling now?[Y/n]"
     echo "
 NOT starting compilation
 "
+    fi
   fi
 fi
-
