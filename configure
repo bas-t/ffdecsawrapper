@@ -272,6 +272,7 @@ Missing dependency g++-4.6, marking for installation.
 Missing dependency g++-4.7, marking for installation.
 "
         apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+      fi
     fi
   fi
 
@@ -667,6 +668,5 @@ confirmyes "Start compiling now?[Y/n]"
     echo "
 NOT starting compilation
 "
-    fi
   fi
 fi
