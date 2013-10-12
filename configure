@@ -258,13 +258,28 @@ Aborting...
     fi
   fi
 
-  if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
-    echo "
-Missing dependency g++4.7, marking for installation.
+  if [ $OS == Debian ] ; then
+    if [ $SHORT_KERNEL == 3.2 ] ; then
+      if ! dpkg-query -l g++-4.6 > /dev/null 2>&1; then
+        echo "
+Missing dependency g++-4.6, marking for installation.
 "
-    if [ $OS == Debian ] ; then
-      apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+        apt-get install g++-4.6 -y || die "Error installing dependency g++-4.6"
+      fi
     else
+      if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
+        echo "
+Missing dependency g++-4.7, marking for installation.
+"
+        apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+    fi
+  fi
+
+  if [ $OS == Ubuntu ] ; then
+    if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
+      echo "
+Missing dependency g++-4.7, marking for installation.
+"
       sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
     fi
   fi
@@ -430,11 +445,13 @@ else
 fi
 
 if test "x$CXX" = "x"; then
-  if [ $OS = Ubuntu ] || [ $OS = Debian ] ; then
-    if test -f /usr/bin/g++-4.8 2>&1 1>/dev/null; then
-      CXX=g++-4.7
+  if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
+    if [ $SHORT_KERNEL == 3.2 ] ; then
+      if [ $OS == Debian ] ; then
+        CXX=g++-4.6
+      fi
     else
-      CXX=g++
+      CXX=g++-4.7
     fi
   else
     CXX=g++
