@@ -613,6 +613,12 @@ if [ $_NOTEST -eq 0 ]; then
     if [ $_VERB -ge 1 ]; then
       echo "Testing optimization levels 2 and 3"
       echo ""
+      echo "This may take a while...
+
+If you have chosen the 'long' option,
+
+a very long while..."
+      echo ""
     else
       echo "This may take a while..."
     fi
