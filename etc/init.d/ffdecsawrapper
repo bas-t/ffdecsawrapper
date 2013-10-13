@@ -11,7 +11,7 @@
 
 # Author: Bas-t
 
-
+. /lib/lsb/init-functions
 
 # Include ffdecsawrapper defaults if available.
 test -f /etc/default/ffdecsawrapper && . /etc/default/ffdecsawrapper
