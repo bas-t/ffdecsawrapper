@@ -258,42 +258,6 @@ Aborting...
     fi
   fi
 
-  if [ $OS == Debian ] ; then
-    if [ $SHORT_KERNEL == 3.2 ] ; then
-      if ! dpkg-query -l g++-4.6 > /dev/null 2>&1; then
-        echo "
-Missing dependency g++-4.6, marking for installation.
-"
-        apt-get install g++-4.6 -y || die "Error installing dependency g++-4.6"
-      fi
-    else
-      if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
-        echo "
-Missing dependency g++-4.7, marking for installation.
-"
-        apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
-      fi
-    fi
-  fi
-
-  if [ $OS == Ubuntu ] ; then
-    if [ $RELEASE == precise ] ; then
-      if ! dpkg-query -l g++-4.6 > /dev/null 2>&1; then
-        echo "
-Missing dependency g++-4.6, marking for installation.
-"
-        sudo apt-get install g++-4.6 -y || die "Error installing dependency g++-4.7"
-      fi
-    else
-      if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
-        echo "
-Missing dependency g++-4.7, marking for installation.
-"
-        sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
-      fi
-    fi
-  fi
-
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
@@ -455,21 +419,7 @@ else
 fi
 
 if test "x$CXX" = "x"; then
-  if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
-    if [ $SHORT_KERNEL == 3.2 ] ; then
-      if [ $OS == Debian ] ; then
-        CXX=g++-4.6
-      fi
-    else
-      if [ $RELEASE == precise ] ; then
-        CXX=g++-4.6
-       else
-        CXX=g++-4.7
-      fi
-    fi
-  else
-    CXX=g++
-  fi
+  CXX=g++
 fi
 
 # Experimental FFdecsa optimizing code
