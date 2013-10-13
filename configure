@@ -63,30 +63,8 @@ get_cpu_optimization(){
   FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
   arch=`uname -m`
   processors_flags=`cat /proc/cpuinfo | grep "flags" | head -n 1`
-  vendor=`cat /proc/cpuinfo |grep "vendor_id" | head -n 1 | sed -e "s/.*:\W*//"`
-  gcc_ver=`$CXX -v 2>&1 | grep "gcc version" | head -n 1`
-  gcc_major=`echo $gcc_ver | sed -e 's/^gcc version \([0-9]*\)\..*/\1/'`
-  gcc_minor=`echo $gcc_ver | sed -e 's/^gcc version [0-9]*\.\([0-9]*\).*/\1/'`
-  if test $gcc_major -gt 4; then
-    ARCH="native"
-  elif test $gcc_major -eq 4 && test $gcc_minor -ge 2; then
-    ARCH="native"
-  elif test "x$arch" = "xx86_64"; then
-    if test "x$vendor" = "xAuthenticAMD"; then
-      ARCH="k8"
-    elif test "x$vendor" = "xGenuineIntel"; then
-      ARCH="nocona"
-    else
-      echo **WARNING** - Unknown vendor $vendor - assuming nocona
-      ARCH="nocona"
-    fi
-    FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
-  elif test "x$arch" = "xathlon-xp"; then
-    ARCH="athlon-xp"
-    FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
-  else
-    ARCH="pentium"
-  fi
+  ARCH="native"
+  FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
   OPTS=""
   for opt in mmx sse sse2; do
     if check_cpu $opt; then
