@@ -277,6 +277,14 @@ Missing dependency g++-4.7, marking for installation.
   fi
 
   if [ $OS == Ubuntu ] ; then
+    if [ $RELEASE == precise ] ; then
+      if ! dpkg-query -l g++-4.6 > /dev/null 2>&1; then
+        echo "
+Missing dependency g++-4.6, marking for installation.
+"
+        sudo apt-get install g++-4.6 -y || die "Error installing dependency g++-4.7"
+      fi
+    else
     if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
       echo "
 Missing dependency g++-4.7, marking for installation.
@@ -452,7 +460,11 @@ if test "x$CXX" = "x"; then
         CXX=g++-4.6
       fi
     else
-      CXX=g++-4.7
+      if [ $RELEASE == precise ] ; then
+        CXX=g++-4.6
+       else
+        CXX=g++-4.7
+      fi
     fi
   else
     CXX=g++
