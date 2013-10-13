@@ -285,11 +285,12 @@ Missing dependency g++-4.6, marking for installation.
         sudo apt-get install g++-4.6 -y || die "Error installing dependency g++-4.7"
       fi
     else
-    if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
-      echo "
+      if ! dpkg-query -l g++-4.7 > /dev/null 2>&1; then
+        echo "
 Missing dependency g++-4.7, marking for installation.
 "
-      sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+        sudo apt-get install g++-4.7 -y || die "Error installing dependency g++-4.7"
+      fi
     fi
   fi
 
