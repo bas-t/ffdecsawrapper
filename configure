@@ -61,8 +61,6 @@ check_cpu(){
 #try to figure out best FFdecsa compiler options
 get_cpu_optimization(){
   FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
-  arch=`uname -m`
-  processors_flags=`cat /proc/cpuinfo | grep "flags" | head -n 1`
   ARCH="native"
   FLAGS="$FLAGS -finline-limit=6000000 --param max-unrolled-insns=500"
   OPTS=""
