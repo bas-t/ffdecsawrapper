@@ -36,7 +36,7 @@ confirmno(){
 
 # Get kernel version numbers
 
-    SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+'.0 )
+    SHORT_KERNEL=$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )
     FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
     SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
     PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
@@ -49,7 +49,7 @@ confirmno(){
 # Define where to build and from what dir to build
 
     BUILD_DIR=/lib/modules/`uname -r`/build
-    TEMPDIR=/usr/src/$SHORT_KERNEL
+    TEMPDIR=/usr/src/$SHORT_KERNEL.0
 
 # Abort if running kernel is < 3.x
 
@@ -80,7 +80,7 @@ if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
    and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'
 
 
-Do you want me to install linux-source-$SHORT_KERNEL?
+Do you want me to install linux-source-$SHORT_KERNEL.0?
 This will remove any previously installed
 linux-source packages and (re)install
 the source for your current kernel.
@@ -98,7 +98,7 @@ done patching the kernel and compiling FFdecsawrapper.
 
     if [ $(echo $?) -eq 0 ]; then
       sudo apt-get purge linux-source* -y && sudo apt-get build-dep linux --no-install-recommends -y
-      sudo apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
+      sudo apt-get install linux-source-$SHORT_KERNEL.0 -y || die "Error installing linux-source-$SHORT_KERNEL.0"
 
 # Compile the patched dvb-core.ko module and install it
 
@@ -111,10 +111,10 @@ Preparing, this may take a while...
       sudo mkdir -p $TEMPDIR
       if  [ $FIRST_DIGIT -eq 3 ]; then
         if [ $SECOND_DIGIT -lt 7 ]; then
-          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2; then
+            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL.0/drivers/media/dvb/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz; then
+            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL.0/drivers/media/dvb/dvb-core/
           fi
           echo "
 Building and installing, please be patient...
@@ -126,10 +126,10 @@ Building and installing, please be patient...
           sudo rm -rf $TEMPDIR
           sudo depmod -a
         else
-          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2; then
+            sudo tar -xjf /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL.0/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz; then
+            sudo tar -xJf /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL.0/drivers/media/dvb-core/
           fi
           echo "
 Building and installing, please be patient...
