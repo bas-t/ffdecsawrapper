@@ -20,7 +20,7 @@
 #ifndef ___VERSION_H
 #define ___VERSION_H
 
-#define SC_RELEASE "1.1.2"
+#define SC_RELEASE "1.1.3"
 
 extern const char *ScVersion;
 
