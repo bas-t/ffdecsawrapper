@@ -328,10 +328,10 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 
   if test "x$dvb_path" = "x"; then
     if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-#      if test "x$CXX" = "x"; then
-#        CXX=g++
-#      fi
-#        export CXX
+      if test "x$CXX" = "x"; then
+        CXX=g++
+      fi
+        export CXX
       if uname -a | grep 'Debian' > /dev/null  2>&1; then
         ./kernelpatch-debian
       elif uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
