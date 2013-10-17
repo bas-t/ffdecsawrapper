@@ -230,6 +230,28 @@ Aborting...
     fi
   fi
 
+# Compare system default g++ (major) version with the
+# g++ (major) version the kernel was built with
+# If they differ, choose the version the kernel was built with
+
+  if [ $OS == Debian ] ; then
+
+    CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
+    CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
+
+    if ! [ $CCSYSTEM == $CCKERNEL ] ; then
+      if test "x$CXX" = "x"; then
+         CXX=g++-$CCKERNEL
+      fi
+
+      if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
+        echo "
+Missing dependency g++-$CCKERNEL, marking for installation.
+"        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+      fi
+    fi
+  fi 
+
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
@@ -304,12 +326,14 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
   fi
 
   if test "x$dvb_path" = "x"; then
-    if uname -a | grep 'Debian' > /dev/null  2>&1; then
-      if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+    if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+#      if test "x$CXX" = "x"; then
+#        CXX=g++
+#      fi
+#        export CXX
+      if uname -a | grep 'Debian' > /dev/null  2>&1; then
         ./kernelpatch-debian
-      fi
-    elif uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
-      if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+      elif uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
         ./kernelpatch-ubuntu
       fi
     fi
