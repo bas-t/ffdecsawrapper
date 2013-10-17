@@ -247,7 +247,8 @@ Aborting...
       if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
         echo "
 Missing dependency g++-$CCKERNEL, marking for installation.
-"        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+"
+        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
       fi
     fi
   fi 
