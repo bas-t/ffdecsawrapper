@@ -614,9 +614,7 @@ if [ $_NOTEST -eq 0 ]; then
       echo ""
       echo "This may take a while...
 
-If you have chosen the 'long' option,
-
-a very long while..."
+Please be patient"
       echo ""
     else
       echo "This may take a while..."

@@ -114,7 +114,8 @@ show_help(){
   echo "                        Don't use this option unless you"
   echo "                        exactly know what you are doing."
   echo "                        "
-  echo " --cxx=<opt>            [g++] Command for C++ compilation"
+  echo " --cxx=<opt>            [g++] Define C++ and CC version to use"
+  echo "                        Use like --cxx=4.7"
   echo "                        "
   exit 0
 }
@@ -128,7 +129,7 @@ for opt do
   case "$opt" in
   --dvb_dir=*) dvb_path=`eval echo $optval`
   ;;
-  --cxx=*) CXX="$optval"
+  --cxx=*) CXX="g++-$optval"; GCC="gcc-$optval"
   ;;
   --ffdecsa_mode=*) ffdecsa_opt="no"; MAX_MODE="$optval"
   ;;
@@ -161,13 +162,6 @@ FIRST_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )
 SECOND_DIGIT=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )
 PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )
 
-if [ -f /usr/bin/lsb_release ]; then
-# Get OS and release info
-
-    OS=$( lsb_release -si )
-    RELEASE=$( lsb_release -sc )
-fi
-
 # Abort if running kernel is < 3.x
 
 if [ $FIRST_DIGIT -lt 3 ]; then
@@ -181,7 +175,7 @@ Aborting...
   exit 1
 fi
 
-# Check for v4l drivers
+# Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
   echo "
@@ -215,9 +209,21 @@ fi
 # Begin Debian/Ubuntu Section
 #
 
-# Install build dependencies for FFdecsawrapper
+# First get some info on what we are running
+
+if [ -f /usr/bin/lsb_release ]; then
+  OS=$( lsb_release -si )
+  RELEASE=$( lsb_release -sc )
+fi
+
+# The rest of the Debian/Ubuntu section
+# depends on the outcome of next line
 
 if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
+
+# If we run Debian, make sure
+# that we are running as root
+
   if [ $OS == Debian ] ; then
     if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
       echo "
@@ -233,25 +239,34 @@ Aborting...
 # Compare system default g++ (major) version with the
 # g++ (major) version the kernel was built with
 # If they differ, choose the version the kernel was built with
+# and install any missing packages, unless we defined
+# a specific version using --cxx= option on command line
 
-  if [ $OS == Debian ] ; then
+  CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
+  CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
 
-    CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
-    CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
+  if ! [ $CCSYSTEM == $CCKERNEL ] ; then
+    if test "x$CXX" = "x"; then
+      CXX=g++-$CCKERNEL
+      GCC=gcc-$CCKERNEL
+      export GCC
+    else
+      export GCC
+    fi
 
-    if ! [ $CCSYSTEM == $CCKERNEL ] ; then
-      if test "x$CXX" = "x"; then
-         CXX=g++-$CCKERNEL
-      fi
-
-      if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
-        echo "
+    if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
+      echo "
 Missing dependency g++-$CCKERNEL, marking for installation.
 "
+      if [ $OS == Debian ] ; then
         apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+      else
+        sudo apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
       fi
     fi
-  fi 
+  fi
+
+# Install build dependencies for FFdecsawrapper 
 
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
     echo "
@@ -308,6 +323,13 @@ Missing dependency build-essential, marking for installation.
     fi
   fi
 
+# If we are running a Debian or Ubuntu kernel
+# we need the headers installed.
+# But don't install headers if we are running
+# a vanilla kernel
+# uname -a does not return Debian or Ubuntu
+# when we are running a vannila kernel
+
   if uname -a | grep 'Debian' > /dev/null  2>&1; then
     if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
       echo "
@@ -326,12 +348,12 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
     fi
   fi
 
+# The kernel needs to be patched if we don't
+# use newest v4l drivers, but don't offer
+# to do so if it allready has been done.
+
   if test "x$dvb_path" = "x"; then
     if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-      if test "x$CXX" = "x"; then
-        CXX=g++
-      fi
-        export CXX
       if uname -a | grep 'Debian' > /dev/null  2>&1; then
         ./kernelpatch-debian
       elif uname -a | grep 'Ubuntu' > /dev/null  2>&1; then
@@ -415,6 +437,9 @@ else
   fi
 fi
 
+# Set compiler version,
+# if not done allready
+
 if test "x$CXX" = "x"; then
   CXX=g++
 fi
@@ -424,6 +449,8 @@ echo "
 
 echo "
 Using C++ compiler: $CXX"
+
+# Define what optimization tests we want
 
 if test "x$ffdecsa_opt" = "xoldlong"; then
   FFDECSA_MODES="PARALLEL_32_INT PARALLEL_32_4CHAR PARALLEL_32_4CHARA \
@@ -435,6 +462,10 @@ elif test "x$ffdecsa_opt" = "xoldyes"; then
   FFDECSA_MODES="PARALLEL_32_INT PARALLEL_64_2INT PARALLEL_64_LONG \
                  PARALLEL_64_MMX PARALLEL_128_2LONG PARALLEL_128_2MMX \
                  PARALLEL_128_SSE PARALLEL_128_SSE2"
+
+# To use improved optimization code
+# run external script
+
 elif test "x$ffdecsa_opt" = "xyes"; then
   CCC=$CXX
   export CCC
@@ -449,9 +480,13 @@ Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, oldyes, oldlong,
   exit 1
 fi
 
+# Set temp dir
+
 if test "x${TMPDIR}" = "x"; then
   TMPDIR="/tmp"
 fi
+
+# Set compiletype
 
 if test "x$compiletype_opt" = "xrelease"; then
   echo "
@@ -466,6 +501,10 @@ Bad option to --compiletype '$compiletype_opt'. Should be 'release, debug'"
   exit 1
 fi
 
+# Don't know what this option is all about,
+# never used it.
+# Maybe a leftover from VDR?
+
 if test "x$auxserver_opt" != "x"; then
   echo $auxserver_opt | {
     IFS=: read host port pass
@@ -476,7 +515,8 @@ fi
 TMPDIR="${TMPDIR}/ffdecsawrapper.${RANDOM}"
 mkdir ${TMPDIR}
 
-#Test FFDECSA compile (oldstyle)
+#Test FFdecsa optimization (oldstyle and deprecated)
+
 if test "x$ffdecsa_opt" != "xyes"; then
   if test "x$ffdecsa_opt" != "xlong"; then
     MAX_val=0
@@ -546,14 +586,17 @@ Using PARALLEL_MODE = ${MAX_MODE}"
   fi
 fi
 
+# Play with TsBufferSize, w.i.p
+
 if test "x$tsbuffer" != "x"; then
   sed -i "s/DeCsaTsBuffSize=4/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
 fi
 
 rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
-date >> config.log
-echo "	$0 $*" >> config.log
+
+# Compile and, if running Debian/Ubuntu,
+# finish by installing the lot.
 
 if [ $OS == Ubuntu ] || [ $OS == Debian ] ; then
   echo "

@@ -107,6 +107,7 @@ done patching the kernel and compiling ffdecsawrapper and ffdecsawrapper module.
 Building patched dvb-core module for kernel `uname -r`
 
 Preparing, this may take a while...
+
 "
       rm -rf $TEMPDIR
       mkdir -p $TEMPDIR
@@ -121,7 +122,7 @@ Preparing, this may take a while...
 Building and installing, please be patient...
 "
           patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
-          CC=$CXX make -C $BUILD_DIR M=$TEMPDIR modules
+          CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
           mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
           /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
           rm -rf $TEMPDIR
@@ -136,7 +137,7 @@ Building and installing, please be patient...
 Building and installing, please be patient...
 "
           patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
-          CC=$CXX make -C $BUILD_DIR M=$TEMPDIR modules
+          CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
           mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
           /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
           rm -rf $TEMPDIR
