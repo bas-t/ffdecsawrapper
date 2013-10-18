@@ -249,10 +249,9 @@ Aborting...
     if test "x$CXX" = "x"; then
       CXX=g++-$CCKERNEL
       GCC=gcc-$CCKERNEL
-      export GCC
-    else
-      export GCC
     fi
+
+    export GCC
 
     if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
       echo "
