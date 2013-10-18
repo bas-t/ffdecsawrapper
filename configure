@@ -240,7 +240,7 @@ Aborting...
 # If it is, offer to stop it
 
 if ps -C ffdecsawrapper > /dev/null 2>&1; then
-  echo"
+  echo "
 It seems that FFdecsawrapper is running.
 
 It should be stopped before proceeding.
