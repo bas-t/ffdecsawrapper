@@ -245,7 +245,7 @@ It seems that FFdecsawrapper is running.
 
 It should be stopped before proceeding.
 "
-  confirmyes "Do you want stop FFdecsawrapper? [Y/n]"
+  confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
   if [ $(echo $?) -eq 0 ]; then
     if test -e /etc/init.d/ffdecsawrapper; then
       if [ $OS == Debian ] ; then
