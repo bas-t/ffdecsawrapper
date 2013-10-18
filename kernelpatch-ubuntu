@@ -58,6 +58,10 @@ if [ $FIRST_DIGIT -lt 3 ]; then
   exit 1
 fi
 
+if test "x$GCC" = "x"; then
+  GCC=gcc
+fi
+
 if echo $OS | grep 'Ubuntu' 2>&1 1>/dev/null; then
 
 # When using FFdecsawrapper, the kernel has to be patched.
