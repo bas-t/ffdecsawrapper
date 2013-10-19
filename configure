@@ -271,35 +271,6 @@ It should be stopped before proceeding.
   fi
 fi
 
-# Compare system default g++ (major) version with the
-# g++ (major) version the kernel was built with
-# If they differ, choose the version the kernel was built with
-# and install any missing packages, unless we defined
-# a specific version using --cxx= option on command line
-
-  CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
-  CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
-
-  if ! [ $CCSYSTEM == $CCKERNEL ] ; then
-    if test "x$CXX" = "x"; then
-      CXX=g++-$CCKERNEL
-      GCC=gcc-$CCKERNEL
-    fi
-
-    export GCC
-
-    if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
-      echo "
-Missing dependency g++-$CCKERNEL, marking for installation.
-"
-      if [ $OS == Debian ] ; then
-        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
-      else
-        sudo apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
-      fi
-    fi
-  fi
-
 # Install build dependencies for FFdecsawrapper 
 
   if ! dpkg-query -l gettext > /dev/null 2>&1; then
@@ -379,6 +350,35 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 Missing dependency linux-headers-`uname -r`, marking for installation.
 "
       sudo apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+    fi
+  fi
+
+# Compare system default g++ (major) version with the
+# g++ (major) version the kernel was built with
+# If they differ, choose the version the kernel was built with
+# and install any missing packages, unless we defined
+# a specific version using --cxx= option on command line
+
+  CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
+  CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
+
+  if ! [ $CCSYSTEM == $CCKERNEL ] ; then
+    if test "x$CXX" = "x"; then
+      CXX=g++-$CCKERNEL
+      GCC=gcc-$CCKERNEL
+    fi
+
+    export GCC
+
+    if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
+      echo "
+Missing dependency g++-$CCKERNEL, marking for installation.
+"
+      if [ $OS == Debian ] ; then
+        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+      else
+        sudo apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+      fi
     fi
   fi
 
