@@ -22,10 +22,6 @@ LBDIR = dvbloopback/src
 SCDIR = sc/PLUGINS/src
 SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing
 
-ifdef AUXSERVER_OPTS
-  DEFINES += ${AUXSERVER_OPTS}
-endif
-
 CXXFLAGS += -g
 CFLAGS   += -g
 SC_FLAGS += -g
