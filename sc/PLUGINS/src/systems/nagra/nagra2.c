@@ -1596,13 +1596,6 @@ cSystemLinkNagra2::cSystemLinkNagra2(void)
 {
   opts=new cOpts(SYSTEM_NAME,5);
   opts->Add(new cOptBool("DropEMMS",trNOOP("Nagra2: drop EMM-S packets"),&dropEMMs));
-#ifdef HAS_AUXSRV
-  static const char allowed_chars[] = "0123456789abcdefghijklmnopqrstuvwxyz-.";
-  opts->Add(new cOptBool("AuxServerEnable",trNOOP("Nagra2: Enable AUXserver"),&auxEnabled));
-  opts->Add(new cOptStr("AuxServerAddr",trNOOP("Nagra2: AUXserver hostname"),auxAddr,sizeof(auxAddr),allowed_chars));
-  opts->Add(new cOptInt("AuxServerPort",trNOOP("Nagra2: AUXserver port"),&auxPort,0,65535));
-  opts->Add(new cOptStr("AuxServerPass",trNOOP("Nagra2: AUXserver password"),auxPassword,sizeof(auxPassword),allowed_chars));
-#endif
   Feature.NeedsKeyFile();
 }
 

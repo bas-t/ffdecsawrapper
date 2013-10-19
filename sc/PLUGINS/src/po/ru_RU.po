@@ -192,18 +192,6 @@ msgstr "Nagra: мин. время обработки ECM"
 msgid "Nagra2: drop EMM-S packets"
 msgstr "Награ2: запрет EMM-S пакетов"
 
-msgid "Nagra2: Enable AUXserver"
-msgstr "Nagra2: разрешить AUXserver"
-
-msgid "Nagra2: AUXserver hostname"
-msgstr "Nagra2: AUXserver имя хоста"
-
-msgid "Nagra2: AUXserver port"
-msgstr "Nagra2: AUXserver порт"
-
-msgid "Nagra2: AUXserver password"
-msgstr "Nagra2: AUXserver пароль"
-
 msgid "don't touch"
 msgstr "не изменять"
 
