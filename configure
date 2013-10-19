@@ -94,21 +94,23 @@ show_help(){
   echo " --auxserver=<opt>      [localhost:7777:auxserver]"
   echo "                        Use auxserver with given parms."
   echo "                        "
-  echo " --optimize=<opt>       [yes] Set FFDecsa optimization auto-detection"
+  echo " --optimize=<opt>       [yes] Perform FFDecsa optimization auto-detection"
+  echo "                        for all mmx and sse types optimizations"
   echo "                        with both -O2 and -O3 levels"
   echo "                        long: Try all known optimizations"
   echo "                        oldyes: Try most common optimizations"
   echo "                        oldlong: Try all known optimizations"
-  echo "                        oldyes and oldlong execute old code"
   echo "                        no: Don't do any optimizations"
-  echo "                        Option is disabled by --ffdecsa_mode"
+  echo "                        Option is disabled by --ffdecsa_mode option"
+  echo "                        oldyes and oldlong execute old code"
   echo "                        "
   echo " --tsbuffer=<opt>       [4] Change default TS buffer size (in MB)."
   echo "                        Use like --tsbuffer=8"
   echo "                        "
-  echo " --ffdecsa_mode=<opt>   Use <opt> optimization"
-  echo "                        like  --ffdecsa_mode=PARALLEL_128_SSE"
-  echo "                        Option disables --optimize"
+  echo " --ffdecsa_mode=<opt>   Test single <opt> optimization mode"
+  echo "                        with both -O2 and -O3 level"
+  echo "                        Use like  --ffdecsa_mode=PARALLEL_128_SSE"
+  echo "                        Option disables --optimize option"
   echo "                        "
   echo " --ffdecsa_flags=<opt>  Override default ffdecsa compiler flags."
   echo "                        Don't use this option unless you"
@@ -131,7 +133,7 @@ for opt do
   ;;
   --cxx=*) CXX="g++-$optval"; GCC="gcc-$optval"
   ;;
-  --ffdecsa_mode=*) ffdecsa_opt="no"; MAX_MODE="$optval"
+  --ffdecsa_mode=*) ffdecsa_opt="defined"; MAX_MODE="$optval"
   ;;
   --ffdecsa_flags=*) ffdecsa_flags="$optval"
   ;;
@@ -239,37 +241,37 @@ Aborting...
 # Check if FFdecsawrapper is running
 # If it is, offer to stop it
 
-if ps -C ffdecsawrapper > /dev/null 2>&1; then
-  echo "
+  if ps -C ffdecsawrapper > /dev/null 2>&1; then
+    echo "
 It seems that FFdecsawrapper is running.
 
 It should be stopped before proceeding.
 "
-  confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
-  if [ $(echo $?) -eq 0 ]; then
-    if test -e /etc/init.d/ffdecsawrapper; then
-      if [ $OS == Debian ] ; then
-        /etc/init.d/ffdecsawrapper stop
-        sleep 3
-        rmmod dvbloopback > /dev/null 2>&1
+    confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
+    if [ $(echo $?) -eq 0 ]; then
+      if test -e /etc/init.d/ffdecsawrapper; then
+        if [ $OS == Debian ] ; then
+          /etc/init.d/ffdecsawrapper stop
+          sleep 3
+          rmmod dvbloopback > /dev/null 2>&1
+        else
+          sudo /etc/init.d/ffdecsawrapper stop
+          sudo sleep 3
+          sudo rmmod dvbloopback > /dev/null 2>&1
+        fi
       else
-        sudo /etc/init.d/ffdecsawrapper stop
-        sudo sleep 3
-        sudo rmmod dvbloopback > /dev/null 2>&1
-      fi
-    else
-      if [ $OS == Debian ] ; then
-        killall -9 ffdecsawrapper
-        sleep 3
-        rmmod dvbloopback > /dev/null 2>&1
-      else
-        sudo killall -9 ffdecsawrapper
-        sudo sleep 3
-        sudo rmmod dvbloopback > /dev/null 2>&1
+        if [ $OS == Debian ] ; then
+          killall -9 ffdecsawrapper
+          sleep 3
+          rmmod dvbloopback > /dev/null 2>&1
+        else
+          sudo killall -9 ffdecsawrapper
+          sudo sleep 3
+          sudo rmmod dvbloopback > /dev/null 2>&1
+        fi
       fi
     fi
   fi
-fi
 
 # Install build dependencies for FFdecsawrapper 
 
@@ -478,12 +480,6 @@ if test "x$CXX" = "x"; then
   CXX=g++
 fi
 
-echo "
-`uname -r` kernel detected."
-
-echo "
-Using C++ compiler: $CXX"
-
 # Define what optimization tests we want
 
 if test "x$ffdecsa_opt" = "xoldlong"; then
@@ -508,6 +504,10 @@ elif test "x$ffdecsa_opt" = "xlong"; then
   CCC=$CXX
   export CCC
  ./FFdecsa_optimizer -e
+elif test "x$ffdecsa_opt" = "xdefined"; then
+  CCC=$CXX
+  export CCC
+ ./FFdecsa_optimizer -P $MAX_MODE
 elif test "x$ffdecsa_opt" != "xno"; then
   echo "
 Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, oldyes, oldlong, no'"
@@ -523,12 +523,9 @@ fi
 # Set compiletype
 
 if test "x$compiletype_opt" = "xrelease"; then
-  echo "
-Using compile type release"
   echo "RELEASE=1" >> config.mak
 elif test "x$compiletype_opt" = "xdebug"; then
-  echo "
-Using compile type debug"
+  echo ""
 else
   echo "
 Bad option to --compiletype '$compiletype_opt'. Should be 'release, debug'"
@@ -553,68 +550,70 @@ mkdir ${TMPDIR}
 
 if test "x$ffdecsa_opt" != "xyes"; then
   if test "x$ffdecsa_opt" != "xlong"; then
-    MAX_val=0
-    if test "x$ffdecsa_opt" != "xno"; then
-      if test "x$ffdecsa_flags" = "x"; then
-        if test -f /proc/cpuinfo; then
-          get_cpu_optimization
+    if test "x$ffdecsa_opt" != "xdefined"; then
+      MAX_val=0
+      if test "x$ffdecsa_opt" != "xno"; then
+        if test "x$ffdecsa_flags" = "x"; then
+          if test -f /proc/cpuinfo; then
+            get_cpu_optimization
+          fi
+        else
+          FLAGS=$ffdecsa_flags
         fi
-      else
-        FLAGS=$ffdecsa_flags
-      fi
-      FFdecsaDIR="FFdecsa"
-      TMPOUT="${TMPDIR}/FFdecsa/out"
-      mkdir "${TMPDIR}/FFdecsa"
-      cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
-      echo "
+        FFdecsaDIR="FFdecsa"
+        TMPOUT="${TMPDIR}/FFdecsa/out"
+        mkdir "${TMPDIR}/FFdecsa"
+        cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
+        echo "
 Trying various FFdecsa optimizations...
 "
-      for var in ${FFDECSA_MODES}; do
-        make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
-        if test $? -ne 0 ; then
-          echo "
-    ${var}: build failed"
-        else
-          rm -f ${TMPOUT}
-          sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
-          if test $? -ne 0; then
+        for var in ${FFDECSA_MODES}; do
+          make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
+          if test $? -ne 0 ; then
             echo "
-    ${var}: test failed"
+    ${var}: build failed"
           else
-            grep FAILED "${TMPOUT}" >/dev/null 2>&1
-            if test $? -ne 1; then
+            rm -f ${TMPOUT}
+            sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
+            if test $? -ne 0; then
               echo "
     ${var}: test failed"
             else
-              res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
-              echo "
+              grep FAILED "${TMPOUT}" >/dev/null 2>&1
+              if test $? -ne 1; then
+                echo "
+    ${var}: test failed"
+              else
+                res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
+                echo "
     ${var}: $res"
-              if test $res -gt $MAX_val; then
-                MAX_val=$res
-                MAX_MODE=$var
+                if test $res -gt $MAX_val; then
+                  MAX_val=$res
+                  MAX_MODE=$var
+                fi
               fi
             fi
           fi
-        fi
-      make -C "${TMPDIR}/FFdecsa" clean >/dev/null 2>&1
-      done
-      echo "
-Choosing PARALLEL_MODE = ${MAX_MODE}"
-      echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-    else
-      if test "x$ffdecsa_flags" = "x"; then
-        if test -f /proc/cpuinfo; then
-          get_cpu_optimization
-        fi
-      else
-        FLAGS=$ffdecsa_flags
-      fi
-      echo "
-Using PARALLEL_MODE = ${MAX_MODE}"
-      if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
+        make -C "${TMPDIR}/FFdecsa" clean >/dev/null 2>&1
+        done
+        echo "
+Choosing PARALLEL MODE = ${MAX_MODE}"
         echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
       else
-        echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+        if test "x$ffdecsa_flags" = "x"; then
+          if test -f /proc/cpuinfo; then
+            get_cpu_optimization
+          fi
+        else
+          FLAGS=$ffdecsa_flags
+        fi
+        echo "
+Using PARALLEL_MODE = ${MAX_MODE}"
+        if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
+          echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+        else
+          echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
+        fi
       fi
     fi
   fi
@@ -625,6 +624,23 @@ fi
 if test "x$tsbuffer" != "x"; then
   sed -i "s/DeCsaTsBuffSize=4/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
 fi
+
+echo "
+`uname -r` kernel detected."
+
+echo "
+Using C++ compiler: $CXX"
+
+if test "x$compiletype_opt" = "xrelease"; then
+  echo "
+Using compile type: release
+"
+elif test "x$compiletype_opt" = "xdebug"; then
+  echo "
+Using compile type: debug
+"
+fi
+
 
 rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
@@ -640,15 +656,15 @@ Everything looks ok!
 Just hit 'enter' to run
 make && make module
 "
-confirmyes "Start compiling now?[Y/n]"
+  confirmyes "Start compiling now?[Y/n]"
 
   if [ $(echo $?) -eq 0 ]; then
     make && make module
     if [ $(echo $?) -eq 0 ]; then
       echo "
-Do you want to install ffdecsawrapper and dvbloopback module?
+Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
 "
-confirmyes "Yes, install everything now![Y/n]"
+      confirmyes "Yes, install them now![Y/n]"
       if [ $(echo $?) -eq 0 ]; then
         if [ $OS == Debian ] ; then
           if ps -C ffdecsawrapper > /dev/null 2>&1; then
