@@ -43,37 +43,6 @@ confirmyes(){
     esac
 }
 
-#check whether option is supported by this cpu
-check_cpu(){
-    ok=0
-    grep "^flags.* $1 " /proc/cpuinfo >/dev/null 2>&1
-    if test $? -eq 0; then
-      ok=1
-    else
-      grep "^flags.* $1\$" /proc/cpuinfo >/dev/null 2>&1
-      if test $? -eq 0; then
-        ok=1
-      fi
-    fi
-    eval test $ok -eq 1
-}
-
-#try to figure out best FFdecsa compiler options
-get_cpu_optimization(){
-  FLAGS="FLAGS=-O3 -fexpensive-optimizations -funroll-loops"
-  ARCH="native"
-  OPTS=""
-  for opt in mmx sse sse2; do
-    if check_cpu $opt; then
-      OPTS="$OPTS $opt"
-      FLAGS="$FLAGS -m$opt"
-    fi
-  done
-  FLAGS="$FLAGS -march=$ARCH"
-  echo "
-Processor capabilities: $ARCH ($OPTS )"
-}
-
 show_help(){
   echo " Usage: ./configure --opt1=<opt> --opt2=<opt>"
   echo "                        "
@@ -93,11 +62,8 @@ show_help(){
   echo "                        for all mmx and sse types optimizations"
   echo "                        with both -O2 and -O3 levels"
   echo "                        long: Try all known optimizations"
-  echo "                        oldyes: Try most common optimizations"
-  echo "                        oldlong: Try all known optimizations"
   echo "                        no: Don't do any optimizations"
   echo "                        Option is disabled by --ffdecsa_mode option"
-  echo "                        oldyes and oldlong execute old code"
   echo "                        "
   echo " --tsbuffer=<opt>       [4] Change default TS buffer size (in MB)."
   echo "                        Use like --tsbuffer=8"
@@ -117,7 +83,6 @@ show_help(){
   exit 0
 }
 
-MAX_MODE=PARALLEL_32_INT
 ffdecsa_opt="yes"
 compiletype_opt="release"
 
@@ -424,21 +389,7 @@ fi
 # Define what optimization tests we want
 
 if test "x$ffdecsa_flags" = "x"; then
-  if test "x$ffdecsa_opt" = "xoldlong"; then
-    FFDECSA_MODES="PARALLEL_32_INT PARALLEL_32_4CHAR PARALLEL_32_4CHARA \
-                   PARALLEL_64_8CHAR PARALLEL_64_8CHARA PARALLEL_64_2INT \
-                   PARALLEL_64_LONG PARALLEL_64_MMX PARALLEL_128_16CHAR \
-                   PARALLEL_128_16CHARA PARALLEL_128_4INT PARALLEL_128_2LONG \
-                   PARALLEL_128_2MMX PARALLEL_128_SSE PARALLEL_128_SSE2"
-  elif test "x$ffdecsa_opt" = "xoldyes"; then
-    FFDECSA_MODES="PARALLEL_32_INT PARALLEL_64_2INT PARALLEL_64_LONG \
-                   PARALLEL_64_MMX PARALLEL_128_2LONG PARALLEL_128_2MMX \
-                   PARALLEL_128_SSE PARALLEL_128_SSE2"
-
-# To use improved optimization code
-# run external script
-
-  elif test "x$ffdecsa_opt" = "xyes"; then
+  if test "x$ffdecsa_opt" = "xyes"; then
     CCC=$CXX
     export CCC
    ./FFdecsa_optimizer
@@ -452,84 +403,8 @@ if test "x$ffdecsa_flags" = "x"; then
    ./FFdecsa_optimizer -P $MAX_MODE
   elif test "x$ffdecsa_opt" != "xno"; then
     echo "
-Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, oldyes, oldlong, no'"
+Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'"
     exit 1
-  fi
-fi
-
-# Set temp dir
-
-if test "x${TMPDIR}" = "x"; then
-  TMPDIR="/tmp"
-fi
-
-TMPDIR="${TMPDIR}/ffdecsawrapper.${RANDOM}"
-mkdir ${TMPDIR}
-
-#Test FFdecsa optimization (oldstyle and deprecated)
-
-if test "x$ffdecsa_flags" = "x"; then
-  if test "x$ffdecsa_opt" != "xyes"; then
-    if test "x$ffdecsa_opt" != "xlong"; then
-      if test "x$ffdecsa_opt" != "xdefined"; then
-        MAX_val=0
-        if test "x$ffdecsa_opt" != "xno"; then
-          if test -f /proc/cpuinfo; then
-            get_cpu_optimization
-          fi
-          FFdecsaDIR="FFdecsa"
-          TMPOUT="${TMPDIR}/FFdecsa/out"
-          mkdir "${TMPDIR}/FFdecsa"
-          cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}/FFdecsa/"
-          echo "
-Trying various FFdecsa optimizations...
-"
-          for var in ${FFDECSA_MODES}; do
-            make -C "${TMPDIR}/FFdecsa" FFdecsa_test "PARALLEL_MODE=${var}" "${FLAGS}" "COMPILER=$CXX" >/dev/null 2>&1
-            if test $? -ne 0 ; then
-              echo "
-    ${var}: build failed"
-            else
-              rm -f ${TMPOUT}
-              sync;sleep 2; "${TMPDIR}/FFdecsa/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
-              if test $? -ne 0; then
-                echo "
-    ${var}: test failed"
-              else
-                grep FAILED "${TMPOUT}" >/dev/null 2>&1
-                if test $? -ne 1; then
-                  echo "
-    ${var}: test failed"
-                else
-                  res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
-                  echo "
-    ${var}: $res"
-                  if test $res -gt $MAX_val; then
-                    MAX_val=$res
-                    MAX_MODE=$var
-                  fi
-                fi
-              fi
-            fi
-          make -C "${TMPDIR}/FFdecsa" clean >/dev/null 2>&1
-          done
-          echo "
-Choosing PARALLEL MODE = ${MAX_MODE}"
-          echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-        else
-          if test -f /proc/cpuinfo; then
-            get_cpu_optimization
-          fi
-          echo "
-Using PARALLEL_MODE = ${MAX_MODE}"
-          if test "x$MAX_MODE" != "xPARALLEL_32_INT"; then
-            echo "FFDECSA_OPTS = \"$FLAGS\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-          else
-            echo "FFDECSA_OPTS = PARALLEL_MODE=${MAX_MODE} COMPILER=$CXX" >> config.mak
-          fi
-        fi
-      fi
-    fi
   fi
 fi
 
