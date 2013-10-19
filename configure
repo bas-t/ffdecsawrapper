@@ -665,7 +665,16 @@ Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
           cp -f ffdecsawrapper /usr/bin
           mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
           /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-          depmod -a
+          if [ $(echo $?) -eq 0 ]; then
+            depmod -a
+            echo "
+Installed without errors!
+"  
+          else
+            echo "
+Error(s) encoutered installing the dvbloopback kernel module.
+"
+          fi
         else
           if ps -C ffdecsawrapper > /dev/null 2>&1; then
             if test -e /etc/init.d/ffdecsawrapper; then
@@ -683,7 +692,16 @@ Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
           sudo cp -f ffdecsawrapper /usr/bin
           sudo mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
           sudo /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-          sudo depmod -a
+          if [ $(echo $?) -eq 0 ]; then
+            sudo depmod -a
+            echo "
+Installed without errors!
+"  
+          else
+            echo "
+Error(s) encoutered installing the dvbloopback kernel module.
+"
+          fi
         fi
       fi
     fi
