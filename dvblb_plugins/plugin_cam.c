@@ -107,18 +107,6 @@ static int init_sc(void) {
 
   memset(scCap, 0, 80);
   sc->SetupParse("LoggerActive","2");
-#ifdef USE_AUXSERVER
-  sc->SetupParse("Nagra2.AuxServerEnable", "1");
-  #ifdef AUXSERVER_PORT
-  sc->SetupParse("Nagra2.AuxServerPort", AUXSERVER_PORT);
-  #endif
-  #ifdef AUXSERVER_HOST
-  sc->SetupParse("Nagra2.AuxServerAddr", AUXSERVER_HOST);
-  #endif
-  #ifdef AUXSERVER_PASSWD
-  sc->SetupParse("Nagra2.AuxServerPass", AUXSERVER_PASSWD);
-  #endif
-#endif
   for(int i = 0; i < 32 && scopts[i].cmd[0] != '\0'; i++) {
     dprintf0("Setting SC options: %s = %s\n", scopts[i].cmd, scopts[i].value);
     sc->SetupParse(scopts[i].cmd, scopts[i].value);

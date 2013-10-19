@@ -37,16 +37,6 @@
 
 #define MATCH_ID(x,y) ((((x)^(y))&~0x107)==0)
 
-// ----------------------------------------------------------------
-
-#define HAS_AUXSRV
-
-#ifdef HAS_AUXSRV
-extern int auxEnabled;
-extern int auxPort;
-extern char auxAddr[80];
-extern char auxPassword[250];
-#endif
 
 // ----------------------------------------------------------------
 

@@ -187,18 +187,6 @@ msgstr ""
 msgid "Nagra2: drop EMM-S packets"
 msgstr ""
 
-msgid "Nagra2: Enable AUXserver"
-msgstr ""
-
-msgid "Nagra2: AUXserver hostname"
-msgstr ""
-
-msgid "Nagra2: AUXserver port"
-msgstr ""
-
-msgid "Nagra2: AUXserver password"
-msgstr ""
-
 msgid "don't touch"
 msgstr ""
 

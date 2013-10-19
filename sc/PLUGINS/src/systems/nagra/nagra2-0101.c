@@ -23,96 +23,6 @@
 
 #include "nagra2.h"
 
-// -- cAuxSrv ------------------------------------------------------------------
-
-#ifdef HAS_AUXSRV
-#include "network.h"
-#define AUX_PROTOCOL_VERSION 2
-int auxEnabled=0;
-int auxPort=7777;
-char auxAddr[80]="localhost";
-char auxPassword[250]="auxserver";
-
-class cAuxSrv : public cMutex {
-private:
-  cNetSocket so;
-  //
-  bool Login(void);
-public:
-  int Map(int map, unsigned char *data, int len, int outlen);
-  };
-
-bool cAuxSrv::Login()
-{
-  unsigned char buff[256];
-  PRINTF(L_SYS_MAP,"auxsrv: connecting to %s:%d",auxAddr,auxPort);
-  so.SetRWTimeout(7000);
-  if(so.Connect(auxAddr,auxPort)) {
-    buff[0]=0xA7;
-    buff[1]=0x7A;
-    buff[2]=0;
-    int l=strlen(auxPassword);
-    buff[3]=l;
-    memcpy(&buff[4],auxPassword,l);
-    buff[4+l]=0xFF;
-    if(so.Write(buff,l+5)>0 &&
-       so.Read(buff,9)>0 &&
-       buff[0]==0x7A && buff[1]==0xA7 && buff[2]==0x00 && buff[3]==0x04 && buff[8]==0xff &&
-       ((buff[4]<<8)|buff[5])==AUX_PROTOCOL_VERSION) return true;
-    PRINTF(L_SYS_MAP,"auxsrv: login write failed");
-    }
-  so.Disconnect();
-  return false;
-}
-
-int cAuxSrv::Map(int map, unsigned char *data, int len, int outlen)
-{
-  if(!auxEnabled) {
-    PRINTF(L_SYS_MAP,"auxsrv: AUXserver is disabled!");
-    return -1;
-    }
-  if(len>500 || outlen>500) return -1;
-  cMutexLock lock(this);
-  if(!so.Connected() && !Login()) return false;
-  PRINTF(L_SYS_MAP,"auxsrv: calling map%02x",map);
-  unsigned char buff[512];
-  buff[0]=0xA7;
-  buff[1]=0x7A;
-  buff[2]=((len+1)>>8) & 0xff;
-  buff[3]=(len+1)&0xff;
-  buff[4]=map;
-  memcpy(&buff[5],data,len);
-  buff[len+5]=0xFF;
-  if(so.Write(buff,len+6)>0) {
-    if(so.Read(buff,5)>0) {
-      if(buff[0]==0x7A && buff[1]==0xA7) {
-        int l=buff[2]*256+buff[3];
-        if(so.Read(buff+5,l,200)>0) {
-          if(buff[4]==0x00) {
-            int cycles=(buff[5]<<16)|(buff[6]<<8)|buff[7];
-            if(l==outlen+4) {
-              if(buff[l+4]==0xFF) {
-                memcpy(data,buff+8,outlen);
-                return cycles;
-                }
-              else PRINTF(L_SYS_MAP,"auxsrv: bad footer in map%02x response",map);
-              }
-            else PRINTF(L_SYS_MAP,"auxsrv: bad length in map%02x response (got=%d want=%d)",map,l-4,outlen);
-            }
-          else PRINTF(L_SYS_MAP,"auxsrv: map%02x not successfull (unsupported?)",map);
-          }
-        else PRINTF(L_SYS_MAP,"auxsrv: map%02x read failed (2)",map);
-        }
-      else PRINTF(L_SYS_MAP,"auxsrv: bad response to map%02x",map);
-      }
-    else PRINTF(L_SYS_MAP,"auxsrv: map%02x read failed",map);
-    }
-  else  PRINTF(L_SYS_MAP,"auxsrv: map%02x write failed",map);
-  so.Disconnect();
-  return -1;
-}
-#endif //HAS_AUXSRV
-
 // -- cMap0101 ----------------------------------------------------------------
 
 class cMap0101 : public cMapCore {
@@ -120,9 +30,7 @@ private:
   static const unsigned char primes[];
   static const int tim3b[][17];
   static const unsigned short msb3e[];
-#ifdef HAS_AUXSRV
-  cAuxSrv aux;
-#endif
+
   //
   void MakePrime(unsigned char *residues, bool strong);
 protected:
@@ -373,12 +281,6 @@ bool cMap0101::Map(int f, unsigned char *data, int l)
       MakePrime(data,f==0x4f);
       break;
     case 0x57:
-#ifdef HAS_AUXSRV
-      {
-      int c=aux.Map(0x57,data,0x60,0x40);
-      if(c>0) { cycles=c-6; break; }
-      }
-#endif
       {
       cBN a, b, x, y;
       if(l<2 || l>4) l=4;
