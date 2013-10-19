@@ -89,11 +89,6 @@ show_help(){
   echo "                        Use like --dvb_dir=/usr/src/media_build/linux"
   echo "                        Info: www.lursen.org/wiki/V4l_and_ffdecsawrapper"
   echo "                        "
-  echo " --auxserver            Use auxserver with default parms."
-  echo "                        "
-  echo " --auxserver=<opt>      [localhost:7777:auxserver]"
-  echo "                        Use auxserver with given parms."
-  echo "                        "
   echo " --optimize=<opt>       [yes] Perform FFDecsa optimization auto-detection"
   echo "                        for all mmx and sse types optimizations"
   echo "                        with both -O2 and -O3 levels"
@@ -140,10 +135,6 @@ for opt do
   --tsbuffer=*) tsbuffer="$optval"
   ;;
   --optimize=*) ffdecsa_opt="$optval"
-  ;;
-  --auxserver) auxserver_opt="localhost:7777:auxserver"
-  ;;
-  --auxserver=*) auxserver_opt="$optval"
   ;;
   --compiletype=*) compiletype_opt="$optval"
   ;;
@@ -602,17 +593,6 @@ fi
 
 if test "x$ffdecsa_flags" != "x"; then
   echo $ffdecsa_flags >> config.mak
-fi
-
-# Don't know what this option is all about,
-# never used it.
-# Maybe a leftover from VDR?
-
-if test "x$auxserver_opt" != "x"; then
-  echo $auxserver_opt | {
-    IFS=: read host port pass
-    echo "AUXSERVER_OPTS=-DAUXSERVER_HOST=\\\"$host\\\" -DAUXSERVER_PORT=\\\"$port\\\" -DAUXSERVER_PASSWD=\\\"$pass\\\" -DUSE_AUXSERVER" >> config.mak
-  }
 fi
 
 # Set compiletype
