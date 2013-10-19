@@ -25,5 +25,5 @@
 
  - `Basic instructions on how tu use this software (in combination with MythTV). <http://www.lursen.org/wiki/FFdecsawrapper_with_MythTV_and_Oscam_on_Debian/Ubuntu>`_
 
- **NOTICE: I'm done with Ubuntu. All Ubuntu stuff has been saved to a new branch: ubuntu. I'm stripping all Ubuntu stuff from stable branch.**
+ **NOTICE: I'm done with Ubuntu. All Ubuntu stuff has been saved to a new branch: ubuntu. I'm stripping all Ubuntu stuff from stable branch. I'm not testing FFdecsawrapper on Ubuntu anymore.**
 
