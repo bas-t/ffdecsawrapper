@@ -486,7 +486,12 @@ Installed without errors!
             fi
             if [ $(echo $?) -eq 0 ]; then
               echo "
-Your kernel is properly patched, you should reboot your macine now.
+
+####################################################################
+
+Your kernel is properly patched. You should reboot your machine now.
+
+####################################################################
 "
             fi
           fi 
