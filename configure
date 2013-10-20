@@ -291,33 +291,6 @@ Missing dependency g++-$CCKERNEL, marking for installation.
       apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
     fi
   fi
-
-# The kernel needs to be patched if we don't
-# use newest v4l drivers, but don't offer
-# to do so if it allready has been done.
-
-  if test "x$dvb_path" = "x"; then
-    if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-      if uname -a | grep 'Debian' > /dev/null  2>&1; then
-        ./kernelpatch
-      fi
-    fi
-    if [ $(echo $?) -eq 1 ]; then
-      echo "
-Error(s) encountered during installing build-deps
-for FFdecsawrapper and/or running kernel patch.
-Fix the cause of the error(s) and run me again.
-"
-      confirmno "Do you want to continue anyway? [y/N]"
-      if [ $(echo $?) -eq 1 ]; then
-        git clean -xfd
-        echo "
-Aborting...
-"
-        exit 1
-      fi
-    fi
-  fi
 fi
 
 #
@@ -498,7 +471,25 @@ Installed without errors!
 
 #########################
 
-"  
+"
+          sleep 2
+
+# The kernel needs to be patched if we don't
+# use newest v4l drivers, but don't offer
+# to do so if it allready has been done.
+
+          if test "x$dvb_path" = "x"; then
+            if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+              if uname -a | grep 'Debian' > /dev/null  2>&1; then
+                ./kernelpatch
+              fi
+            fi
+            if [ $(echo $?) -eq 0 ]; then
+              echo "
+Your kernel is properly patched, you should reboot your macine now.
+"
+            fi
+          fi 
         else
           echo "
 #############################################################
