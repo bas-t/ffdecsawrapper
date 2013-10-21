@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 die(){
     echo $1
@@ -92,9 +92,6 @@ the source for your current kernel.
 
 Having done that, your running Debian kernel
 will be patched for use with ffdecsawrapper.
-
-Don't forget to reboot to load new module once you are
-done patching the kernel and compiling ffdecsawrapper and ffdecsawrapper module.
 "
 
     confirmyes "Proceed?[Y/n]"
@@ -123,7 +120,7 @@ Preparing, this may take a while...
             tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
           fi
           echo "
-Building and installing, please be patient...
+Building and installing
 "
           patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
           CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
@@ -148,7 +145,7 @@ Your kernel is properly patched. You should reboot your machine now.
             tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
           fi
           echo "
-Building and installing, please be patient...
+Building and installing
 "
           patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
           CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
