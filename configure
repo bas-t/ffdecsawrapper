@@ -443,20 +443,15 @@ make && make module
     if [ $(echo $?) -eq 0 ]; then
       echo "
 Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
+
+Binary's location: /usr/bin/ffdecsawrapper
+
+dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+
+If you hit Y and your kernel needs to be patched, that will be done too.
 "
       confirmyes "Yes, install them now![Y/n]"
       if [ $(echo $?) -eq 0 ]; then
-        if ps -C ffdecsawrapper > /dev/null 2>&1; then
-          if test -e /etc/init.d/ffdecsawrapper; then
-            /etc/init.d/ffdecsawrapper stop
-            sleep 3
-            rmmod dvbloopback > /dev/null 2>&1
-          else
-            killall -9 ffdecsawrapper
-            sleep 3
-            rmmod dvbloopback > /dev/null 2>&1
-          fi
-        fi
         rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
         rm -f /usr/bin/ffdecsawrapper
         cp -f ffdecsawrapper /usr/bin
