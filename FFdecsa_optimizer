@@ -347,14 +347,6 @@ elif [ "$vendor_id" = "Geode" ]; then #by NSC
     fi
 fi
 
-if [ \( -z "$_CPU" \) -a \( -z "$line" \) ]; then
-    echo "\
-Unrecognised CPU.
-  Vendor:$vendor_id family:$cpu_family model:$cpu_model
-  flags:$flags" >&2
-    exit 1
-fi
-
 [ -z "$_CPU" ] && _CPU="`try_line "$line"`"
 
 if echo "$_CPU" | grep -q "amdfam10"; then
