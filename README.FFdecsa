@@ -13,13 +13,6 @@ copyright by fatih89r and released under the GPL. Many thanks for this
 outstanding work! You'll find the slightly modified FFdecsa code in the FFdecsa
 directory.
 
-There are several options to configure optimization at compile time. Use:
-
-CPUOPT=type   to determine your CPU type. With gcc 3.2 valid options are:
-              pentium, pentium-mmx, pentiumpro, pentium2, pentium3, pentium4,
-              k6, k6-2, k6-3, athlon, athlon-tbird, athlon4, athlon-xp and
-              athlon-mp. You should set your CPU type as close as possible for
-              best performance. Defaults to pentium.
 
 PARALLEL=mode to determine which datatype should be used for parallel
               processing. Valid modes are:
@@ -37,21 +30,11 @@ PARALLEL=mode to determine which datatype should be used for parallel
                  PARALLEL_128_2LONG
                  PARALLEL_128_2MMX
                  PARALLEL_128_SSE
-              Hints: if you have a Pentium4 or AthlonXP and a recent compiler
-              try PARALLEL_64_MMX. If you have a 64-bit CPU, try
-              PARALLEL_128_SSE. If you're unsure take PARALLEL_32_INT (which
-              isn't the fastest, but quite good and very portable).
-              For additional information read the FFdecsa documentation.
-              Defaults to PARALLEL_32_INT.
 
-CSAFLAGS=opts to set compiler options.
-              Defaults to -Wall -fPIC -g -O3 -mmmx -fomit-frame-pointer
-                          -fexpensive-optimizations -funroll-loops
-
-All of them can be added to VDR's make.config file.
 
 It has been reported that FFdecsa yields invalid results (make test fails) if
 compiled with gcc 4.4.x and option -O3. Use -O2 in this case to work around.
+Same goes for gcc 4.8.x and up using -O3. mmx tests can fail.
 Suggestions how to fix the problem in source are highly appreciated.
 
 
