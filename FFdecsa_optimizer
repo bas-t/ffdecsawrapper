@@ -37,14 +37,13 @@ print_usage() {
   echo "-P [MODE]     test only the given PARALLEL_MODE"
   echo "-T [N]        number of tests per mode"
   echo "-e            extended - test all PARALLEL_MODEs"
-  echo "-n            disable \"native\" flags if gcc/g++ >=4.2"
   echo "-q            be quiet - only results, warnings and errors"
   echo "-h            this output"
   echo ""
 }
 
 
-while getopts "D:O:P:T:einqh" options; do
+while getopts "D:O:P:T:eqh" options; do
   case $options in
     D ) if [ -d $OPTARG ]; then
           FFdecsaDIR=$OPTARG
@@ -63,8 +62,6 @@ while getopts "D:O:P:T:einqh" options; do
         fi
         ;;
     e ) _SHORT=0
-        ;;
-    n ) _NONAT=1
         ;;
     q ) _VERB=0
         ;;
@@ -152,19 +149,6 @@ if try_gcc_options "-march=native"; then
   _CANNAT=1
 fi
 
-if ! [ "$OwnFlags" == "" ]; then
-  _NONAT=1
-  if try_gcc_options $OwnFlags; then
-    echo "Custom compiler flags accepted by $CC"
-    echo ""
-  else
-    echo "Custom compiler flags rejected by $CC"
-    echo "FFdecsa_Test will not be performed"
-    echo ""
-    exit 1
-  fi
-fi
-
 if [ $_VERB -ge 1 ]; then
     gcc_ver=`$CC -v 2>&1 | grep -i "gcc version" | head -n 1`
     
@@ -189,12 +173,7 @@ if [ $_CANNAT -ge 1 ] && [ $_NONAT -eq 0 ]; then
   if [ $_VERB -ge 1 ]; then
     echo "Using compilers \"native\" flags"
     echo ""
-    echo ""
   fi
-elif [ $_VERB -ge 1 ] && [ "$OwnFlags" == "" ]; then
-  echo "Compilers \"native\" flags disabled or unsupported"
-  echo ""
-  echo ""
 fi
 
 if [ $is_x86_64 -eq 1 ]; then
@@ -396,30 +375,23 @@ Please be patient"
     echo ""
     echo ""
   fi
-
 fi
 
-if [ $_VERB -ge 1 ]; then
-  echo "### FFdeCSA Fasted OPTS ###"
-  if [ "$OwnFlags" != "" ]; then
-    echo "Custom compiler flags are set."
-    echo "Adapt the Makefile yourself!"
-  else
-    echo "CPUOPT     ?= $_CPU"
-    if [ $_NOTEST -eq 0 ]; then
-      echo "PARALLEL   ?= $MAX_MODE"
-    else
-      echo "PARALLEL   ?= $MAX_MODE   # untested!"
-    fi
-    if [ "$_FLAGS" == "" ]; then
-      echo "CSAFLAGS   ?= $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
-    else
-      echo "CSAFLAGS   ?= ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
-    fi
-  fi
-  echo ""
-  echo "### GENERIC FFdeCSA make OPTS ###"
+echo "### FFdeCSA Fasted OPTS ###"
+
+echo "CPUOPT     ?= $_CPU"
+if [ $_NOTEST -eq 0 ]; then
+  echo "PARALLEL   ?= $MAX_MODE"
+else
+  echo "PARALLEL   ?= $MAX_MODE   # untested!"
 fi
+if [ "$_FLAGS" == "" ]; then
+  echo "CSAFLAGS   ?= $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+else
+  echo "CSAFLAGS   ?= ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+fi
+echo "### GENERIC FFdeCSA make OPTS ###"
+
 
 if [ "$OwnFlags" != "" ] || [ "$OLevel" != "" ]; then
   echo "FFDECSA_OPTS = \"FLAGS=${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
