@@ -1,30 +1,16 @@
 #!/bin/bash
 
-echo ""
-echo "### FFdecsa optimization helper/benchmark "
-echo "### Version 10"
-echo ""
-echo ""
-
-# customize here
 FFdecsaDIR="./FFdecsa"
-OwnFlags=""
-
-# compiler
 CC=$CCC
 
 # some initial values
 OLevel=""
 PMode=""
 MTimes=10
-
 _FLAGS=""
 _CPU=""
-_VERB=1
 _SHORT=1
-_NOTEST=0
 _CANNAT=0
-_NONAT=0
 _DONAT=0
 
 print_usage() {
@@ -32,23 +18,17 @@ print_usage() {
   echo "Usage: $0 [OPTION [ARG]]..."
   echo ""
   echo "Options:"
-  echo "-D [PATH]     path to FFdecsa source directory"
   echo "-O [LEVEL]    set custom optimization level e.g. S, 2 or 3"
   echo "-P [MODE]     test only the given PARALLEL_MODE"
   echo "-T [N]        number of tests per mode"
   echo "-e            extended - test all PARALLEL_MODEs"
-  echo "-q            be quiet - only results, warnings and errors"
   echo "-h            this output"
   echo ""
 }
 
 
-while getopts "D:O:P:T:eqh" options; do
+while getopts "O:P:T:eh" options; do
   case $options in
-    D ) if [ -d $OPTARG ]; then
-          FFdecsaDIR=$OPTARG
-        fi
-        ;;
     O ) if [ -n $OPTARG ]; then
           OLevel=$OPTARG
         fi
@@ -62,8 +42,6 @@ while getopts "D:O:P:T:eqh" options; do
         fi
         ;;
     e ) _SHORT=0
-        ;;
-    q ) _VERB=0
         ;;
     h ) print_usage
         exit 0
@@ -84,15 +62,6 @@ if [ "$OLevel" != "" ]; then
   esac
 fi
 
-source_check() {
-  testpath=$1
-  if [ -f "${testpath}/FFdecsa.c" ] && [ -f "${testpath}/FFdecsa_test.c" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 [ -z "$CC" ] && CC=g++
 
 try_gcc_options() {
@@ -102,12 +71,6 @@ try_gcc_options() {
 if ! try_gcc_options; then
     echo "Error: Couldn't execute your compiler ($CC)" >&2
     exit 1
-fi
-
-if try_gcc_options -march=i386; then
-    is_x86_64=0
-else
-    is_x86_64=1
 fi
 
 read_cpu_data_linux() {
@@ -149,45 +112,27 @@ if try_gcc_options "-march=native"; then
   _CANNAT=1
 fi
 
-if [ $_VERB -ge 1 ]; then
-    gcc_ver=`$CC -v 2>&1 | grep -i "gcc version" | head -n 1`
+gcc_ver=`$CC -v 2>&1 | grep -i "gcc version" | head -n 1`
     
-    echo "### CPU-INFO ###"
-    if [ $is_x86_64 -eq 0 ]; then
-      echo "System: x86"
-    else
-      echo "System: x86_64"
-    fi
-    echo ""
-    echo "Vendor-ID: $vendor_id"
-    echo "CPU-Family: $cpu_family"
-    echo "CPU-Model: $cpu_model"
-    echo "Flags: $flags"
-    echo ""
-    echo "$gcc_ver"
-fi
+echo "
 
-if [ $_CANNAT -ge 1 ] && [ $_NONAT -eq 0 ]; then
+### CPU-INFO ###"
+echo "Vendor-ID: $vendor_id"
+echo "CPU-Family: $cpu_family"
+echo "CPU-Model: $cpu_model"
+echo "Flags: $flags"
+echo ""
+echo "$gcc_ver"
+
+if [ $_CANNAT -ge 1 ]; then
   _DONAT=1
   _CPU="native"
-  if [ $_VERB -ge 1 ]; then
-    echo "Using compilers \"native\" flags"
-    echo ""
-  fi
-fi
-
-if [ $is_x86_64 -eq 1 ]; then
-    if [ "$_FLAGS" != "" ]; then
-        _FLAGS="$_FLAGS -fPIC"
-    else
-        _FLAGS=" -fPIC"
-    fi
+  echo "Using compilers \"native\" flags"
+  echo ""
 fi
 
 # complete flags for FFdesca_Test
-if [ "$OwnFlags" != "" ]; then
-  IFLAGS=$OwnFlags
-elif [ "$OLevel" == "" ]; then
+if [ "$OLevel" == "" ]; then
   IFLAGS="-march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
   IFLAGS="$OptFlag -march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
@@ -228,64 +173,43 @@ ffdecsa_test() {
 
   cp $FFdecsaDIR/*.c $FFdecsaDIR/*.h $FFdecsaDIR/Makefile "${TMPDIR}"
 
-  if [ "$OwnFlags" != "" ]; then
-    FLAGS="$IFLAGS"
-  else
-    FLAGS="$1 $IFLAGS"
-  fi 
+  FLAGS="$1 $IFLAGS"
 
   COMPILER=$CC
   export FLAGS
   export COMPILER
 
   for var in ${FFDECSA_MODES}; do
-    if [ $_VERB -ge 1 ]; then
-      echo "    ${var}"
-    fi
+    echo "    ${var}"
     make -C "${TMPDIR}" -e FFdecsa_test "PARALLEL_MODE=${var}" >/dev/null 2>&1
     if test $? -ne 0 ; then
-      if [ $_VERB -ge 1 ]; then
-        echo "    ${var}: build failed"
-      fi
+      echo "    ${var}: build failed"
     else
       MAX_M_val=0
       rm -f ${TMPOUT}
       sync;sleep 2; "${TMPDIR}/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
       if test $? -ne 0; then
-        if [ $_VERB -ge 1 ]; then
-          echo "    ...failed!"
-        fi
+        echo "    ...failed!"
       else
         grep FAILED "${TMPOUT}" >/dev/null 2>&1
         if test $? -ne 1; then
-          if [ $_VERB -ge 1 ]; then
-            echo "    ...failed!"
-          fi
+          echo "    ...failed!"
         else
           MAX_M_val=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
-          if [ $_VERB -ge 1 ]; then
-            printf "      - $MAX_M_val"
-          fi
-          
+          printf "      - $MAX_M_val"
           if [ $MTimes -ge 2 ]; then
             for i in `seq 2 $MTimes`; do
-              # sync;
-              # sleep 1; 
               "${TMPDIR}/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
               res=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
               if test $res -gt $MAX_M_val; then
                 MAX_M_val=$res
               fi
-              if [ $_VERB -ge 1 ]; then
-                printf ", $res"
-              fi
+              printf ", $res"
             done
           fi
 
-          if [ $_VERB -ge 1 ]; then
-            printf "\n"
-            echo "      - $MAX_M_val Mbit/s max."
-          fi
+          printf "\n"
+          echo "      - $MAX_M_val Mbit/s max."
 
           if [ "$1" == "-O2" ]; then          
             if test $MAX_M_val -gt $MAX_val_2; then
@@ -316,10 +240,8 @@ ffdecsa_test() {
 
   unset
 
-  if [ $_VERB -ge 1 ]; then
-    echo "  Fastest PARALLEL_MODE = ${MAX_MODE} (${MAX_val} Mbit/s)"
-    echo ""
-  fi
+  echo "  Fastest PARALLEL_MODE = ${MAX_MODE} (${MAX_val} Mbit/s)"
+  echo ""
 
   rm -rf "${TMPDIR}"
 }
@@ -331,69 +253,51 @@ MAX_MODE="PARALLEL_64_MMX"
 MAX_MODE_2="PARALLEL_64_MMX"
 MAX_MODE_3="PARALLEL_64_MMX"
 
-if [ $_NOTEST -eq 0 ]; then
+  echo "### FFdeCSA TEST ###"
+  echo "Using compiler: $CC"
+  echo "Flags: $IFLAGS"
+  echo ""
 
-  if [ $_VERB -ge 1 ]; then
-      echo "### FFdeCSA TEST ###"
-      echo "Using compiler: $CC"
-      echo "Flags: $IFLAGS"
-      echo ""
-  fi
-
-  if [ "$OwnFlags" != "" ]; then
-    ffdecsa_test
-  elif [ "$OLevel" != "" ]; then
-    ffdecsa_test "$OptFlag"
-  else
-    if [ $_VERB -ge 1 ]; then
-      echo "Testing optimization levels 2 and 3"
-      echo ""
-      echo "This may take a while...
+if [ "$OLevel" != "" ]; then
+  ffdecsa_test "$OptFlag"
+else
+  echo "Testing optimization levels 2 and 3"
+  echo ""
+  echo "This may take a while...
 
 Please be patient"
-      echo ""
-    else
-      echo "This may take a while..."
-    fi
-    for i in `seq 2 3`; do
-      if [ $_VERB -ge 1 ]; then
-        echo "  Level -O${i}:"
-      fi
-      ffdecsa_test "-O${i}"
-    done
-    if [ $MAX_val_3 -ge $MAX_val_2 ]; then
-      MAX_MODE=$MAX_MODE_3
-      MAX_val=$MAX_val_3
-      OptFlag="-O3"
-    else
-      MAX_MODE=$MAX_MODE_2
-      MAX_val=$MAX_val_2
-      OptFlag="-O2"
-    fi
-    echo ""
-    echo "Best result with $OptFlag and $MAX_MODE at $MAX_val Mbit/s"
-    echo ""
-    echo ""
+  echo ""
+  for i in `seq 2 3`; do
+    echo "  Level -O${i}:"
+    ffdecsa_test "-O${i}"
+  done
+  if [ $MAX_val_3 -ge $MAX_val_2 ]; then
+    MAX_MODE=$MAX_MODE_3
+    MAX_val=$MAX_val_3
+    OptFlag="-O3"
+  else
+    MAX_MODE=$MAX_MODE_2
+    MAX_val=$MAX_val_2
+    OptFlag="-O2"
   fi
+  echo ""
+  echo "Best result with $OptFlag and $MAX_MODE at $MAX_val Mbit/s"
+  echo ""
+  echo ""
 fi
 
 echo "### FFdeCSA Fasted OPTS ###"
+echo "CPUOPT   = $_CPU"
+echo "PARALLEL = $MAX_MODE"
 
-echo "CPUOPT     ?= $_CPU"
-if [ $_NOTEST -eq 0 ]; then
-  echo "PARALLEL   ?= $MAX_MODE"
-else
-  echo "PARALLEL   ?= $MAX_MODE   # untested!"
-fi
 if [ "$_FLAGS" == "" ]; then
-  echo "CSAFLAGS   ?= $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+  echo "FLAGS    = $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
-  echo "CSAFLAGS   ?= ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+  echo "FLAGS    = ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 fi
-echo "### GENERIC FFdeCSA make OPTS ###"
 
 
-if [ "$OwnFlags" != "" ] || [ "$OLevel" != "" ]; then
+if [ "$OLevel" != "" ]; then
   echo "FFDECSA_OPTS = \"FLAGS=${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
 else
   echo "FFDECSA_OPTS = \"FLAGS=$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
