@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -f /usr/bin/lsb_release ]; then
+  OS=$( lsb_release -si )
+  RELEASE=$( lsb_release -sc )
+fi
+
 FFdecsaDIR="./FFdecsa"
 CC=$CCC
 
@@ -121,13 +126,19 @@ echo "Vendor-ID: $vendor_id"
 echo "CPU-Family: $cpu_family"
 echo "CPU-Model: $cpu_model"
 echo "Flags: $flags"
-echo ""
-echo "$gcc_ver"
+
+if [ $OS == Debian ] || [ $OS == Ubuntu ] ; then
+  echo " 
+### GCC-INFO ###"
+  echo "Your kernel is built with:"
+  echo "$gcc_ver"
+fi
 
 if [ $_CANNAT -ge 1 ]; then
   _DONAT=1
   _CPU="native"
-  echo "Using compilers \"native\" flags"
+  echo "
+Using compilers \"native\" flags"
   echo ""
 fi
 
