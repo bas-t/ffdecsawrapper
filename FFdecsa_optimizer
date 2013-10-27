@@ -130,7 +130,8 @@ echo "Flags: $flags"
 if [ $OS == Debian ] || [ $OS == Ubuntu ] ; then
   echo " 
 ### GCC-INFO ###"
-  echo "Your kernel is built with:"
+  echo "Unless you specified a gcc/g++ version to use,
+your kernel is built with:"
   echo "$gcc_ver"
 fi
 
