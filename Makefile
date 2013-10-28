@@ -22,9 +22,11 @@ LBDIR = dvbloopback/src
 SCDIR = sc/PLUGINS/src
 SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing
 
+ifneq ($(RELEASE),1)
 CXXFLAGS += -g
 CFLAGS   += -g
 SC_FLAGS += -g
+endif
 
 SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
 	./sc/PLUGINS/lib/libffdecsawrapper-sc.a

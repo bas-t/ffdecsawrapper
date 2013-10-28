@@ -34,7 +34,11 @@ TMPDIR = /tmp
 ### The C++ compiler and options:
 
 CXX      ?= g++
+ifneq ($(RELEASE),1)
 CXXFLAGS ?= -O2 -g -fPIC -Wall -Woverloaded-virtual
+else
+CXXFLAGS ?= -O2 -fPIC -Wall -Woverloaded-virtual
+endif
 
 ### Includes and Defines
 
@@ -98,7 +102,13 @@ DEFINES += -DFFDECSAWRAPPER_MAXCAID=$(MAXCAID)
 # FFdeCSA
 CPUOPT     ?= pentium
 PARALLEL   ?= PARALLEL_32_INT
+
+ifneq ($(RELEASE),1)
 CSAFLAGS   ?= -Wall -fPIC -g -O3 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops
+else
+CSAFLAGS   ?= -Wall -fPIC -O3 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops
+endif
+
 FFDECSADIR  = FFdecsa
 FFDECSA     = $(FFDECSADIR)/FFdecsa.o
 FFDECSATEST = $(FFDECSADIR)/FFdecsa_test.done
