@@ -85,16 +85,6 @@ LOCALEDIR = $(BASEDIR)/locale
 
 SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 
-#
-# generic stuff
-#
-
-
-ifdef WITH_PCSC
-  DEFINES  += -DWITH_PCSC
-  LIBS     += -lpcsclite
-endif
-
 # max number of CAIDs per slot
 MAXCAID = 64
 DEFINES += -DFFDECSAWRAPPER_MAXCAID=$(MAXCAID)
@@ -136,7 +126,7 @@ SHAREDDEFINES += -DSTATICBUILD
 BUILDTARGETS += $(FFDECSATEST) systems i18n
 
 all: $(BUILDTARGETS)
-.PHONY: i18n systems systems-pre contrib clean clean-core clean-systems clean-pre dist srcdist
+.PHONY: i18n systems systems-pre clean clean-core clean-systems clean-pre dist
 
 # Dependencies:
 
@@ -194,15 +184,10 @@ systems:
 systems-pre:
 	@for i in `ls -A -I ".*" $(PREDIR) | grep -- '-$(SCAPIVERS).so.$(APIVERSION)$$'`; do cp -p "$(PREDIR)/$$i" "$(LIBDIR)"; done
 
-contrib:
-	@$(MAKE) -C contrib all
-
 clean-systems:
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" clean; done
 
 clean-core:
-	@$(MAKE) -C testing clean
-	@$(MAKE) -C contrib clean
 	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
 	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
 	@-rm -f $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a $(LIBDIR)/libsc-*.a
@@ -213,30 +198,6 @@ clean-pre:
 	@-find "$(PREDIR)" -type f -not -name ".empty" -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f
 
 clean: clean-core clean-systems
-
-dist: ARCHIVE := $(PLUGIN)-$(RELEASE)
-dist: clean-core
-	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" dist; done
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a * $(TMPDIR)/$(ARCHIVE)
-	@echo -n "release" >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
-	@path="$(TMPDIR)/$(ARCHIVE)/$(notdir $(SYSDIR))";\
-	 for i in `ls -A -I ".*" $$path`; do if [ -f "$$path/$$i/nonpublic.mk" ]; then rm -rf "$$path/$$i"; fi; if [ -f "$$path/$$i/nonpublic.sh" ]; then (cd $$path/$$i ; source ./nonpublic.sh ; rm ./nonpublic.sh); fi; done
-	@strip --strip-unneeded --preserve-dates $(TMPDIR)/$(ARCHIVE)/$(notdir $(PREDIR))/* || true
-	@tar czf ffdecsawrapper-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Distribution package created as ffdecsawrapper-$(ARCHIVE).tar.gz
-
-copy: ARCHIVE := $(PLUGIN)-$(VERSION)
-copy: clean clean-pre
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a .hgtags .hgignore * $(TMPDIR)/$(ARCHIVE)
-	@echo -n $(SUBREL) | sed -e 's/HG-/CP-/' >$(TMPDIR)/$(ARCHIVE)/$(DISTFILE)
-	@tar czf ffdecsawrapper-$(ARCHIVE).tar.gz -C $(TMPDIR) $(ARCHIVE)
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Full copy package created as ffdecsawrapper-$(ARCHIVE).tar.gz
 
 FORCE:
 
