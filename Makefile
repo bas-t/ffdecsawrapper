@@ -1,10 +1,7 @@
 VERSION = 1.1.4
-TOOL = ffdecsawrapper
 
 $(shell touch config.mak)
 include config.mak
-
-#DEFINES = -DNO_RINGBUF
 
 CC       ?= gcc
 CXX      ?= g++
@@ -14,7 +11,11 @@ CFLAGS   ?= -Wall -D__user=
 DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
+TOOL = ffdecsawrapper
+LIBS = -lpthread -lcrypto -lcrypt -lv4l1
 SCDIR = sc/PLUGINS/src
+SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
+	./sc/PLUGINS/lib/libffdecsawrapper-sc.a
 SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing
 
 ifneq ($(RELEASE),1)
@@ -22,9 +23,6 @@ CXXFLAGS += -g
 CFLAGS   += -g
 SC_FLAGS += -g
 endif
-
-SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
-	./sc/PLUGINS/lib/libffdecsawrapper-sc.a
 
 OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 	plugin_showioctl.o plugin_legacysw.o plugin_dss.o plugin_cam.o \
@@ -41,8 +39,6 @@ OBJ_LIBSI := objs/si_descriptor.o objs/si_section.o objs/si_si.o objs/si_util.o
 
 INC_DEPS := $(shell ls $(LBDIR)/*.h) dvbloopback/module/dvbloopback.h
 INC_DEPS_LB := $(shell ls dvblb_plugins/*.h)
-
-LIBS = -lpthread -lcrypto -lcrypt -lv4l1
 
 all: $(TOOL)
 
@@ -63,7 +59,7 @@ update:
 	@git pull
 
 sc-plugin:
-	$(MAKE) -C $(SCDIR) $(SCOPTS) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" FFDECSAWRAPPER=1 STATIC=1 all
+	$(MAKE) -C $(SCDIR) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" FFDECSAWRAPPER=1 STATIC=1 all
 
 FFdecsa/FFdecsa.o:
 	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
