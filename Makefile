@@ -11,11 +11,6 @@ CXX      ?= g++
 CXXFLAGS ?= -Wall -D__user= 
 CFLAGS   ?= -Wall -D__user= 
 
-ifdef DVB_DIR
-  INCLUDES = -I$(SOURCE_DIR)/include/uapi -I$(SOURCE_DIR)/arch/x86/include -I$(SOURCE_DIR)/include
-  DVB_MOD_DIR = DVB_DIR=$(DVB_DIR)
-endif
-
 DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
@@ -74,7 +69,7 @@ FFdecsa/FFdecsa.o:
 	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
 
 module:
-	cd dvbloopback/module && $(MAKE) $(DVB_MOD_DIR)
+	cd dvbloopback/module && $(MAKE)
 	@cp -f dvbloopback/module/dvbloopback.ko .
 
 objs/libsi.a: $(OBJ_LIBSI)
