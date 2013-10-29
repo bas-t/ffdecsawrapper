@@ -12,11 +12,3 @@ dvbloopback-objs := dvb_loopback.o dvblb_proc.o dvblb_forward.o
 
 add_modver: $(SYMVER)
 
-clean:
-	make -C $(BUILD_DIR) M=$(PWD) clean
-	cd config-dvb && make clean
-	rm -f config-dvb/chkdvb.c
-	rm -f dvbdevwrap.h
-	rm -f dvbdev.h
-	rm -f Module.symvers
-

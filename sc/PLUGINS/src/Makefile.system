@@ -19,7 +19,6 @@
 ### The directory environment:
 
 LIBDIR = ../../../lib
-PREDIR = ../systems-pre
 
 ### Includes and Defines
 
@@ -39,56 +38,15 @@ $(DEPFILE): $(OBJS:%.o=%.c) $(wildcard *.h)
 
 ### Targets:
 
-LIBSC    = libsc-$(TARGET).so
-LIBSCVER = libsc-$(TARGET)-$(SCAPIVERS).so.$(APIVERSION)
 LIBSCAR  = libsc-$(TARGET).a
 
-ifdef STATIC
 BUILDTARGETS = $(LIBDIR)/$(LIBSCAR)
-else
-BUILDTARGETS = $(LIBDIR)/$(LIBSCVER) $(PREDIR)/$(LIBSCVER)
-endif
-
-define clean
-@-rm -f $(OBJS) $(CLEAN_RM) $(DEPFILE) $(LIBSC) core* *~
-endef
-
-define clean-pre
-@find "$(PREDIR)" -type f -iname "libsc-$(TARGET)-*.so.*" -not -iname "libsc-$(TARGET)-$(SCAPIVERS).so.*" | xargs rm -f
-@-rm -f $(PREDIR)/$(LIBSCVER)
-endef
 
 all: $(BUILDTARGETS)
-.PHONY: clean dist
+
 
 %.o: %.c
 	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(SINCLUDES) $<
 
-$(LIBSC): $(OBJS)
-	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(LIBS) $(SHAREDLIBS) -o $@
-	$(clean-pre)
-
-$(LIBDIR)/$(LIBSCVER): $(LIBSC)
-	@cp -p $< $@
-
 $(LIBDIR)/$(LIBSCAR): $(OBJS)
 	$(AR) r $@ $(OBJS)
-
-ifdef NONPUBLIC
-$(PREDIR)/$(LIBSCVER): $(LIBSC)
-	$(clean-pre)
-	@cp -p $< $@
-
-dist: $(PREDIR)/$(LIBSCVER)
-	$(clean)
-else
-$(PREDIR)/$(LIBSCVER):
-
-dist:
-	$(clean-pre)
-	$(clean)
-endif
-
-clean:
-	$(clean-pre)
-	$(clean)

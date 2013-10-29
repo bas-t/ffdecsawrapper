@@ -11,7 +11,6 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see http://www.gnu.org/licenses/
 
-
 # The official name of this plugin.
 #
 PLUGIN = sc
@@ -31,30 +30,13 @@ SYSDIR = ./systems
 PREDIR = ./systems-pre
 TMPDIR = /tmp
 
-### The C++ compiler and options:
-
-CXX      ?= g++
-ifneq ($(RELEASE),1)
-CXXFLAGS ?= -O2 -g -fPIC -Wall -Woverloaded-virtual
-else
-CXXFLAGS ?= -O2 -fPIC -Wall -Woverloaded-virtual
-endif
-
 ### Includes and Defines
 
 INCLUDES      = -I$(BASEDIR)/include
-DEFINES       = -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+DEFINES       = -DPLUGIN_NAME='"$(PLUGIN)"'
 SHAREDDEFINES = -DAPIVERSNUM=$(APIVERSNUM) -D_GNU_SOURCE
 LIBS          = -lcrypto
 SHAREDLIBS    =
-
-### Allow user defined options to overwrite defaults:
-
--include $(BASEDIR)/Make.config
--include Make.config
-
-### we need this ATM because of the helper.h macros...
-CXXFLAGS += -fno-strict-aliasing
 
 ### The version number of FFdecsawrapper (taken from FFdecsawrapper's "config.h"):
 
@@ -75,40 +57,17 @@ OBJS = $(PLUGIN).o data.o filter.o system.o misc.o cam.o device.o version.o \
        smartcard.o network.o crypto.o system-common.o parse.o log.o \
        override.o
 
-### Internationalization (I18N):
-
-PODIR     = po
-I18Npot   = $(PODIR)/$(PLUGIN).pot
-I18Nmo    = ffdecsawrapper-$(PLUGIN).mo
-I18Nmsgs  = $(addprefix $(LOCALEDIR)/,$(addsuffix /LC_MESSAGES/$(I18Nmo),$(notdir $(foreach file, $(wildcard $(PODIR)/*.po), $(basename $(file))))))
-LOCALEDIR = $(BASEDIR)/locale
-
 SHAREDDEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 
 # max number of CAIDs per slot
 MAXCAID = 64
 DEFINES += -DFFDECSAWRAPPER_MAXCAID=$(MAXCAID)
 
-# FFdeCSA
-CPUOPT     ?= pentium
-PARALLEL   ?= PARALLEL_32_INT
-
-ifneq ($(RELEASE),1)
-CSAFLAGS   ?= -Wall -fPIC -g -O3 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops
-else
-CSAFLAGS   ?= -Wall -fPIC -O3 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops
-endif
-
-FFDECSADIR  = FFdecsa
-FFDECSA     = $(FFDECSADIR)/FFdecsa.o
-FFDECSATEST = $(FFDECSADIR)/FFdecsa_test.done
-
 # FFDECSAWRAPPER
-ifdef FFDECSAWRAPPER
 DEFINES += -DFFDECSAWRAPPER
 FFDECSA =
 FFDECSATEST =
-endif
+CSAFLAGS = "-Wall -fPIC -O2 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops"
 
 # export for system makefiles
 export SCAPIVERS
@@ -123,16 +82,16 @@ export CXXFLAGS
 
 BUILDTARGETS = $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a
 SHAREDDEFINES += -DSTATICBUILD
-BUILDTARGETS += $(FFDECSATEST) systems i18n
+BUILDTARGETS += $(FFDECSATEST) systems
 
 all: $(BUILDTARGETS)
-.PHONY: i18n systems systems-pre clean clean-core clean-systems clean-pre dist
+.PHONY: systems
 
 # Dependencies:
 
 MAKEDEP = g++ -MM -MG
 DEPFILE = .dependencies
-DEPFILES = $(subst i18n.c,,$(subst version.c,,$(OBJS:%.o=%.c)))
+DEPFILES = $(subst version.c,,$(OBJS:%.o=%.c))
 $(DEPFILE): $(DEPFILES) $(wildcard *.h)
 	@$(MAKEDEP) $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $(DEPFILES) > $@
 
@@ -153,23 +112,7 @@ $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a: $(OBJS)
 	$(AR) r $@ $(OBJS)
 
 $(FFDECSA) $(FFDECSATEST): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
-	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all
-
-$(I18Npot): $(shell grep -rl '\(tr\|trNOOP\)(\".*\")' *.c $(SYSDIR))
-	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --msgid-bugs-address='<noone@nowhere.org>' -o $@ `ls $^`
-
-%.po: $(I18Npot)
-	msgmerge -U --no-wrap --no-location --backup=none -q $@ $<
-	@touch $@
-
-%.mo: %.po
-	msgfmt -c -o $@ $<
-
-$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/$(I18Nmo): $(PODIR)/%.mo
-	@mkdir -p $(dir $@)
-	cp $< $@
-
-i18n: $(I18Nmsgs)
+	@$(MAKE) COMPILER=$(CXX) FLAGS=$(CSAFLAGS) PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all
 
 version.c: FORCE
 	@echo >$@.new "/* generated file, do not edit */"; \
@@ -181,23 +124,4 @@ version.c: FORCE
 systems:
 	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" all || exit 1; done
 
-systems-pre:
-	@for i in `ls -A -I ".*" $(PREDIR) | grep -- '-$(SCAPIVERS).so.$(APIVERSION)$$'`; do cp -p "$(PREDIR)/$$i" "$(LIBDIR)"; done
-
-clean-systems:
-	@for i in `ls -A -I ".*" $(SYSDIR)`; do $(MAKE) -f ../../Makefile.system -C "$(SYSDIR)/$$i" clean; done
-
-clean-core:
-	@if test -d $(FFDECSADIR); then $(MAKE) -C $(FFDECSADIR) clean; fi
-	@-rm -f $(LIBDIR)/libsc-*-$(SCAPIVERS).so.$(APIVERSION)
-	@-rm -f $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a $(LIBDIR)/libsc-*.a
-	@-rm -f $(OBJS) $(DEPFILE) version.c *.so *.tar.gz core* *~
-	@-rm -f $(PODIR)/*.mo
-
-clean-pre:
-	@-find "$(PREDIR)" -type f -not -name ".empty" -not -iname "*-$(SCAPIVERS).so.*" | xargs rm -f
-
-clean: clean-core clean-systems
-
 FORCE:
-

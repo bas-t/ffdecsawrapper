@@ -6,22 +6,19 @@ include config.mak
 CC       ?= gcc
 CXX      ?= g++
 CXXFLAGS ?= -Wall -D__user= 
-CFLAGS   ?= -Wall -D__user= 
 
 DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
 TOOL = ffdecsawrapper
 LIBS = -lpthread -lcrypto -lcrypt -lv4l1
+MODDIR = dvbloopback/module
 SCDIR = sc/PLUGINS/src
 SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
 	./sc/PLUGINS/lib/libffdecsawrapper-sc.a
-SC_FLAGS = -O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing
 
 ifneq ($(RELEASE),1)
 CXXFLAGS += -g
-CFLAGS   += -g
-SC_FLAGS += -g
 endif
 
 OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
@@ -43,7 +40,7 @@ INC_DEPS_LB := $(shell ls dvblb_plugins/*.h)
 all: $(TOOL)
 
 $(TOOL): $(OBJS) | sc-plugin
-	$(CXX) $(CFLAGS) -o $(TOOL) $(SCLIBS) $(OBJS) $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $(TOOL) $(SCLIBS) $(OBJS) $(LIBS)
 
 clean:
 	@git clean -xfd
@@ -59,13 +56,13 @@ update:
 	@git pull
 
 sc-plugin:
-	$(MAKE) -C $(SCDIR) CXX=$(CXX) CXXFLAGS="$(SC_FLAGS)" FFDECSAWRAPPER=1 STATIC=1 all
+	$(MAKE) -C $(SCDIR) CXX=$(CXX) CXXFLAGS=$(SC_FLAGS) STATIC=1 all
 
 FFdecsa/FFdecsa.o:
 	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
 
 module:
-	cd dvbloopback/module && $(MAKE)
+	cd $(MODDIR) && $(MAKE)
 	@cp -f dvbloopback/module/dvbloopback.ko .
 
 objs/libsi.a: $(OBJ_LIBSI)

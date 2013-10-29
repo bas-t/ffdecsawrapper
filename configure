@@ -400,7 +400,7 @@ fi
 if test "x$compiletype_opt" = "xrelease"; then
   echo "RELEASE=1" >> config.mak
 elif test "x$compiletype_opt" = "xdebug"; then
-  echo ""
+  echo "RELEASE=0" >> config.mak
 else
   echo "
 Bad option to --compiletype '$compiletype_opt'. Should be 'release, debug'"
@@ -423,8 +423,13 @@ Using compile type: debug
 "
 fi
 
+# Set wrapper compiler options
+if test "x$compiletype_opt" = "xrelease"; then
+  echo "SC_FLAGS = \"-O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing\"" >> config.mak
+elif test "x$compiletype_opt" = "xdebug"; then
+  echo "SC_FLAGS = \"-O2 -g -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing\"" >> config.mak
+fi
 
-rm -rf "${TMPDIR}"
 echo "CXX=$CXX" >> config.mak
 
 # Compile and, if running Debian/Ubuntu,
