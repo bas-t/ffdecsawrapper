@@ -3,6 +3,8 @@
 if [ -f /usr/bin/lsb_release ]; then
   OS=$( lsb_release -si )
   RELEASE=$( lsb_release -sc )
+else
+  OS=0
 fi
 
 FFdecsaDIR="./FFdecsa"
