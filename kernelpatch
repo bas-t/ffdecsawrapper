@@ -69,133 +69,106 @@ Aborting..."
     GCC=gcc
   fi
 
-  if echo $OS | egrep 'Debian|Ubuntu' 2>&1 1>/dev/null; then
-
 # When using FFdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
-    echo "
+  echo "
 FFdecsawrapper needs a patched dvb-core.ko kernel module.
 
-If you are running a !!!UNMODIFIED!!! Debian kernel
-(including those frome 'backports' or other branches, like 'sid'),
-I can do that for you, if your sources.list is ok and the source
-for your kernel is available from the repo's.
-"
-
-    confirmyes "Do you want me to patch your running Debian kernel?[Y/n]"
-
-    if [ "$?" -eq 0 ]; then
-
-      echo "
-
-   WARNING!!!
-
-   If you have more then 4 DVB adapters, or planning to use more then 4,
-   your kernel cannot be patched.
-   So if you did not do so allready,
-   recompile your kernel with apropriate dvb-mutex patch,
-   and 'CONFIG_DVB_MAX_ADAPTERS=<twice your adapters>'
-
-"
-      if [ "$OS" == Debian ]; then
-        echo "Do you want me to install linux-source-$SHORT_KERNEL?"
-      else
-        echo "Do you want me to install linux-source-$SHORT_KERNEL.0?"
-      fi
-
-      echo "This will remove any previously installed
-linux-source packages and (re)install
+If you are running a !!!UNMODIFIED!!! Debian/Ubuntu kernel
+I can do that for you if your sources.list is ok and the source
+for your kernel is available from the repo's. This will remove any
+previously installed linux-source packages and (re)install
 the source for your current kernel.
-
-Having done that, your running Debian kernel
+Having done that, your running Debian/Ubuntu kernel
 will be patched for use with ffdecsawrapper.
 "
 
-      confirmyes "Proceed?[Y/n]"
+  confirmyes "Do you want me to patch your running Debian/Ubuntu kernel?[Y/n]"
 
 # Install build dependencies for patching the kernel
 
-      if [ "$?" -eq 0 ]; then
-        apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
-        if [ "$OS" == Debian ]; then
-          apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
-        else
-          apt-get install linux-source-$SHORT_KERNEL.0 -y || die "Error installing linux-source-$SHORT_KERNEL.0"
-        fi
+  if [ "$?" -eq 0 ]; then
+    apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
+    if [ "$OS" == Debian ]; then
+      apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
+    else
+      apt-get install linux-source-$SHORT_KERNEL.0 -y || die "Error installing linux-source-$SHORT_KERNEL.0"
+    fi
 
 # Compile the patched dvb-core.ko module and install it
 
-        echo "
+    echo "
 Building patched dvb-core module for kernel `uname -r`
 
 Preparing, this may take a while...
-
 "
-        rm -rf $TEMPDIR
-        mkdir -p $TEMPDIR
-        if  [ "$FIRST_DIGIT" -eq 3 ]; then
-          if [ "$SECOND_DIGIT" -lt 7 ]; then
-            if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-              tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-            elif  test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2; then
-              tar -xjf /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL.0/drivers/media/dvb/dvb-core/
-            elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-              tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-            elif test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz; then
-              tar -xJf /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL.0/drivers/media/dvb/dvb-core/
-            fi
-            echo "
-Building and installing
-"
-            patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
-            CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
-            mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
-            /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
-              if [ "$?" -eq 0 ]; then
-                echo "
-
-####################################################################
-
-Your kernel is properly patched. You should reboot your machine now.
-
-####################################################################
-"
-              fi
-            rm -rf $TEMPDIR
-            depmod -a
-          else
-            if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-              tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-            elif  test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2; then
-              tar -xjf /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL.0/drivers/media/dvb-core/
-            elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-              tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-            elif test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz; then
-              tar -xJf /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL.0/drivers/media/dvb-core/
-            fi
-            echo "
-Building and installing
-"
-            patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
-            CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
-            mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
-            /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
-              if [ "$?" -eq 0 ]; then
-                echo "
-
-####################################################################
-
-Your kernel is properly patched. You should reboot your machine now.
-
-####################################################################
-"
-              fi
-            rm -rf $TEMPDIR
-            depmod -a
-          fi
+    rm -rf $TEMPDIR
+    mkdir -p $TEMPDIR
+    if  [ "$FIRST_DIGIT" -eq 3 ]; then
+      if [ "$SECOND_DIGIT" -lt 7 ]; then
+        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+        elif  test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL.0/drivers/media/dvb/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL.0/drivers/media/dvb/dvb-core/
         fi
+        echo "
+Building and installing
+"
+        patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
+          if [ "$?" -eq 0 ]; then
+            echo "
+
+###################################################################
+
+Your kernel is properly patched. You should reboot your machine now.
+
+####################################################################
+"
+          fi
+        rm -rf $TEMPDIR
+        depmod -a
+      else
+        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        elif  test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.0.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL.0/drivers/media/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.0.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL.0/drivers/media/dvb-core/
+        fi
+        echo "
+Building and installing
+"
+        patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
+          if [ "$?" -eq 0 ]; then
+            echo "
+
+####################################################################
+
+Your kernel is properly patched. You should reboot your machine now.
+
+####################################################################
+"
+          fi
+        rm -rf $TEMPDIR
+        depmod -a
       fi
     fi
+  else
+    echo "
+Not patching any kernel.
+"
   fi
 fi
