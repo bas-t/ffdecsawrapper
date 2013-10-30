@@ -728,7 +728,7 @@ bool cSmartCardNagra::DoBlkCmd(unsigned char cmd, int ilen, unsigned char res, i
   T1  protocol: 21 00 08 A0 CA 00 00 02 C0 00 06 87
   */
   unsigned char msg[MAX_LEN+16];
-  static char nagra_head[] = { 0xA0,0xCA,0x00,0x00 };
+  static unsigned char nagra_head[] = { 0xA0,0xCA,0x00,0x00 };
 
   memset(msg,0,sizeof(msg));
   int c=0;
