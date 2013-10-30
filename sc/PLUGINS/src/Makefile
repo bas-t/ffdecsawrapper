@@ -67,7 +67,7 @@ DEFINES += -DFFDECSAWRAPPER_MAXCAID=$(MAXCAID)
 DEFINES += -DFFDECSAWRAPPER
 FFDECSA =
 FFDECSATEST =
-CSAFLAGS = "-Wall -fPIC -O2 -mmmx -fomit-frame-pointer -fexpensive-optimizations -funroll-loops"
+CSAFLAGS = "-Wall -fPIC -O2 -mmmx -msse -msse2 -fomit-frame-pointer -fexpensive-optimizations -funroll-loops"
 
 # export for system makefiles
 export SCAPIVERS
