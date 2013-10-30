@@ -3,8 +3,6 @@
 if [ -f /usr/bin/lsb_release ]; then
   OS=$( lsb_release -si )
   RELEASE=$( lsb_release -sc )
-else
-  OS=0
 fi
 
 FFdecsaDIR="./FFdecsa"
@@ -129,7 +127,7 @@ echo "CPU-Family: $cpu_family"
 echo "CPU-Model: $cpu_model"
 echo "Flags: $flags"
 
-if [ $OS == Debian ] || [ $OS == Ubuntu ] ; then
+if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
   echo " 
 ### GCC-INFO ###"
   echo "Unless you specified a gcc/g++ version to use,
@@ -160,7 +158,7 @@ fi
 ffdecsa_test() {
 
   if [ "$PMode" == "" ]; then
-    if [ $_SHORT -lt 1 ]; then
+    if [ "$_SHORT" -lt 1 ]; then
       FFDECSA_MODES="PARALLEL_32_INT PARALLEL_32_4CHAR PARALLEL_32_4CHARA \
                      PARALLEL_64_8CHAR PARALLEL_64_8CHARA PARALLEL_64_2INT \
                      PARALLEL_64_LONG PARALLEL_64_MMX PARALLEL_128_16CHAR \
@@ -285,7 +283,7 @@ Please be patient"
     echo "  Level -O${i}:"
     ffdecsa_test "-O${i}"
   done
-  if [ $MAX_val_3 -ge $MAX_val_2 ]; then
+  if [ "$MAX_val_3" -ge "$MAX_val_2" ]; then
     MAX_MODE=$MAX_MODE_3
     MAX_val=$MAX_val_3
     OptFlag="-O3"

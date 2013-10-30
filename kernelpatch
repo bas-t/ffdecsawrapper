@@ -54,7 +54,7 @@ confirmno(){
 
 # Abort if running kernel is < 3.x
 
-if [ $FIRST_DIGIT -lt 3 ]; then
+if [ "$FIRST_DIGIT" -lt 3 ]; then
   echo "The kernel you are running is not supported anymore.
 
 Minimum supported version is 3.x
@@ -83,7 +83,7 @@ for your kernel is available from the repo's.
 
   confirmyes "Do you want me to patch your running Debian kernel?[Y/n]"
 
-  if [ $(echo $?) -eq 0 ]; then
+  if [ "$?" -eq 0 ]; then
 
     echo "
 
@@ -109,7 +109,7 @@ will be patched for use with ffdecsawrapper.
 
 # Install build dependencies for patching the kernel
 
-    if [ $(echo $?) -eq 0 ]; then
+    if [ "$?" -eq 0 ]; then
       apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
       apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
 
@@ -123,8 +123,8 @@ Preparing, this may take a while...
 "
       rm -rf $TEMPDIR
       mkdir -p $TEMPDIR
-      if  [ $FIRST_DIGIT -eq 3 ]; then
-        if [ $SECOND_DIGIT -lt 7 ]; then
+      if  [ "$FIRST_DIGIT" -eq 3 ]; then
+        if [ "$SECOND_DIGIT" -lt 7 ]; then
           if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
             tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
           elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
@@ -137,7 +137,7 @@ Building and installing
           CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
           mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
           /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
-            if [ $(echo $?) -eq 0 ]; then
+            if [ "$?" -eq 0 ]; then
               echo "
 
 ####################################################################
@@ -162,7 +162,7 @@ Building and installing
           CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
           mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
           /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
-            if [ $(echo $?) -eq 0 ]; then
+            if [ "$?" -eq 0 ]; then
               echo "
 
 ####################################################################

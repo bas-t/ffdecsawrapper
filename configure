@@ -122,7 +122,7 @@ PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3'
 
 # Abort if running kernel is < 3.x
 
-if [ $FIRST_DIGIT -lt 3 ]; then
+if [ "$FIRST_DIGIT" -lt 3 ]; then
   echo "
 The kernel you are running is not supported anymore.
 
@@ -153,7 +153,7 @@ http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 
 confirmyes "Proceed?[Y/n]"
 
-  if [ $(echo $?) -eq 1 ]; then
+  if [ "$?" -eq 1 ]; then
     echo "
 You have chosen not to proceed.
 
@@ -172,14 +172,12 @@ fi
 if [ -f /usr/bin/lsb_release ]; then
   OS=$( lsb_release -si )
   RELEASE=$( lsb_release -sc )
-else
-  OS=0
 fi
 
 # The rest of the Debian section
 # depends on the outcome of next line
 
-if [ $OS == Debian ] ; then
+if [ "$OS" == Debian ] ; then
 
 # Make sure that we are running as root
 
@@ -203,7 +201,7 @@ It seems that FFdecsawrapper is running.
 It should be stopped before proceeding.
 "
     confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
-    if [ $(echo $?) -eq 0 ]; then
+    if [ "$?" -eq 0 ]; then
       if test -e /etc/init.d/ffdecsawrapper; then
         /etc/init.d/ffdecsawrapper stop
         sleep 3
@@ -278,7 +276,7 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
   CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
   CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
 
-  if ! [ $CCSYSTEM == $CCKERNEL ] ; then
+  if ! [ "$CCSYSTEM" == "$CCKERNEL" ] ; then
     if test "x$CXX" = "x"; then
       CXX=g++-$CCKERNEL
       GCC=gcc-$CCKERNEL
@@ -325,7 +323,7 @@ Aborting...
     exit 0
   fi
 else
-  if [ $SECOND_DIGIT -lt 7 ]; then
+  if [ "$SECOND_DIGIT" -lt 7 ]; then
     cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/dvbdev.h
   else
     cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
@@ -403,7 +401,7 @@ elif test "x$compiletype_opt" = "xdebug"; then
   echo "RELEASE=0" >> config.mak
 else
   echo "
-Bad option to --compiletype '$compiletype_opt'. Should be 'release, debug'"
+Bad option to --compiletype '$compiletype_opt' Should be 'release, debug'"
   exit 1
 fi
 
@@ -435,7 +433,7 @@ echo "CXX=$CXX" >> config.mak
 # Compile and, if running Debian/Ubuntu,
 # finish by installing the lot.
 
-if [ $OS == Debian ] ; then
+if [ "$OS" == Debian ] ; then
   echo "
 
 Everything looks ok!
@@ -445,9 +443,9 @@ make && make module
 "
   confirmyes "Start compiling now?[Y/n]"
 
-  if [ $(echo $?) -eq 0 ]; then
+  if [ "$?" -eq 0 ]; then
     make && make module
-    if [ $(echo $?) -eq 0 ]; then
+    if [ "$?" -eq 0 ]; then
       echo "
 Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
 
@@ -458,13 +456,13 @@ dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.k
 If you hit Y and your kernel needs to be patched, that will be done too.
 "
       confirmyes "Yes, install them now![Y/n]"
-      if [ $(echo $?) -eq 0 ]; then
+      if [ "$?" -eq 0 ]; then
         rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
         rm -f /usr/bin/ffdecsawrapper
         cp -f ffdecsawrapper /usr/bin
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
         /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-        if [ $(echo $?) -eq 0 ]; then
+        if [ "$?" -eq 0 ]; then
           depmod -a
           echo "
 #########################
@@ -513,7 +511,7 @@ make && make module
 "
 confirmyes "Start compiling now?[Y/n]"
 
-  if [ $(echo $?) -eq 0 ]; then
+  if [ "$?" -eq 0 ]; then
     make && make module
   else
     echo "
