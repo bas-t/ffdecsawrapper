@@ -273,6 +273,15 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 # and install any missing packages, unless we defined
 # a specific version using --cxx= option on command line
 
+  if test "x$CXX" != "x"; then
+    if ! dpkg-query -l $CXX > /dev/null 2>&1; then
+      echo "
+Missing dependency $CXX, marking for installation.
+"
+      apt-get install $CXX -y || die "Error installing dependency $CXX"
+    fi
+  fi
+
   CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
   CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
 
@@ -280,13 +289,6 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
     if test "x$CXX" = "x"; then
       CXX=g++-$CCKERNEL
       GCC=gcc-$CCKERNEL
-    else
-      if ! dpkg-query -l g++-$CXX > /dev/null 2>&1; then
-        echo "
-Missing dependency g++-$CXX, marking for installation.
-"
-        apt-get install g++-$CXX -y || die "Error installing dependency g++-$CXX"
-      fi
     fi
 
     export GCC

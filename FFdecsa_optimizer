@@ -74,7 +74,8 @@ try_gcc_options() {
 }
 
 if ! try_gcc_options; then
-    echo "Error: Couldn't execute your compiler ($CC)" >&2
+    echo "
+Error: Couldn't execute your compiler ($CC)" >&2
     exit 1
 fi
 
