@@ -280,6 +280,13 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
     if test "x$CXX" = "x"; then
       CXX=g++-$CCKERNEL
       GCC=gcc-$CCKERNEL
+    else
+      if ! dpkg-query -l g++-$CXX > /dev/null 2>&1; then
+        echo "
+Missing dependency g++-$CXX, marking for installation.
+"
+        apt-get install g++-$CXX -y || die "Error installing dependency g++-$CXX"
+      fi
     fi
 
     export GCC
@@ -362,18 +369,38 @@ fi
 # Define what optimization tests we want
 
 if test "x$ffdecsa_flags" = "x"; then
+    CCC=$CXX
+    export CCC
   if test "x$ffdecsa_opt" = "xyes"; then
-    CCC=$CXX
-    export CCC
    ./FFdecsa_optimizer
+    if ! [ "$?" -eq 0 ]; then
+      echo "
+Fatal error(s) encoutered during optimization tests.
+
+Aborting...
+"
+      exit 1
+    fi
   elif test "x$ffdecsa_opt" = "xlong"; then
-    CCC=$CXX
-    export CCC
    ./FFdecsa_optimizer -e
+    if ! [ "$?" -eq 0 ]; then
+      echo "
+Fatal error(s) encoutered during optimization tests.
+
+Aborting...
+"
+      exit 1
+    fi
   elif test "x$ffdecsa_opt" = "xdefined"; then
-    CCC=$CXX
-    export CCC
    ./FFdecsa_optimizer -P $MAX_MODE
+    if ! [ "$?" -eq 0 ]; then
+      echo "
+Fatal error(s) encoutered during optimization tests.
+
+Aborting...
+"
+      exit 1
+    fi
   elif test "x$ffdecsa_opt" != "xno"; then
     echo "
 Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'"
