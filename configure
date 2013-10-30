@@ -177,18 +177,22 @@ fi
 # The rest of the Debian section
 # depends on the outcome of next line
 
-if [ "$OS" == Debian ] ; then
+if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
 
 # Make sure that we are running as root
 
   if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
-    echo "
+    if [ "$OS" == Debian ]; then
+      echo "
 You should run as root.
 
 Aborting...
 "
-    make clean > /dev/null 2>&1
-    exit 0
+      make clean > /dev/null 2>&1
+      exit 0
+    else
+      sudo su
+    fi
   fi
 
 # Check if FFdecsawrapper is running
@@ -258,7 +262,7 @@ Missing dependency build-essential, marking for installation.
 # uname -a does not return Debian
 # when we are running a vannila kernel
 
-  if uname -a | grep 'Debian' > /dev/null  2>&1; then
+  if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
     if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
       echo "
 Missing dependency linux-headers-`uname -r`, marking for installation.
@@ -462,7 +466,7 @@ echo "CXX=$CXX" >> config.mak
 # Compile and, if running Debian/Ubuntu,
 # finish by installing the lot.
 
-if [ "$OS" == Debian ] ; then
+if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
   echo "
 
 Everything looks ok!
@@ -509,7 +513,7 @@ Installed without errors!
 
           if test "x$dvb_path" = "x"; then
             if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-              if uname -a | grep 'Debian' > /dev/null  2>&1; then
+              if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
                 ./kernelpatch
               fi
             fi
