@@ -191,7 +191,15 @@ Aborting...
       make clean > /dev/null 2>&1
       exit 0
     else
-      sudo su
+      echo "
+You should run as root.
+
+Do \"sudo su\" and run me again.
+
+Aborting...
+"
+      make clean > /dev/null 2>&1
+      exit 0
     fi
   fi
 
