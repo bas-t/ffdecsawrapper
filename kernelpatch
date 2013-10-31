@@ -39,7 +39,7 @@ confirmno(){
     OS=$( lsb_release -si )
     RELEASE=$( lsb_release -sc )
 
-if [ "OS" == Debian ] || [ "$OS" == Ubuntu ]; then
+if [ "$OS" == "Debian" ] || [ "$OS" == "Ubuntu" ]; then
 
 # Get kernel version numbers
 
