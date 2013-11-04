@@ -34,10 +34,36 @@ confirmno(){
     esac
 }
 
+success(){
+echo "
+
+###################################################################
+
+Your kernel is properly patched. You should reboot your machine now.
+
+####################################################################
+"
+}
+
+fail(){
+echo "
+
+##########################################################
+
+Error(s) encountered. Your kernel is NOT properly patched.
+
+##########################################################
+"
+rm -rf $TEMPDIR
+exit 1
+}
+
 # Get OS and release info
 
+if [ -f /usr/bin/lsb_release ]; then
     OS=$( lsb_release -si )
     RELEASE=$( lsb_release -sc )
+fi
 
 if [ "$OS" == "Debian" ] || [ "$OS" == "Ubuntu" ]; then
 
@@ -77,23 +103,24 @@ FFdecsawrapper needs a patched dvb-core.ko kernel module.
 
 If you are running a !!!UNMODIFIED!!! Debian/Ubuntu kernel
 I can do that for you if your sources.list is ok and the source
-for your kernel is available from the repo's. This will remove any
-previously installed linux-source packages and (re)install
-the source for your current kernel.
+for your kernel is available from the repo's.
+
+This will (re)install the source for your running kernel
+along with any missing build deps.
 Having done that, your running Debian/Ubuntu kernel
 will be patched for use with ffdecsawrapper.
 "
 
   confirmyes "Do you want me to patch your running Debian/Ubuntu kernel?[Y/n]"
 
-# Install build dependencies for patching the kernel
+# Install dependencies for patching the kernel
 
   if [ "$?" -eq 0 ]; then
-    apt-get purge linux-source* -y && apt-get build-dep linux --no-install-recommends -y
+    apt-get build-dep linux --no-install-recommends -y
     if [ "$OS" == Debian ]; then
-      apt-get install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
+      apt-get --reinstall install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
     else
-      apt-get install linux-source-$SHORT_KERNEL.0 -y || die "Error installing linux-source-$SHORT_KERNEL.0"
+      apt-get --reinstall install linux-source-$SHORT_KERNEL.0 -y || die "Error installing linux-source-$SHORT_KERNEL.0"
     fi
 
 # Compile the patched dvb-core.ko module and install it
@@ -124,14 +151,9 @@ Building and installing
         mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
           if [ "$?" -eq 0 ]; then
-            echo "
-
-###################################################################
-
-Your kernel is properly patched. You should reboot your machine now.
-
-####################################################################
-"
+            success
+          else
+            fail
           fi
         rm -rf $TEMPDIR
         depmod -a
@@ -153,14 +175,9 @@ Building and installing
         mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
           if [ "$?" -eq 0 ]; then
-            echo "
-
-####################################################################
-
-Your kernel is properly patched. You should reboot your machine now.
-
-####################################################################
-"
+            success
+          else
+            fail
           fi
         rm -rf $TEMPDIR
         depmod -a

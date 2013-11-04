@@ -513,7 +513,6 @@ Installed without errors!
 #########################
 
 "
-          sleep 2
 
 # The kernel needs to be patched if we don't
 # use newest v4l drivers, but don't offer
@@ -533,7 +532,9 @@ Installed without errors!
 Error(s) encoutered installing the dvbloopback kernel module.
 
 #############################################################
+
 "
+          exit 1
         fi
       fi
     fi
