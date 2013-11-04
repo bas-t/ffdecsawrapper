@@ -35,6 +35,7 @@ confirmno(){
 }
 
 success(){
+depmod -a
 echo "
 
 ###################################################################
@@ -43,6 +44,7 @@ Your kernel is properly patched. You should reboot your machine now.
 
 ####################################################################
 "
+rm -rf $TEMPDIR
 }
 
 fail(){
@@ -150,13 +152,11 @@ Building and installing
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
         mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
-          if [ "$?" -eq 0 ]; then
-            success
-          else
-            fail
-          fi
-        rm -rf $TEMPDIR
-        depmod -a
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
       else
         if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
           tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
@@ -174,13 +174,11 @@ Building and installing
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
         mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
-          if [ "$?" -eq 0 ]; then
-            success
-          else
-            fail
-          fi
-        rm -rf $TEMPDIR
-        depmod -a
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
       fi
     fi
   else
