@@ -116,7 +116,7 @@ will be patched for use with ffdecsawrapper.
 # Install dependencies for patching the kernel
 
   if [ "$?" -eq 0 ]; then
-    apt-get build-dep linux --no-install-recommends -y
+    apt-get build-dep linux --no-install-recommends -y || die "Error installing \"build-dep linux\""
     if [ "$OS" == Debian ]; then
       apt-get --reinstall install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
     else
