@@ -511,13 +511,6 @@ If you hit Y and your kernel needs to be patched, that will be done too.
         /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         if [ "$?" -eq 0 ]; then
           depmod -a
-          echo "
-#########################
-
-Installed without errors!
-
-#########################
-"
 
 # The kernel needs to be patched if we don't
 # use newest v4l drivers, but don't offer
@@ -526,7 +519,21 @@ Installed without errors!
           if test "x$dvb_path" = "x"; then
             if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
               if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
+                echo "
+#########################
+Installed without errors!
+#########################
+"
                 ./kernelpatch
+              else
+                echo "
+##########################
+Installed without errors!!
+
+Kernelpatch not needed, or
+non stock kernel detected.
+##########################
+"
               fi
             fi
           fi 
