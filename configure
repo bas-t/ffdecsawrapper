@@ -249,35 +249,35 @@ It should be stopped before proceeding.
 
 # Install build dependencies for FFdecsawrapper 
 
-  if ! dpkg-query -l gettext > /dev/null 2>&1; then
+  if ! dpkg-query -l gettext | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
 "
     apt-get install gettext -y || die "Error installing dependency gettext"
   fi
 
-  if ! dpkg-query -l libv4l-dev > /dev/null 2>&1; then
+  if ! dpkg-query -l libv4l-dev | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency libv4l-dev, marking for installation.
 "
     apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
   fi
 
-  if ! dpkg-query -l libproc-processtable-perl > /dev/null 2>&1; then
+  if ! dpkg-query -l libproc-processtable-perl | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency libproc-processtable-perl, marking for installation.
 "
     apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
   fi
 
-  if ! dpkg-query -l libssl-dev > /dev/null 2>&1; then
+  if ! dpkg-query -l libssl-dev | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency libssl-dev, marking for installation.
 "
     apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
   fi
 
-  if ! dpkg-query -l build-essential > /dev/null 2>&1; then
+  if ! dpkg-query -l build-essential | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency build-essential, marking for installation.
 "
@@ -292,7 +292,7 @@ Missing dependency build-essential, marking for installation.
 # when we are running a vannila kernel
 
   if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
-    if ! dpkg-query -l linux-headers-`uname -r` > /dev/null 2>&1; then
+    if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency linux-headers-`uname -r`, marking for installation.
 "
@@ -307,7 +307,7 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 # a specific version using --cxx= option on command line
 
   if test "x$CXX" != "x"; then
-    if ! dpkg-query -l $CXX > /dev/null 2>&1; then
+    if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency $CXX, marking for installation.
 "
@@ -324,7 +324,7 @@ Missing dependency $CXX, marking for installation.
       CC=gcc-$CCKERNEL
     fi
 
-    if ! dpkg-query -l g++-$CCKERNEL > /dev/null 2>&1; then
+    if ! dpkg-query -l g++-$CCKERNEL | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency g++-$CCKERNEL, marking for installation.
 "
