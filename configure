@@ -1,13 +1,16 @@
 #!/bin/bash
 
 die(){
-    echo $1
+    echo -en "
+\E[1;33;44m$1, aborting...\E[0m
+
+"
     exit 1
 }
 
 die_unknown(){
-    echo "
- Unknown option \"$1\".
+    echo -en "
+\E[1;33;44mUnknown option \"$1\".\E[0m
 
 "
     ./configure --help
@@ -41,6 +44,17 @@ confirmyes(){
             true
             ;;
     esac
+}
+
+optimizer(){
+echo -en "
+\E[1;33;44m
+Fatal error(s) encoutered during optimization tests.
+
+Aborting...
+\E[0m
+"
+exit 1
 }
 
 show_help(){
@@ -123,12 +137,15 @@ PATCHLEVEL=$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3'
 # Abort if running kernel is < 3.x
 
 if [ "$FIRST_DIGIT" -lt 3 ]; then
-  echo "
+  echo -en "
+\E[1;33;44m
 The kernel you are running is not supported anymore.
 
 Minimum supported version is 3.x
+\E[0m
 
 Aborting...
+
 "
   exit 1
 fi
@@ -136,10 +153,10 @@ fi
 # Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
-  echo "
-
-
-    WARNING!!!
+  echo -en "
+\E[1;33;44m
+                     ! ATTENTION !
+\E[0m
 
 You have set the --dvb_dir= option, indicating that you compiled
 and installed newest dvb drivers from v4l.This should mean that
@@ -149,8 +166,8 @@ If you are not sure, you probably did not.
 In that case answer no to the question and first have a look at:
 
 http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
-"
 
+"
 confirmyes "Proceed?[Y/n]"
 
   if [ "$?" -eq 1 ]; then
@@ -183,22 +200,26 @@ if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
 
   if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
     if [ "$OS" == Debian ]; then
-      echo "
+      echo -en "
+\E[1;33;44m
 You should run as root.
 
 Aborting...
+\E[0m
+
 "
-      make clean > /dev/null 2>&1
       exit 0
     else
-      echo "
+      echo -en "
+\E[1;33;44m
 You should run as root.
 
 Do \"sudo su\" and run me again.
 
 Aborting...
+\E[0m
+
 "
-      make clean > /dev/null 2>&1
       exit 0
     fi
   fi
@@ -327,7 +348,8 @@ if test "x$dvb_path" != "x"; then
     cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
   elif test -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h; then
     cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
-  else echo "
+  else echo -en "
+\E[1;33;44m
 ERROR!!!
 
 Could not locate any of the following:
@@ -337,6 +359,7 @@ $dvb_path/drivers/media/dvb-core/dvbdev.h
 $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
 
 Aborting...
+\E[0m
 "
     make clean > /dev/null 2>&1
     exit 0
@@ -355,12 +378,14 @@ fi
 if test "x$dvb_path" = "x"; then
   if test -f /lib/modules/`uname -r`/build/Module.symvers; then
     cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
-  else echo "
+  else echo -en "
+\E[1;33;44m
 ERROR!!!
 
 could not locate /lib/modules/`uname -r`/build/Module.symvers
 
 Aborting...
+\E[0m
 "
     make clean > /dev/null 2>&1
     exit 0
@@ -387,32 +412,17 @@ if test "x$ffdecsa_flags" = "x"; then
   if test "x$ffdecsa_opt" = "xyes"; then
    ./FFdecsa_optimizer
     if ! [ "$?" -eq 0 ]; then
-      echo "
-Fatal error(s) encoutered during optimization tests.
-
-Aborting...
-"
-      exit 1
+      optimizer
     fi
   elif test "x$ffdecsa_opt" = "xlong"; then
    ./FFdecsa_optimizer -e
     if ! [ "$?" -eq 0 ]; then
-      echo "
-Fatal error(s) encoutered during optimization tests.
-
-Aborting...
-"
-      exit 1
+      optimizer
     fi
   elif test "x$ffdecsa_opt" = "xdefined"; then
    ./FFdecsa_optimizer -P $MAX_MODE
     if ! [ "$?" -eq 0 ]; then
-      echo "
-Fatal error(s) encoutered during optimization tests.
-
-Aborting...
-"
-      exit 1
+      optimizer
     fi
   elif test "x$ffdecsa_opt" != "xno"; then
     echo "
@@ -511,7 +521,6 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 Installed without errors!
 
 #########################
-
 "
 
 # The kernel needs to be patched if we don't
@@ -526,13 +535,14 @@ Installed without errors!
             fi
           fi 
         else
-          echo "
+          echo -en "
+\E[1;33;44m
 #############################################################
 
 Error(s) encoutered installing the dvbloopback kernel module.
 
 #############################################################
-
+\E[0m
 "
           exit 1
         fi
