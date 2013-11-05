@@ -48,13 +48,14 @@ rm -rf $TEMPDIR
 }
 
 fail(){
-echo "
-
+echo -en "
+\E[1;33;44m
 ##########################################################
 
 Error(s) encountered. Your kernel is NOT properly patched.
 
 ##########################################################
+\E[0m
 "
 rm -rf $TEMPDIR
 exit 1
@@ -73,20 +74,24 @@ if [ "$OS" == "Debian" ] || [ "$OS" == "Ubuntu" ]; then
 
   if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
     if [ "$OS" == Debian ]; then
-      echo "
+      echo -en "
+\E[1;33;44m
 You should run as root.
 
 Aborting...
+\E[0m
 "
       make clean > /dev/null 2>&1
       exit 0
     else
-      echo "
+      echo -en "
+\E[1;33;44m
 You should run as root.
 
 Do \"sudo su\" and run me again.
 
 Aborting...
+\E[0m
 "
       make clean > /dev/null 2>&1
       exit 0
@@ -110,11 +115,15 @@ Aborting...
 # Abort if running kernel is < 3.x
 
   if [ "$FIRST_DIGIT" -lt 3 ]; then
-    echo "The kernel you are running is not supported anymore.
+    echo -en "
+\E[1;33;44m
+The kernel you are running is not supported anymore.
 
 Minimum supported version is 3.x
 
-Aborting..."
+Aborting...
+\E[0m
+"
     exit 1
   fi
 
@@ -125,10 +134,10 @@ Aborting..."
 # When using FFdecsawrapper, the kernel has to be patched.
 # Let's do it.
 
-  echo "
+  echo -en "
 FFdecsawrapper needs a patched dvb-core.ko kernel module.
 
-If you are running a !!!UNMODIFIED!!! Debian/Ubuntu kernel
+If you are running a \E[1;33;44m!UNMODIFIED!\E[0m Debian/Ubuntu kernel
 I can do that for you if your sources.list is ok and the source
 for your kernel is available from the repo's.
 

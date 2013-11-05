@@ -74,8 +74,9 @@ try_gcc_options() {
 }
 
 if ! try_gcc_options; then
-    echo "
-Error: Couldn't execute your compiler ($CC)" >&2
+    echo -en "
+\E[1;33;44mError: Couldn't execute your compiler ($CC)\E[0m
+"
     exit 1
 fi
 
@@ -274,12 +275,12 @@ MAX_MODE_3="PARALLEL_64_MMX"
 if [ "$OLevel" != "" ]; then
   ffdecsa_test "$OptFlag"
 else
-  echo "Testing optimization levels 2 and 3"
-  echo ""
-  echo "This may take a while...
+  echo "
+Testing optimization levels 2 and 3
 
-Please be patient"
-  echo ""
+This may take a while,
+please be patient...
+"
   for i in `seq 2 3`; do
     echo "  Level -O${i}:"
     ffdecsa_test "-O${i}"
@@ -293,10 +294,9 @@ Please be patient"
     MAX_val=$MAX_val_2
     OptFlag="-O2"
   fi
-  echo ""
-  echo "Best result with $OptFlag and $MAX_MODE at $MAX_val Mbit/s"
-  echo ""
-  echo ""
+  echo -en "\E[1;33;44m
+Best result with $OptFlag and $MAX_MODE at $MAX_val Mbit/s
+\E[0m"
 fi
 
 echo "### FFdeCSA Fasted OPTS ###"
