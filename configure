@@ -456,14 +456,11 @@ Bad option to --compiletype '$compiletype_opt' Should be 'release, debug'"
 fi
 
 echo "
-`uname -r` kernel detected."
-
-echo "
+`uname -r` kernel detected.
 Using C++ compiler: $CXX"
 
 if test "x$compiletype_opt" = "xrelease"; then
-  echo "
-Using compile type: release
+  echo "Using compile type: release
 "
 elif test "x$compiletype_opt" = "xdebug"; then
   echo "
@@ -486,7 +483,6 @@ echo "CC=$CC" >> config.mak
 
 if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
   echo "
-
 Everything looks ok!
 
 Just hit 'enter' to run

@@ -294,9 +294,9 @@ please be patient...
     MAX_val=$MAX_val_2
     OptFlag="-O2"
   fi
-  echo -en "\E[1;33;44m
-Best result with $OptFlag and $MAX_MODE at $MAX_val Mbit/s
-\E[0m"
+  echo -en "\E[1;33;44mBest result with $OptFlag and $MAX_MODE at $MAX_val Mbit/s\E[0m
+
+"
 fi
 
 echo "### FFdeCSA Fasted OPTS ###"
