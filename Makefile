@@ -12,7 +12,11 @@ INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
 TOOL = ffdecsawrapper
 LIBS = -lpthread -lcrypto -lcrypt -lv4l1
-MODDIR = dvbloopback/module
+MODDIR = $(PWD)/dvbloopback/module/
+SYMVER = $(MODDIR)Module.symvers
+EXTRA_CFLAGS += -Idrivers/media/dvb-core/ -I$(MODDIR) \
+                  -Idrivers/media/dvb/dvb-core/
+BUILD_DIR ?= /lib/modules/$(shell uname -r)/build
 SCDIR = sc/PLUGINS/src
 SCLIBS = -Wl,-whole-archive ./sc/PLUGINS/lib/libsc-*.a -Wl,-no-whole-archive \
 	./sc/PLUGINS/lib/libffdecsawrapper-sc.a
@@ -62,7 +66,7 @@ FFdecsa/FFdecsa.o:
 	$(MAKE) -C FFdecsa $(FFDECSA_OPTS)
 
 module:
-	cd $(MODDIR) && $(MAKE)
+	$(MAKE) -C $(MODDIR) CC=$(CC) SYMVER=$(SYMVER) EXTRA_CFLAGS=$(EXTRA_CFLAGS) BUILD_DIR=$(BUILD_DIR) MODDIR=$(MODDIR)
 	@cp -f dvbloopback/module/dvbloopback.ko .
 
 objs/libsi.a: $(OBJ_LIBSI)
