@@ -525,8 +525,11 @@ Installed without errors!
 #########################
 "
                 ./kernelpatch
-              else
-                echo "
+
+              fi
+            fi
+          else
+            echo "
 ##########################
 Installed without errors!!
 
@@ -534,8 +537,6 @@ Kernelpatch not needed, or
 non stock kernel detected.
 ##########################
 "
-              fi
-            fi
           fi 
         else
           echo -en "
