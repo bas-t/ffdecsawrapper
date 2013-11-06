@@ -36,12 +36,10 @@ confirmno(){
 
 success(){
 depmod -a
-echo "
+echo -en "
 
 ###################################################################
-
-Your kernel is properly patched. You should reboot your machine now.
-
+\E[1;33;44mYour kernel is properly patched. You should reboot your machine now.\E[0m
 ####################################################################
 "
 rm -rf $TEMPDIR
@@ -49,13 +47,9 @@ rm -rf $TEMPDIR
 
 fail(){
 echo -en "
-\E[1;33;44m
 ##########################################################
-
-Error(s) encountered. Your kernel is NOT properly patched.
-
+\E[1;33;44mError(s) encountered. Your kernel is NOT properly patched.\E[0m
 ##########################################################
-\E[0m
 "
 rm -rf $TEMPDIR
 exit 1
@@ -145,6 +139,10 @@ This will (re)install the source for your running kernel
 along with any missing build deps.
 Having done that, your running Debian/Ubuntu kernel
 will be patched for use with ffdecsawrapper.
+
+\E[1;33;44mIf you recompiled a stock kernel, you should\E[0m
+\E[1;33;44mhave patched it. So answer 'No' in that case\E[0m
+
 "
 
   confirmyes "Do you want me to patch your running Debian/Ubuntu kernel?[Y/n]"
