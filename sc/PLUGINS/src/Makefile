@@ -102,12 +102,6 @@ $(DEPFILE): $(DEPFILES) $(wildcard *.h)
 %.o: %.c
 	$(CXX) $(CXXFLAGS) -c $(DEFINES) $(SHAREDDEFINES) $(INCLUDES) $<
 
-libffdecsawrapper-$(PLUGIN).so: $(OBJS) $(FFDECSA)
-	$(CXX) $(CXXFLAGS) -shared $(OBJS) $(FFDECSA) $(LIBS) $(SHAREDLIBS) -o $@
-
-$(LIBDIR)/libffdecsawrapper-$(PLUGIN).so.$(APIVERSION): libffdecsawrapper-$(PLUGIN).so
-	@cp -p $< $@
-
 $(LIBDIR)/libffdecsawrapper-$(PLUGIN).a: $(OBJS)
 	$(AR) r $@ $(OBJS)
 
