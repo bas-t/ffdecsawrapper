@@ -84,6 +84,3 @@ objs/%.o: sc/%.cpp
 objs/si_%.o: sc/libsi/%.c
 	$(CXX) $(CXXFLAGS) -o $@ -c  $(DEFINES) $(INCLUDES_SI) $<
 
-objs/version.o: version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ -c $(DEFINES) $<
-
