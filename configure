@@ -588,6 +588,7 @@ NOT starting compilation
 "
     fi
   else
+    sleep 2
     make && make module
   fi
 fi
