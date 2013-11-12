@@ -153,7 +153,8 @@ fi
 # Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
-  echo -en "
+  if ! uname -a | grep 'ARCH' > /dev/null  2>&1; then
+    echo -en "
 \E[1;33;44m
                      ! ATTENTION !
 \E[0m
@@ -170,13 +171,14 @@ http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 "
 confirmyes "Proceed?[Y/n]"
 
-  if [ "$?" -eq 1 ]; then
-    echo "
+    if [ "$?" -eq 1 ]; then
+      echo "
 You have chosen not to proceed.
 
 Aborting...
 "
-    exit 0
+      exit 0
+    fi
   fi
 fi
 
@@ -568,7 +570,8 @@ NOT starting compilation
 "
   fi
 else
-  echo "
+  if ! uname -a | grep 'ARCH' > /dev/null  2>&1; then
+    echo "
 
 Everything looks ok!
 
@@ -577,11 +580,14 @@ make && make module
 "
 confirmyes "Start compiling now?[Y/n]"
 
-  if [ "$?" -eq 0 ]; then
-    make && make module
-  else
-    echo "
+    if [ "$?" -eq 0 ]; then
+      make && make module
+    else
+      echo "
 NOT starting compilation
 "
+    fi
+  else
+    make && make module
   fi
 fi
