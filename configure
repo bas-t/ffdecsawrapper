@@ -153,7 +153,7 @@ fi
 # Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
-  if ! uname -a | grep 'ARCH' > /dev/null  2>&1; then
+  if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
     echo -en "
 \E[1;33;44m
                      ! ATTENTION !
@@ -570,7 +570,7 @@ NOT starting compilation
 "
   fi
 else
-  if ! uname -a | grep 'ARCH' > /dev/null  2>&1; then
+  if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
     echo "
 
 Everything looks ok!
