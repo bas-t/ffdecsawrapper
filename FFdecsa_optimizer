@@ -147,9 +147,9 @@ fi
 
 # complete flags for FFdesca_Test
 if [ "$OLevel" == "" ]; then
-  IFLAGS="-march=${_CPU}${_FLAGS} -mmmx -msse -msse2 -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+  IFLAGS="-march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
-  IFLAGS="$OptFlag -march=${_CPU}${_FLAGS} -mmmx -msse -msse2 -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+  IFLAGS="$OptFlag -march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 fi
 
 
@@ -304,9 +304,9 @@ echo "CPUOPT   = $_CPU"
 echo "PARALLEL = $MAX_MODE"
 
 if [ "$_FLAGS" == "" ]; then
-  echo "FLAGS    = $OptFlag -mmmx -msse -msse2 -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+  echo "FLAGS    = $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
-  echo "FLAGS    = ${OptFlag}${_FLAGS} -mmmx -msse -msse2 -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
+  echo "FLAGS    = ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 fi
 
 
