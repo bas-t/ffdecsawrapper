@@ -182,8 +182,8 @@ Building and installing
 "
         patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
-        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         if [ "$?" -eq 0 ]; then
           success
         else
@@ -204,8 +204,8 @@ Building and installing
 "
         patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
-        mkdir -p /lib/modules/`uname -r`/updates > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         if [ "$?" -eq 0 ]; then
           success
         else
