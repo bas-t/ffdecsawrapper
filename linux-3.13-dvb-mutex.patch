@@ -1,0 +1,16 @@
+--- a/drivers/media/dvb-core/dvbdev.c	2014-01-20 03:40:07.000000000 +0100
++++ b/drivers/media/dvb-core/dvbdev.c	2014-01-23 23:39:41.357710804 +0100
+@@ -81,8 +81,11 @@
+ 			goto fail;
+ 		file->private_data = dvbdev;
+ 		replace_fops(file, new_fops);
+-		if (file->f_op->open)
++		if (file->f_op->open) {
++                        mutex_unlock(&dvbdev_mutex);
+ 			err = file->f_op->open(inode,file);
++                        mutex_lock(&dvbdev_mutex);
++                }
+ 		up_read(&minor_rwsem);
+ 		mutex_unlock(&dvbdev_mutex);
+ 		return err;
+
