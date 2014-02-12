@@ -79,7 +79,7 @@ show_help(){
   echo "                        no: Don't do any optimizations"
   echo "                        Option is disabled by --ffdecsa_mode option"
   echo "                        "
-  echo " --tsbuffer=<opt>       [1024] Change default TS buffer size (in KB)."
+  echo " --tsbuffer=<opt>       [2048] Change default TS buffer size (in KB)."
   echo "                        Use like --tsbuffer=8"
   echo "                        "
   echo " --ffdecsa_mode=<opt>   Test single <opt> optimization mode"
@@ -433,10 +433,10 @@ Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'"
   fi
 fi
 
-# Play with TsBufferSize, w.i.p
+# Set TsBufferSize
 
 if test "x$tsbuffer" != "x"; then
-  sed -i "s/DeCsaTsBuffSize=1024/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
+  sed -i "s/DeCsaTsBuffSize=2048/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
 fi
 
 # If set, use user defined FFdecsa flags
