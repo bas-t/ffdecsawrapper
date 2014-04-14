@@ -51,7 +51,7 @@ echo -en "
 \E[1;33;44mError(s) encountered. Your kernel is NOT properly patched.\E[0m
 ##########################################################
 "
-#rm -rf $TEMPDIR
+rm -rf $TEMPDIR
 exit 1
 }
 
