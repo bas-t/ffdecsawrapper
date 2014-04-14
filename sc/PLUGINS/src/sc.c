@@ -945,7 +945,7 @@ cScSetup::cScSetup(void)
   PrestartAU=0;
   SuperKeys=0;
   EcmCache=0;
-  DeCsaTsBuffSize=2048;
+  DeCsaTsBuffSize=4;
 }
 
 void cScSetup::Check(void)
