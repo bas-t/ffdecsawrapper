@@ -91,10 +91,7 @@ static int init_sc(void) {
   sc=(cPlugin *)VDRPluginCreator();
 
   dprintf0("initializing plugin: SoftCam (%s): %s\n", sc->Version(), sc->Description());
-#ifndef __x86_64__
-  //I have no idea why 64bit systems crash with the redirect
   SetCAMPrint(DBG_NAME, PLUGIN_ID, 0, &_dbglvl);
-#endif
   if (!sc->Initialize()) {
     dprintf0("Failed to initialize sc\n");
     return false;
