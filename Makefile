@@ -1,4 +1,4 @@
-VERSION = 1.1.8
+VERSION = 1.1.9
 
 $(shell touch config.mak)
 include config.mak
