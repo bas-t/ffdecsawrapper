@@ -223,9 +223,7 @@ int init_osd(int real, int virt) {
 
 int log_rotate(int report_error)
 {
-  /* http://www.gossamer-threads.com/lists/mythtv/dev/110113 */
-
-  int new_logfd = open(logfile, O_WRONLY|O_CREAT|O_APPEND|O_SYNC|O_LARGEFILE, 0664);
+  int new_logfd = open(logfile, O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE, 0664);
   if (new_logfd < 0) {
     // If we can't open the new logfile, send data to /dev/null
     if (report_error) {
