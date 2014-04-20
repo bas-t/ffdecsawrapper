@@ -1356,19 +1356,13 @@ bool cCam::IsSoftCSA(bool live)
 
 void cCam::Tune(const cChannel *channel)
 {
-  bool stop = false;
   cMutexLock lock(this);
   if(source!=channel->Source() || transponder!=channel->Transponder()) {
     source=channel->Source(); transponder=channel->Transponder();
     PRINTF(L_CORE_PIDS,"%d: now tuned to source %x(%s) transponder %x",cardNum,source,*cSource::ToString(source),transponder);
-    stop = true;
-    } else {
-    PRINTF(L_CORE_PIDS,"%d: tune to same source/transponder",cardNum);
-    }
-
-  if (stop) {
     Stop();
-  }
+    }
+    else PRINTF(L_CORE_PIDS,"%d: tune to same source/transponder",cardNum);
 }
 
 void cCam::PostTune(void)
