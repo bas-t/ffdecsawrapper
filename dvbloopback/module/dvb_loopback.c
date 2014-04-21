@@ -181,7 +181,7 @@ static int dvblb_usercopy(struct file *file,
 
 	/* call driver */
 	if ((err = func(file, cmd, parg)) == -ENOIOCTLCMD)
-		err = -EINVAL;
+		err = -ENOTTY;
 
 	if (err < 0)
 		goto out;
