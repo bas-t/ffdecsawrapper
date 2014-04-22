@@ -11,7 +11,7 @@ CC=$CCC
 # some initial values
 OLevel=""
 PMode=""
-MTimes=10
+MTimes=1
 _FLAGS=""
 _CPU=""
 _SHORT=1
@@ -210,7 +210,7 @@ ffdecsa_test() {
           echo "    ...failed!"
         else
           MAX_M_val=`grep "speed=.*Mbit" "${TMPOUT}" | sed -e 's/^.*=\([0-9]*\)\.[0-9]* Mbit.*$/\1/'`
-          printf "      - $MAX_M_val"
+          printf "     $MAX_M_val Mbit/s"
           if [ $MTimes -ge 2 ]; then
             for i in `seq 2 $MTimes`; do
               "${TMPDIR}/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
@@ -223,7 +223,6 @@ ffdecsa_test() {
           fi
 
           printf "\n"
-          echo "      - $MAX_M_val Mbit/s max."
 
           if [ "$1" == "-O2" ]; then          
             if test $MAX_M_val -gt $MAX_val_2; then
@@ -315,3 +314,4 @@ if [ "$OLevel" != "" ]; then
 else
   echo "FFDECSA_OPTS = \"FLAGS=$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
 fi
+
