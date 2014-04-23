@@ -1,4 +1,4 @@
-VERSION = 1.1.8
+VERSION = 1.1.9
 
 $(shell touch config.mak)
 include config.mak
@@ -48,7 +48,6 @@ $(TOOL): $(OBJS) | sc-plugin
 
 clean:
 	@git clean -xfd
-	@git reset --hard HEAD
 
 distclean:
 	@git clean -xfd
