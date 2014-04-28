@@ -166,10 +166,14 @@ Preparing, this may take a while...
 "
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
       if [ "$SECOND_DIGIT" -lt 7 ]; then
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+        if [ "$OS" = Ubuntu ]; then
+          tar -C "${TEMPDIR}/linux-${UBUNTU_KERNEL}/drivers/media/dvb" -cf - dvb-core | tar -C "${TEMPDIR}" -xpf -
+	else
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          fi
         fi
         echo "
 Building and installing
@@ -184,10 +188,14 @@ Building and installing
           fail
         fi
       elif [ "$SECOND_DIGIT" -lt 13 ]; then
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        if [ "$OS" = Ubuntu ]; then
+          tar -C "${TEMPDIR}/linux-${UBUNTU_KERNEL}/drivers/media" -cf - dvb-core | tar -C "${TEMPDIR}" -xpf -
+	else
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          fi
         fi
         echo "
 Building and installing
@@ -202,10 +210,14 @@ Building and installing
           fail
         fi
       else
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        if [ "$OS" = Ubuntu ]; then
+          tar -C "${TEMPDIR}/linux-${UBUNTU_KERNEL}/drivers/media" -cf - dvb-core | tar -C "${TEMPDIR}" -xpf -
+	else
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          fi
         fi
         echo "
 Building and installing
