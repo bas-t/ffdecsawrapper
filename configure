@@ -526,8 +526,11 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 \E[1;33;44mInstalled without errors!\E[0m
 #########################
 "
+  if [ "$OS" == Debian ]; then
                 ./kernelpatch
-              else
+  elif [ "$OS" == Ubuntu ] ; then
+                ./kernelpatch_ubuntu
+  else
                 echo -en "
 ##########################
 \E[1;33;44mInstalled without errors!!\E[0m
