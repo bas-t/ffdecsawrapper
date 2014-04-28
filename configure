@@ -196,13 +196,12 @@ fi
 # The rest of the Debian section
 # depends on the outcome of next line
 
-if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
+if [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
 
 # Make sure that we are running as root
 
-  if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
-    if [ "$OS" == Debian ]; then
-      echo -en "
+  if [ "$(whoami)" != "root" ]; then
+    echo -en "
 \E[1;33;44m
 You should run as root.
 
@@ -210,20 +209,7 @@ Aborting...
 \E[0m
 
 "
-      exit 0
-    else
-      echo -en "
-\E[1;33;44m
-You should run as root.
-
-Do \"sudo su\" and run me again.
-
-Aborting...
-\E[0m
-
-"
-      exit 0
-    fi
+    exit 0
   fi
 
 # Check if FFdecsawrapper is running
@@ -320,7 +306,7 @@ Missing dependency $CXX, marking for installation.
   CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
   CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
 
-  if ! [ "$CCSYSTEM" == "$CCKERNEL" ] ; then
+  if ! [ "$CCSYSTEM" = "$CCKERNEL" ] ; then
     if test "x$CXX" = "x"; then
       CXX=g++-$CCKERNEL
       CC=gcc-$CCKERNEL
@@ -483,7 +469,7 @@ echo "CC=$CC" >> config.mak
 # Compile and, if running Debian/Ubuntu,
 # finish by installing the lot.
 
-if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
+if [ "$OS" = Debian ] || [ "$OS" = Ubuntu ] ; then
   echo "
 Everything looks ok!
 

@@ -87,6 +87,10 @@ LOGDIR="/var/log/ffdecsawrapper"
 
 DATABASENAME="mythconverg"
 
+                      # Do we manage MythTV stuff at all ?
+
+USEMYTHV="1"
+
                       # Set this to 1 once you are done configuring.
 ENABLED="0"
 

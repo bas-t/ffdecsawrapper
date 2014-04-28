@@ -28,24 +28,26 @@ if ! test -e /dev/dvb/adapter$ADAPTERS > /dev/null 2>&1; then
   exit 1
 fi
 
-# We want to start mythtv-backend from this script, not from rc*.d
-# or upstart
-if test -h /etc/rc1.d/*mythtv-backend; then
-  update-rc.d -f mythtv-backend remove
-elif test -e /etc/init/mythtv-backend.conf; then
-  if ! test -e /etc/init/mythtv-backend.override; then
-    echo 'manual' > /etc/init/mythtv-backend.override
+if [ "${USEMYTHTV}" -ne 0 ]; then
+  # We want to start mythtv-backend from this script, not from rc*.d
+  # or upstart
+  if test -h /etc/rc1.d/*mythtv-backend; then
+    update-rc.d -f mythtv-backend remove
+  elif test -e /etc/init/mythtv-backend.conf; then
+    if ! test -e /etc/init/mythtv-backend.override; then
+      echo 'manual' > /etc/init/mythtv-backend.override
+    fi
   fi
 fi
 
 mkdir $PIDDIR > /dev/null 2>&1
-chown $USER.$USER $PIDDIR
+chown $USER:$USER $PIDDIR
 
 mkdir $LOGDIR > /dev/null 2>&1
-chown $USER.$USER $LOGDIR
+chown $USER:$USER $LOGDIR
 
 mkdir $CAMDIR > /dev/null 2>&1
-chown $USER.$USER -R $CAMDIR
+chown $USER:$USER -R $CAMDIR
 
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
@@ -84,15 +86,17 @@ UnloadDriver() {
 
 # Load driver, start ffdecsawrapper, start mythbackend
 d_start() {
-        # Check if the database exists. If not, abort.
-        if
-          test ! -d "/var/lib/mysql/$DATABASENAME"
-        then
-           echo -e "\n\
-           \nThe '$DATABASENAME' database does not exist.\n\
-           \nYou should create it prior to running ffdecsawrapper.\n\
-           \nAborting...\n"
-           exit 1
+        if [ "${USEMYTHTV}" -ne 0 ]; then
+          # Check if the database exists. If not, abort.
+          if
+            test ! -d "/var/lib/mysql/$DATABASENAME"
+          then
+            echo -e "\n\
+              \nThe '$DATABASENAME' database does not exist.\n\
+              \nYou should create it prior to running ffdecsawrapper.\n\
+              \nAborting...\n"
+            exit 1
+          fi
         fi
 
         # Load dvbloopback
@@ -140,83 +144,87 @@ d_start() {
           fi
         else 
           echo -e "$PROG is already running. \n\
-          \nUse /etc/init.d/ffdecsawrapper restart instead. \n"
+          \nUse service ffdecsawrapper restart instead. \n"
         fi
 
-        # When needed, wait for Mysql Server.
-        # If it does not come up at all, die.
-        if ! test -f "/var/run/mysqld/mysqld.pid"; then
-        COUNTER=0
-          while [  $COUNTER -lt 30 ]; do
-            echo -e "Waiting for Mysql Server to come up...\n"
-            sleep 2
-            if test -f "/var/run/mysqld/mysqld.pid"; then
-              COUNTER=30
-            else
-              let COUNTER=COUNTER+1
-            fi
-          done
+        if [ "${USEMYTHTV}" -ne 0 ]; then
+          # When needed, wait for Mysql Server.
+          # If it does not come up at all, die.
+          if ! test -f "/var/run/mysqld/mysqld.pid"; then
+            COUNTER=0
+            while [ $COUNTER -lt 30 ]; do
+              echo -e "Waiting for Mysql Server to come up...\n"
+              sleep 2
+              if test -f "/var/run/mysqld/mysqld.pid"; then
+                COUNTER=30
+              else
+                let COUNTER=COUNTER+1
+              fi
+            done
             if ! test -f "/var/run/mysqld/mysqld.pid"; then
-              rm -f $PIDDIR/$PID
+              rm -f -- $PIDDIR/$PID
               echo -e "\nMysql Server is not running.\n
               \nAborting...\n\nStopping $PROG\n"
-	      start-stop-daemon --stop --oknodo --chuid $USER --exec $DAEMON -- $ARGS
+              start-stop-daemon --stop --oknodo --chuid $USER --exec $DAEMON -- $ARGS
               sleep $DELAY
               # Unload dvbloopback
               if DriverLoaded; then 
-                 echo -e "Unloading dvbloopback. \n"
-	         UnloadDriver
-               fi
-             exit 1
-           fi
-        fi
-
-        # Start MythTV Backend. (or restart, if it is already running)
-        sleep 10
-        if ! ps -C mythbackend > /dev/null 2>&1; then
-          if ! [ -L $MYTH ]; then
-            $MYTH start
-          else
-            service $UPSTARTMYTH start
+                 echo -e "Unloading dvbloopback.\n"
+                 UnloadDriver
+              fi
+              exit 1
+            fi
           fi
-        else
-           sleep $DELAY
-           if ! [ -L $MYTH ]; then
-             $MYTH stop
-             # Just in case it hangs:
-             killall -9 mythbackend > /dev/null 2>&1
+
+          # Start MythTV Backend. (or restart, if it is already running)
+          sleep 10
+          if ! ps -C mythbackend > /dev/null 2>&1; then
+            if ! [ -L $MYTH ]; then
+              $MYTH start
+            else
+              service $UPSTARTMYTH start
+            fi
+          else
              sleep $DELAY
-             $MYTH start
-           else
-             service $UPSTARTMYTH stop
-             # Just in case it hangs:
-             killall -9 mythbackend > /dev/null 2>&1
-             sleep $DELAY
-             service $UPSTARTMYTH start
-           fi
-        fi
-        if ps -C mythbackend > /dev/null 2>&1; then
-          echo -e ""
-          echo -e "Sucessfully started $UPSTARTMYTH\n"
+             if ! [ -L $MYTH ]; then
+               $MYTH stop
+               # Just in case it hangs:
+               killall -9 mythbackend > /dev/null 2>&1
+               sleep $DELAY
+               $MYTH start
+             else
+               service $UPSTARTMYTH stop
+               # Just in case it hangs:
+               killall -9 mythbackend > /dev/null 2>&1
+               sleep $DELAY
+               service $UPSTARTMYTH start
+             fi
+          fi
+          if ps -C mythbackend > /dev/null 2>&1; then
+            echo -e ""
+            echo -e "Sucessfully started $UPSTARTMYTH\n"
+          fi
         fi
 }
 
 # Stop mythbackend, stop ffdecsawrapper, unload driver
 d_stop() {
-        # Stop MythTV
-        echo -e ""
-        if ! [ -L $MYTH ]; then
-	  $MYTH stop
-        else
-          service $UPSTARTMYTH stop
+        if [ "${USEMYTHTV}" -ne 0 ]; then
+          # Stop MythTV
+          echo -e ""
+          if ! [ -L $MYTH ]; then
+            $MYTH stop
+          else
+            service $UPSTARTMYTH stop
+          fi
+          # Just in case it hangs:
+          killall -9 mythbackend > /dev/null 2>&1
+          # mythlogserver has a nasty habbit: it won't quit..
+          killall -9 mythlogserver > /dev/null 2>&1
         fi
-        # Just in case it hangs:
-	killall -9 mythbackend > /dev/null 2>&1
-        # mythlogserver has a nasty habbit: it won't quit..
-        killall -9 mythlogserver > /dev/null 2>&1
 
         # Stop ffdecsawrapper
-        rm -f $PIDDIR/$PID
+        rm -f -- $PIDDIR/$PID
         echo -e ""
         echo -e "Stopping $PROG \n"
 	start-stop-daemon --stop --oknodo --chuid $USER --exec $DAEMON -- $ARGS
@@ -253,4 +261,3 @@ case "$1" in
 esac
 
 exit 0
-

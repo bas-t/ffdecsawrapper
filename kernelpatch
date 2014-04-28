@@ -57,54 +57,50 @@ exit 1
 
 # Get OS and release info
 
-if [ -f /usr/bin/lsb_release ]; then
+if which lsb_release >/dev/null; then
     OS=$( lsb_release -si )
     RELEASE=$( lsb_release -sc )
 fi
 
-if [ "$OS" == "Debian" ] || [ "$OS" == "Ubuntu" ]; then
+if [ "$OS" = "Debian" -o "$OS" = "Ubuntu" ]; then
 
 # Make sure that we are running as root
 
-  if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
-    if [ "$OS" == Debian ]; then
-      echo -en "
+  if [ "$(whoami)" != "root" ]; then
+    echo -en "
 \E[1;33;44m
 You should run as root.
 
 Aborting...
 \E[0m
 "
-      make clean > /dev/null 2>&1
-      exit 0
-    else
-      echo -en "
-\E[1;33;44m
-You should run as root.
-
-Do \"sudo su\" and run me again.
-
-Aborting...
-\E[0m
-"
-      make clean > /dev/null 2>&1
-      exit 0
-    fi
+    make clean > /dev/null 2>&1
+    exit 0
   fi
 
 # Get kernel version numbers
 
-    SHORT_KERNEL="$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )"
-    FIRST_DIGIT="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )"
-    SECOND_DIGIT="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )"
-    PATCHLEVEL="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )"
+    UNAME_R="$( uname -r )"
+    FIRST_DIGIT="${UNAME_R%%.*}"
+    TMP="${UNAME_R#${FIRST_DIGIT}.}"
+    SECOND_DIGIT="${TMP%%.*}"
+    TMP="${TMP#${SECOND_DIGIT}.}"
+    THIRD_DIGIT="${TMP%%-*}"
+    TMP="${TMP#${THIRD_DIGIT}-}"
+    UBUNTU_FIRST="${TMP%%-*}"
+    UNAME_V="$( uname -v )"
+    TMP="${UNAME_V#\#}"
+    UBUNTU_SECOND="${TMP%%~*}"
+    SHORT_KERNEL="${FIRST_DIGIT}.${SECOND_DIGIT}"
+
+    PATCHLEVEL="${THIRD_DIGIT}"
     UBUNTU_KERNEL="$SHORT_KERNEL.0"
+    UBUNTU_DSC_VER="${FIRST_DIGIT}.${SECOND_DIGIT}.${THIRD_DIGIT}-${UBUNTU_FIRST}.${UBUNTU_SECOND}"
 
 # Define where to build and from what dir to build
 
     BUILD_DIR="/lib/modules/`uname -r`/build"
     TEMPDIR="/usr/src/$SHORT_KERNEL"
-
 
 # Abort if running kernel is < 3.x
 
@@ -148,13 +144,17 @@ will be patched for use with ffdecsawrapper.
   confirmyes "Do you want me to patch your running Debian/Ubuntu kernel?[Y/n]"
 
 # Install dependencies for patching the kernel
+  rm -rf -- "${TEMPDIR}"
+  mkdir -p -- "${TEMPDIR}"
 
   if [ "$?" -eq 0 ]; then
     apt-get build-dep linux --no-install-recommends -y || die "Error installing \"build-dep linux\""
-    if [ "$OS" == Debian ]; then
+    if [ "$OS" = Debian ]; then
       apt-get --reinstall install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
     else
-      apt-get --reinstall install linux-source-$UBUNTU_KERNEL -y || die "Error installing linux-source-$UBUNTU_KERNEL"
+      cd "${TEMPDIR}"
+      dget -u -x http://archive.ubuntu.com/ubuntu/pool/main/l/linux/linux_${UBUNTU_DSC_VER}.dsc || die "Error installing linux-source-$UBUNTU_KERNEL"
+      cd -
     fi
 
 # Compile the patched dvb-core.ko module and install it
@@ -164,70 +164,68 @@ Building patched dvb-core module for kernel `uname -r`
 
 Preparing, this may take a while...
 "
-    rm -rf $TEMPDIR
-    mkdir -p $TEMPDIR
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
       if [ "$SECOND_DIGIT" -lt 7 ]; then
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        elif  test -f /usr/src/linux-source-$UBUNTU_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$UBUNTU_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$UBUNTU_KERNEL/drivers/media/dvb/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        elif test -f /usr/src/linux-source-$UBUNTU_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$UBUNTU_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$UBUNTU_KERNEL/drivers/media/dvb/dvb-core/
+        if [ "$OS" = Ubuntu ]; then
+          tar -C "${TEMPDIR}/linux-${UBUNTU_KERNEL}/drivers/media/dvb" -cf - dvb-core | tar -C "${TEMPDIR}" -xpf -
+	else
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+          fi
         fi
         echo "
 Building and installing
 "
-        patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
-        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        patch -p4 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR/dvb-core modules
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        /usr/bin/install $TEMPDIR/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         if [ "$?" -eq 0 ]; then
           success
         else
           fail
         fi
       elif [ "$SECOND_DIGIT" -lt 13 ]; then
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif  test -f /usr/src/linux-source-$UBUNTU_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$UBUNTU_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$UBUNTU_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$UBUNTU_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$UBUNTU_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$UBUNTU_KERNEL/drivers/media/dvb-core/
+        if [ "$OS" = Ubuntu ]; then
+          tar -C "${TEMPDIR}/linux-${UBUNTU_KERNEL}/drivers/media" -cf - dvb-core | tar -C "${TEMPDIR}" -xpf -
+	else
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          fi
         fi
         echo "
 Building and installing
 "
-        patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
-        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        patch -p3 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR/dvb-core modules
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        /usr/bin/install $TEMPDIR/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         if [ "$?" -eq 0 ]; then
           success
         else
           fail
         fi
       else
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif  test -f /usr/src/linux-source-$UBUNTU_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$UBUNTU_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$UBUNTU_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$UBUNTU_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$UBUNTU_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$UBUNTU_KERNEL/drivers/media/dvb-core/
+        if [ "$OS" = Ubuntu ]; then
+          tar -C "${TEMPDIR}/linux-${UBUNTU_KERNEL}/drivers/media" -cf - dvb-core | tar -C "${TEMPDIR}" -xpf -
+	else
+          if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+            tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+            tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 3 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+          fi
         fi
         echo "
 Building and installing
 "
-        patch -p4 -d $TEMPDIR < linux-3.13-dvb-mutex.patch > /dev/null 2>&1
-        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        patch -p3 -d $TEMPDIR < linux-3.13-dvb-mutex.patch > /dev/null 2>&1
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR/dvb-core modules
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
-        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        /usr/bin/install $TEMPDIR/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         if [ "$?" -eq 0 ]; then
           success
         else
