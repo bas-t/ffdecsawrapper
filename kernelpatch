@@ -180,7 +180,7 @@ Preparing, this may take a while...
         echo "
 Building and installing
 "
-        patch -p5 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
+        patch -p4 -d $TEMPDIR < linux-2.6.38-dvb-mutex.patch > /dev/null 2>&1
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
@@ -202,7 +202,7 @@ Building and installing
         echo "
 Building and installing
 "
-        patch -p4 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
+        patch -p3 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch > /dev/null 2>&1
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
@@ -224,7 +224,7 @@ Building and installing
         echo "
 Building and installing
 "
-        patch -p4 -d $TEMPDIR < linux-3.13-dvb-mutex.patch > /dev/null 2>&1
+        patch -p3 -d $TEMPDIR < linux-3.13-dvb-mutex.patch > /dev/null 2>&1
         CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
         /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
