@@ -39,13 +39,13 @@ elif test -e /etc/init/mythtv-backend.conf; then
 fi
 
 mkdir $PIDDIR > /dev/null 2>&1
-chown $USER.$USER $PIDDIR
+chown $USER:$USER $PIDDIR
 
 mkdir $LOGDIR > /dev/null 2>&1
-chown $USER.$USER $LOGDIR
+chown $USER:$USER $LOGDIR
 
 mkdir $CAMDIR > /dev/null 2>&1
-chown $USER.$USER -R $CAMDIR
+chown $USER:$USER -R $CAMDIR
 
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
@@ -253,4 +253,3 @@ case "$1" in
 esac
 
 exit 0
-
