@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -f /usr/bin/lsb_release ]; then
+if which lsb_release >/dev/null; then
   OS=$( lsb_release -si )
   RELEASE=$( lsb_release -sc )
 fi
@@ -120,7 +120,7 @@ if try_gcc_options "-march=native"; then
 fi
 
 gcc_ver=`$CC -v 2>&1 | grep -i "gcc version" | head -n 1`
-    
+
 echo "
 
 ### CPU-INFO ###"
@@ -129,8 +129,8 @@ echo "CPU-Family: $cpu_family"
 echo "CPU-Model: $cpu_model"
 echo "Flags: $flags"
 
-if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
-  echo " 
+if [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
+  echo "
 ### GCC-INFO ###"
   echo "Unless you specified a gcc/g++ version to use,
 your kernel is built with:"
@@ -146,7 +146,7 @@ Using compilers \"native\" flags"
 fi
 
 # complete flags for FFdesca_Test
-if [ "$OLevel" == "" ]; then
+if [ "$OLevel" = "" ]; then
   IFLAGS="-march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
   IFLAGS="$OptFlag -march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
@@ -159,7 +159,7 @@ fi
 
 ffdecsa_test() {
 
-  if [ "$PMode" == "" ]; then
+  if [ "$PMode" = "" ]; then
     if [ "$_SHORT" -lt 1 ]; then
       FFDECSA_MODES="PARALLEL_32_INT PARALLEL_32_4CHAR PARALLEL_32_4CHARA \
                      PARALLEL_64_8CHAR PARALLEL_64_8CHARA PARALLEL_64_2INT \
@@ -179,9 +179,9 @@ ffdecsa_test() {
   fi
 
   if [ -d "${TMPDIR}" ]; then
-    rm -rf "${TMPDIR}"
+    rm -rf -- "${TMPDIR}"
   fi
-  
+
   mkdir "${TMPDIR}"
   TMPOUT="${TMPDIR}/out"
 
@@ -200,7 +200,7 @@ ffdecsa_test() {
       echo "    ${var}: build failed"
     else
       MAX_M_val=0
-      rm -f ${TMPOUT}
+      rm -f -- "${TMPOUT}"
       sync;sleep 2; "${TMPDIR}/FFdecsa_test" > /dev/null 2>"${TMPOUT}"
       if test $? -ne 0; then
         echo "    ...failed!"
@@ -224,14 +224,14 @@ ffdecsa_test() {
 
           printf "\n"
 
-          if [ "$1" == "-O2" ]; then          
+          if [ "$1" = "-O2" ]; then
             if test $MAX_M_val -gt $MAX_val_2; then
               MAX_val_2=$MAX_M_val
               MAX_MODE_2=$var
               MAX_val=$MAX_M_val
               MAX_MODE=$var
             fi
-          elif [ "$1" == "-O3" ]; then
+          elif [ "$1" = "-O3" ]; then
             if test $MAX_M_val -gt $MAX_val_3; then
               MAX_val_3=$MAX_M_val
               MAX_MODE_3=$var
@@ -256,7 +256,7 @@ ffdecsa_test() {
   echo "  Fastest PARALLEL_MODE = ${MAX_MODE} (${MAX_val} Mbit/s)"
   echo ""
 
-  rm -rf "${TMPDIR}"
+  rm -rf -- "${TMPDIR}"
 }
 
 MAX_val=0
@@ -302,16 +302,14 @@ echo "### FFdeCSA Fasted OPTS ###"
 echo "CPUOPT   = $_CPU"
 echo "PARALLEL = $MAX_MODE"
 
-if [ "$_FLAGS" == "" ]; then
+if [ "$_FLAGS" = "" ]; then
   echo "FLAGS    = $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
   echo "FLAGS    = ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 fi
-
 
 if [ "$OLevel" != "" ]; then
   echo "FFDECSA_OPTS = \"FLAGS=${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
 else
   echo "FFDECSA_OPTS = \"FLAGS=$OptFlag ${IFLAGS}\" PARALLEL_MODE=${MAX_MODE} COMPILER=$CC" >> config.mak
 fi
-
