@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Define where to build and from what dir to build
+
+    BUILD_DIR="/lib/modules/`uname -r`/build"
+    TEMPDIR="tmp"
+
 die(){
     echo $1
     exit 1
@@ -42,7 +47,7 @@ echo -en "
 \E[1;33;44mYour kernel is properly patched. You should reboot your machine now.\E[0m
 ####################################################################
 "
-rm -rf $TEMPDIR
+cd ../.. && rm -rf $TEMPDIR
 }
 
 fail(){
@@ -51,7 +56,7 @@ echo -en "
 \E[1;33;44mError(s) encountered. Your kernel is NOT properly patched.\E[0m
 ##########################################################
 "
-rm -rf $TEMPDIR
+cd ../.. && rm -rf $TEMPDIR
 exit 1
 }
 
@@ -99,12 +104,6 @@ Aborting...
     SECOND_DIGIT="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )"
     PATCHLEVEL="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )"
     UBUNTU_KERNEL="$SHORT_KERNEL.0"
-
-# Define where to build and from what dir to build
-
-    BUILD_DIR="/lib/modules/`uname -r`/build"
-    TEMPDIR="tmp"
-
 
 # Abort if running kernel is < 3.x
 
