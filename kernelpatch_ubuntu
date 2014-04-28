@@ -67,23 +67,12 @@ if [ -f /usr/bin/lsb_release ]; then
     RELEASE=$( lsb_release -sc )
 fi
 
-if [ "$OS" == "Debian" ] || [ "$OS" == "Ubuntu" ]; then
+if [ "$OS" == "Ubuntu" ]; then
 
 # Make sure that we are running as root
 
   if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
-    if [ "$OS" == Debian ]; then
-      echo -en "
-\E[1;33;44m
-You should run as root.
-
-Aborting...
-\E[0m
-"
-      make clean > /dev/null 2>&1
-      exit 0
-    else
-      echo -en "
+    echo -en "
 \E[1;33;44m
 You should run as root.
 
@@ -92,9 +81,8 @@ Do \"sudo su\" and run me again.
 Aborting...
 \E[0m
 "
-      make clean > /dev/null 2>&1
-      exit 0
-    fi
+    make clean > /dev/null 2>&1
+    exit 0
   fi
 
 # Get kernel version numbers
