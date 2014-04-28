@@ -1,6 +1,5 @@
-diff -Nur linux-3.7.5/drivers/media/dvb-core/dvbdev.c linux-3.7.5/drivers/media/dvb-core/dvbdev.c
---- linux-3.7.5/drivers/media/dvb-core/dvbdev.c
-+++ linux-3.7.5/drivers/media/dvb-core/dvbdev.c
+--- drivers/media/dvb-core/dvbdev.c
++++ drivers/media/dvb-core/dvbdev.c
 @@ -83,8 +83,11 @@ static int dvb_device_open(struct inode *inode, struct file *file)
  			file->f_op = old_fops;
  			goto fail;
