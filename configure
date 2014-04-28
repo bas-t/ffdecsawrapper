@@ -541,6 +541,7 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 \E[1;33;44mnon stock kernel detected.\E[0m
 ##########################
 "
+                fi
               fi
             else
               echo -en "
