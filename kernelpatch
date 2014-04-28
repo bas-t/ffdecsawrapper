@@ -157,9 +157,7 @@ will be patched for use with ffdecsawrapper.
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
       if [ "$SECOND_DIGIT" -lt 7 ]; then
         patch -p0 < ../../linux-2.6.38-dvb-mutex.patch
-        if [ "$?" -eq 0 ]; then
-          success
-        else
+        if ! [ "$?" -eq 0 ]; then
           fail
         fi
         CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb/dvb-core modules
@@ -172,9 +170,7 @@ will be patched for use with ffdecsawrapper.
         fi
       elif [ "$SECOND_DIGIT" -lt 13 ]; then
         patch -p0 < ../../linux-3.7.1-dvb-mutex.patch
-        if [ "$?" -eq 0 ]; then
-          success
-        else
+        if ! [ "$?" -eq 0 ]; then
           fail
         fi
         CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
@@ -187,9 +183,7 @@ will be patched for use with ffdecsawrapper.
         fi
       else
         patch -p0 < ../../linux-3.13-dvb-mutex.patch
-        if [ "$?" -eq 0 ]; then
-          success
-        else
+        if ! [ "$?" -eq 0 ]; then
           fail
         fi
         CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
