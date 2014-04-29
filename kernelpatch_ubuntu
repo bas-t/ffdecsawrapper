@@ -67,7 +67,7 @@ if [ -f /usr/bin/lsb_release ]; then
     RELEASE=$( lsb_release -sc )
 fi
 
-if [ "$OS" == "Ubuntu" ]; then
+if [ "$OS" = "Ubuntu" ]; then
 
 # Make sure that we are running as root
 
