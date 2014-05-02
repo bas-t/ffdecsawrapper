@@ -156,7 +156,7 @@ will be patched for use with ffdecsawrapper.
           fail
         fi
       elif [ "$SECOND_DIGIT" -lt 13 ]; then
-        patch -p0 < ../../linux-3.7.1-dvb-mutex.patch
+        patch -p0 < ../../linux-3.7-dvb-mutex.patch
         if ! [ "$?" -eq 0 ]; then
           fail
         fi

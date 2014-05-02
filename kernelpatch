@@ -178,7 +178,7 @@ Building and installing
         echo "
 Building and installing
 "
-        patch -p3 -d $TEMPDIR < linux-3.7.1-dvb-mutex.patch
+        patch -p3 -d $TEMPDIR < linux-3.7-dvb-mutex.patch
         if ! [ "$?" -eq 0 ]; then
           fail
         fi
