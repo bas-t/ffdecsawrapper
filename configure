@@ -150,6 +150,26 @@ Aborting...
   exit 1
 fi
 
+if [ "$SECOND_DIGIT" -lt 13 ]; then
+  echo -en "
+\E[1;33;44m
+The kernel you are running is not supported in this branch.
+
+Minimum supported version is 3.13
+
+If you are running a 3.x kernel 3.12 or lower, do:
+
+make update
+
+git checkout oldstable
+
+and run ./configure again.
+
+Aborting...
+\E[0m
+"
+fi
+
 # Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
