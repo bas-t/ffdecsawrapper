@@ -168,6 +168,7 @@ and run ./configure again.
 Aborting...
 \E[0m
 "
+exit 0
 fi
 
 # Check for use of v4l drivers
