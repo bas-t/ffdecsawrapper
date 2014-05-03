@@ -157,7 +157,7 @@ The kernel you are running is not supported in this branch.
 
 Minimum supported version is 3.13
 
-If you are running a 3.x kernel 3.12 or lower, do:
+If you are running a 3.x kernel, version 3.12 or lower, do:
 
 make update
 
