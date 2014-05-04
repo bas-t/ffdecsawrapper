@@ -43,8 +43,7 @@
 
 #define DVBLOOPBACK_VERSION "0.0.1"
 
-/* Include files common to 2.4 and 2.6 versions */
-#include <linux/version.h>	/* >= 2.6.14 LINUX_VERSION_CODE */ 
+#include <linux/version.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -56,11 +55,7 @@
 #include <linux/vmalloc.h>
 #include <linux/cdev.h>
 #include <linux/platform_device.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 #include <linux/sched.h>
-#endif
-
 #include "dvbdev.h"
 #include "dvbdevwrap.h"
 #include "dvblb_internal.h"

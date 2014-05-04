@@ -362,9 +362,7 @@ fi
 
 
 # Get the right dvbdev.h in place
-# If --dvb_dir= is set, use supplied header, else
-# distinguish between '3.6 or lower' and '3.7 or higher' kernels,
-# they use different versions of dvbdev.h
+# If --dvb_dir= is set, use supplied header
 
 if test "x$dvb_path" != "x"; then
   if test -f $dvb_path/drivers/media/dvb-core/dvbdev.h; then
@@ -386,12 +384,6 @@ Aborting...
 "
     make clean > /dev/null 2>&1
     exit 0
-  fi
-else
-  if [ "$SECOND_DIGIT" -lt 7 ]; then
-    cp -f dvbloopback/module/dvbdev-2.6.38.h dvbloopback/module/dvbdev.h
-  else
-    cp -f dvbloopback/module/dvbdev-3.7.x.h dvbloopback/module/dvbdev.h
   fi
 fi
 
