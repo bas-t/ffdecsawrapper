@@ -21,30 +21,17 @@
  *	along with Foobar; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
-#include <linux/version.h>      /* >= 2.6.14 LINUX_VERSION_CODE */
+#include <linux/version.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/seq_file.h>
-
 #include <linux/proc_fs.h>
 #include "dvblb_internal.h"
 
 static struct proc_dir_entry *procdir;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-static int dvblb_procfs_read(char *page, char **start, off_t off, int count,
-                             int *eof, void *data)
-{
-	struct dvblb_devinfo *lbdev = (struct dvblb_devinfo *)data;
-	int val;
-	if (lbdev == NULL)
-		return 0;
-	val = (lbdev->forward_dev) ? 1 : 0;
-	return sprintf(page, "%03d", val);
-}
-#else
 static int dvblb_procfs_read(struct seq_file *s, void* v)
 {
 	struct dvblb_devinfo *lbdev = s->private;
@@ -55,16 +42,7 @@ static int dvblb_procfs_read(struct seq_file *s, void* v)
 	seq_printf(s, "%03d", val);
         return 0;
 }
-#endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-static int dvblb_procfs_write(struct file *file, const char *buffer,
-                              unsigned long count, void *data)
-{
-	char str[10];
-	int val, v1, v2, v3, fm;
-	struct dvblb_devinfo *lbdev = (struct dvblb_devinfo *)data;
-#else
 static ssize_t dvblb_procfs_write(struct file *file, const char *buffer,
                               size_t count, loff_t *pos)
 {
@@ -73,7 +51,6 @@ static ssize_t dvblb_procfs_write(struct file *file, const char *buffer,
 	int val, v1, v2, v3, fm;
         struct seq_file *s = file->private_data;
         struct dvblb_devinfo* lbdev = s->private;
-#endif
 	if (lbdev == NULL)
 		return count;
 	if (lbdev->parent->link == -1)
@@ -122,16 +99,6 @@ static ssize_t dvblb_procfs_write(struct file *file, const char *buffer,
 	return count;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-static int dvblb_procfs_adapter_read(char *page, char **start, off_t off,
-                                     int count, int *eof, void *data)
-{
-	struct dvblb *dvblb = (struct dvblb *)data;
-	if (dvblb == NULL)
-		return 0;
-	return sprintf(page, "%d", dvblb->link);
-}
-#else
 static int dvblb_procfs_adapter_read(struct seq_file *s, void* v)
 {
 	struct dvblb *dvblb = s->private;
@@ -140,16 +107,7 @@ static int dvblb_procfs_adapter_read(struct seq_file *s, void* v)
 	seq_printf(s, "%d", dvblb->link);
         return 0;
 }
-#endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-static int dvblb_procfs_adapter_write(struct file *file, const char *buffer,
-                                      unsigned long count, void *data)
-{
-	char str[10];
-	int val, i, fm;
-	struct dvblb *dvbdev = (struct dvblb *)data;
-#else
 static ssize_t dvblb_procfs_adapter_write(struct file *file, const char *buffer,
                               size_t count, loff_t *pos)
 {
@@ -158,7 +116,6 @@ static ssize_t dvblb_procfs_adapter_write(struct file *file, const char *buffer,
 	int val, i, fm;
         struct seq_file *s = file->private_data;
         struct dvblb* dvbdev = s->private;
-#endif
 	if (dvbdev == NULL)
 		return count;
 	if (count > 10)
@@ -202,20 +159,11 @@ static ssize_t dvblb_procfs_adapter_write(struct file *file, const char *buffer,
 int dvblb_remove_procfs(struct proc_dir_entry *pdir,
                         struct proc_dir_entry *parent)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-	char name[20];
-	memcpy(name, pdir->name, pdir->namelen);
-	name[pdir->namelen] = '\0';
-	// printk("Removing proc: %s\n", name);
-	remove_proc_entry(name, parent);
-#else
 	proc_remove(pdir);
-#endif
 	return 0;
 }
 EXPORT_SYMBOL(dvblb_remove_procfs);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 static int dvblb_procfs_open(struct inode *inode, struct file *filep)
 {
     return single_open(filep, dvblb_procfs_read, PDE_DATA(inode));
@@ -228,31 +176,17 @@ static const struct file_operations dvblb_procfs_fops = {
     .write      = dvblb_procfs_write,
     .release    = single_release,
 };
-#endif
 
 int dvblb_init_procfs_device(struct dvblb *dvblb, struct dvblb_devinfo *lbdev)
 {
         int type = lbdev->lb_dev->type;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-	lbdev->procfile = create_proc_entry(dnames[type], 0644, dvblb->procdir);
-#else
         lbdev->procfile = proc_create_data(dnames[type], 0644, dvblb->procdir, &dvblb_procfs_fops, lbdev);
-#endif
         if (lbdev->procfile == NULL)
                 return -ENOMEM;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-	lbdev->procfile->data = lbdev;
-	lbdev->procfile->read_proc = dvblb_procfs_read;
-	lbdev->procfile->write_proc = dvblb_procfs_write;
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	lbdev->procfile->owner = THIS_MODULE;
-#endif
         return 0;
 }
 EXPORT_SYMBOL(dvblb_init_procfs_device);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 static int dvblb_procfs_adapter_open(struct inode *inode, struct file *filep)
 {
     return single_open(filep, dvblb_procfs_adapter_read, PDE_DATA(inode));
@@ -265,7 +199,6 @@ static const struct file_operations dvblb_procfs_adapter_fops = {
     .write      = dvblb_procfs_adapter_write,
     .release    = single_release,
 };
-#endif
 
 int dvblb_init_procfs_adapter(struct dvblb *dvblb)
 {
@@ -274,26 +207,11 @@ int dvblb_init_procfs_adapter(struct dvblb *dvblb)
 	dvblb->procdir = proc_mkdir(name, procdir);
 	if (dvblb->procdir == NULL)
 		return -ENOMEM;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	dvblb->procdir->owner = THIS_MODULE;
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-	dvblb->procfile = create_proc_entry("adapter", 0644, dvblb->procdir);
-#else
         dvblb->procfile = proc_create_data("adapter", 0644, dvblb->procdir, &dvblb_procfs_adapter_fops, dvblb);
-#endif
 	if (dvblb->procfile == NULL) {
 		dvblb_remove_procfs(dvblb->procdir, procdir);
 		return -ENOMEM;
 	}
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-	dvblb->procfile->data = dvblb;
-	dvblb->procfile->read_proc = dvblb_procfs_adapter_read;
-	dvblb->procfile->write_proc = dvblb_procfs_adapter_write;
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	dvblb->procfile->owner = THIS_MODULE;
-#endif
 	dvblb->init |= DVBLB_STATUS_PROC;
 
 	return 0;
@@ -318,9 +236,6 @@ int dvblb_init_procfs(void)
 	procdir = proc_mkdir("dvbloopback", NULL);
 	if (procdir == NULL)
 		return -ENOMEM;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	procdir->owner = THIS_MODULE;
-#endif
 	return 0;
 }
 EXPORT_SYMBOL(dvblb_init_procfs);
