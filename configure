@@ -163,6 +163,8 @@ make update
 
 git checkout oldstable
 
+git pull
+
 and run ./configure again.
 
 Aborting...
