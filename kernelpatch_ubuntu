@@ -163,7 +163,7 @@ will be patched for use with ffdecsawrapper.
     CWD=$(pwd)
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
       patch -p0 < ../../linux-3.13-dvb-mutex.patch
-       f ! [ "$?" -eq 0 ]; then
+      if ! [ "$?" -eq 0 ]; then
         fail
       fi
       CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
