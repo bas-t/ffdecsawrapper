@@ -498,7 +498,30 @@ echo "CC=$CC" >> config.mak
 # Compile and, if running Debian/Ubuntu,
 # finish by installing the lot.
 
-if [ "$OS" = Debian ] || [ "$OS" = Ubuntu ] ; then
+if ! [ "$OS" = Debian ] || [ "$OS" = Ubuntu ] ; then
+  if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
+    echo "
+
+Everything looks ok!
+
+Just hit 'enter' to run
+make && make module
+"
+    confirmyes "Start compiling now?[Y/n]"
+
+    if [ "$?" -eq 0 ]; then
+      make && make module
+    else
+      echo "
+NOT starting compilation
+"
+      exit 0
+    fi
+  else
+    sleep 2
+    make && make module
+  fi
+else
   echo "
 Everything looks ok!
 
@@ -507,9 +530,27 @@ make && make module
 "
   confirmyes "Start compiling now?[Y/n]"
 
-  if [ "$?" -eq 0 ]; then
+  if ! [ "$?" -eq 0 ]; then
+    echo "
+NOT starting compilation
+"
+    exit 0
+  else
     make && make module
-    if [ "$?" -eq 0 ]; then
+    if ! [ "$?" -eq 0 ]; then
+      echo -en "
+\E[1;33;44m
+###################################################
+
+Error(s) encoutered while compiling ffdecsawrapper
+
+and/or dvbloopback kernel module.
+
+####################################################
+\E[0m
+"
+      exit 1
+    else
       echo "
 Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
 
@@ -520,44 +561,57 @@ dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.k
 If you hit Y and your kernel needs to be patched, that will be done too.
 "
       confirmyes "Yes, install them now![Y/n]"
-      if [ "$?" -eq 0 ]; then
+      if ! [ "$?" -eq 0 ]; then
+        exit 0
+      else
         rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
         rm -f /usr/bin/ffdecsawrapper
         cp -f ffdecsawrapper /usr/bin
         mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
         /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-        if [ "$?" -eq 0 ]; then
+
+        if ! [ "$?" -eq 0 ]; then
+          echo -en "
+#######################################################
+\E[1;33;44mError(s) encountered. Could not install ffdecsawrapper.\E[0m
+#######################################################
+"
+          exit 1
+        else
           depmod -a
+        fi
+      fi
 
 # The kernel needs to be patched if we don't
 # use newest v4l drivers, but don't offer
 # to do so if it allready has been done.
 
-          if test "x$dvb_path" = "x"; then
-            if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-              if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
-                echo -en "
+      if test "x$dvb_path" = "x"; then
+        if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+          if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
+            echo -en "
 #########################
 \E[1;33;44mInstalled without errors!\E[0m
 #########################
 "
-  if [ "$OS" = Debian ]; then
-    if [ "$PATCHLEVEL" -lt 90 ]; then
-      ./kernelpatch
-    else
-      echo -en "
+            if [ "$OS" = Debian ]; then
+              if [ "$PATCHLEVEL" -lt 90 ]; then
+                ./kernelpatch
+              else
+                echo -en "
 #################################
 \E[1;33;44mNOT patching the running kernel,\E[0m
 
 \E[1;33;44mmodified stock kernel detected.\E[0m
 #################################
 "
-     
-    fi
-  elif [ "$OS" = Ubuntu ] ; then
-    ./kernelpatch_ubuntu
-  else
-    echo -en "
+                exit 0     
+              fi
+            elif [ "$OS" = Ubuntu ] ; then
+              ./kernelpatch_ubuntu
+            fi
+          else
+            echo -en "
 ##########################
 \E[1;33;44mInstalled without errors!!\E[0m
 
@@ -567,10 +621,10 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 \E[1;33;44mnon stock kernel detected.\E[0m
 ##########################
 "
-                fi
-              fi
-            else
-              echo -en "
+            exit 0
+          fi
+        else
+          echo -en "
 ###############################
    \E[1;33;44mInstalled without errors!\E[0m
 
@@ -578,47 +632,8 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 \E[1;33;44mExisting kernel patch detected.\E[0m
 ###############################
 "
-            fi
-          fi 
-        else
-          echo -en "
-\E[1;33;44m
-#############################################################
-
-Error(s) encoutered installing the dvbloopback kernel module.
-
-#############################################################
-\E[0m
-"
-          exit 1
         fi
       fi
     fi
-  else
-    echo "
-NOT starting compilation
-"
-  fi
-else
-  if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
-    echo "
-
-Everything looks ok!
-
-Just hit 'enter' to run
-make && make module
-"
-confirmyes "Start compiling now?[Y/n]"
-
-    if [ "$?" -eq 0 ]; then
-      make && make module
-    else
-      echo "
-NOT starting compilation
-"
-    fi
-  else
-    sleep 2
-    make && make module
   fi
 fi
