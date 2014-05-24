@@ -129,7 +129,7 @@ echo "CPU-Family: $cpu_family"
 echo "CPU-Model: $cpu_model"
 echo "Flags: $flags"
 
-if [ "$OS" == Debian ] || [ "$OS" == Ubuntu ] ; then
+if [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
   echo " 
 ### GCC-INFO ###"
   echo "Unless you specified a gcc/g++ version to use,
@@ -146,7 +146,7 @@ Using compilers \"native\" flags"
 fi
 
 # complete flags for FFdesca_Test
-if [ "$OLevel" == "" ]; then
+if [ "$OLevel" = "" ]; then
   IFLAGS="-march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
   IFLAGS="$OptFlag -march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
@@ -159,7 +159,7 @@ fi
 
 ffdecsa_test() {
 
-  if [ "$PMode" == "" ]; then
+  if [ "$PMode" = "" ]; then
     if [ "$_SHORT" -lt 1 ]; then
       FFDECSA_MODES="PARALLEL_32_INT PARALLEL_32_4CHAR PARALLEL_32_4CHARA \
                      PARALLEL_64_8CHAR PARALLEL_64_8CHARA PARALLEL_64_2INT \
@@ -224,14 +224,14 @@ ffdecsa_test() {
 
           printf "\n"
 
-          if [ "$1" == "-O2" ]; then          
+          if [ "$1" = "-O2" ]; then          
             if test $MAX_M_val -gt $MAX_val_2; then
               MAX_val_2=$MAX_M_val
               MAX_MODE_2=$var
               MAX_val=$MAX_M_val
               MAX_MODE=$var
             fi
-          elif [ "$1" == "-O3" ]; then
+          elif [ "$1" = "-O3" ]; then
             if test $MAX_M_val -gt $MAX_val_3; then
               MAX_val_3=$MAX_M_val
               MAX_MODE_3=$var
@@ -302,7 +302,7 @@ echo "### FFdeCSA Fasted OPTS ###"
 echo "CPUOPT   = $_CPU"
 echo "PARALLEL = $MAX_MODE"
 
-if [ "$_FLAGS" == "" ]; then
+if [ "$_FLAGS" = "" ]; then
   echo "FLAGS    = $OptFlag -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
 else
   echo "FLAGS    = ${OptFlag}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"

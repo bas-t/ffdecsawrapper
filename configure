@@ -219,7 +219,7 @@ fi
 # The rest of the Debian section
 # depends on the outcome of next line
 
-if [ "$OS" = Debian ] || [ "$OS" = Ubuntu ] ; then
+if [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
 
 # Make sure that we are running as root
 
@@ -498,7 +498,7 @@ echo "CC=$CC" >> config.mak
 # Compile and, if running Debian/Ubuntu,
 # finish by installing the lot.
 
-if ! [ "$OS" = Debian ] || [ "$OS" = Ubuntu ] ; then
+if ! [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
   if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
     echo "
 
