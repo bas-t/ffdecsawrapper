@@ -579,6 +579,11 @@ If you hit Y and your kernel needs to be patched, that will be done too.
           exit 1
         else
           depmod -a
+            echo -en "
+#########################
+\E[1;33;44mInstalled without errors!\E[0m
+#########################
+"
         fi
       fi
 
@@ -589,11 +594,6 @@ If you hit Y and your kernel needs to be patched, that will be done too.
       if test "x$dvb_path" = "x"; then
         if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
           if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
-            echo -en "
-#########################
-\E[1;33;44mInstalled without errors!\E[0m
-#########################
-"
             if [ "$OS" = Debian ]; then
               if [ "$PATCHLEVEL" -lt 90 ]; then
                 ./kernelpatch
@@ -613,9 +613,6 @@ If you hit Y and your kernel needs to be patched, that will be done too.
           else
             echo -en "
 ##########################
-\E[1;33;44mInstalled without errors!!\E[0m
-
-
 \E[1;33;44mKernelpatch not needed, or\E[0m
 
 \E[1;33;44mnon stock kernel detected.\E[0m
@@ -626,9 +623,6 @@ If you hit Y and your kernel needs to be patched, that will be done too.
         else
           echo -en "
 ###############################
-   \E[1;33;44mInstalled without errors!\E[0m
-
-
 \E[1;33;44mExisting kernel patch detected.\E[0m
 ###############################
 "
