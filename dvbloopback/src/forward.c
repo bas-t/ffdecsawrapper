@@ -188,7 +188,7 @@ int init_osd(int real, int virt) {
   FILE *FH;
   char str[256];
   int tmp;
-  int link[] = {0, 1, 8}; //video, audio, osd
+  int link[] = {0, 1, 16}; //video, audio, osd
   //Link real adapter to virtual adapter
   sprintf(str, "/proc/dvbloopback/adapter%d/adapter", virt);
   FH = fopen(str, "w");
