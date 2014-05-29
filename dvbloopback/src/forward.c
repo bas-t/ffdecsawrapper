@@ -263,12 +263,12 @@ static void exit_handler(int type)
 int main(int argc, char *argv[])
 {
   unsigned long bufsize = 2000000;
-  struct parser_adpt pc_all[8];
-  struct common_data common[8];
+  struct parser_adpt pc_all[16];
+  struct common_data common[16];
   struct list_head *ptr;
   pthread_t msg_highpri_thread;
   pthread_t socket_thread;
-  int virt_adapt[8], real_adapt[8], adapter_cnt=0;
+  int virt_adapt[16], real_adapt[16], adapter_cnt=0;
   unsigned long debug_port = 5456; 
   int longopt = 0;
   int c, Option_Index = 0;
