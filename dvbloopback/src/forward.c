@@ -188,7 +188,7 @@ int init_osd(int real, int virt) {
   FILE *FH;
   char str[256];
   int tmp;
-  int link[] = {0, 1, 16}; //video, audio, osd
+  int link[] = {0, 1, 32}; //video, audio, osd
   //Link real adapter to virtual adapter
   sprintf(str, "/proc/dvbloopback/adapter%d/adapter", virt);
   FH = fopen(str, "w");
@@ -263,12 +263,12 @@ static void exit_handler(int type)
 int main(int argc, char *argv[])
 {
   unsigned long bufsize = 2000000;
-  struct parser_adpt pc_all[16];
-  struct common_data common[16];
+  struct parser_adpt pc_all[32];
+  struct common_data common[32];
   struct list_head *ptr;
   pthread_t msg_highpri_thread;
   pthread_t socket_thread;
-  int virt_adapt[16], real_adapt[16], adapter_cnt=0;
+  int virt_adapt[32], real_adapt[32], adapter_cnt=0;
   unsigned long debug_port = 5456; 
   int longopt = 0;
   int c, Option_Index = 0;
