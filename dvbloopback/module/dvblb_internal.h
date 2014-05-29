@@ -3,7 +3,7 @@
 #include "dvbdev.h"
 #include "dvbloopback.h"
 
-#define DVBLB_MAX_ADAPTERS 8
+#define DVBLB_MAX_ADAPTERS 16
 
 struct dvblb;
 
