@@ -99,6 +99,7 @@ show_help(){
 
 ffdecsa_opt="yes"
 compiletype_opt="release"
+v4l_opt="no"
 
 for opt do
   optval="${opt#*=}"
@@ -116,6 +117,8 @@ for opt do
   --optimize=*) ffdecsa_opt="$optval"
   ;;
   --compiletype=*) compiletype_opt="$optval"
+  ;;
+  --v4l=*) v4l_opt="$optval"
   ;;
   --help) show_help
   ;;
@@ -176,8 +179,9 @@ fi
 # Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
-  if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
-    echo -en "
+  if test "x$v4l_opt" = "xno"; then
+    if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
+      echo -en "
 \E[1;33;44m
                      ! ATTENTION !
 \E[0m
@@ -194,13 +198,14 @@ http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 "
 confirmyes "Proceed?[Y/n]"
 
-    if [ "$?" -eq 1 ]; then
-      echo "
+      if [ "$?" -eq 1 ]; then
+        echo "
 You have chosen not to proceed.
 
 Aborting...
 "
-      exit 0
+        exit 0
+      fi
     fi
   fi
 fi
