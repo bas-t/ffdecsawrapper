@@ -1120,7 +1120,6 @@ static int __init dvblb_init(void)
 
 	dvblb_init_procfs();
 
-	info("frontend loopback driver v"DVBLOOPBACK_VERSION);
 	if (num_adapters < 1 || num_adapters > DVBLB_MAX_ADAPTERS) {
 		printk("dvbloopback: param num_adapters=%d. Must be between"
 		       " 1 and %d\n", num_adapters, DVBLB_MAX_ADAPTERS);
