@@ -66,7 +66,7 @@ void InitAll(const char *cfgdir)
   if(!Feature.SmartCard()) smartcards.Disable();
   cStructLoaders::Load(false);
   if(Feature.KeyFile() && keys.Count()<1)
-    PRINTF(L_GEN_ERROR,"no keys loaded for softcam!");
+    PRINTF(L_GEN_INFO,"no keys loaded for softcam");
   if(!cSystems::Init(cfgdir)) exit(2);
 }
 
