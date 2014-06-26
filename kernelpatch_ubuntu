@@ -1,0 +1,183 @@
+#!/bin/bash
+
+# Define where to build and from what dir to build
+
+    BUILD_DIR="/lib/modules/`uname -r`/build"
+    TEMPDIR="tmp"
+
+die(){
+    echo $1
+    exit 1
+}
+
+confirmyes(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [Y/n]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        [nN][oO]|[nN])
+            false
+            ;;
+        *)
+            true
+            ;;
+    esac
+}
+
+confirmno(){
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case $response in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
+success(){
+depmod -a
+echo -en "
+
+####################################################################
+\E[1;33;44mYour kernel is properly patched. You should reboot your machine now.\E[0m
+####################################################################
+"
+cd ../.. && rm -rf $TEMPDIR
+}
+
+fail(){
+echo -en "
+##########################################################
+\E[1;33;44mError(s) encountered. Your kernel is NOT properly patched.\E[0m
+##########################################################
+"
+cd ../.. && rm -rf $TEMPDIR
+exit 1
+}
+
+# Get OS and release info
+
+if [ -f /usr/bin/lsb_release ]; then
+    OS=$( lsb_release -si )
+    RELEASE=$( lsb_release -sc )
+fi
+
+if [ "$OS" = "Ubuntu" ]; then
+
+# Make sure that we are running as root
+
+  if ! echo "$(whoami)" | grep "root" > /dev/null 2>&1; then
+    echo -en "
+\E[1;33;44m
+You should run as root.
+
+Do \"sudo su\" and run me again.
+
+Aborting...
+\E[0m
+"
+    make clean > /dev/null 2>&1
+    exit 0
+  fi
+
+# Get kernel version numbers
+
+    SHORT_KERNEL="$( echo `uname -r` | grep -o '[[:digit:]]\+\.[[:digit:]]\+' )"
+    FIRST_DIGIT="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n1 )"
+    SECOND_DIGIT="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2' )"
+    PATCHLEVEL="$( echo `uname -r` | grep -o '[[:digit:]]\+' | head -n3 | awk 'NR==3' )"
+    UBUNTU_KERNEL="$SHORT_KERNEL.0"
+
+# Abort if running kernel is < 3.x
+
+  if [ "$FIRST_DIGIT" -lt 3 ]; then
+    echo -en "
+\E[1;33;44m
+The kernel you are running is not supported anymore.
+
+Minimum supported version is 3.x
+
+Aborting...
+\E[0m
+"
+    exit 1
+  fi
+
+  if [ "$SECOND_DIGIT" -lt 13 ]; then
+    echo -en "
+\E[1;33;44m
+The kernel you are running is not supported in this branch.
+
+Minimum supported version is 3.13
+
+If you are running a 3.x kernel 3.12 or lower, do:
+
+make update
+
+git checkout oldstable
+
+and run ./configure again.
+
+Aborting...
+\E[0m
+"
+  fi
+
+  if test "x$GCC" = "x"; then
+    GCC=gcc
+  fi
+
+# When using FFdecsawrapper, the kernel has to be patched.
+# Let's do it.
+
+  echo -en "
+FFdecsawrapper needs a patched dvb-core.ko kernel module.
+
+If you are running a \E[1;33;44m!UNMODIFIED!\E[0m Debian/Ubuntu kernel
+I can do that for you if your sources.list is ok and the source
+for your kernel is available from the repo's.
+
+This will (re)install the source for your running kernel
+along with any missing build deps.
+Having done that, your running Debian/Ubuntu kernel
+will be patched for use with ffdecsawrapper.
+
+\E[1;33;44mIf you recompiled a stock kernel, you should\E[0m
+\E[1;33;44mhave patched it. So answer 'No' in that case\E[0m
+
+"
+
+  confirmyes "Do you want me to patch your running Debian/Ubuntu kernel?[Y/n]"
+
+# Install dependencies for patching the kernel
+
+  if [ "$?" -eq 0 ]; then
+    apt-get build-dep linux --no-install-recommends -y || die "Error installing \"build-dep linux\""
+    rm -rf $TEMPDIR && mkdir $TEMPDIR && cd $TEMPDIR && apt-get source linux-image-`uname -r` -y || die "Error installing linux-source-$UBUNTU_KERNEL"
+    cd linux*
+    CWD=$(pwd)
+    if  [ "$FIRST_DIGIT" -eq 3 ]; then
+      patch -p0 < ../../linux-3.13-dvb-mutex.patch
+      if ! [ "$?" -eq 0 ]; then
+        fail
+      fi
+      CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
+      mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+      /usr/bin/install $CWD/drivers/media/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+      if [ "$?" -eq 0 ]; then
+        success
+      else
+        fail
+      fi
+    fi
+  else
+    echo "
+Not patching any kernel.
+"
+  fi
+fi
