@@ -49,16 +49,14 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/pagemap.h>
+#include <linux/slab.h>
 #include <linux/dvb/ca.h>
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/version.h>
 #include <linux/vmalloc.h>
 #include <linux/cdev.h>
 #include <linux/platform_device.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 #include <linux/sched.h>
-#endif
 
 #include "dvbdev.h"
 #include "dvbdevwrap.h"
