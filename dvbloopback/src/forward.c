@@ -142,7 +142,7 @@ void show_help()
 {
   struct list_head *ptr;
   int i;
-  printf("sasc-ng [options] -j <real>:<virtual> ...\n"); 
+  printf("ffdecsawrapper [options] -j <real>:<virtual> ...\n"); 
   printf("Version: %s-%s\n\n", RELEASE_VERSION, source_version);
   printf("   -j//--join <real>:<virt>\n");
   printf("                     : Connect real and loopback dvb adapters\n");

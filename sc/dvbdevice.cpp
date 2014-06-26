@@ -51,7 +51,7 @@ cDvbDevice::cDvbDevice(int n)
     //int camfd;
     fd_video = 0;
     cardIndex=n;
-    //For sasc-ng, we never use the ca device here!
+    //For ffdecsawrapper, we never use the ca device here!
     //camfd=DvbOpen("ca",cardIndex,O_RDWR|O_NONBLOCK);
     //if (camfd > 0)
     //{
