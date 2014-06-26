@@ -323,7 +323,6 @@ static void connect_scan(struct parser_adpt *pc_all)
   bzero(scanner, sizeof(struct scanner));
   if(scan_ports) {
     snprintf(scan_script, sizeof(scan_script), "%s/scanner", get_camdir());
-    snprintf(scan_lib, sizeof(scan_lib), "%s/libscanwrap.so", get_camdir());
     if(stat(scan_script, &st) == -1 || ! (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
       dprintf0("Couldn't locate executable %s\n", scan_script);
       exit(1);
