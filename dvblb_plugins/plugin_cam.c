@@ -9,11 +9,11 @@
 #include <linux/dvb/ca.h>
 #include <linux/dvb/dmx.h>
 
-#include "../sc/include/vdr/plugin.h"
-#include "../sc/include/vdr/dvbdevice.h"
-#include "../sc/include/vdr/sclink.h"
-#include "../sc/include/vdr/channels.h"
-#include "../sc/include/vdr/tools.h"
+#include "../sc/include/ffdecsawrapper/plugin.h"
+#include "../sc/include/ffdecsawrapper/dvbdevice.h"
+#include "../sc/include/ffdecsawrapper/sclink.h"
+#include "../sc/include/ffdecsawrapper/channels.h"
+#include "../sc/include/ffdecsawrapper/tools.h"
 #include "../sc/sasccam.h"
 // Hack to disable debug print control from sc
 

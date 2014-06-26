@@ -7,7 +7,7 @@
  * $Id: dvbdevice.c 1.93 2004/06/19 09:33:42 kls Exp $
  */
 
-#include "include/vdr/dvbdevice.h"
+#include "include/ffdecsawrapper/dvbdevice.h"
 #include <errno.h>
 #include <limits.h>
 #include <libv4l1-videodev.h>
