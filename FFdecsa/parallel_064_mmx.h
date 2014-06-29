@@ -20,11 +20,7 @@
 
 #include <mmintrin.h>
 
-#ifdef __i386__
-#define MEMALIGN_VAL 8
-#else
 #define MEMALIGN_VAL 16
-#endif
 
 union __u64 {
     unsigned int u[2];
