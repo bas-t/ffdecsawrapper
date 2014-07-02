@@ -123,10 +123,8 @@ static int dvblb_usercopy(struct file *file,
 	void    *mbuf = NULL;
 	void    *parg = NULL;
 	int     err  = -EINVAL;
-#if DVB_API_VERSION >=5
 	struct  dtv_properties *tvps = NULL;
 	struct  dtv_property *tvp = NULL;
-#endif
 
 	/*  Copy arguments into temp kernel buffer  */
 	switch (_IOC_DIR(cmd)) {
@@ -153,7 +151,6 @@ static int dvblb_usercopy(struct file *file,
 		err = -EFAULT;
 		if (copy_from_user(parg, (void __user *)arg, _IOC_SIZE(cmd)))
 			goto out;
-#if DVB_API_VERSION >=5
 		if ((cmd == FE_SET_PROPERTY) || (cmd == FE_GET_PROPERTY)) {
 		    tvps = (struct dtv_properties __user *)arg;
 		    tvp = (struct dtv_property *) kmalloc(tvps->num *
@@ -171,7 +168,6 @@ static int dvblb_usercopy(struct file *file,
 		    tvps->props = tvp;
 		    tvp = NULL;
 		}
-#endif
 		break;
 	}
 
@@ -187,7 +183,6 @@ static int dvblb_usercopy(struct file *file,
 	{
 	case _IOC_READ:
 	case (_IOC_WRITE | _IOC_READ):
-#if DVB_API_VERSION >=5
 		if ((cmd == FE_GET_PROPERTY) || (cmd == FE_SET_PROPERTY)) 
 		{
 		    tvps = (struct dtv_properties __user *)arg;
@@ -200,7 +195,6 @@ static int dvblb_usercopy(struct file *file,
 		    }
 		    tvps->props = tvp;
 		}
-#endif
 		if (copy_to_user((void __user *)arg, parg, _IOC_SIZE(cmd)))
 			err = -EFAULT;
 		break;
@@ -246,10 +240,8 @@ static int dvblb_fake_ioctl(struct dvblb_devinfo *lbdev, struct dvb_device **f,
                             unsigned long int cmd, void *arg)
 {
 	int ret = 0;
-#if DVB_API_VERSION >=5
 	struct dtv_properties *tvps = NULL;
 	long unsigned int _ioctllen;
-#endif
 	dprintk2("dvblb_fake_ioctl (%d) : %lu\n", lbdev->parent->adapter.num,
 	         0xFF & cmd);
 	if (mutex_lock_interruptible(&lbdev->lock_fake_ioctl))
@@ -313,7 +305,6 @@ static int dvblb_fake_ioctl(struct dvblb_devinfo *lbdev, struct dvb_device **f,
 	}
 
 	if (cmd < DVBLB_MAX_CMDS || ! (cmd & IOC_IN)){
-#if DVB_API_VERSION >=5
 		if ((cmd == FE_GET_PROPERTY)) {
 		    tvps = (struct dtv_properties __user *)(lbdev->ioctlretdata + sizeof(int));
 		    _ioctllen = lbdev->ioctllen + (tvps->num * sizeof(struct dtv_property));
@@ -322,7 +313,6 @@ static int dvblb_fake_ioctl(struct dvblb_devinfo *lbdev, struct dvb_device **f,
 		    tvps->props = (struct dtv_property __user *)(arg + lbdev->ioctllen);
 		}
 		else
-#endif
 		    memcpy(arg, lbdev->ioctlretdata + sizeof(int), lbdev->ioctllen);
 	}
 
@@ -534,9 +524,7 @@ static ssize_t dvblb_read (struct file *f, char * buf, size_t count, loff_t *off
 {
 	struct dvb_device *dvbdev, **filemap;
 	struct dvblb_devinfo *lbdev;
-#if DVB_API_VERSION >=5
 	struct dtv_properties *tvps = NULL;
-#endif
 	unsigned long int _count = 0;
 
 	filemap  = (struct dvb_device **) f->private_data;
@@ -595,13 +583,11 @@ static ssize_t dvblb_read (struct file *f, char * buf, size_t count, loff_t *off
 		cmd = lbdev->ioctlcmd;
 		size = (lbdev->ioctllen > sizeof(int)) ? lbdev->ioctllen :
 		                                         sizeof(int);
-#if DVB_API_VERSION >=5
 		if ((cmd == FE_GET_PROPERTY) || (cmd == FE_SET_PROPERTY)){
 		    tvps = (struct dtv_properties __user *)(lbdev->ioctldata);
 		    _count = size + base_size + (tvps->num * sizeof(struct dtv_property));
 		}
 		else
-#endif
 		    _count = base_size + size;
 		    
 		if (count < _count || lbdev->ioctlcmd == ULONG_MAX ||
@@ -633,7 +619,6 @@ static ssize_t dvblb_read (struct file *f, char * buf, size_t count, loff_t *off
 			}
 			
 		} else {
-#if DVB_API_VERSION >=5
 			if ((cmd == FE_GET_PROPERTY) || (cmd == FE_SET_PROPERTY)) {    
 			    if (copy_to_user(buf + base_size + size, tvps->props,
 			                 tvps->num * sizeof(struct dtv_property))) {
@@ -642,7 +627,6 @@ static ssize_t dvblb_read (struct file *f, char * buf, size_t count, loff_t *off
 			    }
 			    tvps->props = (struct dtv_property __user *)(buf + base_size + size);
 			}
-#endif
 			if (copy_to_user(buf + base_size, lbdev->ioctldata,
 			                 size)) {
 				mutex_unlock(&lbdev->lock_ioctl);
@@ -694,9 +678,7 @@ static long dvblb_ioctl(struct file *f,
 	void * parg = (void *)arg;
 	struct dvb_device *dvbdev, **filemap;
 	struct dvblb_devinfo *lbdev;
-#if DVB_API_VERSION >=5
 	struct dtv_properties *tvps;
-#endif
 	int size;
 
 	filemap  = (struct dvb_device **) f->private_data;
@@ -781,7 +763,6 @@ static long dvblb_ioctl(struct file *f,
 		mutex_unlock(&lbdev->lock_ioctl);
 		return -EFAULT;
 	}
-#if DVB_API_VERSION >=5
 	if (cmd == FE_GET_PROPERTY)
 	{    
 	    tvps = (struct dtv_properties __user *)(lbdev->ioctlretdata + sizeof(int));    
@@ -795,7 +776,6 @@ static long dvblb_ioctl(struct file *f,
 	    tvps->props = (struct dtv_property __user *)(lbdev->ioctlretdata + size);
 	    dprintk("%s() copy_from_user: cmd %u\n", __func__, tvps->props[0].cmd);
  	}
-#endif
 
 	lbdev->ioctlretval = *(int *)lbdev->ioctlretdata;
 	lbdev->ioctlcmd = ULONG_MAX;

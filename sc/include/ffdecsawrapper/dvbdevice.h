@@ -15,10 +15,6 @@
 #include "device.h"
 #include "dvbspu.h"
 
-#if DVB_API_VERSION < 3 
-#error VDR requires Linux DVB driver API version 3 or higher! 
-#endif
-
 #define MAXDVBDEVICES  8
 
 class cDvbTuner;
