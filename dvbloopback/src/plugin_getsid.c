@@ -833,7 +833,6 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
       if(opt_experimental)
         *result = CMD_SKIPCALL;
     }
-#if DVB_API_VERSION >=5
   } else if (cmd == FE_SET_PROPERTY) {
     dprintf0("Tuning frontend (new)\n");
     pthread_mutex_lock(&sid_data->mutex);
@@ -847,7 +846,6 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
     clear_sid_data(sid_data);
     pthread_mutex_unlock(&sid_data->mutex);
     memset(&sid_data->tunecache, 0, sizeof(struct dvb_frontend_parameters));
-#endif
   } else if(cmd == FE_DISEQC_SEND_MASTER_CMD
             || cmd == FE_DISEQC_SEND_BURST
             || cmd == FE_SET_TONE
