@@ -1216,7 +1216,7 @@ public:
   virtual bool Initialize(void);
   virtual bool Start(void);
   virtual void Stop(void);
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   virtual void MainThreadHook(void);
 #endif
   virtual cMenuSetupPage *SetupMenu(void);
@@ -1361,7 +1361,7 @@ bool cScPlugin::SetupParse(const char *Name, const char *Value)
   return true;
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 void cScPlugin::MainThreadHook(void)
 {
@@ -1373,7 +1373,7 @@ void cScPlugin::MainThreadHook(void)
     }
 }
 
-#endif //SASC
+#endif //FFDECSAWRAPPER
 
 const char **cScPlugin::SVDRPHelpPages(void)
 {

@@ -47,7 +47,7 @@ class cDeCSA;
 
 // ----------------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 class cDeCsaTSBuffer : public cThread {
 private:
   int f;

@@ -29,10 +29,10 @@
 #include <ffdecsawrapper/dvbdevice.h>
 #include <ffdecsawrapper/thread.h>
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 #include <ffdecsawrapper/dvbci.h>
 #include "FFdecsa/FFdecsa.h"
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 #include "device.h"
 #include "cam.h"
@@ -45,7 +45,7 @@
 
 // -- cDeCsaTSBuffer -----------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 cDeCsaTSBuffer::cDeCsaTSBuffer(int File, int Size, int CardIndex, cDeCSA *DeCsa, bool ScActive)
 {
@@ -121,7 +121,7 @@ uchar *cDeCsaTSBuffer::Get(void)
   return NULL;
 }
 
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 // --- cScDevicePlugin ---------------------------------------------------------
 
@@ -139,7 +139,7 @@ cScDevicePlugin::~cScDevicePlugin()
 
 // -- cScDvbDevice -------------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 #define SCDEVICE cScDvbDevice
 #define DVBDEVICE cDvbDevice
@@ -279,7 +279,7 @@ uint32_t cScDeviceProbe::GetSubsystemId(int Adapter, int Frontend)
 
 #endif //APIVERSNUM >= 10711
 
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 // -- cScDevices ---------------------------------------------------------------
 
@@ -299,7 +299,7 @@ int cScDevices::DvbOpen(const char *Name, int a, int f, int Mode, bool ReportErr
   return fd;
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 #if APIVERSNUM < 10711
 static int *vdr_nci=0, *vdr_ud=0, vdr_save_ud;
@@ -419,7 +419,7 @@ bool cScDevices::ForceBudget(int n)
    return budget && (budget&(1<<n));
 }
 
-#else //!SASC
+#else //!FFDECSAWRAPPER
 
 void cScDevices::OnPluginLoad(void) {}
 void cScDevices::OnPluginUnload(void) {}
@@ -429,4 +429,4 @@ void cScDevices::Shutdown(void) {}
 void cScDevices::SetForceBudget(int n) {}
 bool cScDevices::ForceBudget(int n) { return true; }
 
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
