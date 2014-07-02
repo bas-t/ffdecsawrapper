@@ -94,15 +94,12 @@ show_help(){
   echo " --cxx=<opt>            [g++] Define C++ and CC version to use"
   echo "                        Use like --cxx=4.7"
   echo "                        "
-  echo " --api=<opt>            [old] old = 1.6.0, new = 1.7.13"
-  echo "                        "
   exit 0
 }
 
 ffdecsa_opt="yes"
 compiletype_opt="release"
 v4l_opt="no"
-api_opt="old"
 
 for opt do
   optval="${opt#*=}"
@@ -122,8 +119,6 @@ for opt do
   --compiletype=*) compiletype_opt="$optval"
   ;;
   --v4l=*) v4l_opt="$optval"
-  ;;
-  --api=*) api_opt="$optval"
   ;;
   --help) show_help
   ;;
@@ -485,13 +480,6 @@ else
   echo "
 Bad option to --compiletype '$compiletype_opt' Should be 'release, debug'"
   exit 1
-fi
-
-# Set api version
-
-if test "x$api_opt" = "xnew"; then
-  sed -i "s/APIVERSION  \"1.6.0\"/APIVERSION  \"1.7.13\"/" sc/include/ffdecsawrapper/config.h
-  sed -i "s/APIVERSNUM   10600/APIVERSNUM   10713/" sc/include/ffdecsawrapper/config.h
 fi
 
 echo "
