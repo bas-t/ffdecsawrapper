@@ -22,8 +22,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "include/vdr/dvbdevice.h"
-#include "include/vdr/channels.h"
+#include "include/ffdecsawrapper/dvbdevice.h"
+#include "include/ffdecsawrapper/channels.h"
 #include "cam.h"
 #include "device.h"
 #include "sasccam.h"

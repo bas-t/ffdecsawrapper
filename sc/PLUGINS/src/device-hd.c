@@ -21,11 +21,11 @@
 #include <stdio.h>
 #include <sys/ioctl.h>
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
-#include <vdr/channels.h>
-#include <vdr/ci.h>
-#include <vdr/dvbci.h>
+#include <ffdecsawrapper/channels.h>
+#include <ffdecsawrapper/ci.h>
+#include <ffdecsawrapper/dvbci.h>
 
 #include "device.h"
 #include "cam.h"
@@ -122,4 +122,4 @@ bool cScHdDevicePlugin::SetCaPid(cDevice *dev, ca_pid_t *ca_pid)
 
 #endif //WITH_HDDVB
 #endif //APIVERSNUM >= 10711
-#endif //SASC
+#endif //FFDECSAWRAPPER
