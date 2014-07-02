@@ -19,12 +19,7 @@ typedef enum dvblb_type {
 } dvblb_type_t;
 
 enum {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	DVBLB_CMD_OPEN = 0,
-#else
-	//pawel5870: Workaround for kernel 2.6.31
 	DVBLB_CMD_OPEN = 4,
-#endif
 	DVBLB_CMD_CLOSE,
 	DVBLB_CMD_READ,
 	DVBLB_CMD_WRITE,
