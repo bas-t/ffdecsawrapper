@@ -59,7 +59,7 @@ extern cEcmCache ecmcache;
 
 // ----------------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 class cCiFrame {
 private:
   cRingBufferLinear *rb;
@@ -75,7 +75,7 @@ public:
   void Del(void);
   int Avail(void);
   };
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 // ----------------------------------------------------------------
 
@@ -145,7 +145,7 @@ typedef int caid_t;
 #define MAX_CW_IDX        16
 #define MAX_SPLIT_SID     16
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 class cCam : public cCiAdapter, public cSimpleItem {
 #else
 class cCam : public cSimpleItem {
@@ -154,7 +154,7 @@ private:
   cDevice *device;
   const char *devId;
   int adapter, frontend;
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   cMutex ciMutex;
   cRingBufferLinear *rb;
   cScCamSlot *slots[MAX_CI_SLOTS];
@@ -187,7 +187,7 @@ private:
   int GetFreeIndex(void);
   void LogStartup(void);
 protected:
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   virtual int Read(unsigned char *Buffer, int MaxLength);
   virtual void Write(const unsigned char *Buffer, int Length);
   virtual bool Reset(int Slot);
@@ -223,7 +223,7 @@ public:
   void PostTune(void);
   void SetPid(int type, int pid, bool on);
   char *CurrentKeyStr(int num, const char **id);
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   bool OwnSlot(const cCamSlot *slot) const;
   cDeCSA *DeCSA(void) const { return decsa; }
 #endif
@@ -233,7 +233,7 @@ void LogStatsDown(void);
 
 // ----------------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 #define MAX_CSA_PIDS 8192
 #define MAX_CSA_IDX  16
@@ -261,6 +261,6 @@ public:
   bool SetCaPid(ca_pid_t *ca_pid);
   void SetActive(bool on);
   };
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 #endif // ___CAM_H

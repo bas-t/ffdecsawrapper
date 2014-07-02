@@ -24,7 +24,7 @@
 #include <ffdecsawrapper/device.h>
 #include <ffdecsawrapper/channels.h>
 #include <ffdecsawrapper/thread.h>
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 #include <vdr/ringbuffer.h>
 #endif
 
@@ -38,7 +38,7 @@
 #include "override.h"
 #include "misc.h"
 #include "log-core.h"
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 #include "FFdecsa/FFdecsa.h"
 #endif
 
@@ -1556,7 +1556,7 @@ void cEcmHandler::ParseCAInfo(int SysId)
 
 // --- cChannelCaids -----------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 class cChannelCaids : public cSimpleItem {
 private:
@@ -2039,7 +2039,7 @@ void cScCamSlot::Process(const unsigned char *data, int len)
     }
 }
 
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 // -- cCams --------------------------------------------------------------------
 
@@ -2102,7 +2102,7 @@ void cGlobal::CaidsChanged(void)
 
 // -- cCam ---------------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 struct TPDU {
   unsigned char slot;
   unsigned char tcid;
@@ -2118,7 +2118,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, cScDev
   softcsa=SoftCSA; fullts=FullTS;
   tcid=0; rebuildcaids=false;
   memset(version,0,sizeof(version));
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   memset(slots,0,sizeof(slots));
   SetDescription("SC-CI adapter on device %s",devId);
   rb=new cRingBufferLinear(KILOBYTE(8),6+LEN_OFF,false,"SC-CI adapter read");
@@ -2132,7 +2132,7 @@ cCam::cCam(cDevice *Device, int Adapter, int Frontend, const char *DevId, cScDev
   else PRINTF(L_GEN_ERROR,"failed to create ringbuffer for SC-CI adapter %s.",devId);
 
   decsa=softcsa ? new cDeCSA(devId) : 0;
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
   source=transponder=-1; liveVpid=liveApid=0; logger=0; hookman=0;
   memset(lastCW,0,sizeof(lastCW));
@@ -2147,16 +2147,16 @@ cCam::~cCam()
   handlerList.Clear();
   delete hookman;
   delete logger;
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   Cancel(3);
   ciMutex.Lock();
   delete rb; rb=0;
   ciMutex.Unlock();
   delete decsa; decsa=0;
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 bool cCam::OwnSlot(const cCamSlot *slot) const
 {
   if(slots[0]==slot) return true;
@@ -2175,14 +2175,14 @@ int cCam::GetCaids(int slot, unsigned short *Caids, int max)
     }
   return version[slot];
 }
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 void cCam::CaidsChanged(void)
 {
   rebuildcaids=true;
 }
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 void cCam::BuildCaids(bool force)
 {
   if(caidTimer.TimedOut() || force || (rebuildcaids && triggerTimer.TimedOut())) {
@@ -2345,7 +2345,7 @@ bool cCam::Assign(cDevice *Device, bool Query)
 {
   return Device ? (Device==device) : true;
 }
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 
 bool cCam::IsSoftCSA(bool live)
 {
@@ -2640,10 +2640,10 @@ bool cCam::SetCaDescr(ca_descr_t *ca_descr, bool initial)
 {
   if(!softcsa || (fullts && ca_descr->index==0))
     return devplugin->SetCaDescr(device,ca_descr,initial);
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   else if(decsa)
     return decsa->SetDescr(ca_descr,initial);
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
   return false;
 }
 
@@ -2651,10 +2651,10 @@ bool cCam::SetCaPid(ca_pid_t *ca_pid)
 {
   if(!softcsa || (fullts && ca_pid->index==0))
     return devplugin->SetCaPid(device,ca_pid);
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   else if(decsa)
     return decsa->SetCaPid(ca_pid);
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
   return false;
 }
 
@@ -2783,7 +2783,7 @@ void cCam::RemHandler(cEcmHandler *handler)
 
 // -- cDeCSA -------------------------------------------------------------------
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 #define MAX_STALL_MS 70
 
@@ -2980,4 +2980,4 @@ bool cDeCSA::Decrypt(unsigned char *data, int len, bool force)
   return false;
 }
 
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
