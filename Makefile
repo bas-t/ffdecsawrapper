@@ -30,7 +30,7 @@ OBJ  := forward.o process_req.o msg_passing.o plugin_getsid.o plugin_ringbuf.o\
 	plugin_ffdecsa.o version.o
 
 OBJ_SC := misc.o dvbdevice.o osdbase.o menuitems.o device.o thread.o \
-	tools.o sasccam.o log.o compat.o thread.o libsi.a
+	tools.o sasccam.o log.o compat.o libsi.a
 
 OBJS := $(foreach ob,$(OBJ) $(OBJ_SC), objs/$(ob)) FFdecsa/FFdecsa.o
 INCLUDES_SC := -I$(SCDIR) -I./sc/include
