@@ -21,47 +21,47 @@
 
 class SCDEVICE : public DVBDEVICE {
 private:
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   cDeCsaTSBuffer *tsBuffer;
   cMutex tsMutex;
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
   cCam *cam;
   cScDevicePlugin *devplugin;
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   cCiAdapter *hwciadapter;
   cTimeMs lastDump;
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
   int fd_dvr, fd_ca, fd_ca2;
   cMutex cafdMutex;
   bool softcsa, fullts;
   char devId[8];
   //
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   bool ScActive(void);
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 protected:
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   virtual bool Ready(void);
   virtual bool SetPid(cPidHandle *Handle, int Type, bool On);
   virtual bool SetChannelDevice(const cChannel *Channel, bool LiveView);
   virtual bool OpenDvr(void);
   virtual void CloseDvr(void);
   virtual bool GetTSPacket(uchar *&Data);
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
 public:
   SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int cafd);
   ~SCDEVICE();
   bool SetCaDescr(ca_descr_t *ca_descr, bool initial);
   bool SetCaPid(ca_pid_t *ca_pid);
   void DumpAV(void);
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   virtual bool HasCi(void);
   void LateInit(void);
   void EarlyShutdown(void);
   bool CheckFullTs(void);
 #else
   cCam *Cam(void) { return cam; }
-#endif //!SASC
+#endif //!FFDECSAWRAPPER
   };
 
 SCDEVICE::SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int cafd)
@@ -75,7 +75,7 @@ SCDEVICE::SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int ca
 :DVBDEVICE(Adapter)
 #endif //APIVERSNUM >= 10711
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   tsBuffer=0; hwciadapter=0;
 #endif
   cam=0; devplugin=DevPlugin; softcsa=fullts=false;
@@ -85,21 +85,21 @@ SCDEVICE::SCDEVICE(cScDevicePlugin *DevPlugin, int Adapter, int Frontend, int ca
 #else
   snprintf(devId,sizeof(devId),"%d",Adapter);
 #endif
-#ifdef SASC
+#ifdef FFDECSAWRAPPER
   cam=new cCam(this,Adapter,0,devId,devplugin,softcsa,fullts);
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 }
 
 SCDEVICE::~SCDEVICE()
 {
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
   DetachAllReceivers();
   Cancel(3);
   EarlyShutdown();
 #endif
   if(fd_ca>=0) close(fd_ca);
   if(fd_ca2>=0) close(fd_ca2);
-#ifdef SASC
+#ifdef FFDECSAWRAPPER
   delete cam;
 #endif
 }
@@ -121,7 +121,7 @@ void SCDEVICE::DumpAV(void)
 {}
 #endif
 
-#ifndef SASC
+#ifndef FFDECSAWRAPPER
 
 void SCDEVICE::EarlyShutdown(void)
 {
@@ -225,7 +225,7 @@ bool SCDEVICE::GetTSPacket(uchar *&Data)
   return false;
 }
 
-#endif // !SASC
+#endif // !FFDECSAWRAPPER
 
 #undef SCDEVICE
 #undef DVBDEVICE
