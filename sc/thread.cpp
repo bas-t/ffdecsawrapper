@@ -7,7 +7,7 @@
  * $Id: thread.c 1.45 2005/08/14 11:15:42 kls Exp $
  */
 
-#include "include/vdr/thread.h"
+#include "include/ffdecsawrapper/thread.h"
 #include <errno.h>
 #include <malloc.h>
 #include <stdarg.h>
@@ -16,7 +16,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include "include/vdr/tools.h"
+#include "include/ffdecsawrapper/tools.h"
 
 static bool GetAbsTime(struct timespec *Abstime, int MillisecondsFromNow)
 {

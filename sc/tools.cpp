@@ -7,7 +7,7 @@
  * $Id: tools.c 1.97 2005/08/27 14:43:55 kls Exp $
  */
 
-#include "include/vdr/tools.h"
+#include "include/ffdecsawrapper/tools.h"
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -17,8 +17,8 @@
 #include <sys/vfs.h>
 #include <time.h>
 #include <unistd.h>
-#include "include/vdr/i18n.h"
-#include "include/vdr/thread.h"
+#include "include/ffdecsawrapper/i18n.h"
+#include "include/ffdecsawrapper/thread.h"
 
 int SysLogLevel = 3;
 
@@ -459,9 +459,9 @@ bool SpinUpDisk(const char *FileName)
   for (int n = 0; n < 10; n++) {
       free(buf);
       if (DirectoryOk(FileName))
-         asprintf(&buf, "%s/vdr-%06d", *FileName ? FileName : ".", n);
+         asprintf(&buf, "%s/ffdecsawrapper-%06d", *FileName ? FileName : ".", n);
       else
-         asprintf(&buf, "%s.vdr-%06d", FileName, n);
+         asprintf(&buf, "%s.ffdecsawrapper-%06d", FileName, n);
       if (access(buf, F_OK) != 0) { // the file does not exist
          timeval tp1, tp2;
          gettimeofday(&tp1, NULL);
@@ -844,7 +844,7 @@ bool cSafeFile::Close(void)
 
 // --- cLockFile -------------------------------------------------------------
 
-#define LOCKFILENAME      ".lock-vdr"
+#define LOCKFILENAME      ".lock-ffdecsawrapper"
 #define LOCKFILESTALETIME 600 // seconds before considering a lock file "stale"
 
 cLockFile::cLockFile(const char *Directory)
