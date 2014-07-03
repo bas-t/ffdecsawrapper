@@ -374,7 +374,8 @@ fi
 if test "x$dvb_path" != "x"; then
   if test -f $dvb_path/drivers/media/dvb-core/dvbdev.h; then
     cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
-
+  elif test -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h; then
+    cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
   else echo -en "
 \E[1;33;44m
 ERROR!!!
