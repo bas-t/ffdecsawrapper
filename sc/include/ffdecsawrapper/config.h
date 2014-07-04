@@ -20,21 +20,10 @@
 #include "font.h"
 #include "tools.h"
 
-// VDR's own version number:
-
-#define VDRVERSION  "1.6.0"
-#define VDRVERSNUM   10600  // Version * 10000 + Major * 100 + Minor
-
-// The plugin API's version number:
+// The API's version number:
 
 #define APIVERSION  "1.6.0"
 #define APIVERSNUM   10600  // Version * 10000 + Major * 100 + Minor
-
-// When loading plugins, VDR searches them by their APIVERSION, which
-// may be smaller than VDRVERSION in case there have been no changes to
-// VDR header files since the last APIVERSION. This allows compiled
-// plugins to work with newer versions of the core VDR as long as no
-// VDR header files have changed.
 
 #define MAXPRIORITY 99
 #define MAXLIFETIME 99
