@@ -18,7 +18,7 @@ PLUGIN = sc
 ### The version number of this plugin
 
 RELEASE := $(shell grep 'define SC_RELEASE' version.h | awk '{ print $$3 }' | sed -e 's/[";]//g')
-SUBREL  := $(shell echo -n "Stable";)
+SUBREL  := $(shell echo -n "Master";)
 VERSION := $(RELEASE)-$(SUBREL)
 SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' version.h)
 
