@@ -90,13 +90,12 @@ const char *cPlugin::ConfigDirectory(const char *PluginName) {return opt_camdir;
 static int init_sc(void) {
   sc=(cPlugin *)VDRPluginCreator();
 
-  dprintf0("initializing plugin: SoftCam (%s): %s\n", sc->Version(), sc->Description());
+  dprintf0("initializing: FFdecsawrapper (%s): %s\n", sc->Version(), sc->Description());
   SetCAMPrint(DBG_NAME, PLUGIN_ID, 0, &_dbglvl);
   if (!sc->Initialize()) {
     dprintf0("Failed to initialize sc\n");
     return false;
   }
-  dprintf0("starting plugin:\n");
   if (!sc->Start()) {
     dprintf0("Failed to start sc plugin\n");
     return false;
