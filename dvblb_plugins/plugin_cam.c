@@ -90,7 +90,7 @@ const char *cPlugin::ConfigDirectory(const char *PluginName) {return opt_camdir;
 static int init_sc(void) {
   sc=(cPlugin *)VDRPluginCreator();
 
-  dprintf0("initializing: FFdecsawrapper (%s): %s\n", sc->Version(), sc->Description());
+  dprintf0("initializing: FFdecsawrapper, %s\n", sc->Description());
   SetCAMPrint(DBG_NAME, PLUGIN_ID, 0, &_dbglvl);
   if (!sc->Initialize()) {
     dprintf0("Failed to initialize sc\n");
