@@ -118,6 +118,7 @@ void * msg_loop(void * arg)
           cmd->message(msg, priority);
         if(msg->type == MSG_PROCESSED)
           break;
+		}
 // FIXME : The bogus 512 message should not be sent at all.
 // The 512 message is only pidfile and/or logfile related.
 // Both pidfile and logfile functions are OK on my system.
