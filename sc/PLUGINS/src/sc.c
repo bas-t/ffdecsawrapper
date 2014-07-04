@@ -1284,13 +1284,11 @@ cScPlugin::~cScPlugin()
 
 bool cScPlugin::Initialize(void)
 {
-  PRINTF(L_GEN_INFO,"SC version %s initializing",ScVersion);
   return dllSuccess && cScDevices::Initialize();
 }
 
 bool cScPlugin::Start(void)
 {
-  PRINTF(L_GEN_INFO,"SC version %s starting",ScVersion);
   if(APIVERSNUM<MINAPIVERSNUM) {
     PRINTF(L_GEN_ERROR,"SC plugin needs at least VDR API version %d.%d.%d",MIN_VERS,MIN_MAJOR,MIN_MINOR);
     return false;
