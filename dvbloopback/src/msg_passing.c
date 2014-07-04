@@ -118,10 +118,15 @@ void * msg_loop(void * arg)
           cmd->message(msg, priority);
         if(msg->type == MSG_PROCESSED)
           break;
-      }
-      if(msg->type != MSG_PROCESSED) {
-        tmprintf("MSG", "Got unprocessed message type: %d\n", msg->type);
-      }
+// FIXME : The bogus 512 message should not be sent at all.
+// The 512 message is only pidfile and/or logfile related.
+// Both pidfile and logfile functions are OK on my system.
+// But we don't want to block any other relevant "msg->type != MSG_PROCESSED" messages.
+// If there are any, that is...
+//
+//      if(msg->type != MSG_PROCESSED) { 
+//        tmprintf("MSG", "Got unprocessed message type: %d\n", msg->type);
+//    }
       if (msg->recurring) {
         msg->next_run = time(NULL) + msg->recurring;
         msg->type = orig_type;
