@@ -90,21 +90,21 @@ const char *cPlugin::ConfigDirectory(const char *PluginName) {return opt_camdir;
 static int init_sc(void) {
   sc=(cPlugin *)VDRPluginCreator();
 
-  dprintf0("initializing: FFdecsawrapper, %s\n", sc->Description());
+  dprintf0("initializing FFdecsawrapper, %s\n", sc->Description());
   SetCAMPrint(DBG_NAME, PLUGIN_ID, 0, &_dbglvl);
   if (!sc->Initialize()) {
-    dprintf0("Failed to initialize sc\n");
+    dprintf0("Failed to initialize FFdecsawrapper\n");
     return false;
   }
   if (!sc->Start()) {
-    dprintf0("Failed to start sc plugin\n");
+    dprintf0("Failed to start FFdecsawrapper\n");
     return false;
   }
 
   memset(scCap, 0, 80);
   sc->SetupParse("LoggerActive","2");
   for(int i = 0; i < 32 && scopts[i].cmd[0] != '\0'; i++) {
-    dprintf0("Setting SC options: %s = %s\n", scopts[i].cmd, scopts[i].value);
+    dprintf0("Setting FFdecsawrapper options: %s = %s\n", scopts[i].cmd, scopts[i].value);
     sc->SetupParse(scopts[i].cmd, scopts[i].value);
   }
   return true;
@@ -322,7 +322,7 @@ void process_cam(struct msg *msg, unsigned int priority)
     //link.data.tune.transponder=ch->Transponder();
     //dprintf0("Sending Tune cmd to SC\n");
     //DoScLinkOp(sc, &link);
-    dprintf0("SC completed  Tune cmd\n");
+    dprintf0("FFdecsawrapper completed  Tune cmd\n");
   }
 
   int i, epidlist[MAXDPIDS], *epidptr = epidlist;
@@ -543,7 +543,7 @@ void connect_cam(struct parser_adpt *pc_all)
       ca_caps_t ca_caps;
       if (ioctl(sc_data->cafd, CA_GET_CAP, &ca_caps) == 0 &&
           ca_caps.slot_num > 0 && (ca_caps.slot_type & CA_CI_LINK)) {
-        dprintf0("Found a FF card\n");
+        dprintf0("Found a FullFleged card\n");
       } else {
         sc_data->cafd = -1;
       }
@@ -647,13 +647,13 @@ static struct option *parseopt_cam(arg_enum_t cmd)
         for(i = 0; i < 32 && scopts[i].cmd[0] != '\0'; i++)
           ;
         if(i == 32) {
-          dprintf0("Too many SC options.  Ignoring: %s\n", optarg);
+          dprintf0("Too many FFdecsawrapper options.  Ignoring: %s\n", optarg);
         } else {
           char *pos =optarg;
           while(*pos != '=' && *pos != '\0')
             pos++;
           if(*pos == '\0') {
-            dprintf0("Could not parse SC argument: %s\n", optarg);
+            dprintf0("Could not parse FFdecsawrapper argument: %s\n", optarg);
           } else {
             memcpy(scopts[i].cmd, optarg, pos - optarg);
             memcpy(scopts[i].value, pos+1, strlen(optarg) - (1+pos - optarg));
