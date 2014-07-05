@@ -20,8 +20,6 @@
 #ifndef ___VERSION_H
 #define ___VERSION_H
 
-#define SC_RELEASE "2.0.2"
-
 extern const char *ScVersion;
 
 // SC API version number for loading shared libraries

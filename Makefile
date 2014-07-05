@@ -1,4 +1,4 @@
-VERSION = 2.0.2
+VERSION = $(shell git describe --always)
 
 $(shell touch config.mak)
 include config.mak
