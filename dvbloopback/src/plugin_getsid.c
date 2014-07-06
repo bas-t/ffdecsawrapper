@@ -588,7 +588,7 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
       for(i = 0; i < count; i++) {
         if(! (pollfd[i].revents & POLLIN)) {
           // stop waiting if no data comes for too long..
-          if (pollretries[i] >= 10) {
+          if (pollretries[i] >= 20) {
             dprintf0("start: giving up wait for pid on filter %d, no data found...\n",i);
             found++;
           }
