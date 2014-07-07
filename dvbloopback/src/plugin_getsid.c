@@ -398,7 +398,7 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
     return -1;
   }
   if(sidnum->seen && !match_sid(sid,opt_unseen)) {
-    dprintf0("Already seen sid: %d\n", sid);
+    //dprintf0("Already seen sid: %d\n", sid);
     free_sid(sid_ll);
     return -1;
   }
