@@ -398,7 +398,7 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
     return -1;
   }
   if(sidnum->seen && !match_sid(sid,opt_unseen)) {
-    //dprintf0("Already seen sid: %d\n", sid);
+    dprintf3("Already seen sid: %d\n", sid);
     free_sid(sid_ll);
     return -1;
   }
@@ -589,7 +589,7 @@ static int start(char *dmxdev, struct sid_data *sid_data, int timeout) {
         if(! (pollfd[i].revents & POLLIN)) {
           // stop waiting if no data comes for too long..
           if (pollretries[i] >= 20) {
-          //  dprintf0("start: giving up wait for pid on filter %d, no data found...\n",i);
+            dprintf3("start: giving up wait for pid on filter %d, no data found...\n",i);
             found++;
           }
           continue;
@@ -752,10 +752,10 @@ static void *read_sid(void *arg)
         msg_send(MSG_LOW_PRIORITY, MSG_ADDSID, sid_data->common->real_adapt,
                  sidmsg);
       } else {
-      //  dprintf0("Didn't find sid for pid: %d\n", dmxcmd->pid);
+        dprintf3("Didn't find sid for pid: %d\n", dmxcmd->pid);
       }
     } else {
-     //   dprintf0("Didn't find sid for pid: %d\n", dmxcmd->pid);
+        dprintf3("Didn't find sid for pid: %d\n", dmxcmd->pid);
     }
   }
 }
