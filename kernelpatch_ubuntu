@@ -108,26 +108,6 @@ Aborting...
     exit 1
   fi
 
-  if [ "$SECOND_DIGIT" -lt 13 ]; then
-    echo -en "
-\E[1;33;44m
-The kernel you are running is not supported in this branch.
-
-Minimum supported version is 3.13
-
-If you are running a 3.x kernel 3.12 or lower, do:
-
-make update
-
-git checkout oldstable
-
-and run ./configure again.
-
-Aborting...
-\E[0m
-"
-  fi
-
   if test "x$GCC" = "x"; then
     GCC=gcc
   fi
@@ -162,17 +142,45 @@ will be patched for use with ffdecsawrapper.
     cd linux*
     CWD=$(pwd)
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
-      patch -p0 < ../../linux-3.13-dvb-mutex.patch
-      if ! [ "$?" -eq 0 ]; then
-        fail
-      fi
-      CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
-      mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
-      /usr/bin/install $CWD/drivers/media/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-      if [ "$?" -eq 0 ]; then
-        success
+      if [ "$SECOND_DIGIT" -lt 7 ]; then
+        patch -p0 < ../../linux-3.0-dvb-mutex.patch
+        if ! [ "$?" -eq 0 ]; then
+          fail
+        fi
+        CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb/dvb-core modules
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $CWD/drivers/media/dvb/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
+      elif [ "$SECOND_DIGIT" -lt 13 ]; then
+        patch -p0 < ../../linux-3.7-dvb-mutex.patch
+        if ! [ "$?" -eq 0 ]; then
+          fail
+        fi
+        CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $CWD/drivers/media/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
       else
-        fail
+        patch -p0 < ../../linux-3.13-dvb-mutex.patch
+        if ! [ "$?" -eq 0 ]; then
+          fail
+        fi
+        CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $CWD/drivers/media/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
       fi
     fi
   else

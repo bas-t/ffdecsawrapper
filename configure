@@ -153,29 +153,6 @@ Aborting...
   exit 1
 fi
 
-if [ "$SECOND_DIGIT" -lt 13 ]; then
-  echo -en "
-\E[1;33;44m
-The kernel you are running is not supported in this branch.
-
-Minimum supported version is 3.13
-
-If you are running a 3.x kernel, version 3.12 or lower, do:
-
-make update
-
-git checkout oldstable
-
-git pull
-
-and run ./configure again.
-
-Aborting...
-\E[0m
-"
-exit 0
-fi
-
 # Check for use of v4l drivers
 
 if test "x$dvb_path" != "x"; then
@@ -393,7 +370,11 @@ Aborting...
     exit 0
   fi
 else
-  if [ "$SECOND_DIGIT" -lt 17 ]; then
+  if [ "$SECOND_DIGIT" -lt 7 ]; then
+    cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
+  elif [ "$SECOND_DIGIT" -lt 13 ]; then
+    cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
+  elif [ "$SECOND_DIGIT" -lt 17 ]; then
     cp -f dvbloopback/module/dvbdev.h-3.13 dvbloopback/module/dvbdev.h
   else
     cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
@@ -421,6 +402,17 @@ Aborting...
 else
   if test -f $dvb_path/../v4l/Module.symvers; then
     cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
+  else echo -en "
+\E[1;33;44m
+ERROR!!!
+
+could not locate $dvb_path/../v4l/Module.symvers
+
+Aborting...
+\E[0m
+"
+    make clean > /dev/null 2>&1
+    exit 0
   fi
 fi
 
