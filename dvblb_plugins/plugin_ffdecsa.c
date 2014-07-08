@@ -88,7 +88,7 @@ void update_keys(int adpt, unsigned char keytype, int index, unsigned char *key,
       dprintf0("Got command(%d): %c idx: %d pid: %d\n", adpt, keytype, index,
                pid);
     } else {
-      dprintf0("Got command(%d): %c idx: %d pid: %d key: "
+      dprintf1("Got command(%d): %c idx: %d pid: %d key: "
              "%02x%02x...%02x\n", adpt, keytype, index, pid,
              key[0], key[1], key[7]);
     }
