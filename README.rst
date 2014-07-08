@@ -11,7 +11,7 @@
 
 
 
-**The 'master' branch is based on a rev 620 checkout of the old vdr-sasc-ng plugin, the branches 'stable' and 'oldstable' are based on rev 570**
+**The 'master' branch is based on a rev 620 (latest) checkout of the old vdr-sasc-ng plugin, the 'stable' branch is based on rev 570**
 
 
  **Due to 'Hollywood' legislation, the use of this software is illegal in most countrys. (but not in my country, hehe)**
@@ -19,8 +19,6 @@
  **The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.**
 
  **You can use it with kernel version 3.x and up, including more recent kernels (latest ok test: 3.16-RC3)**
-
- **Support for kernelversions 3.12.x and lower moved to oldstable branch.**
 
  **If you have to compile and install newest dvb drivers from v4l (or TBS and other v4l-based out of kernel drivers), you should apply proper dvb-mutex patch to your sources prior to compiling. If you are not sure on how to do this:**
 
