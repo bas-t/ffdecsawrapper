@@ -106,26 +106,6 @@ Aborting...
     exit 1
   fi
 
-  if [ "$SECOND_DIGIT" -lt 13 ]; then
-    echo -en "
-\E[1;33;44m
-The kernel you are running is not supported in this branch.
-
-Minimum supported version is 3.13
-
-If you are running a 3.x kernel 3.12 or lower, do:
-
-make update
-
-git checkout oldstable
-
-and run ./configure again.
-
-Aborting...
-\E[0m
-"
-  fi
-
   if test "x$GCC" = "x"; then
     GCC=gcc
   fi
@@ -168,25 +148,69 @@ Preparing, this may take a while...
     rm -rf $TEMPDIR
     mkdir -p $TEMPDIR
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
-      if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-        tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-      elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-        tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-      fi
-      echo "
+      if [ "$SECOND_DIGIT" -lt 7 ]; then
+        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
+        fi
+        echo "
 Building and installing
 "
-      patch -p3 -d $TEMPDIR < linux-3.13-dvb-mutex.patch
-      if ! [ "$?" -eq 0 ]; then
-        fail
-      fi
-      CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
-      mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
-      /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-      if [ "$?" -eq 0 ]; then
-        success
+        patch -p4 -d $TEMPDIR < linux-3.0-dvb-mutex.patch
+        if ! [ "$?" -eq 0 ]; then
+          fail
+        fi
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
+      elif [ "$SECOND_DIGIT" -lt 13 ]; then
+        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        fi
+        echo "
+Building and installing
+"
+        patch -p3 -d $TEMPDIR < linux-3.7-dvb-mutex.patch
+        if ! [ "$?" -eq 0 ]; then
+          fail
+        fi
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
       else
-        fail
+        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+        fi
+        echo "
+Building and installing
+"
+        patch -p3 -d $TEMPDIR < linux-3.13-dvb-mutex.patch
+        if ! [ "$?" -eq 0 ]; then
+          fail
+        fi
+        CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+        /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        if [ "$?" -eq 0 ]; then
+          success
+        else
+          fail
+        fi
       fi
     fi
   else
