@@ -84,7 +84,6 @@ static int opt_maxfilters = 2;
 static int opt_max_fail = 20;
 static int opt_allpids = 0;
 static int opt_resetpidmap = 0;
-static int opt_experimental = 0;
 static int opt_orbit = 0;
 static char *opt_ignore = 0;
 static char *opt_unseen = 0;
@@ -94,7 +93,6 @@ static struct option Sid_Opts[] = {
   {"sid-allpid", 0, &sid_opt, 'p'},
   {"sid-nocache", 0, &sid_opt, 'c'},
   {"sid-orbit", 1, &sid_opt, 'o'},
-  {"sid-experimental", 0, &sid_opt, 'e'},
   {"sid-ignore", 1, &sid_opt, 'i'},
   {"sid-restart", 1, &sid_opt, 'r'},
   {"sid-unseen", 1, &sid_opt, 'u'},
@@ -830,7 +828,6 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
       pthread_mutex_unlock(&sid_data->mutex);
     } else {
       dprintf0("Skipping cache reset since tuning matches last tune\n");
-      if(opt_experimental)
         *result = CMD_SKIPCALL;
     }
   } else if (cmd == FE_SET_PROPERTY) {
@@ -997,11 +994,7 @@ static void connect_sid(struct parser_adpt *pc_all)
   pthread_cond_init(&sid_data->cond, NULL);
   INIT_LIST_HEAD(&sid_data->sidlist);
   INIT_LIST_HEAD(&sid_data->cmdqueue);
-  if(opt_experimental) {
-    ATTACH_CALLBACK(&pc_all->frontend->pre_ioctl,  fe_tune, -1);
-  } else {
-    ATTACH_CALLBACK(&pc_all->frontend->post_ioctl, fe_tune, -1);
-  }
+  ATTACH_CALLBACK(&pc_all->frontend->pre_ioctl,  fe_tune, -1);
   ATTACH_CALLBACK(&pc_all->frontend->post_close, fe_close,    -1);
   ATTACH_CALLBACK(&pc_all->demux->post_ioctl,    set_demux,   -1);
   ATTACH_CALLBACK(&pc_all->demux->post_close,    close_demux, -1);
@@ -1053,7 +1046,6 @@ static struct option *parseopt_sid(arg_enum_t cmd)
     printf("                     : When tuning, treat given SIDs as unseen allways\n");
     printf("   --sid-nocache     : Don't cache pid<->sid mapping\n");
     printf("   --sid-orbit <val> : Set the satellit orbit to 'val' and don't scan the NIT\n");
-    printf("   --sid-experimental: Enable experimental tuning code\n");
     printf("   --sid-restart <n> : Max number of PAT/NIT read restarts\n");
   }
   if(! sid_opt)
@@ -1075,9 +1067,6 @@ static struct option *parseopt_sid(arg_enum_t cmd)
       break;
     case 'c':
       opt_resetpidmap = 1;
-      break;
-    case 'e':
-      opt_experimental = 1;
       break;
     case 'i':
       opt_ignore = optarg;
