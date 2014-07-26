@@ -38,7 +38,6 @@
 }
 
 static int cam_opt = 0;
-static int opt_budget = 0;
 static int opt_fixcat = 1;
 static char opt_camdir[256] = {"./sc_files"};
 char * get_camdir() { return opt_camdir;}
@@ -533,23 +532,7 @@ void connect_cam(struct parser_adpt *pc_all)
   sc_data->virt = pc_all->frontend->common->virt_adapt;
   sc_data->real = cardnum;
   sc_data->cam = new sascCam(cardnum);
-
-  if (opt_budget) {
-    sc_data->cafd = -1;
-  } else {
-    asprintf(&cadev, "/dev/dvb/adapter%d/ca0", cardnum);
-    sc_data->cafd = open(cadev, O_RDWR|O_NONBLOCK);
-    if (sc_data->cafd >= 0) {
-      ca_caps_t ca_caps;
-      if (ioctl(sc_data->cafd, CA_GET_CAP, &ca_caps) == 0 &&
-          ca_caps.slot_num > 0 && (ca_caps.slot_type & CA_CI_LINK)) {
-        dprintf0("Found a FullFleged card\n");
-      } else {
-        sc_data->cafd = -1;
-      }
-    }
-    free(cadev);
-  }
+  sc_data->cafd = -1;
   list_add(&sc_data->list, &sclist);
   if(opt_fixcat) {
     ATTACH_CALLBACK(&pc_all->demux->pre_ioctl, dmxioctl_call, 0);
@@ -616,7 +599,6 @@ static struct option *parseopt_cam(arg_enum_t cmd)
     return Cam_Opts;
   }
   if(cmd == ARG_HELP) {
-    printf("   --cam-budget      : Force budget card mode\n");
     printf("   --cam-dir <dir>   : Set directory for sc files (default ./sc_files)\n");
     printf("   --cam-nofixcat    : Don't remove cat entries\n");
     printf("   --cam-extau <cmd> : Execute cmd to retrieve updated keys\n");
@@ -626,10 +608,6 @@ static struct option *parseopt_cam(arg_enum_t cmd)
   if(! cam_opt)
     return NULL;
 
-  switch(cam_opt) {
-    case 'b':
-      opt_budget = 1;
-      break;
     case 'd':
       strncpy(opt_camdir, optarg, sizeof(opt_camdir)-1);
       opt_camdir[sizeof(opt_camdir)-1]=0;
