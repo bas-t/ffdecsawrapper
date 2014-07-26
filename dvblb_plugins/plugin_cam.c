@@ -607,7 +607,7 @@ static struct option *parseopt_cam(arg_enum_t cmd)
   }
   if(! cam_opt)
     return NULL;
-
+    switch(cam_opt) {
     case 'd':
       strncpy(opt_camdir, optarg, sizeof(opt_camdir)-1);
       opt_camdir[sizeof(opt_camdir)-1]=0;
