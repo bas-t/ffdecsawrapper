@@ -18,6 +18,9 @@
 #include <sys/syscall.h>
 #include "include/ffdecsawrapper/tools.h"
 
+#define DBG_NAME "THREAD"
+#include "../dvbloopback/src/debug.h"
+
 static bool GetAbsTime(struct timespec *Abstime, int MillisecondsFromNow)
 {
   struct timeval now;
@@ -233,10 +236,10 @@ void cMutex::Unlock(void)
 	void *cThread::StartThread(cThread *Thread)
 	{
 	  if (Thread->description)
-	     dsyslog("%s thread started (pid=%d, tid=%ld)", Thread->description, getpid(), pthread_self());
+	     dprintf0("%s thread started (pid=%d, tid=%ld)", Thread->description, getpid());
 	  Thread->Action();
 	  if (Thread->description)
-	     dsyslog("%s thread ended (pid=%d, tid=%ld)", Thread->description, getpid(), pthread_self());
+	     dprintf0("%s thread ended (pid=%d, tid=%ld)", Thread->description, getpid());
 	  Thread->running = false;
 	  Thread->active = false;
 	  return NULL;
