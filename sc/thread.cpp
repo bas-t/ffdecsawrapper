@@ -236,10 +236,10 @@ void cMutex::Unlock(void)
 	void *cThread::StartThread(cThread *Thread)
 	{
 	  if (Thread->description)
-	     dprintf0("%s thread started (pid=%d, tid=%ld\n)", Thread->description, getpid());
+	     dprintf0("%s thread started (pid=%d, tid=%ld)\n", Thread->description, getpid());
 	  Thread->Action();
 	  if (Thread->description)
-	     dprintf0("%s thread ended (pid=%d, tid=%ld\n)", Thread->description, getpid());
+	     dprintf0("%s thread ended (pid=%d, tid=%ld)\n", Thread->description, getpid());
 	  Thread->running = false;
 	  Thread->active = false;
 	  return NULL;
