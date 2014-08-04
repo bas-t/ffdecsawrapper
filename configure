@@ -234,6 +234,8 @@ Aborting...
 # Check if FFdecsawrapper is running
 # If it is, offer to stop it
 
+  FFDECSAWRAPPER=0
+
   if ps -C ffdecsawrapper > /dev/null 2>&1; then
     echo "
 It seems that FFdecsawrapper is running.
@@ -243,6 +245,7 @@ It should be stopped before proceeding.
     confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
     if [ "$?" -eq 0 ]; then
       if test -e /etc/init.d/ffdecsawrapper; then
+        FFDECSAWRAPPER=1
         /etc/init.d/ffdecsawrapper stop
         sleep 3
         rmmod dvbloopback > /dev/null 2>&1
@@ -629,6 +632,15 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 \E[1;33;44mExisting kernel patch detected.\E[0m
 ###############################
 "
+        fi
+        if [ "$FFDECSAWRAPPER" = 1] ; then
+          echo "Do you want to start FFdecsawrapper now?"
+          confirmyes "Yes, start it now![Y/n]"
+          if ! [ "$?" -eq 0 ]; then
+            echo "Not starting FFdecsawrapper"
+          else
+            /etc/init.d/ffdecsawrapper start
+          fi
         fi
       fi
     fi
