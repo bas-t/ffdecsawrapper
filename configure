@@ -633,7 +633,7 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 ###############################
 "
         fi
-        if [ "$FFDECSAWRAPPER" = 1 ] ; then
+        if [ "$FFDECSAWRAPPER" = 1] ; then
           echo "Do you want to start FFdecsawrapper now?"
           confirmyes "Yes, start it now![Y/n]"
           if ! [ "$?" -eq 0 ]; then
