@@ -351,12 +351,12 @@ int cNetSocket::Select(bool forRead, int timeout)
 	    r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
 	
 	    if (( r>=0) || (errno !=EINTR)) {
-		    break;
+	    	break;
 	    }
     }
 
     if(r>0) 
-	    return 1;
+    	return 1;
     else if(r<0) {
       PRINTF(L_GEN_ERROR,"socket: select failed: %s",*StrError(errno));
       return -1;
