@@ -343,16 +343,15 @@ int cNetSocket::Select(bool forRead, int timeout)
     int r;
 
     while(true) {
-	    FD_ZERO(&fds); 
-	    FD_SET(sd,&fds);
-	    tv.tv_sec=timeout/1000; 
-	    tv.tv_usec=0;
+	FD_ZERO(&fds); 
+	FD_SET(sd,&fds);
+	tv.tv_sec=timeout/1000; 
+	tv.tv_usec=0;
 
-	    r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
+	r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
 	
-	    if (( r>=0) || (errno !=EINTR)) {
-	    	break;
-	    }
+	if (( r>=0) || (errno !=EINTR))
+		break;
     }
 
     if(r>0) 
