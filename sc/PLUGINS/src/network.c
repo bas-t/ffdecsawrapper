@@ -335,25 +335,37 @@ int cNetSocket::Select(bool forRead, int timeout)
 {
   if(sd>=0) {
     fd_set fds;
-    FD_ZERO(&fds); FD_SET(sd,&fds);
     struct timeval tv;
 
     if(timeout>0 && timeout<60)
       PRINTF(L_GEN_DEBUG,"socket: internal: small timeout value %d",timeout);
 
-    tv.tv_sec=timeout/1000; tv.tv_usec=(timeout%1000)*1000;
     int r;
-    do { r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv); } while(r<0 && errno==EINTR);
-    if(r>0) return 1;
+
+    while(true) {
+	FD_ZERO(&fds); 
+	FD_SET(sd,&fds);
+	tv.tv_sec=timeout/1000; 
+	tv.tv_usec=0;
+
+	r=select(sd+1,forRead ? &fds:0,forRead ? 0:&fds,0,&tv);
+	
+	if (( r>=0) || (errno !=EINTR))
+		break;
+    }
+
+    if(r>0) 
+    	return 1;
     else if(r<0) {
       PRINTF(L_GEN_ERROR,"socket: select failed: %s",*StrError(errno));
       return -1;
-      }
+    }
     else {
       if(timeout>0 && !quietlog) PRINTF(L_CORE_NET,"socket: select timed out (%d ms)",timeout);
       errno=ETIMEDOUT;
       return 0;
-      }
     }
+  }
   return -1;
 }
+
