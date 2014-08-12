@@ -24,9 +24,6 @@
 #include <ffdecsawrapper/device.h>
 #include <ffdecsawrapper/channels.h>
 #include <ffdecsawrapper/thread.h>
-#ifndef FFDECSAWRAPPER
-#include <vdr/ringbuffer.h>
-#endif
 
 #include "cam.h"
 #include "global.h"
