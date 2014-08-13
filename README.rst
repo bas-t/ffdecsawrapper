@@ -18,7 +18,7 @@
 
  **The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.**
 
- **You can use it with kernel version 3.x and up, including more recent kernels (latest ok test: 3.16-RC3)**
+ **You can use it with kernel version 3.x and up, including more recent kernels (latest ok test: linux-next-20140813)**
 
  **If you have to compile and install newest dvb drivers from v4l (or TBS and other v4l-based out of kernel drivers), you should apply proper dvb-mutex patch to your sources prior to compiling. If you are not sure on how to do this:**
 
