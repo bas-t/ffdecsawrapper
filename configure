@@ -94,12 +94,16 @@ show_help(){
   echo " --cxx=<opt>            [g++] Define C++ and CC version to use"
   echo "                        Use like --cxx=4.7"
   echo "                        "
+  echo " --linux_next=<opt>     [no] yes: configure FFdecsawrapper for a kernel"
+  echo "                        built from linux-next git repo."
+  echo "                        "
   exit 0
 }
 
 ffdecsa_opt="yes"
 compiletype_opt="release"
 v4l_opt="no"
+linuxnext_opt="no"
 
 for opt do
   optval="${opt#*=}"
@@ -119,6 +123,8 @@ for opt do
   --compiletype=*) compiletype_opt="$optval"
   ;;
   --v4l=*) v4l_opt="$optval"
+  ;;
+  --linux_next=*) linuxnext_opt="$optval"
   ;;
   --help) show_help
   ;;
@@ -370,7 +376,9 @@ Aborting...
     exit 0
   fi
 else
-  if [ "$SECOND_DIGIT" -lt 7 ]; then
+  if [ "x$linuxnext_opt" = "xyes" ]; then
+    cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+  elif [ "$SECOND_DIGIT" -lt 7 ]; then
     cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
   elif [ "$SECOND_DIGIT" -lt 13 ]; then
     cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
