@@ -362,7 +362,7 @@ bool cCardClientNewCamd::Init(const char *config)
      || sscanf(&config[num],":%31[^:]:%31[^:]:%28[^:]",username,password,key)!=3
      || GetHex(tmp,configKey,sizeof(configKey),false)!=14) return false;
   char str[32];
-  PRINTF(L_CC_CORE,"%s: username=%s password=%s key=%s",name,username,password,HexStr(str,configKey,14));
+  //PRINTF(L_CC_CORE,"%s: username=%s password=%s key=%s",name,username,password,HexStr(str,configKey,14));
   return true;
 }
 
