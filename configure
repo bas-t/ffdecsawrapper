@@ -161,8 +161,8 @@ fi
 
 # Check for use of v4l drivers
 
-if test "x$dvb_path" != "x"; then
-  if test "x$v4l_opt" = "xno"; then
+if [ "x$dvb_path" != "x" ]; then
+  if [ "x$v4l_opt" = "xno" ]; then
     if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
       echo -en "
 \E[1;33;44m
@@ -248,7 +248,7 @@ It should be stopped before proceeding.
 "
     confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
     if [ "$?" -eq 0 ]; then
-      if test -e /etc/init.d/ffdecsawrapper; then
+      if [ -e /etc/init.d/ffdecsawrapper ]; then
         /etc/init.d/ffdecsawrapper stop
         sleep 3
         rmmod dvbloopback > /dev/null 2>&1
@@ -319,7 +319,7 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 # and install any missing packages, unless we defined
 # a specific version using --cxx= option on command line
 
-  if test "x$CXX" != "x"; then
+  if [ "x$CXX" != "x" ]; then
     if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency $CXX, marking for installation.
@@ -332,7 +332,7 @@ Missing dependency $CXX, marking for installation.
   CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
 
   if ! [ "$CCSYSTEM" = "$CCKERNEL" ] ; then
-    if test "x$CXX" = "x"; then
+    if [ "x$CXX" = "x" ]; then
       CXX=g++-$CCKERNEL
       CC=gcc-$CCKERNEL
     fi
@@ -354,10 +354,10 @@ fi
 # Get the right dvbdev.h in place
 # If --dvb_dir= is set, use supplied header
 
-if test "x$dvb_path" != "x"; then
-  if test -f $dvb_path/drivers/media/dvb-core/dvbdev.h; then
+if [ "x$dvb_path" != "x" ]; then
+  if [ -f $dvb_path/drivers/media/dvb-core/dvbdev.h ]; then
     cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
-  elif test -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h; then
+  elif [ -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h ]; then
     cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
   else echo -en "
 \E[1;33;44m
@@ -392,8 +392,8 @@ fi
 # Get the right Module.symvers in place
 # Abort when it is not found
 
-if test "x$dvb_path" = "x"; then
-  if test -f /lib/modules/`uname -r`/build/Module.symvers; then
+if [ "x$dvb_path" = "x" ]; then
+  if [ -f /lib/modules/`uname -r`/build/Module.symvers ]; then
     cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
   else echo -en "
 \E[1;33;44m
@@ -408,7 +408,7 @@ Aborting...
     exit 0
   fi
 else
-  if test -f $dvb_path/../v4l/Module.symvers; then
+  if [ -f $dvb_path/../v4l/Module.symvers ]; then
     cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
   else echo -en "
 \E[1;33;44m
@@ -427,32 +427,32 @@ fi
 # Set compiler version,
 # if not done allready
 
-if test "x$CXX" = "x"; then
+if [ "x$CXX" = "x" ]; then
   CXX=g++
   CC=gcc
 fi
 
 # Define what optimization tests we want
 
-if test "x$ffdecsa_flags" = "x"; then
+if [ "x$ffdecsa_flags" = "x" ]; then
     CCC=$CXX
     export CCC
-  if test "x$ffdecsa_opt" = "xyes"; then
+  if [ "x$ffdecsa_opt" = "xyes" ]; then
    ./FFdecsa_optimizer
     if ! [ "$?" -eq 0 ]; then
       optimizer
     fi
-  elif test "x$ffdecsa_opt" = "xlong"; then
+  elif [ "x$ffdecsa_opt" = "xlong" ]; then
    ./FFdecsa_optimizer -e
     if ! [ "$?" -eq 0 ]; then
       optimizer
     fi
-  elif test "x$ffdecsa_opt" = "xdefined"; then
+  elif [ "x$ffdecsa_opt" = "xdefined" ]; then
    ./FFdecsa_optimizer -P $MAX_MODE
     if ! [ "$?" -eq 0 ]; then
       optimizer
     fi
-  elif test "x$ffdecsa_opt" != "xno"; then
+  elif [ "x$ffdecsa_opt" != "xno" ]; then
     echo "
 Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'"
     exit 1
@@ -461,21 +461,21 @@ fi
 
 # Set TsBufferSize
 
-if test "x$tsbuffer" != "x"; then
+if [ "x$tsbuffer" != "x" ]; then
   sed -i "s/DeCsaTsBuffSize=4/DeCsaTsBuffSize=$tsbuffer/" sc/PLUGINS/src/sc.c
 fi
 
 # If set, use user defined FFdecsa flags
 
-if test "x$ffdecsa_flags" != "x"; then
+if [ "x$ffdecsa_flags" != "x" ]; then
   echo $ffdecsa_flags >> config.mak
 fi
 
 # Set compiletype
 
-if test "x$compiletype_opt" = "xrelease"; then
+if [ "x$compiletype_opt" = "xrelease" ]; then
   echo "RELEASE=1" >> config.mak
-elif test "x$compiletype_opt" = "xdebug"; then
+elif [ "x$compiletype_opt" = "xdebug" ]; then
   echo "RELEASE=0" >> config.mak
 else
   echo "
@@ -487,19 +487,19 @@ echo "
 `uname -r` kernel detected.
 Using C++ compiler: $CXX"
 
-if test "x$compiletype_opt" = "xrelease"; then
+if [ "x$compiletype_opt" = "xrelease" ]; then
   echo "Using compile type: release
 "
-elif test "x$compiletype_opt" = "xdebug"; then
+elif [ "x$compiletype_opt" = "xdebug" ]; then
   echo "
 Using compile type: debug
 "
 fi
 
 # Set wrapper compiler options
-if test "x$compiletype_opt" = "xrelease"; then
+if [ "x$compiletype_opt" = "xrelease" ]; then
   echo "SC_FLAGS = \"-O2 -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing\"" >> config.mak
-elif test "x$compiletype_opt" = "xdebug"; then
+elif [ "x$compiletype_opt" = "xdebug" ]; then
   echo "SC_FLAGS = \"-O2 -g -fPIC -Wall -Woverloaded-virtual -fno-strict-aliasing\"" >> config.mak
 fi
 
@@ -575,26 +575,35 @@ If you hit Y and your kernel needs to be patched, that will be done too.
       if ! [ "$?" -eq 0 ]; then
         exit 0
       else
-        rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
-        rm -f /usr/bin/ffdecsawrapper
-        cp -f ffdecsawrapper /usr/bin
-        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
-        /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-
-        if ! [ "$?" -eq 0 ]; then
-          echo -en "
-#######################################################
-\E[1;33;44mError(s) encountered. Could not install ffdecsawrapper.\E[0m
-#######################################################
+        if [ -e /usr/bin/ffdecsawrapper ]; then
+          echo "
+Existing FFdecsawrapper binary detected,
+do you want to replace it with the newly compiled version?
 "
-          exit 1
+          confirmyes "Yes, please do![Y/n]"
+          if [ "$?" -eq 0 ]; then
+            rm -f /usr/bin/ffdecsawrapper
+            cp -f ffdecsawrapper /usr/bin
+          fi
         else
-          depmod -a
-            echo -en "
-#########################
-\E[1;33;44mInstalled without errors!\E[0m
-#########################
+          cp -f ffdecsawrapper /usr/bin
+        fi
+        if [ -e /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
+          echo "
+Existing dvbloopback kernel module detected,
+do you want to replace it with the newly compiled version?
 "
+          confirmyes "Yes, please do![Y/n]"
+          if [ "$?" -eq 0 ]; then
+            rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+            depmod -a
+            /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+            depmod -a
+          fi
+        else
+          mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
+          /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+          depmod -a
         fi
       fi
 
@@ -602,7 +611,7 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 # use newest v4l drivers, but don't offer
 # to do so if it allready has been done.
 
-      if test "x$dvb_path" = "x"; then
+      if [ "x$dvb_path" = "x" ]; then
         if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
           if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
             if [ "$OS" = Debian ]; then
