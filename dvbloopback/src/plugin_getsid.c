@@ -84,6 +84,7 @@ static int opt_maxfilters = 8;
 static int opt_max_fail = 20;
 static int opt_allpids = 0;
 static int opt_resetpidmap = 0;
+static int opt_experimental = 0;
 static int opt_orbit = 0;
 static char *opt_ignore = 0;
 static char *opt_unseen = 0;
@@ -93,6 +94,7 @@ static struct option Sid_Opts[] = {
   {"sid-allpid", 0, &sid_opt, 'p'},
   {"sid-nocache", 0, &sid_opt, 'c'},
   {"sid-orbit", 1, &sid_opt, 'o'},
+  {"sid-experimental", 0, &sid_opt, 'e'},
   {"sid-ignore", 1, &sid_opt, 'i'},
   {"sid-restart", 1, &sid_opt, 'r'},
   {"sid-unseen", 1, &sid_opt, 'u'},
@@ -811,6 +813,7 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
     return;
 
   if(cmd == FE_SET_FRONTEND || cmd == FE_SET_FRONTEND2) {
+    if(opt_experimental) {
     dprintf0("Tuning frontend\n");
       pthread_mutex_lock(&sid_data->mutex);
       memcpy(&sid_data->tunecache, data, sizeof(struct dvb_frontend_parameters));
@@ -823,6 +826,27 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
       msg_send(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
       clear_sid_data(sid_data);
       pthread_mutex_unlock(&sid_data->mutex);
+    } else {
+    dprintf0("Tuning frontend\n");
+    if(memcmp(&sid_data->tunecache, data, sizeof(struct dvb_frontend_parameters))) {
+      pthread_mutex_lock(&sid_data->mutex);
+      memcpy(&sid_data->tunecache, data, sizeof(struct dvb_frontend_parameters));
+      if(sid_data->sendmsg) {
+        msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_ADDSID, adapt,
+                                  free_addsid_msg);
+        msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_REMOVESID, adapt, NULL);
+       msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
+      } 
+      msg_send(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
+
+      clear_sid_data(sid_data);
+
+      pthread_mutex_unlock(&sid_data->mutex);
+      } else {
+        dprintf0("Skipping cache reset since tuning matches last tune\n");
+          *result = CMD_SKIPCALL;
+      }
+     }
     }
     else if (cmd == FE_SET_PROPERTY) {
     dprintf0("Tuning frontend (new)\n");
@@ -1041,6 +1065,7 @@ static struct option *parseopt_sid(arg_enum_t cmd)
     printf("   --sid-nocache     : Don't cache pid<->sid mapping\n");
     printf("   --sid-orbit <val> : Set the satellit orbit to 'val' and don't scan the NIT\n");
     printf("   --sid-restart <n> : Max number of PAT/NIT read restarts\n");
+    printf("   --sid-experimental: Enable experimental tuning code\n");
   }
   if(! sid_opt)
     return NULL;
@@ -1061,6 +1086,9 @@ static struct option *parseopt_sid(arg_enum_t cmd)
       break;
     case 'c':
       opt_resetpidmap = 1;
+      break;
+    case 'e':
+      opt_experimental = 1;
       break;
     case 'i':
       opt_ignore = optarg;
