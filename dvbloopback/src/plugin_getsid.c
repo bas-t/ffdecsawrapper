@@ -816,7 +816,7 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
     if(opt_experimental) {
     dprintf0("Tuning frontend\n");
       pthread_mutex_lock(&sid_data->mutex);
-      memcpy(&sid_data->tunecache, data, sizeof(struct dvb_frontend_parameters));
+      memset(&sid_data->tunecache, 0, sizeof(struct dvb_frontend_parameters));
       if(sid_data->sendmsg) {
         msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_ADDSID, adapt,
                                   free_addsid_msg);
@@ -835,7 +835,7 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
         msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_ADDSID, adapt,
                                   free_addsid_msg);
         msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_REMOVESID, adapt, NULL);
-       msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
+        msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
       } 
       msg_send(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
 
