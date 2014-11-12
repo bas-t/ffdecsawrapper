@@ -813,6 +813,11 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
     return;
 
   if(cmd == FE_SET_FRONTEND || cmd == FE_SET_FRONTEND2) {
+    // The experimental part of this code is tested with 3.18-rc kernels, using a couple of TBS6285 quad DVB-T/T2/C adapters in DVB-C mode,
+    // TBS drivers compiled as per https://github.com/bas-t/tbs6281-5-intree/blob/master/README.txt,
+    // having Ziggo Netherlands as DVB-C provider.
+    // This seems to fix all multirec problems I've been suffering from.
+    // To activate, use '--sid-experimental'
     if(opt_experimental) {
     dprintf0("Tuning frontend\n");
       pthread_mutex_lock(&sid_data->mutex);
@@ -826,7 +831,9 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
       msg_send(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
       clear_sid_data(sid_data);
       pthread_mutex_unlock(&sid_data->mutex);
-    } else {
+    }
+    // End of experimental code.
+    else {
     dprintf0("Tuning frontend\n");
     if(memcmp(&sid_data->tunecache, data, sizeof(struct dvb_frontend_parameters))) {
       pthread_mutex_lock(&sid_data->mutex);
