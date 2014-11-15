@@ -80,7 +80,7 @@ static const char *typeNames[] = { "typ0","typ1","VIDEO","typ3","AUDIO","typ5","
 #define AVR1   (60*1000)
 #define AVR2   (4*60*1000)
 #define AVR3   (10*60*1000)
-#define REPORT (60*1000)
+#define REPORT (300*1000)
 
 class cLogStats : public cThread {
 private:
