@@ -227,6 +227,7 @@ Aborting...
     else
       echo -en "
 \E[1;33;44m
+
 ######################################################
 
 Synced with remote repo successfully! Please rerun
