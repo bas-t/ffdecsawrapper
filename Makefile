@@ -53,11 +53,6 @@ distclean:
 	@git clean -xfd
 	@git reset --hard HEAD
 
-update:
-	@git clean -xfd
-	@git reset --hard HEAD
-	@git pull
-
 sc-plugin:
 	$(MAKE) -C $(SCDIR) CXX=$(CXX) CXXFLAGS=$(SC_FLAGS) STATIC=1 all
 

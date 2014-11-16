@@ -97,6 +97,8 @@ show_help(){
   echo " --linux_next=<opt>     [no] yes: configure FFdecsawrapper for a kernel"
   echo "                        built from linux-next git repo."
   echo "                        "
+  echo " --update=<opt>         [yes] no: don't clean local clone and"
+  echo "                        don't pull in any updates."
   exit 0
 }
 
@@ -104,6 +106,7 @@ ffdecsa_opt="yes"
 compiletype_opt="release"
 v4l_opt="no"
 linuxnext_opt="no"
+update_opt="yes"
 
 for opt do
   optval="${opt#*=}"
@@ -125,6 +128,8 @@ for opt do
   --v4l=*) v4l_opt="$optval"
   ;;
   --linux_next=*) linuxnext_opt="$optval"
+  ;;
+  --update=*) update_opt="$optval"
   ;;
   --help) show_help
   ;;
@@ -157,6 +162,100 @@ Aborting...
 
 "
   exit 1
+fi
+
+# Check git status
+if [ "x$update_opt" = "xyes" ]; then
+  git clean -xfd > /dev/null
+  git reset --hard HEAD > /dev/null
+  git remote update > /dev/null 2>&1
+  if ! [ "$?" -eq 0 ]; then
+    echo -en "
+\E[1;33;44m
+###################################
+
+Error(s) encountered while updating
+
+the status from remote git repo.
+
+Aborting...
+
+####################################
+\E[0m
+"
+    exit 1
+  fi
+  LOCAL=$(git rev-parse @{0})
+  REMOTE=$(git rev-parse @{u})
+  BASE=$(git merge-base @{0} @{u})
+
+  if [ $LOCAL = $REMOTE ]; then
+    GITSTATUS="0"    # "Up-to-date"
+  elif [ $LOCAL = $BASE ]; then
+    GITSTATUS="1"    # "Need to pull"
+  elif [ $REMOTE = $BASE ]; then
+    GITSTATUS="2"    # "Need to push"
+  else
+    GITSTATUS="3"    # "Diverged"
+  fi
+  if [ "$GITSTATUS" -eq "0" ]; then
+    echo "
+Your local clone is clean and up-to-date
+"
+    sleep 3
+  elif [ "$GITSTATUS" -eq "1" ]; then
+    echo "
+Going to sync your local clone with updated remote repo.
+"
+    sleep 3
+    git pull > /dev/null
+    if ! [ "$?" -eq 0 ]; then
+      echo -en "
+\E[1;33;44m
+###################################
+
+Error(s) encountered while syncing
+
+local with remote repo
+
+Aborting...
+
+####################################
+\E[0m
+"
+      exit 1
+    else
+      echo -en "
+\E[1;33;44m
+###################################################
+
+Synced with remote repo successfully! Please rerun
+
+./configure to complete installation of drivers.
+
+Arrow up and enter will get you there.
+
+####################################################
+\E[0m
+"
+      exit 0
+    fi
+  elif [ "$GITSTATUS" -eq "2" -o "$GITSTATUS" -eq "3" ]; then
+    echo -en "
+\E[1;33;44m
+#####################################
+
+Your local clone cannot be synced
+
+with remote repo due to local changes
+
+Aborting...
+
+######################################
+\E[0m
+"
+    exit 1
+  fi    
 fi
 
 # Check for use of v4l drivers
