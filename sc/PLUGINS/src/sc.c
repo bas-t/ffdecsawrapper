@@ -989,7 +989,6 @@ void cScSetup::Check(void)
       break;
       }
 
-  PRINTF(L_CORE_LOAD,"** Plugin config:");
   PRINTF(L_CORE_LOAD,"** Key updates (AU) are %s (%sprestart)",AutoUpdate?(AutoUpdate==1?"enabled (active CAIDs)":"enabled (all CAIDs)"):"DISABLED",PrestartAU?"":"no ");
   PRINTF(L_CORE_LOAD,"** Local systems %stake priority over cached remote",LocalPriority?"":"DON'T ");
   PRINTF(L_CORE_LOAD,"** %sorce transfermode with digital audio",ForceTransfer?"F":"DON'T f");
