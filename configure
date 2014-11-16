@@ -216,7 +216,7 @@ Going to sync your local clone with updated remote repo.
 
 Error(s) encountered while syncing
 
-local with remote repo
+local with remote git repo
 
 Aborting...
 
@@ -227,15 +227,17 @@ Aborting...
     else
       echo -en "
 \E[1;33;44m
-###################################################
+######################################################
 
 Synced with remote repo successfully! Please rerun
 
-./configure to complete installation of drivers.
+./configure to complete installation of FFdecsawrapper
+
+and dvbloopback drivers.
 
 Arrow up and enter will get you there.
 
-####################################################
+######################################################
 \E[0m
 "
       exit 0
