@@ -810,10 +810,9 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
   if(sid_data == NULL)
     return;
 
-  if(cmd == FE_SET_FRONTEND || cmd == FE_SET_FRONTEND2) {
+  if(cmd == FE_SET_FRONTEND || cmd == FE_SET_FRONTEND2 || cmd == FE_SET_PROPERTY) {
     dprintf0("Tuning frontend\n");
       pthread_mutex_lock(&sid_data->mutex);
-      memset(&sid_data->tunecache, 0, sizeof(struct dvb_frontend_parameters));
       if(sid_data->sendmsg) {
         msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_ADDSID, adapt,
                                   free_addsid_msg);
@@ -823,20 +822,7 @@ static void fe_tune(struct parser_cmds *pc, struct poll_ll *fdptr,
       msg_send(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
       clear_sid_data(sid_data);
       pthread_mutex_unlock(&sid_data->mutex);
-    }
-    else if (cmd == FE_SET_PROPERTY) {
-    dprintf0("Tuning frontend (new)\n");
-    pthread_mutex_lock(&sid_data->mutex);
-    if(sid_data->sendmsg) {
-      msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_ADDSID, adapt,
-                                  free_addsid_msg);
-      msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_REMOVESID, adapt, NULL);
-      msg_remove_type_from_list(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
-    } 
-    msg_send(MSG_LOW_PRIORITY, MSG_RESETSID, adapt, NULL);
-    clear_sid_data(sid_data);
-    pthread_mutex_unlock(&sid_data->mutex);
-    memset(&sid_data->tunecache, 0, sizeof(struct dvb_frontend_parameters));
+      memset(&sid_data->tunecache, 0, sizeof(struct dvb_frontend_parameters));
   } else if(cmd == FE_DISEQC_SEND_MASTER_CMD
             || cmd == FE_DISEQC_SEND_BURST
             || cmd == FE_SET_TONE
