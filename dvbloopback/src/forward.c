@@ -46,6 +46,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#define PLUGIN_ID PLUGIN_INIT
+#define DBG_NAME "INIT"
+
 #include "process_req.h"
 #include "plugin_getsid.h"
 #include "plugin_ringbuf.h"
@@ -487,7 +490,7 @@ int main(int argc, char *argv[])
       signal(SIGHUP, &log_rotate_handler);
   }
 
-  dprintf("Version: %s-%s\n", RELEASE_VERSION, source_version);
+  dprintf0("%s-%s\n", RELEASE_VERSION, source_version);
 
   //Need to init msg_loop early in case some plugins setup messages during init
   msg_loop_init();
