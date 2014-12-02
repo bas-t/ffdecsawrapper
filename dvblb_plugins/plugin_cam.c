@@ -15,16 +15,14 @@
 #include "../sc/include/ffdecsawrapper/channels.h"
 #include "../sc/include/ffdecsawrapper/tools.h"
 #include "../sc/sasccam.h"
-// Hack to disable debug print control from sc
+
+#define PLUGIN_ID 28
+#define DBG_NAME "CAM"
 
 #include "process_req.h"
 #include "plugin_getsid.h"
 #include "plugin_cam.h"
 #include "plugin_msg.h"
-
-#define PLUGIN_ID 28
-#define DBG_NAME "CAM"
-#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
 
 #define ll_find_elem(elem, lhead, item, value, type) {  \
   struct list_head *lptr;                               \

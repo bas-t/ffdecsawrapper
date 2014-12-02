@@ -32,13 +32,13 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
-#include "process_req.h"
-#include "plugin_ringbuf.h"
-#include "msg_passing.h"
 
 #define PLUGIN_ID PLUGIN_RINGBUF
 #define DBG_NAME "RINGBUF"
-#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
+
+#include "process_req.h"
+#include "plugin_ringbuf.h"
+#include "msg_passing.h"
 
 //#define CHECK_READ_OK
 //#define POLL_WORKS

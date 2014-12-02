@@ -38,6 +38,12 @@
 // Header Needed for Frontend
 #include <linux/dvb/frontend.h>
 
+// Define your plugin load order here
+//
+// Must be even, < 32, >= 8, and unique (total of 12 plugins allowed currently)
+#define PLUGIN_ID 16
+#include "debug.h"
+
 // YOU MUST INCLUDE THIS
 //
 // Provides Structs for parser commands
@@ -48,11 +54,6 @@
 // Provides Structs for message passing
 #include "msg_passing.h"
 
-// Define your plugin load order here
-//
-// Must be even, < 32, >= 8, and unique (total of 12 plugins allowed currently)
-#define PLUGIN_ID 16
-#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
 
 /* LongOpt Array 
  *

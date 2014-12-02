@@ -32,18 +32,16 @@
 #include <errno.h>
 #include <assert.h>
 #include <pthread.h>
-
 #include <netinet/in.h>
+
+#define PLUGIN_ID 14
+#define DBG_NAME "DSS"
 
 #include "list.h"
 #include <linux/dvb/dmx.h>
 #include <linux/dvb/frontend.h>
 #include "msg_passing.h"
 #include "process_req.h"
-
-#define PLUGIN_ID 14
-#define DBG_NAME "DSS"
-#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
 
 #define DSS_SYMBOLRATE 22211000
 #define DSS_PMTPID 0x20

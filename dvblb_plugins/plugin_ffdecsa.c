@@ -13,7 +13,8 @@
 
 #define PLUGIN_ID 30
 #define DBG_NAME "CSA"
-#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
+
+#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined, unless process_req.h is included
 
 #define FF_MAX_IDX 16
 #define FF_MAX_PID 8

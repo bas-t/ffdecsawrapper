@@ -34,12 +34,11 @@
 #include <linux/dvb/dmx.h>
 #include <linux/dvb/frontend.h>
 
-#include "process_req.h"
-#include "msg_passing.h"
-
 #define PLUGIN_ID 9
 #define DBG_NAME "LEGACYSW"
-#include "debug.h" //This is required to happen AFTER PLUGIN_ID is defined
+
+#include "process_req.h"
+#include "msg_passing.h"
 
 #ifdef FE_DISHNETWORK_SEND_LEGACY_CMD
 enum {
