@@ -510,7 +510,7 @@ void connect_cam(struct parser_adpt *pc_all)
 {
   int cardnum = pc_all->frontend->common->real_adapt;
   struct list_head *ptr;
-  char *cadev;
+  char *cadev __attribute__((unused));
   char tmpstr[5];
   struct sc_data *sc_data;
 

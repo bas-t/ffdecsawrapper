@@ -140,9 +140,9 @@ static cmdret_t do_cmd(struct list_head *list, struct parser_cmds *pc,
 void get_thread_priority(char *str)
 {
   struct sched_param param;
-  int priority;
+  int priority __attribute__((unused));
   int policy;
-  int ret;
+  int ret __attribute__((unused));
   sleep(1);
   /* scheduling parameters of target thread */
   ret = pthread_getschedparam (pthread_self(), &policy, &param);

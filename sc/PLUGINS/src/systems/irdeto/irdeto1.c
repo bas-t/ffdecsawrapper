@@ -280,7 +280,7 @@ bool cSystemIrd::ProcessECM(const cEcmInfo *ecm, unsigned char *source)
 void cSystemIrd::ProcessEMM(int pid, int caid, const unsigned char *data)
 {
   int i, numKeys=0, date=0;
-  unsigned char adr[10], id[4], *pk[4], prov, *mk=0, prvId[3]={0,0,0};
+  unsigned char adr[10], id[4], *pk[4], prov __attribute__((unused)), *mk=0, prvId[3]={0,0,0};
 
   int n=SCT_LEN(data);
   unsigned char *buffer=AUTOMEM(n);

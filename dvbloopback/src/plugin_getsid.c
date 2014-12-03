@@ -268,7 +268,7 @@ unsigned char *parse_ca(unsigned char *buf, unsigned char *ca, int len)
 
 static int read_nit(unsigned char *buf, struct nit_data *nit, unsigned int size) {
   int len, tsl_len, td_len, tag_len, network_desc_len;
-  int network_id, pos, tag;
+  int network_id __attribute__((unused)), pos, tag;
   if (buf[0] != 0x40 && buf[0] != 0x41 && buf[0] != 0x72) {
     dprintf0(
              "read_nit expected table 0x40  or 0x41 but got 0x%02x\n", buf[0]);
@@ -356,7 +356,7 @@ static int read_pmt(unsigned char *buf, struct filter *filt,
 
   unsigned char *captr;
   unsigned int count, skip, pos;
-  int sid, sec, last_sec, pcrpid, epid, type;
+  int sid, sec __attribute__((unused)), last_sec __attribute__((unused)), pcrpid, epid, type;
   if (buf[0] != 0x02) {
     dprintf0(
              "read_pmt expected table 0x02 but got 0x%02x\n", buf[0]);
@@ -771,7 +771,7 @@ static struct sid_data *find_siddata_from_pc(struct parser_cmds *pc)
 
 static void clear_sid_data(struct sid_data *sid_data)
 {
-    int adapt;
+    int adapt __attribute__((unused));
     struct sid *sid_ll;
     struct dmxcmd *dmxcmd;
 
