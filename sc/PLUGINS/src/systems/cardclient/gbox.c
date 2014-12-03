@@ -102,7 +102,7 @@ bool cCardClientGbox::ProcessECM(const cEcmInfo *ecm, const unsigned char *data,
     };
   unsigned char buff[512];
   if(sizeof(pmt)+n+8>sizeof(buff)) {
-    PRINTF(L_CC_GBOX,"CA descriptor buffer overflow %d",sizeof(pmt)+n+8);
+    PRINTF(L_CC_GBOX,"CA descriptor buffer overflow %zd",sizeof(pmt)+n+8);
     return false;
     }
   memcpy(buff,pmt,sizeof(pmt));

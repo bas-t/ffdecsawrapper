@@ -903,14 +903,14 @@ void cCardClientCCcam2::PacketAnalyzer(const struct CmdHeader *hdr, int length)
         else if(plen==0x2c) {
           memcpy(cmd05aes,((struct GenericCmd *)hdr)->payload+strlen(password),sizeof(cmd05aes));
           cmd05mode=CMD05_MODE_AES;
-          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=password=%d)",strlen(password));
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=password=%zd)",strlen(password));
           LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,plen,"cmd 05 key payload");
           LDUMP(L_CC_CCCAM2EX,cmd05aes,sizeof(cmd05aes),"cmd 05 aes key");
           }
         else if(plen==0x2d) {
           memcpy(cmd05aes,((struct GenericCmd *)hdr)->payload+strlen(username),sizeof(cmd05aes));
           cmd05mode=CMD05_MODE_AES;
-          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=username=%d)",strlen(username));
+          PRINTF(L_CC_CCCAM2EX,"cmd 05 mode now AES (offset=username=%zd)",strlen(username));
           LDUMP(L_CC_CCCAM2EX,((struct GenericCmd *)hdr)->payload,plen,"cmd 05 key payload");
           LDUMP(L_CC_CCCAM2EX,cmd05aes,sizeof(cmd05aes),"cmd 05 aes key");
           }
@@ -1197,7 +1197,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     if(cwwait.TimedWait(cwmutex,MAXLAG)) {
       uint64_t l=lag.Elapsed();
       shares.SetLag(shareid,l);
-      PRINTF(L_CC_CCCAM2EX,"wait returned after %lld",l);
+      PRINTF(L_CC_CCCAM2EX,"wait returned after %lu",l);
       if(newcw) {
         // check for partial CW
         if(!CheckNull(cw+0,8)) memcpy(Cw+0,cw+0,8);
@@ -1212,7 +1212,7 @@ bool cCardClientCCcam2::ProcessECM(const cEcmInfo *ecm, const unsigned char *dat
     else {
       uint64_t l=lag.Elapsed();
       shares.SetLag(shareid,l);
-      PRINTF(L_CC_CCCAM2EX,"getting CW timed out after %lld",l);
+      PRINTF(L_CC_CCCAM2EX,"getting CW timed out after %lu",l);
       }
     ecmshares.AddStatus(ecm,shareid,-1);
     cwmutex.Unlock();
