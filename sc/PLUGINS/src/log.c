@@ -45,7 +45,7 @@ static const struct LogModule lm_general = {
   };
 
 static const struct LogModule *mods[LMOD_SUP] = { &lm_general };
-static int config[LMOD_SUP] = { LMOD_ENABLE|L_GEN_ALL|LMOD_CFG_VALID };
+static unsigned int config[LMOD_SUP] = { LMOD_ENABLE|L_GEN_ALL|LMOD_CFG_VALID };
 static int cmask[LMOD_SUP]  = { LMOD_ENABLE|L_GEN_ALL };
 static cMutex logfileMutex;
 static FILE *logfile=0;
@@ -205,7 +205,7 @@ void cLogging::PrivateLogPrint(const struct LogHeader *lh, const char *txt)
 bool cLogging::Enabled(int c)
 {
   int m=LMOD(c);
-  int o=LOPT(c)|LMOD_CFG_VALID|LMOD_ENABLE;
+  unsigned int o=LOPT(c)|LMOD_CFG_VALID|LMOD_ENABLE;
   return m<LMOD_SUP && (config[m] & o)==o;
 }
 

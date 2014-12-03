@@ -44,7 +44,7 @@ struct ScLink {
   int num;
   };
 
-static const char magic[] = SC_MAGIC;
+static int magic[] = SC_MAGIC;
 
 void PrepareScLink(struct ScLink *link, const cDevice *dev, int op)
 {
