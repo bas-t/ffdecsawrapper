@@ -80,7 +80,7 @@ struct pat {
 #define MAX_SIMULTANEOUS_PMT 32
 
 static int sid_opt = 0;
-static int opt_maxfilters = 8;
+static int opt_maxfilters = 20;
 static int opt_max_fail = 20;
 static int opt_allpids = 0;
 static int opt_resetpidmap = 0;

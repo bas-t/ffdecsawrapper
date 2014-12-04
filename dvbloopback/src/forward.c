@@ -156,7 +156,7 @@ void show_help()
   printf("Optional args:\n");
   printf("   -h/--help         : This help message\n");
   printf("   -i/--identify     : List all available adpaters\n");
-  printf("   -b/--buffer <num> : Set size of read buffer (default: 2M)\n");
+  printf("   -b/--buffer <num> : Set size of read buffer (default: 16M)\n");
   printf("   -d/--debug <num>  : Set debug level (this is a 32bit bitmask)\n");
   printf("   -l/--log          : Set log file for output\n");
   printf("   -n/--noload <num> : Don't load module <num>. Use with care!\n");
@@ -265,7 +265,7 @@ static void exit_handler(int type)
 
 int main(int argc, char *argv[])
 {
-  unsigned long bufsize = 2000000;
+  unsigned long bufsize = 16000000;
   struct parser_adpt pc_all[32];
   struct common_data common[32];
   struct list_head *ptr;
