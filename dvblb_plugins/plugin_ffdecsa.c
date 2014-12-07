@@ -244,23 +244,28 @@ static int process_ts(struct csastruct *csa, unsigned char *buffer, uint end,
     while(end - end_enc >= TSPacketSIZE && pkt_count < cluster_size) {
         odd_even = buffer[end_enc+3] & 0xC0;
         if(odd_even) {
-            int pid = ((buffer[end_enc + 1] << 8) + buffer[end_enc + 2])
-                      & 0x1FFF;
+            int pid_index;
+            int pid = ((buffer[end_enc + 1] << 8) + buffer[end_enc + 2]) & 0x1FFF;
             ll_find_elem(pid_ll, csa->pid_map, pid, pid, struct pid);
             if(pid_ll == NULL) {
-                //What to do with an unknown pid?
-                //Let's try to decode it anyway
-                dprintf3("Didn't find pid %d\n", pid);
-                end_enc+=TSPacketSIZE;
-                continue;
+                //What to do with an unknown pid? Let's try to decode it anyway
+                dprintf1("Didn't find pid %d: end %d, force %d, pos %d, index %d\n", 
+                    pid, end, force, pos, index);
+                if (index == -1)
+                    pid_index = 1; //Use default index of 1
+                else
+                    pid_index = index; //Use previous selected index
+            }
+            else {
+                pid_index = pid_ll->index;
             }
             if(index == -1) {
-                //First encrypted packet (with a valid pid)
-                index = pid_ll->index;
+                //First encrypted packet
+                index = pid_index;
                 tmp=odd_even;
                 pkt_count++;
-	    }
-            else if(index != pid_ll->index) {
+            }
+            else if(index != pid_index) {
                 //Encrypted packet with a different index
                 if(start_enc != end_enc) {
                     //there are previous packets that can be decoded
