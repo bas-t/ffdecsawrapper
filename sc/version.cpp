@@ -1,1 +1,1 @@
-const char *source_version = "Master";
+const char *source_version = "Stable";

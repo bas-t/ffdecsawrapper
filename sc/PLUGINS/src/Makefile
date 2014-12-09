@@ -18,7 +18,7 @@ PLUGIN = sc
 ### The version number of this plugin
 
 RELEASE ?= $(shell git describe --always)
-SUBREL  := $(shell echo -n "Master";)
+SUBREL  := $(shell echo -n "Stable";)
 VERSION := $(RELEASE)-$(SUBREL)
 SCAPIVERS := $(shell sed -ne '/define SCAPIVERS/ s/^.[a-zA-Z ]*\([0-9]*\).*$$/\1/p' version.h)
 
