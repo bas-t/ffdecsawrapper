@@ -10,21 +10,25 @@
 
 
 
-
 **The 'master'and 'stable' branches are based on a rev 620 (latest) checkout of the old vdr-sasc-ng plugin, the 'oldstable' branch is based on rev 570**
+
 
 
  **Due to 'Hollywood' legislation, the use of this software is illegal in most countrys. (but not in my country, hehe)**
 
  **The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.**
 
- **You can use it with kernel version 3.x and up, including more recent kernels (latest ok test: linux-3.18-rc7)**
+ **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-3.18.1).**
+
+ **2.x kernels are not supported anymore.**
 
  **If you have to compile and install newest dvb drivers from v4l (or TBS and other v4l-based out of kernel drivers), you should apply proper dvb-mutex patch to your sources prior to compiling. If you are not sure on how to do this:**
 
  - `Basic instructions for v4l are here. <http://www.lursen.org/wiki/V4l_and_ffdecsawrapper>`_
 
- **If you are NOT using out-of-tree drivers and you are running Debian/Ubuntu with a clean unmodified stock kernel, you don't need to recompile it anymore. The running kernel will be properly patched during configuration of FFdecsawrapper. That is, if your sources.list is ok and the source for your Debian/Ubuntu kernel is available from the repo's. Any missing build-deps for FFdecsawrapper and/or patching the dvb-core.ko kernel module will also be 'automagically' installed.**
+ **Note that you should not use v4l drivers if your DVB adapter is supported 'out of the box' by your kernel.**
+
+ **If you are NOT using out-of-tree drivers and you are running Debian/Ubuntu/Mythbuntu with a clean unmodified stock kernel, you don't need to recompile it anymore. The running kernel will be properly patched during configuration of FFdecsawrapper. That is, if your sources.list is ok and the source for your kernel is available from the repo's. Any missing build-deps for FFdecsawrapper and/or patching the dvb-core.ko kernel module will also be 'automagically' installed.**
 
  **USAGE:**
 
