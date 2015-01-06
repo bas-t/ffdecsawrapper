@@ -362,7 +362,7 @@ bool cCardClientBuffy::Login(void)
   memset(buff,0,sizeof(buff));
   buff[0]=0x0A;
   if(!SendMsg(buff,32)) return false;
-  int n=RecvMsg(buff,-sizeof(buff));
+  int n=RecvMsg(buff,sizeof(buff));
   if(n<0) return false;
   for(int i=1; i<n && numCAIDs<MAX_CAIDS; i+=2) {
     unsigned short caid=(buff[i+1]<<8)+buff[i];
