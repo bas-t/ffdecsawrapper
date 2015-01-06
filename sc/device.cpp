@@ -145,7 +145,7 @@ void cDevice::Shutdown(void)
 
 uchar *cDevice::GrabImage(int &Size, bool Jpeg, int Quality, int SizeX, int SizeY)
 {
-  return false;
+  return 0;
 }
 
 void cDevice::SetVideoDisplayFormat(eVideoDisplayFormat VideoDisplayFormat)
