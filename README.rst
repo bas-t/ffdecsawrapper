@@ -18,7 +18,7 @@
 
  **The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.**
 
- **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-3.18.1).**
+ **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-3.19-rc3).**
 
  **2.x kernels are not supported anymore.**
 
