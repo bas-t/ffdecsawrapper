@@ -174,44 +174,48 @@ bool cCardClientRadegast::Login(void)
   PRINTF(L_CC_LOGIN,"%s: connected to %s:%d",name,hostname,port);
 
   InitVars();
-  unsigned char buff[512];
-  char hello[32];
-  snprintf(hello,sizeof(hello),"rdgd/vdr-sc-%s",ScVersion);
-  StartMsg(buff,0x90);			// RDGD_MSG_CLIENT_HELLO
-  AddNano(buff,1,strlen(hello),(unsigned char *)hello);	// RDGD_NANO_DESCR
-  if(!Send(buff) || Recv(buff,sizeof(buff))<0) return false;
-  if(buff[0]==0x91) {
-    PRINTF(L_CC_RDGD,"got server hello, assuming V4 mode");
-    StartMsg(buff,0x94);		// RDGD_MSG_CLIENT_CAP_REQ;
-    int n;
-    if(!Send(buff) || (n=Recv(buff,sizeof(buff)))<0) return false;
-    if(buff[0]==0x95) {
-      LBSTARTF(L_CC_LOGIN);
-      LBPUT("radegast: got caps");
-      int caid;
-      for(int l=GetNanoStart(buff); l<n; l+=buff[l+1]+2) {
-        switch(buff[l]) {
-          case 0xE2:
-            LBPUT(" VERS %s",(char *)&buff[l+2]);
-            break;
-          case 0xE4: // CAP_NANO_CAID
-            if(numCaids>=MAXCAIDS) { l=n; break; } //stop processing
-            caid=(buff[l+2]<<8)+buff[l+3];
-            LBPUT(" CAID %04X",caid);
-            caids[numCaids++]=caid;
-            // XXX we should have EMM processing setup here, but as we don't
-            // XXX get any ua/sa we cannot filter EMM anyways
-            break;
-          case 0xE5: // CAP_NANO_PROVID
-            for(int i=0; i<buff[l+1]; i+=3)
-              LBPUT("/%02X%02X%02X",buff[l+2+i],buff[l+2+i+1],buff[l+2+i+2]);
-            break;
-          }
-        }
-      LBEND();
-      }
-    }
-  else PRINTF(L_CC_RDGD,"no server hello, assuming old mode");
+
+// Comment for compatiblity with Oscam and Atlas HD200/HD100 server radegast
+// 01-11-2015
+
+//  unsigned char buff[512];
+//  char hello[32];
+//  snprintf(hello,sizeof(hello),"rdgd/vdr-sc-%s",ScVersion);
+//  StartMsg(buff,0x90);			// RDGD_MSG_CLIENT_HELLO
+//  AddNano(buff,1,strlen(hello),(unsigned char *)hello);	// RDGD_NANO_DESCR
+//  if(!Send(buff) || Recv(buff,sizeof(buff))<0) return false;
+//  if(buff[0]==0x91) {
+//    PRINTF(L_CC_RDGD,"got server hello, assuming V4 mode");
+//    StartMsg(buff,0x94);		// RDGD_MSG_CLIENT_CAP_REQ;
+//    int n;
+//    if(!Send(buff) || (n=Recv(buff,sizeof(buff)))<0) return false;
+//    if(buff[0]==0x95) {
+//      LBSTARTF(L_CC_LOGIN);
+//      LBPUT("radegast: got caps");
+//      int caid;
+//      for(int l=GetNanoStart(buff); l<n; l+=buff[l+1]+2) {
+//        switch(buff[l]) {
+//          case 0xE2:
+//            LBPUT(" VERS %s",(char *)&buff[l+2]);
+//            break;
+//          case 0xE4: // CAP_NANO_CAID
+//            if(numCaids>=MAXCAIDS) { l=n; break; } //stop processing
+//            caid=(buff[l+2]<<8)+buff[l+3];
+//            LBPUT(" CAID %04X",caid);
+//            caids[numCaids++]=caid;
+//            // XXX we should have EMM processing setup here, but as we don't
+//            // XXX get any ua/sa we cannot filter EMM anyways
+//            break;
+//          case 0xE5: // CAP_NANO_PROVID
+//            for(int i=0; i<buff[l+1]; i+=3)
+//              LBPUT("/%02X%02X%02X",buff[l+2+i],buff[l+2+i+1],buff[l+2+i+2]);
+//            break;
+//          }
+//        }
+//      LBEND();
+//      }
+//    }
+//  else PRINTF(L_CC_RDGD,"no server hello, assuming old mode");
   if(emmProcessing && !emmAllowed) 
     PRINTF(L_CC_EMM,"%s: EMM disabled from config",name);
   CaidsChanged();
