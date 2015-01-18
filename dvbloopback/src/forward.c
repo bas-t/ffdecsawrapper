@@ -490,7 +490,7 @@ int main(int argc, char *argv[])
       signal(SIGHUP, &log_rotate_handler);
   }
 
-  dprintf0("%s-%s\n", RELEASE_VERSION, source_version);
+  dprintf0("Loading %s-%s\n", RELEASE_VERSION, source_version);
 
   //Need to init msg_loop early in case some plugins setup messages during init
   msg_loop_init();
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
     if(cmd->shutdown) 
       cmd->shutdown(); 
   }
-  dprintf("Exiting...\n");
+  dprintf0("%s-%s is going down...\n", RELEASE_VERSION, source_version);
   fflush(stdout);
   fflush(stderr);
   return 0;

@@ -1299,7 +1299,7 @@ void cScPlugin::Stop(void)
   cScDevices::Shutdown();
   LogStatsDown();
   cSoftCAM::Shutdown();
-  PRINTF(L_GEN_DEBUG,"SC cleanup done");
+  PRINTF(L_GEN_INFO,"SC cleanup done, ready to go down");
 }
 
 const char *cScPlugin::Version(void)
