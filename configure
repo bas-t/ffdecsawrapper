@@ -53,6 +53,7 @@ Fatal error(s) encoutered during optimization tests.
 
 Aborting...
 \E[0m
+
 "
 exit 1
 }
@@ -182,6 +183,7 @@ Aborting...
 
 ####################################
 \E[0m
+
 "
     exit 1
   fi
@@ -206,6 +208,7 @@ Your local clone is clean and up-to-date
   elif [ "$GITSTATUS" -eq "1" ]; then
     echo "
 Going to sync your local clone with updated remote repo.
+
 "
     sleep 3
     git pull > /dev/null
@@ -290,6 +293,7 @@ confirmyes "Proceed?[Y/n]"
 You have chosen not to proceed.
 
 Aborting...
+
 "
         exit 0
       fi
@@ -349,6 +353,7 @@ Aborting...
 It seems that FFdecsawrapper is running.
 
 It should be stopped before proceeding.
+
 "
     confirmyes "Do you want to stop FFdecsawrapper now? [Y/n]"
     if [ "$?" -eq 0 ]; then
@@ -369,6 +374,7 @@ It should be stopped before proceeding.
   if ! dpkg-query -l gettext | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency gettext, marking for installation.
+
 "
     apt-get install gettext -y || die "Error installing dependency gettext"
   fi
@@ -376,6 +382,7 @@ Missing dependency gettext, marking for installation.
   if ! dpkg-query -l libv4l-dev | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency libv4l-dev, marking for installation.
+
 "
     apt-get install libv4l-dev -y || die "Error installing dependency libv4l-dev"
   fi
@@ -383,6 +390,7 @@ Missing dependency libv4l-dev, marking for installation.
   if ! dpkg-query -l libproc-processtable-perl | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency libproc-processtable-perl, marking for installation.
+
 "
     apt-get install libproc-processtable-perl -y || die "Error installing dependency libproc-processtable-perl"
   fi
@@ -390,6 +398,7 @@ Missing dependency libproc-processtable-perl, marking for installation.
   if ! dpkg-query -l libssl-dev | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency libssl-dev, marking for installation.
+
 "
     apt-get install libssl-dev -y || die "Error installing dependency libssl-dev"
   fi
@@ -397,6 +406,7 @@ Missing dependency libssl-dev, marking for installation.
   if ! dpkg-query -l build-essential | grep "ii" > /dev/null 2>&1; then
     echo "
 Missing dependency build-essential, marking for installation.
+
 "
     apt-get install build-essential -y || die "Error installing dependency build-essential"
   fi
@@ -412,6 +422,7 @@ Missing dependency build-essential, marking for installation.
     if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency linux-headers-`uname -r`, marking for installation.
+
 "
       apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
     fi
@@ -427,6 +438,7 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
     if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency $CXX, marking for installation.
+
 "
       apt-get install $CXX -y || die "Error installing dependency $CXX"
     fi
@@ -444,6 +456,7 @@ Missing dependency $CXX, marking for installation.
     if ! dpkg-query -l g++-$CCKERNEL | grep "ii" > /dev/null 2>&1; then
       echo "
 Missing dependency g++-$CCKERNEL, marking for installation.
+
 "
       apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
     fi
@@ -561,7 +574,9 @@ if [ "x$ffdecsa_flags" = "x" ]; then
     fi
   elif [ "x$ffdecsa_opt" != "xno" ]; then
     echo "
-Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'"
+Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'
+
+"
     exit 1
   fi
 fi
@@ -586,7 +601,9 @@ elif [ "x$compiletype_opt" = "xdebug" ]; then
   echo "RELEASE=0" >> config.mak
 else
   echo "
-Bad option to --compiletype '$compiletype_opt' Should be 'release, debug'"
+Bad option to --compiletype '$compiletype_opt' Should be 'release, debug'
+
+"
   exit 1
 fi
 
