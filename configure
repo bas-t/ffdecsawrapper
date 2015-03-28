@@ -222,6 +222,7 @@ Aborting...
 
 ####################################
 \E[0m
+
 "
       exit 1
     else
@@ -256,6 +257,7 @@ Aborting...
 
 ######################################
 \E[0m
+
 "
     exit 1
   fi    
@@ -473,6 +475,7 @@ $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
 
 Aborting...
 \E[0m
+
 "
     make clean > /dev/null 2>&1
     exit 0
@@ -505,6 +508,7 @@ could not locate /lib/modules/`uname -r`/build/Module.symvers
 
 Aborting...
 \E[0m
+
 "
     make clean > /dev/null 2>&1
     exit 0
@@ -520,6 +524,7 @@ could not locate $dvb_path/../v4l/Module.symvers
 
 Aborting...
 \E[0m
+
 "
     make clean > /dev/null 2>&1
     exit 0
@@ -619,6 +624,7 @@ Everything looks ok!
 
 Just hit 'enter' to run
 make && make module
+
 "
     confirmyes "Start compiling now?[Y/n]"
 
@@ -627,6 +633,7 @@ make && make module
     else
       echo "
 NOT starting compilation
+
 "
       exit 0
     fi
@@ -640,12 +647,14 @@ Everything looks ok!
 
 Just hit 'enter' to run
 make && make module
+
 "
   confirmyes "Start compiling now?[Y/n]"
 
   if ! [ "$?" -eq 0 ]; then
     echo "
 NOT starting compilation
+
 "
     exit 0
   else
@@ -661,6 +670,7 @@ and/or dvbloopback kernel module.
 
 ####################################################
 \E[0m
+
 "
       exit 1
     else
@@ -672,6 +682,7 @@ Binary's location: /usr/bin/ffdecsawrapper
 dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
 
 If you hit Y and your kernel needs to be patched, that will be done too.
+
 "
       confirmyes "Yes, install them now![Y/n]"
       if ! [ "$?" -eq 0 ]; then
@@ -681,6 +692,7 @@ If you hit Y and your kernel needs to be patched, that will be done too.
           echo "
 Existing FFdecsawrapper binary detected,
 do you want to replace it with the newly compiled version?
+
 "
           confirmyes "Yes, please do![Y/n]"
           if [ "$?" -eq 0 ]; then
@@ -694,6 +706,7 @@ do you want to replace it with the newly compiled version?
           echo "
 Existing dvbloopback kernel module detected,
 do you want to replace it with the newly compiled version?
+
 "
           confirmyes "Yes, please do![Y/n]"
           if [ "$?" -eq 0 ]; then
@@ -726,6 +739,7 @@ do you want to replace it with the newly compiled version?
 
 \E[1;33;44mmodified stock kernel detected.\E[0m
 #################################
+
 "
                 exit 0     
               fi
@@ -739,6 +753,7 @@ do you want to replace it with the newly compiled version?
 
 \E[1;33;44mnon stock kernel detected.\E[0m
 ##########################
+
 "
             exit 0
           fi
@@ -747,6 +762,7 @@ do you want to replace it with the newly compiled version?
 ###############################
 \E[1;33;44mExisting kernel patch detected.\E[0m
 ###############################
+
 "
         fi
       fi
