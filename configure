@@ -73,6 +73,10 @@ crash your kernel.
 
 You are heading for DISASTER!!!
 
+Recompile your kernel/v4l media stack with:
+
+# CONFIG_MEDIA_CONTROLLER_DVB is not set
+
 Aborting...
 
 Feel free to patch the dvbloopback module
