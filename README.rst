@@ -34,7 +34,3 @@
 
  - `Basic instructions on how tu use this software (in combination with MythTV). <http://www.lursen.org/wiki/FFdecsawrapper_with_MythTV_and_Oscam_on_Debian/Ubuntu>`_
 
- **NOTICE:**
-
- **Today (jan 5 2015) my cable provider has announced that they will stop encrypting all of the channels that I actually use shortly. As a consequence I won't be able to test the functionality of FFdecsawrapper anymore. I guess I'll get myself another hobby. Feel free to take over further development if you want to.**
-
