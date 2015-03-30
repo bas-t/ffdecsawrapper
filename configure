@@ -538,7 +538,7 @@ Aborting...
 else
   if [ "x$linuxnext_opt" = "xyes" ]; then
     cp -f dvbloopback/module/dvbdev.h-4.1 dvbloopback/module/dvbdev.h
-  elif [ "$FIRST_DIGIT" lt 4 ]; then
+  elif [ "$FIRST_DIGIT" -lt 4 ]; then
     if [ "$SECOND_DIGIT" -lt 7 ]; then
       cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
     elif [ "$SECOND_DIGIT" -lt 13 ]; then
