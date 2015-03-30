@@ -8,9 +8,9 @@
 #include <sys/ioctl.h>
 #include "plugin_ringbuf.h"
 #include "plugin_getsid.h"
-
+extern "C" {
 #include "../FFdecsa/FFdecsa.h"
-
+}
 #define PLUGIN_ID 30
 #define DBG_NAME "CSA"
 
