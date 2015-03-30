@@ -77,6 +77,7 @@ Aborting...
 
 Feel free to patch the dvbloopback module
 so it can coexist with Mauro's new api.
+If you do, please share your patch.
 \E[0m
 
 "
