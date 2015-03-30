@@ -1,5 +1,5 @@
 #!/bin/bash
-cat $DIR/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB" || cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB"
+
 die(){
     echo -en "
 \E[1;33;44m$1, aborting...\E[0m
