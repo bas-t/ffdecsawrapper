@@ -191,22 +191,6 @@ Aborting...
   exit 1
 fi
 
-# Abort if the kernel/v4l tree is compiled with CONFIG_MEDIA_CONTROLLER_DVB
-
-if [ "x$dvb_path" != "x" ]; then
-  if cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
-    experimental_api
-  elif cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=m" > /dev/null 2>&1 ;then
-    experimental_api
-  fi
-else
-  if cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
-    experimental_api
-  elif cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=m" > /dev/null 2>&1 ;then
-    experimental_api
-  fi
-fi
-
 # Check git status
 if [ "x$update_opt" = "xyes" ]; then
   git clean -xfd > /dev/null
@@ -306,6 +290,22 @@ Aborting...
 "
     exit 1
   fi    
+fi
+
+# Abort if the kernel/v4l tree is compiled with CONFIG_MEDIA_CONTROLLER_DVB
+
+if [ "x$dvb_path" != "x" ]; then
+  if cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
+    experimental_api
+  elif cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=m" > /dev/null 2>&1 ;then
+    experimental_api
+  fi
+else
+  if cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
+    experimental_api
+  elif cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=m" > /dev/null 2>&1 ;then
+    experimental_api
+  fi
 fi
 
 # Check for use of v4l drivers
