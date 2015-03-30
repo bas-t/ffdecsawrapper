@@ -495,15 +495,23 @@ Aborting...
   fi
 else
   if [ "x$linuxnext_opt" = "xyes" ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
-  elif [ "$SECOND_DIGIT" -lt 7 ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
-  elif [ "$SECOND_DIGIT" -lt 13 ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
-  elif [ "$SECOND_DIGIT" -lt 17 ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.13 dvbloopback/module/dvbdev.h
+    cp -f dvbloopback/module/dvbdev.h-4.1 dvbloopback/module/dvbdev.h
+  elif [ "$FIRST_DIGIT" lt 4 ]; then
+    if [ "$SECOND_DIGIT" -lt 7 ]; then
+      cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
+    elif [ "$SECOND_DIGIT" -lt 13 ]; then
+      cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
+    elif [ "$SECOND_DIGIT" -lt 17 ]; then
+      cp -f dvbloopback/module/dvbdev.h-3.13 dvbloopback/module/dvbdev.h
+    else
+      cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+    fi
   else
-    cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+    if [ "$SECOND_DIGIT" -eq 0 ]; then
+      cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+    else
+      cp -f dvbloopback/module/dvbdev.h-4.1 dvbloopback/module/dvbdev.h
+    fi
   fi
 fi
 
