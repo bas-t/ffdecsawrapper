@@ -195,6 +195,12 @@ Aborting...
   exit 1
 fi
 
+# Check for linux-next kernel
+
+if `uname -r` | grep "next" > /dev/null 2>&1; then
+  linuxnext_opt="yes"
+fi
+
 # Check git status
 if [ "x$update_opt" = "xyes" ]; then
   git clean -xfd > /dev/null
