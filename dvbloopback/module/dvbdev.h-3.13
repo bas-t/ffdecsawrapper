@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- *
+ * version 3.13
  */
 
 #ifndef _DVBDEV_H_
@@ -144,4 +144,3 @@ extern int dvb_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 #endif
 
 #endif /* #ifndef _DVBDEV_H_ */
-
