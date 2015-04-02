@@ -733,9 +733,7 @@ Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
 
 Binary's location: /usr/bin/ffdecsawrapper
 
-dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
-
-If you hit Y and your kernel needs to be patched, that will be done too.
+dvbloopback module: /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
 
 "
         confirmyes "Yes, install them now![Y/n]"
