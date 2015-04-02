@@ -718,6 +718,91 @@ NOT starting compilation
     sleep 2
     make && make module
   fi
+elif [ "$OS" = "CentOS" ]; then
+CENTOSVERSION=$(lsb_release -rs | grep -o '[[:digit:]]\+' | head -n1)
+  if [ "$CENTOSVERSION" = "7" ]; then
+    echo "
+Everything looks ok!
+
+Just hit 'enter' to run
+make && make module
+
+"
+    confirmyes "Start compiling now?[Y/n]"
+
+    if ! [ "$?" -eq 0 ]; then
+      echo "
+NOT starting compilation
+
+"
+      exit 0
+    else
+      make && make module
+      if ! [ "$?" -eq 0 ]; then
+        echo -en "
+\E[1;33;44m
+###################################################
+
+Error(s) encoutered while compiling ffdecsawrapper
+
+and/or dvbloopback kernel module.
+
+####################################################
+\E[0m
+
+"
+        exit 1
+      else
+        echo "
+Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
+
+Binary's location: /usr/bin/ffdecsawrapper
+
+dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+
+If you hit Y and your kernel needs to be patched, that will be done too.
+
+"
+        confirmyes "Yes, install them now![Y/n]"
+        if ! [ "$?" -eq 0 ]; then
+          exit 0
+        else
+          if [ -e /usr/bin/ffdecsawrapper ]; then
+            echo "
+Existing FFdecsawrapper binary detected,
+do you want to replace it with the newly compiled version?
+
+"
+            confirmyes "Yes, please do![Y/n]"
+            if [ "$?" -eq 0 ]; then
+              rm -f /usr/bin/ffdecsawrapper
+              cp -f ffdecsawrapper /usr/bin
+            fi
+          else
+            cp -f ffdecsawrapper /usr/bin
+          fi
+          if [ -e /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
+            echo "
+Existing dvbloopback kernel module detected,
+do you want to replace it with the newly compiled version?
+
+"
+            confirmyes "Yes, please do![Y/n]"
+            if [ "$?" -eq 0 ]; then
+              rm -f /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+              depmod -a
+              /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+              depmod -a
+            fi
+          else
+            mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+            /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+            depmod -a
+          fi
+        fi
+      fi
+    fi
+  fi
 else
   echo "
 Everything looks ok!
