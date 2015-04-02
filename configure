@@ -718,9 +718,10 @@ NOT starting compilation
     sleep 2
     make && make module
   fi
-elif [ "$OS" = "CentOS" ]; then
+fi
+if [ "$OS" = "CentOS" ]; then
 CENTOSVERSION=$(lsb_release -rs | grep -o '[[:digit:]]\+' | head -n1)
-  if [ "$CENTOSVERSION" = "7" ]; then
+  if [ "$CENTOSVERSION" -eq "7" ]; then
     echo "
 Everything looks ok!
 
