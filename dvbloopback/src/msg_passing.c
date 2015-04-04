@@ -67,7 +67,7 @@ void * msg_loop(void * arg)
   struct msgctrl *msgctrl;
 
   if (priority == MSG_HIGH_PRIORITY) {
-    struct sched_param param;
+    struct sched_param param __attribute__((unused));
     param.sched_priority = sched_get_priority_min(SCHED_FIFO);
 //    if(pthread_setschedparam(pthread_self(), SCHED_FIFO, &param)) {
 //      perror("sched_setscheduler");
