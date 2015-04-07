@@ -690,6 +690,9 @@ fi
 echo "CXX=$CXX" >> config.mak
 echo "CC=$CC" >> config.mak
 
+# Detect previous installed dvbloopbak module
+MODULE=$(find /lib/modules/`uname -r`/ -type f -name "dvbloopback.ko")
+
 # Compile and, if running Debian/Ubuntu or CentOS 7,
 # finish by installing the lot.
 
@@ -754,16 +757,19 @@ do you want to replace it with the newly compiled version?
           else
             cp -f ffdecsawrapper /usr/bin
           fi
-          if [ -e /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
+          if ! [ "$MODULE" = "" ]; then
             echo "
-Existing dvbloopback kernel module detected,
+Existing $MODULE detected,
 do you want to replace it with the newly compiled version?
 
 "
             confirmyes "Yes, please do![Y/n]"
             if [ "$?" -eq 0 ]; then
-              rm -f /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+              rm -f $MODULE
               depmod -a
+              if ! [ -d /usr/lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
+                mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+              fi
               /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
               depmod -a
             fi
@@ -862,16 +868,19 @@ do you want to replace it with the newly compiled version?
         else
           cp -f ffdecsawrapper /usr/bin
         fi
-        if [ -e /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
+        if ! [ "$MODULE" = "" ]; then
           echo "
-Existing dvbloopback kernel module detected,
+Existing $MODULE detected,
 do you want to replace it with the newly compiled version?
 
 "
           confirmyes "Yes, please do![Y/n]"
           if [ "$?" -eq 0 ]; then
-            rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
+            rm -f $MODULE
             depmod -a
+            if ! [ -d /usr/lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
+              mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+            fi
             /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
             depmod -a
           fi
