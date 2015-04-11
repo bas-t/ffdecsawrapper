@@ -132,9 +132,7 @@ echo "Flags: $flags"
 if [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
   echo " 
 ### GCC-INFO ###"
-  echo "Unless you specified a gcc/g++ version to use,
-your kernel is built with:"
-  echo "$gcc_ver"
+  echo Using: "$gcc_ver"
 fi
 
 if [ $_CANNAT -ge 1 ]; then
