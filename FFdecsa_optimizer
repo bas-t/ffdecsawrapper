@@ -129,20 +129,6 @@ echo "CPU-Family: $cpu_family"
 echo "CPU-Model: $cpu_model"
 echo "Flags: $flags"
 
-if [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
-  echo " 
-### GCC-INFO ###"
-  echo Using: "$gcc_ver"
-fi
-
-if [ $_CANNAT -ge 1 ]; then
-  _DONAT=1
-  _CPU="native"
-  echo "
-Using compilers \"native\" flags"
-  echo ""
-fi
-
 # complete flags for FFdesca_Test
 if [ "$OLevel" = "" ]; then
   IFLAGS="-march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
@@ -268,7 +254,12 @@ MAX_MODE_3="PARALLEL_64_MMX"
   echo "Using compiler: $CC"
   echo "Flags: $IFLAGS"
   echo ""
-
+if [ $_CANNAT -ge 1 ]; then
+  _DONAT=1
+  _CPU="native"
+  echo "Using compilers \"native\" flags"
+  echo ""
+fi
 if [ "$OLevel" != "" ]; then
   ffdecsa_test "$OptFlag"
 else
