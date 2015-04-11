@@ -129,6 +129,11 @@ echo "CPU-Family: $cpu_family"
 echo "CPU-Model: $cpu_model"
 echo "Flags: $flags"
 
+if [ $_CANNAT -ge 1 ]; then
+  _DONAT=1
+  _CPU="native"
+fi
+
 # complete flags for FFdesca_Test
 if [ "$OLevel" = "" ]; then
   IFLAGS="-march=${_CPU}${_FLAGS} -fexpensive-optimizations -fomit-frame-pointer -funroll-loops"
@@ -255,8 +260,6 @@ MAX_MODE_3="PARALLEL_64_MMX"
   echo "Flags: $IFLAGS"
   echo ""
 if [ $_CANNAT -ge 1 ]; then
-  _DONAT=1
-  _CPU="native"
   echo "Using compilers \"native\" flags"
   echo ""
 fi
