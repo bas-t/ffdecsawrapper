@@ -255,10 +255,10 @@ MAX_MODE="PARALLEL_64_MMX"
 MAX_MODE_2="PARALLEL_64_MMX"
 MAX_MODE_3="PARALLEL_64_MMX"
 
-  echo "### FFdeCSA TEST ###"
+  echo "
+### FFdeCSA TEST ###"
   echo "Using compiler: $CC"
   echo "Flags: $IFLAGS"
-  echo ""
 if [ $_CANNAT -ge 1 ]; then
   echo "Using compilers \"native\" flags"
   echo ""
