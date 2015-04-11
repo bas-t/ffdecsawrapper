@@ -125,11 +125,11 @@ show_help(){
   echo " --cxx=<opt>            [g++] Define C++ and CC version to use"
   echo "                        Use like --cxx=4.7"
   echo "                        "
-  echo " --linux_next=<opt>     [no] yes: configure FFdecsawrapper for a kernel"
-  echo "                        built from linux-next git repo."
-  echo "                        "
   echo " --update=<opt>         [yes] no: don't clean local clone and"
   echo "                        don't pull in any updates."
+  echo "                        "
+  echo " --module=<opt>         [yes] no: don't compile dvbloopback kernel module"
+  echo "                        "
   exit 0
 }
 
@@ -138,6 +138,7 @@ compiletype_opt="release"
 v4l_opt="no"
 linuxnext_opt="no"
 update_opt="yes"
+module_opt="yes"
 
 for opt do
   optval="${opt#*=}"
@@ -158,9 +159,9 @@ for opt do
   ;;
   --v4l=*) v4l_opt="$optval"
   ;;
-  --linux_next=*) linuxnext_opt="$optval"
-  ;;
   --update=*) update_opt="$optval"
+  ;;
+  --module=*) module_opt="$optval"
   ;;
   --help) show_help
   ;;
@@ -199,6 +200,17 @@ fi
 
 if uname -r | grep "next" > /dev/null 2>&1; then
   linuxnext_opt="yes"
+fi
+
+# Check for proper use of --module flag
+
+if ! [ "x$module_opt" = "xyes" -o "x$module_opt" = "xno" ]; then
+  echo "
+Bad option to \"--module=\". Should be \"yes\" or \"no\".
+
+Aborting...
+"
+  exit 1
 fi
 
 # Check git status
@@ -302,35 +314,20 @@ Aborting...
   fi    
 fi
 
-# Abort if the kernel/v4l tree is compiled with CONFIG_MEDIA_CONTROLLER_DVB
-
-if [ "x$dvb_path" != "x" ]; then
-  if cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
-    experimental_api
-  elif cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=m" > /dev/null 2>&1 ;then
-    experimental_api
-  fi
-else
-  if cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
-    experimental_api
-  elif cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=m" > /dev/null 2>&1 ;then
-    experimental_api
-  fi
-fi
-
 # Check for use of v4l drivers
-
-if [ "x$dvb_path" != "x" ]; then
-  if [ "x$v4l_opt" = "xno" ]; then
-    if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
-      echo -en "
+if [ "x$module_opt" = "xyes" ]; then
+  if [ "x$dvb_path" != "x" ]; then
+    if [ "x$v4l_opt" = "xno" ]; then
+      if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
+        echo -en "
 \E[1;33;44m
                      ! ATTENTION !
 \E[0m
 
 You have set the --dvb_dir= option, indicating that you compiled
 and installed newest dvb drivers from v4l.This should mean that
-you patched the v4l sources with the apropriate dvb-mutex patch.
+you patched the v4l sources with the apropriate dvb-mutex patch
+and commented out CONFIG_MEDIA_CONTROLLER_DVB
 
 If you are not sure, you probably did not.
 In that case answer no to the question and first have a look at:
@@ -340,16 +337,29 @@ http://www.lursen.org/wiki/V4l_and_ffdecsawrapper
 "
 confirmyes "Proceed?[Y/n]"
 
-      if [ "$?" -eq 1 ]; then
-        echo "
+        if [ "$?" -eq 1 ]; then
+          echo "
 You have chosen not to proceed.
 
 Aborting...
 
 "
-        exit 0
+          exit 0
+        fi
       fi
     fi
+  fi
+fi
+
+# Abort if the kernel/v4l tree is compiled with CONFIG_MEDIA_CONTROLLER_DVB
+
+if [ "x$dvb_path" != "x" ]; then
+  if cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
+    experimental_api
+  fi
+else
+  if cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
+    experimental_api
   fi
 fi
 
@@ -470,15 +480,16 @@ Missing dependency build-essential, marking for installation.
 # uname -a does not return Debian
 # when we are running a vannila kernel
 
-  if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
-    if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
-      echo "
+  if [ "x$module_opt" = "xyes" ]; then
+    if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
+      if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
+        echo "
 Missing dependency linux-headers-`uname -r`, marking for installation.
 
 "
-      apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+        apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+      fi
     fi
-  fi
 
 # Compare system default g++ (major) version with the
 # g++ (major) version the kernel was built with
@@ -486,31 +497,32 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 # and install any missing packages, unless we defined
 # a specific version using --cxx= option on command line
 
-  if [ "x$CXX" != "x" ]; then
-    if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
-      echo "
+    if [ "x$CXX" != "x" ]; then
+      if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
+        echo "
 Missing dependency $CXX, marking for installation.
 
 "
-      apt-get install $CXX -y || die "Error installing dependency $CXX"
-    fi
-  fi
-
-  CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
-  CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
-
-  if ! [ "$CCSYSTEM" = "$CCKERNEL" ] ; then
-    if [ "x$CXX" = "x" ]; then
-      CXX=g++-$CCKERNEL
-      CC=gcc-$CCKERNEL
+        apt-get install $CXX -y || die "Error installing dependency $CXX"
+      fi
     fi
 
-    if ! dpkg-query -l g++-$CCKERNEL | grep "ii" > /dev/null 2>&1; then
-      echo "
+    CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
+    CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
+
+    if ! [ "$CCSYSTEM" = "$CCKERNEL" ] ; then
+      if [ "x$CXX" = "x" ]; then
+        CXX=g++-$CCKERNEL
+        CC=gcc-$CCKERNEL
+      fi
+
+      if ! dpkg-query -l g++-$CCKERNEL | grep "ii" > /dev/null 2>&1; then
+        echo "
 Missing dependency g++-$CCKERNEL, marking for installation.
 
 "
-      apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+      fi
     fi
   fi
 fi
@@ -522,13 +534,13 @@ fi
 
 # Get the right dvbdev.h in place
 # If --dvb_dir= is set, use supplied header
-
-if [ "x$dvb_path" != "x" ]; then
-  if [ -f $dvb_path/drivers/media/dvb-core/dvbdev.h ]; then
-    cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
-  elif [ -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h ]; then
-    cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
-  else echo -en "
+if [ "x$module_opt" = "xyes" ]; then
+  if [ "x$dvb_path" != "x" ]; then
+    if [ -f $dvb_path/drivers/media/dvb-core/dvbdev.h ]; then
+      cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
+    elif [ -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h ]; then
+      cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
+    else echo -en "
 \E[1;33;44m
 ERROR!!!
 
@@ -542,27 +554,28 @@ Aborting...
 \E[0m
 
 "
-    make clean > /dev/null 2>&1
-    exit 0
-  fi
-else
-  if [ "x$linuxnext_opt" = "xyes" ]; then
-    cp -f dvbloopback/module/dvbdev.h-4.1 dvbloopback/module/dvbdev.h
-  elif [ "$FIRST_DIGIT" -lt 4 ]; then
-    if [ "$SECOND_DIGIT" -lt 7 ]; then
-      cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
-    elif [ "$SECOND_DIGIT" -lt 13 ]; then
-      cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
-    elif [ "$SECOND_DIGIT" -lt 17 ]; then
-      cp -f dvbloopback/module/dvbdev.h-3.13 dvbloopback/module/dvbdev.h
-    else
-      cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+      make clean > /dev/null 2>&1
+      exit 0
     fi
   else
-    if [ "$SECOND_DIGIT" -eq 0 ]; then
-      cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
-    else
+    if [ "x$linuxnext_opt" = "xyes" ]; then
       cp -f dvbloopback/module/dvbdev.h-4.1 dvbloopback/module/dvbdev.h
+    elif [ "$FIRST_DIGIT" -lt 4 ]; then
+      if [ "$SECOND_DIGIT" -lt 7 ]; then
+        cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
+      elif [ "$SECOND_DIGIT" -lt 13 ]; then
+        cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
+      elif [ "$SECOND_DIGIT" -lt 17 ]; then
+        cp -f dvbloopback/module/dvbdev.h-3.13 dvbloopback/module/dvbdev.h
+      else
+        cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+      fi
+    else
+      if [ "$SECOND_DIGIT" -eq 0 ]; then
+        cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+      else
+        cp -f dvbloopback/module/dvbdev.h-4.1 dvbloopback/module/dvbdev.h
+      fi
     fi
   fi
 fi
@@ -570,10 +583,11 @@ fi
 # Get the right Module.symvers in place
 # Abort when it is not found
 
-if [ "x$dvb_path" = "x" ]; then
-  if [ -f /lib/modules/`uname -r`/build/Module.symvers ]; then
-    cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
-  else echo -en "
+if [ "x$module_opt" = "xyes" ]; then
+  if [ "x$dvb_path" = "x" ]; then
+    if [ -f /lib/modules/`uname -r`/build/Module.symvers ]; then
+      cp -f /lib/modules/`uname -r`/build/Module.symvers dvbloopback/module/Module.symvers
+    else echo -en "
 \E[1;33;44m
 ERROR!!!
 
@@ -583,13 +597,13 @@ Aborting...
 \E[0m
 
 "
-    make clean > /dev/null 2>&1
-    exit 0
-  fi
-else
-  if [ -f $dvb_path/../v4l/Module.symvers ]; then
-    cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
-  else echo -en "
+      make clean > /dev/null 2>&1
+      exit 0
+    fi
+  else
+    if [ -f $dvb_path/../v4l/Module.symvers ]; then
+      cp -f $dvb_path/../v4l/Module.symvers dvbloopback/module/Module.symvers
+    else echo -en "
 \E[1;33;44m
 ERROR!!!
 
@@ -599,8 +613,9 @@ Aborting...
 \E[0m
 
 "
-    make clean > /dev/null 2>&1
-    exit 0
+      make clean > /dev/null 2>&1
+      exit 0
+    fi
   fi
 fi
 
@@ -691,7 +706,9 @@ echo "CXX=$CXX" >> config.mak
 echo "CC=$CC" >> config.mak
 
 # Detect previous installed dvbloopbak module
-MODULE=$(find /lib/modules/`uname -r`/ -type f -name "dvbloopback.ko")
+if [ "x$module_opt" = "xyes" ]; then
+  MODULE=$(find /lib/modules/`uname -r`/ -type f -name "dvbloopback.ko")
+fi
 
 # Compile and, if running Debian/Ubuntu or CentOS 7,
 # finish by installing the lot.
@@ -715,13 +732,17 @@ NOT starting compilation
 "
       exit 0
     else
-      make && make module
+      if [ "x$module_opt" = "xyes" ]; then
+        make && make module
+      else
+        make
+      fi
       if ! [ "$?" -eq 0 ]; then
         echo -en "
 \E[1;33;44m
 ###################################################
 
-Error(s) encoutered while compiling ffdecsawrapper
+Error(s) encountered while compiling ffdecsawrapper
 
 and/or dvbloopback kernel module.
 
@@ -731,7 +752,8 @@ and/or dvbloopback kernel module.
 "
         exit 1
       else
-        echo "
+        if [ "x$module_opt" = "xyes" ]; then
+          echo "
 Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
 
 Binary's location: /usr/bin/ffdecsawrapper
@@ -739,7 +761,16 @@ Binary's location: /usr/bin/ffdecsawrapper
 dvbloopback module: /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
 
 "
-        confirmyes "Yes, install them now![Y/n]"
+          confirmyes "Yes, install them now![Y/n]"
+        else
+          echo "
+Do you want to install ffdecsawrapper now?
+
+Binary's location: /usr/bin/ffdecsawrapper
+
+"
+          confirmyes "Yes, install it now![Y/n]"
+        fi
         if ! [ "$?" -eq 0 ]; then
           exit 0
         else
@@ -757,26 +788,28 @@ do you want to replace it with the newly compiled version?
           else
             cp -f ffdecsawrapper /usr/bin
           fi
-          if ! [ "$MODULE" = "" ]; then
-            echo "
+          if [ "x$module_opt" = "xyes" ]; then
+            if ! [ "$MODULE" = "" ]; then
+              echo "
 Existing $MODULE detected,
 do you want to replace it with the newly compiled version?
 
 "
-            confirmyes "Yes, please do![Y/n]"
-            if [ "$?" -eq 0 ]; then
-              rm -f $MODULE
-              depmod -a
-              if ! [ -d /usr/lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
-                mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+              confirmno "Replace it [y/N]"
+              if [ "$?" -eq 0 ]; then
+                rm -f $MODULE
+                depmod -a
+                if ! [ -d /usr/lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
+                  mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+                fi
+                /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+                depmod -a
               fi
+            else
+              mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
               /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
               depmod -a
             fi
-          else
-            mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
-            /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
-            depmod -a
           fi
         fi
       fi
@@ -784,7 +817,8 @@ do you want to replace it with the newly compiled version?
   fi
 elif ! [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
   if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
-    echo "
+    if [ "x$module_opt" = "xyes" ]; then
+      echo "
 
 Everything looks ok!
 
@@ -792,10 +826,22 @@ Just hit 'enter' to run
 make && make module
 
 "
+    else
+      echo "
+Everything looks ok!
+
+Just hit 'enter' to proceed
+
+"
+    fi
     confirmyes "Start compiling now?[Y/n]"
 
     if [ "$?" -eq 0 ]; then
-      make && make module
+      if [ "x$module_opt" = "xyes" ]; then
+        make && make module
+      else
+        make
+      fi
     else
       echo "
 NOT starting compilation
@@ -805,9 +851,14 @@ NOT starting compilation
     fi
   else
     sleep 2
-    make && make module
+    if [ "x$module_opt" = "xyes" ]; then
+      make && make module
+    else
+      make
+    fi
   fi
 else
+  if [ "x$module_opt" = "xyes" ]; then
   echo "
 Everything looks ok!
 
@@ -815,6 +866,14 @@ Just hit 'enter' to run
 make && make module
 
 "
+  else
+  echo "
+Everything looks ok!
+
+Just hit 'enter' to proceed
+
+"
+  fi
   confirmyes "Start compiling now?[Y/n]"
 
   if ! [ "$?" -eq 0 ]; then
@@ -824,13 +883,17 @@ NOT starting compilation
 "
     exit 0
   else
-    make && make module
+    if [ "x$module_opt" = "xyes" ]; then
+      make && make module
+    else
+      make
+    fi
     if ! [ "$?" -eq 0 ]; then
       echo -en "
 \E[1;33;44m
 ###################################################
 
-Error(s) encoutered while compiling ffdecsawrapper
+Error(s) encountered while compiling ffdecsawrapper
 
 and/or dvbloopback kernel module.
 
@@ -840,7 +903,8 @@ and/or dvbloopback kernel module.
 "
       exit 1
     else
-      echo "
+      if [ "x$module_opt" = "xyes" ]; then
+        echo "
 Do you want to install ffdecsawrapper binary and dvbloopback kernel module?
 
 Binary's location: /usr/bin/ffdecsawrapper
@@ -850,6 +914,16 @@ dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.k
 If you hit Y and your kernel needs to be patched, that will be done too.
 
 "
+      else
+        echo "
+Do you want to install ffdecsawrapper now?
+
+Binary's location: /usr/bin/ffdecsawrapper
+
+If you hit Y and your kernel needs to be patched, that will be done too.
+
+"
+      fi
       confirmyes "Yes, install them now![Y/n]"
       if ! [ "$?" -eq 0 ]; then
         exit 0
@@ -868,26 +942,28 @@ do you want to replace it with the newly compiled version?
         else
           cp -f ffdecsawrapper /usr/bin
         fi
-        if ! [ "$MODULE" = "" ]; then
-          echo "
+        if [ "x$module_opt" = "xyes" ]; then
+          if ! [ "$MODULE" = "" ]; then
+            echo "
 Existing $MODULE detected,
 do you want to replace it with the newly compiled version?
 
 "
-          confirmyes "Yes, please do![Y/n]"
-          if [ "$?" -eq 0 ]; then
-            rm -f $MODULE
-            depmod -a
-            if ! [ -d /usr/lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
-              mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+            confirmno "Replace it[y/N]"
+            if [ "$?" -eq 0 ]; then
+              rm -f $MODULE
+              depmod -a
+              if ! [ -d /usr/lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
+                mkdir -p /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+              fi
+              /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+              depmod -a
             fi
+          else
+            mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
             /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
             depmod -a
           fi
-        else
-          mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
-          /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-          depmod -a
         fi
       fi
 
