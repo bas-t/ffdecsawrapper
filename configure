@@ -480,15 +480,16 @@ Missing dependency build-essential, marking for installation.
 # uname -a does not return Debian
 # when we are running a vannila kernel
 
-  if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
-    if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
-      echo "
+  if [ "x$module_opt" = "xyes" ]; then
+    if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
+      if ! dpkg-query -l linux-headers-`uname -r` | grep "ii" > /dev/null 2>&1; then
+        echo "
 Missing dependency linux-headers-`uname -r`, marking for installation.
 
 "
-      apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+        apt-get install linux-headers-`uname -r` -y  || die "Error installing dependency linux-headers-`uname -r`"
+      fi
     fi
-  fi
 
 # Compare system default g++ (major) version with the
 # g++ (major) version the kernel was built with
@@ -496,31 +497,32 @@ Missing dependency linux-headers-`uname -r`, marking for installation.
 # and install any missing packages, unless we defined
 # a specific version using --cxx= option on command line
 
-  if [ "x$CXX" != "x" ]; then
-    if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
-      echo "
+    if [ "x$CXX" != "x" ]; then
+      if ! dpkg-query -l $CXX | grep "ii" > /dev/null 2>&1; then
+        echo "
 Missing dependency $CXX, marking for installation.
 
 "
-      apt-get install $CXX -y || die "Error installing dependency $CXX"
-    fi
-  fi
-
-  CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
-  CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
-
-  if ! [ "$CCSYSTEM" = "$CCKERNEL" ] ; then
-    if [ "x$CXX" = "x" ]; then
-      CXX=g++-$CCKERNEL
-      CC=gcc-$CCKERNEL
+        apt-get install $CXX -y || die "Error installing dependency $CXX"
+      fi
     fi
 
-    if ! dpkg-query -l g++-$CCKERNEL | grep "ii" > /dev/null 2>&1; then
-      echo "
+    CCSYSTEM=$( g++ -v 2>&1 | grep -i "gcc version" | awk '{ print $3 }' | cut -d'.' -f1,2 )
+    CCKERNEL=$( cat /proc/version | awk '{ print $7 }' | cut -d'.' -f1,2 )
+
+    if ! [ "$CCSYSTEM" = "$CCKERNEL" ] ; then
+      if [ "x$CXX" = "x" ]; then
+        CXX=g++-$CCKERNEL
+        CC=gcc-$CCKERNEL
+      fi
+
+      if ! dpkg-query -l g++-$CCKERNEL | grep "ii" > /dev/null 2>&1; then
+        echo "
 Missing dependency g++-$CCKERNEL, marking for installation.
 
 "
-      apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+        apt-get install g++-$CCKERNEL -y || die "Error installing dependency g++-$CCKERNEL"
+      fi
     fi
   fi
 fi
