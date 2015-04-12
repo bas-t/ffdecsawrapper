@@ -342,6 +342,7 @@ fi
 if [ -e /usr/bin/ffdecsawrapper ]; then
   echo "
 Existing ffdecsawrapper binary detected.
+
 Do you want to recompile it?
 "
   confirmno "Recompile ffdecsawrapper binary [N/y]"
@@ -764,8 +765,7 @@ Everything looks ok!
 Just hit 'enter' to proceed
 
 "
-    confirmyes "Start compiling now?[Y/n]"
-
+    confirmyes "Start compiling now? [Y/n]"
     if ! [ "$?" -eq 0 ]; then
       echo "
 NOT starting compilation
@@ -776,9 +776,6 @@ NOT starting compilation
       if [ "x$binary_opt" = "xyes" ]; then
         make
       fi
-      if [ "x$module_opt" = "xyes" ]; then
-        make module
-      fi
       if ! [ "$?" -eq 0 ]; then
         echo -en "
 \E[1;33;44m
@@ -786,15 +783,29 @@ NOT starting compilation
 
 Error(s) encountered while compiling ffdecsawrapper
 
-and/or dvbloopback kernel module.
-
 ####################################################
 \E[0m
 
 "
         exit 1
-      else
-        echo "
+      fi
+      if [ "x$module_opt" = "xyes" ]; then
+        make module
+      fi
+      if ! [ "$?" -eq 0 ]; then
+        echo -en "
+\E[1;33;44m
+##############################################################
+
+Error(s) encountered while compiling dvbloopback kernel module.
+
+###############################################################
+\E[0m
+
+"
+        exit 1
+      fi
+      echo "
 Do you want to install ffdecsawrapper binary and/or dvbloopback kernel module?
 
 Binary's location: /usr/bin/ffdecsawrapper
@@ -802,46 +813,34 @@ Binary's location: /usr/bin/ffdecsawrapper
 dvbloopback module: /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
 
 "
-        confirmyes "Yes, install now! [Y/n]"
-        if ! [ "$?" -eq 0 ]; then
-          exit 0
-        else
-          if [ "x$binary_opt" = "xyes" ]; then
-            if [ -e /usr/bin/ffdecsawrapper ]; then
-              rm -f /usr/bin/ffdecsawrapper
-            fi
-            cp -f ffdecsawrapper /usr/bin
+      confirmyes "Yes, install now! [Y/n]"
+      if ! [ "$?" -eq 0 ]; then
+        exit 0
+      else
+        if [ "x$binary_opt" = "xyes" ]; then
+          if [ -e /usr/bin/ffdecsawrapper ]; then
+            rm -f /usr/bin/ffdecsawrapper
           fi
+          cp -f ffdecsawrapper /usr/bin
         fi
-        if [ "x$module_opt" = "xyes" ]; then
-          if [ -e /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
-            rm -f /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
-          fi
-          /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
-          depmod -a
+      fi
+      if [ "x$module_opt" = "xyes" ]; then
+        if [ -e /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
+          rm -f /usr/lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
         fi
+        /usr/bin/install dvbloopback.ko /usr/lib/modules/`uname -r`/updates/ffdecsawrapper
+        depmod -a
       fi
     fi
   fi
 elif ! [ "$OS" = Debian -o "$OS" = Ubuntu ] ; then
   if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
-    if [ "x$module_opt" = "xyes" ]; then
-      echo "
-
-Everything looks ok!
-
-Just hit 'enter' to run
-make && make module
-
-"
-    else
-      echo "
+    echo "
 Everything looks ok!
 
 Just hit 'enter' to proceed
 
 "
-    fi
     confirmyes "Start compiling now? [Y/n]"
     if [ "$?" -eq 0 ]; then
       if [ "x$binary_opt" = "xyes" ]; then
@@ -858,30 +857,46 @@ NOT starting compilation
       exit 0
     fi
   else
-    sleep 2
-    if [ "x$module_opt" = "xyes" ]; then
-      make && make module
-    else
+    if [ "x$binary_opt" = "xyes" ]; then
       make
+    fi
+    if ! [ "$?" -eq 0 ]; then
+      echo -en "
+\E[1;33;44m
+###########################################################
+
+Error(s) encountered while compiling ffdecsawrapper binary.
+
+############################################################
+\E[0m
+
+"
+      exit 1
+    fi
+    if [ "x$module_opt" = "xyes" ]; then
+      make module
+    fi
+    if ! [ "$?" -eq 0 ]; then
+      echo -en "
+\E[1;33;44m
+###############################################################
+
+Error(s) encountered while compiling dvbloopback kernel module.
+
+################################################################
+\E[0m
+
+"
+      exit 1
     fi
   fi
 else
-  if [ "x$module_opt" = "xyes" ]; then
-  echo "
-Everything looks ok!
-
-Just hit 'enter' to run
-make && make module
-
-"
-  else
   echo "
 Everything looks ok!
 
 Just hit 'enter' to proceed
 
 "
-  fi
   confirmyes "Start compiling now? [Y/n]"
 
   if ! [ "$?" -eq 0 ]; then
@@ -894,25 +909,36 @@ NOT starting compilation
     if [ "x$binary_opt" = "xyes" ]; then
       make
     fi
+    if ! [ "$?" -eq 0 ]; then
+      echo -en "
+\E[1;33;44m
+###########################################################
+
+Error(s) encountered while compiling ffdecsawrapper binary.
+
+############################################################
+\E[0m
+
+"
+      exit 1
+    fi
     if [ "x$module_opt" = "xyes" ]; then
       make module
     fi
     if ! [ "$?" -eq 0 ]; then
       echo -en "
 \E[1;33;44m
-###################################################
+###############################################################
 
-Error(s) encountered while compiling ffdecsawrapper
+Error(s) encountered while compiling dvbloopback kernel module.
 
-and/or dvbloopback kernel module.
-
-####################################################
+################################################################
 \E[0m
 
 "
       exit 1
-    else
-      echo "
+    fi
+    echo "
 Do you want to install ffdecsawrapper binary and/or dvbloopback kernel module?
 
 Binary's location: /usr/bin/ffdecsawrapper
@@ -922,23 +948,22 @@ dvbloopback module: /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.k
 If you hit Y and your kernel needs to be patched, that will be done too.
 
 "
-      confirmyes "Yes, install now![Y/n]"
-      if ! [ "$?" -eq 0 ]; then
-        exit 0
-      else
-        if [ "x$binary_opt" = "xyes" ]; then
-          if [ -e /usr/bin/ffdecsawrapper ]; then
-            rm -f /usr/bin/ffdecsawrapper
-          fi
-          cp -f ffdecsawrapper /usr/bin
+    confirmyes "Yes, install now![Y/n]"
+    if ! [ "$?" -eq 0 ]; then
+      exit 0
+    else
+      if [ "x$binary_opt" = "xyes" ]; then
+        if [ -e /usr/bin/ffdecsawrapper ]; then
+          rm -f /usr/bin/ffdecsawrapper
         fi
-        if [ "x$module_opt" = "xyes" ]; then
-          if [ -e /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
-            rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
-          fi
-          /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
-          depmod -a
+        cp -f ffdecsawrapper /usr/bin
+      fi
+      if [ "x$module_opt" = "xyes" ]; then
+        if [ -e /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
+          rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
         fi
+        /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+        depmod -a
       fi
 
 # The kernel needs to be patched if we don't
