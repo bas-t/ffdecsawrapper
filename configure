@@ -322,8 +322,9 @@ if [ "x$module_opt" = "xyes" ]; then
   MODULE=$(find /lib/modules/`uname -r`/ -type f -name "dvbloopback.ko")
   if ! [ "$MODULE" = "" ]; then
     echo "
-Existing $MODULE detected,
-do you want to recompile it?
+Existing $MODULE detected.
+
+Do you want to recompile it?
 
 "
     confirmno "Recompile dvbloopback module [N/y]"
