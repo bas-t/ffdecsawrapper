@@ -317,43 +317,45 @@ Aborting...
   fi    
 fi
 
-# Detect previous installed dvbloopback module
-if [ "x$module_opt" = "xyes" ]; then
-  MODULE=$(find /lib/modules/`uname -r`/ -type f -name "dvbloopback.ko")
-  if ! [ "$MODULE" = "" ]; then
-    echo "
+if ! [ -f "/etc/arch-release" ] > /dev/null  2>&1; then
+  # Detect previous installed dvbloopback module
+  if [ "x$module_opt" = "xyes" ]; then
+    MODULE=$(find /lib/modules/`uname -r`/ -type f -name "dvbloopback.ko")
+    if ! [ "$MODULE" = "" ]; then
+      echo "
 Existing $MODULE detected.
 
 Do you want to recompile it?
 
 "
-    confirmno "Recompile dvbloopback module [N/y]"
-    if [ "$?" -eq 1 ]; then
-      module_opt="no"
-    else
-      if ! [ -d /lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
-        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
+      confirmno "Recompile dvbloopback module [N/y]"
+      if [ "$?" -eq 1 ]; then
+        module_opt="no"
+      else
+        if ! [ -d /lib/modules/`uname -r`/updates/ffdecsawrapper ]; then
+          mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper
+        fi
       fi
     fi
   fi
-fi
 
-# Detect previous installed ffdecswrapper binary
-if [ -e /usr/bin/ffdecsawrapper ]; then
-  echo "
+  # Detect previous installed ffdecswrapper binary
+  if [ -e /usr/bin/ffdecsawrapper ]; then
+    echo "
 Existing ffdecsawrapper binary detected.
 
 Do you want to recompile it?
 "
-  confirmno "Recompile ffdecsawrapper binary [N/y]"
-  if [ "$?" -eq 1 ]; then
-    binary_opt="no"
-    if [ "x$module_opt" = "xno" ]; then
-      echo "
+    confirmno "Recompile ffdecsawrapper binary [N/y]"
+    if [ "$?" -eq 1 ]; then
+      binary_opt="no"
+      if [ "x$module_opt" = "xno" ]; then
+        echo "
 Nothing to do,
 Exit.
 "
-      exit 0
+        exit 0
+      fi
     fi
   fi
 fi
@@ -857,6 +859,7 @@ NOT starting compilation
       exit 0
     fi
   else
+    # Archlinux section
     if [ "x$binary_opt" = "xyes" ]; then
       make
     fi
@@ -890,6 +893,7 @@ Error(s) encountered while compiling dvbloopback kernel module.
       exit 1
     fi
   fi
+  # End Archlinux section
 else
   echo "
 Everything looks ok!
