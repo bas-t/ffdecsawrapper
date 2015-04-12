@@ -647,6 +647,8 @@ if [ "x$ffdecsa_flags" = "x" ]; then
     if ! [ "$?" -eq 0 ]; then
       optimizer
     fi
+  elif [ "x$ffdecsa_opt" = "xno" ]; then
+    echo "FFDECSA_OPTS = \"FLAGS=-O3 -march=native -fexpensive-optimizations -fomit-frame-pointer -funroll-loops\" PARALLEL_MODE=PARALLEL_128_SSE2 COMPILER=g++" >> config.mak
   elif [ "x$ffdecsa_opt" != "xno" ]; then
     echo "
 Bad option to --optimize '$ffdecsa_opt'.  Should be 'yes, long, no'
