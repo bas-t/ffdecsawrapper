@@ -18,7 +18,7 @@
 
  **The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.**
 
- **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-next-20150327).**
+ **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-4.0).**
 
  **2.x kernels are not supported anymore.**
 
@@ -27,7 +27,9 @@
 
  - `Basic instructions for v4l are here. <http://www.lursen.org/wiki/V4l_and_ffdecsawrapper>`_
 
- **If you are NOT using out-of-tree drivers and you are running Debian/Ubuntu with a clean unmodified stock kernel, you don't need to recompile it anymore. The running kernel will be properly patched during configuration of FFdecsawrapper. That is, if your sources.list is ok and the source for your Debian/Ubuntu kernel is available from the repo's. Any missing build-deps for FFdecsawrapper and/or patching the dvb-core.ko kernel module will also be 'automagically' installed.**
+ **Note that you should not use v4l drivers if your DVB adapter is supported 'out of the box' by your kernel.**
+
+ **If you are NOT using out-of-tree drivers and you are running Debian/Ubuntu/Mythbuntu with a clean unmodified stock kernel (linux-3.19.x and up are not supported), you don't need to recompile it anymore. The running kernel will be properly patched during configuration of FFdecsawrapper. That is, if your sources.list is ok and the source for your kernel is available from the repo's. Any missing build-deps for FFdecsawrapper and/or patching the dvb-core.ko kernel module will also be 'automagically' installed.**
 
  **USAGE:**
 

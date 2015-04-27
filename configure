@@ -975,13 +975,14 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 # to do so if it allready has been done.
 
       if [ "x$dvb_path" = "x" ]; then
-        if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
-          if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
-            if [ "$OS" = Debian ]; then
-              if [ "$DEBIANABIVERS" -lt 90 ]; then
-                ./kernelpatch
-              else
-                echo -en "
+        if [ "$FIRST_DIGIT" -lt 4 ] && [ "$SECOND_DIGIT" -lt 19 ]; then
+          if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
+            if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
+              if [ "$OS" = Debian ]; then
+                if [ "$DEBIANABIVERS" -lt 90 ]; then
+                  ./kernelpatch
+                else
+                  echo -en "
 #################################
 \E[1;33;44mNOT patching the running kernel,\E[0m
 
@@ -989,13 +990,13 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 #################################
 
 "
-                exit 0     
+                  exit 0     
+                fi
+              elif [ "$OS" = Ubuntu ] ; then
+                ./kernelpatch_ubuntu
               fi
-            elif [ "$OS" = Ubuntu ] ; then
-              ./kernelpatch_ubuntu
-            fi
-          else
-            echo -en "
+            else
+              echo -en "
 ##########################
 \E[1;33;44mKernelpatch not needed, or\E[0m
 
@@ -1003,15 +1004,16 @@ If you hit Y and your kernel needs to be patched, that will be done too.
 ##########################
 
 "
-            exit 0
-          fi
-        else
-          echo -en "
+              exit 0
+            fi
+          else
+            echo -en "
 ###############################
 \E[1;33;44mExisting kernel patch detected.\E[0m
 ###############################
 
 "
+          fi
         fi
       fi
     fi
