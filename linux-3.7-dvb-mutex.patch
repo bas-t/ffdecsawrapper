@@ -1,17 +1,26 @@
 --- drivers/media/dvb-core/dvbdev.c
 +++ drivers/media/dvb-core/dvbdev.c
-@@ -83,8 +83,11 @@ static int dvb_device_open(struct inode *inode, struct file *file)
- 			file->f_op = old_fops;
- 			goto fail;
+@@ -68,7 +68,7 @@
+ {
+ 	struct dvb_device *dvbdev;
+ 
+-	mutex_lock(&dvbdev_mutex);
++	//mutex_lock(&dvbdev_mutex);
+ 	down_read(&minor_rwsem);
+ 	dvbdev = dvb_minors[iminor(inode)];
+ 
+@@ -91,12 +91,12 @@
  		}
--		if(file->f_op->open)
-+		if(file->f_op->open) {
-+			mutex_unlock(&dvbdev_mutex);
- 			err = file->f_op->open(inode,file);
-+			mutex_lock(&dvbdev_mutex);
-+		}
- 		if (err) {
- 			fops_put(file->f_op);
- 			file->f_op = fops_get(old_fops);
--- 
-
+ 		fops_put(old_fops);
+ 		up_read(&minor_rwsem);
+-		mutex_unlock(&dvbdev_mutex);
++		//mutex_unlock(&dvbdev_mutex);
+ 		return err;
+ 	}
+ fail:
+ 	up_read(&minor_rwsem);
+-	mutex_unlock(&dvbdev_mutex);
++	//mutex_unlock(&dvbdev_mutex);
+ 	return -ENODEV;
+ }
+ 
