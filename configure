@@ -966,6 +966,7 @@ If you hit Y and your kernel needs to be patched, that will be done too.
         if [ -e /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko ]; then
           rm -f /lib/modules/`uname -r`/updates/ffdecsawrapper/dvbloopback.ko
         fi
+        mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
         /usr/bin/install dvbloopback.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
         depmod -a
       fi
