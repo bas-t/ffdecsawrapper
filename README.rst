@@ -15,7 +15,7 @@
 
  **NOTICE:**
 
- **This combined FFdecsawrapper/dvbloopback repo is deprecated and will not be updated as of now. The FFdecsawrapper part has been moved to a new repo:**
+ **This combined FFdecsawrapper/dvbloopback repo is deprecated and will not be updated as of now (20150509). The FFdecsawrapper part has been moved to a new repo:**
  
  - `descrambler. <https://github.com/bas-t/descrambler>`_
 
