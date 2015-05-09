@@ -13,12 +13,23 @@
 **The 'master'and 'stable' branches are based on a rev 620 (latest) checkout of the old vdr-sasc-ng plugin, the 'oldstable' branch is based on rev 570**
 
 
+ **NOTICE:**
+
+ **This combined FFdecsawrapper/dvbloopback repo is deprecated and will not be updated as of now. The FFdecsawrapper part has been moved to a new repo:**
+ 
+ - `descrambler. <https://github.com/bas-t/descrambler>`_
+
+ **The dvbloopback part has been moved to another new repo:**
+ 
+ - `dvbloopback. <https://github.com/bas-t/dvbloopback>`_
+ 
+ **The dvbloopback repo no longer supports out of tree compilation of the kernel module.**
 
  **Due to 'Hollywood' legislation, the use of this software is illegal in most countrys. (but not in my country, hehe)**
 
  **The purpose of this git repo is to make FFdecsa (via FFdecsawrapper's loopback interface) available for use with MythTV and such.**
 
- **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-4.0).**
+ **You can use it with kernel version 3.x and up, including more recent kernels. Best results with 3.14 and up (latest ok test: linux-4.1-rc2).**
 
  **2.x kernels are not supported anymore.**
 
