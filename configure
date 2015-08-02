@@ -960,19 +960,7 @@ If you hit Y and your kernel needs to be patched, that will be done too.
           if ! find /lib/modules/`uname -r`/updates -name dvb-core.ko -print | grep "dvb-core.ko" > /dev/null 2>&1; then
             if uname -a | egrep 'Debian|Ubuntu' > /dev/null  2>&1; then
               if [ "$OS" = Debian ]; then
-                if [ "$DEBIANABIVERS" -lt 90 ]; then
-                  ./kernelpatch
-                else
-                  echo -en "
-#################################
-\E[1;33;44mNOT patching the running kernel,\E[0m
-
-\E[1;33;44mmodified stock kernel detected.\E[0m
-#################################
-
-"
-                  exit 0     
-                fi
+                ./kernelpatch
               elif [ "$OS" = Ubuntu ] ; then
                 ./kernelpatch_ubuntu
               fi
