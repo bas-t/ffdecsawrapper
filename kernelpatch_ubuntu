@@ -182,6 +182,19 @@ will be patched for use with ffdecsawrapper.
           fail
         fi
       fi
+    else
+      patch -p0 < ../../linux-3.13-dvb-mutex.patch
+      if ! [ "$?" -eq 0 ]; then
+        fail
+      fi
+      CC="$GCC" make -C $BUILD_DIR M=$CWD/drivers/media/dvb-core modules
+      mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+      /usr/bin/install $CWD/drivers/media/dvb-core/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+      if [ "$?" -eq 0 ]; then
+        success
+      else
+        fail
+      fi
     fi
   else
     echo "

@@ -212,6 +212,27 @@ Building and installing
           fail
         fi
       fi
+    else
+      if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
+        tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+      elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
+        tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
+      fi
+      echo "
+Building and installing
+"
+      patch -p3 -d $TEMPDIR < linux-3.13-dvb-mutex.patch
+      if ! [ "$?" -eq 0 ]; then
+        fail
+      fi
+      CC="$GCC" make -C $BUILD_DIR M=$TEMPDIR modules
+      mkdir -p /lib/modules/`uname -r`/updates/ffdecsawrapper > /dev/null 2>&1
+      /usr/bin/install $TEMPDIR/dvb-core.ko /lib/modules/`uname -r`/updates/ffdecsawrapper
+      if [ "$?" -eq 0 ]; then
+        success
+      else
+        fail
+      fi
     fi
   else
     echo "

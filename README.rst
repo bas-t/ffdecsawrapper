@@ -15,7 +15,7 @@
 
  **NOTICE:**
 
- **This combined FFdecsawrapper/dvbloopback repo is deprecated and will not be updated as of now (20150509). The FFdecsawrapper part has been moved to a new repo:**
+ **This combined FFdecsawrapper/dvbloopback repo is deprecated and will not be updated as of now (20150820). The FFdecsawrapper part has been moved to a new repo:**
  
  - `descrambler. <https://github.com/bas-t/descrambler>`_
 
@@ -39,7 +39,7 @@
 
  **Note that you should not use v4l drivers if your DVB adapter is supported 'out of the box' by your kernel.**
 
- **If you are NOT using out-of-tree drivers and you are running Debian/Ubuntu/Mythbuntu with a clean unmodified stock kernel (linux-3.19.x and up are not supported), you don't need to recompile it anymore. The running kernel will be properly patched during configuration of FFdecsawrapper. That is, if your sources.list is ok and the source for your kernel is available from the repo's. Any missing build-deps for FFdecsawrapper and/or patching the dvb-core.ko kernel module will also be 'automagically' installed.**
+ **If you are NOT using out-of-tree drivers and you are running Debian/Ubuntu/Mythbuntu with a clean unmodified stock kernel (linux-3.19.x and up may work but are not supported anymore due to this repo beeing deprecated), you don't need to recompile it anymore. The running kernel will be properly patched during configuration of FFdecsawrapper. That is, if your sources.list is ok and the source for your kernel is available from the repo's. Any missing build-deps for FFdecsawrapper and/or patching the dvb-core.ko kernel module will also be 'automagically' installed.**
 
  **USAGE:**
 
