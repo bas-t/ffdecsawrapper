@@ -80,7 +80,7 @@ struct pat {
 #define MAX_SIMULTANEOUS_PMT 32
 
 static int sid_opt = 0;
-static int opt_maxfilters = 20;
+static int opt_maxfilters = 32;
 static int opt_max_fail = 20;
 static int opt_allpids = 0;
 static int opt_resetpidmap = 0;
@@ -1018,7 +1018,7 @@ static struct option *parseopt_sid(arg_enum_t cmd)
     return Sid_Opts;
   } 
   if(cmd == ARG_HELP) {
-    printf("   --sid-filt <num>  : Maximum number of open filters (default 8)\n");
+    printf("   --sid-filt <num>  : Maximum number of open filters (default 32)\n");
     printf("   --sid-allpid      : Parse all pids instead of just A/V\n");
     printf("   --sid-ignore <sid1,sid2,...>\n");
     printf("                     : When tuning, ignore given SIDs\n");
