@@ -94,16 +94,12 @@ show_help(){
   echo " --cxx=<opt>            [g++] Define C++ and CC version to use"
   echo "                        Use like --cxx=4.7"
   echo "                        "
-  echo " --linux_next=<opt>     [no] yes: configure FFdecsawrapper for a kernel"
-  echo "                        built from linux-next git repo."
-  echo "                        "
   exit 0
 }
 
 ffdecsa_opt="yes"
 compiletype_opt="release"
 v4l_opt="no"
-linuxnext_opt="no"
 
 for opt do
   optval="${opt#*=}"
@@ -123,8 +119,6 @@ for opt do
   --compiletype=*) compiletype_opt="$optval"
   ;;
   --v4l=*) v4l_opt="$optval"
-  ;;
-  --linux_next=*) linuxnext_opt="$optval"
   ;;
   --help) show_help
   ;;
@@ -377,15 +371,11 @@ Aborting...
   fi
 else
   if [ "x$linuxnext_opt" = "xyes" ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
-  elif [ "$SECOND_DIGIT" -lt 7 ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.0 dvbloopback/module/dvbdev.h
-  elif [ "$SECOND_DIGIT" -lt 13 ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.7 dvbloopback/module/dvbdev.h
-  elif [ "$SECOND_DIGIT" -lt 17 ]; then
-    cp -f dvbloopback/module/dvbdev.h-3.13 dvbloopback/module/dvbdev.h
+    if uname -r | grep "rc" > /dev/null 2>&1; then
+       RC=$(uname -r | cut -d'-' -f2)
+       wget https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL-$RC -Odvbloopback/module/dvbdev.h
   else
-    cp -f dvbloopback/module/dvbdev.h-3.17 dvbloopback/module/dvbdev.h
+    wget https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL -Odvbloopback/module/dvbdev.h
   fi
 fi
 
