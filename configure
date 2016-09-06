@@ -370,10 +370,9 @@ Aborting...
     exit 0
   fi
 else
-  if [ "x$linuxnext_opt" = "xyes" ]; then
-    if uname -r | grep "rc" > /dev/null 2>&1; then
-       RC=$(uname -r | cut -d'-' -f2)
-       wget https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL-$RC -Odvbloopback/module/dvbdev.h
+  if uname -r | grep "rc" > /dev/null 2>&1; then
+     RC=$(uname -r | cut -d'-' -f2)
+     wget https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL-$RC -Odvbloopback/module/dvbdev.h
   else
     wget https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL -Odvbloopback/module/dvbdev.h
   fi
