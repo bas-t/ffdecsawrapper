@@ -387,7 +387,7 @@ void cMapReg::ClearFullReg(int wsize)
 
 void cMapReg::PrepTmp(BIGNUM *val, int wsize)
 {
-  if(val->neg) {
+  if(BN_is_negative(val)) {
     BN_clear(tmp);
     BN_set_bit(tmp,wsize*64);
     BN_add(tmp,tmp,val);
@@ -502,7 +502,7 @@ void cMapMath::MakeJ0(BIGNUM *j, BIGNUM *d, BIGNUM *c, int bits)
 #error BN_mod_inverse is probably buggy in your openssl version
 #endif
   BN_zero(x);
-  BN_sub(j,x,d); j->neg=1;
+  BN_sub(j,x,d); BN_set_negative(j, 1);
   BN_set_bit(j,0);
   BN_set_bit(x,bits);
   BN_mod_inverse(j,j,x,ctx);

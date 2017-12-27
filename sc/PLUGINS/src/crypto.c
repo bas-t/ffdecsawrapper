@@ -51,23 +51,23 @@ void RotateBytes(unsigned char *in, int n)
 
 bool cBN::Get(const unsigned char *in, int n)
 {
-  return BN_bin2bn(in,n,&big)!=0;
+  return BN_bin2bn(in,n,big)!=0;
 }
 
 int cBN::Put(unsigned char *out, int n) const
 {
-  int s=BN_num_bytes(&big);
+  int s=BN_num_bytes(big);
   if(s>n) {
     unsigned char *buff=AUTOMEM(s);
-    BN_bn2bin(&big,buff);
+    BN_bn2bin(big,buff);
     memcpy(out,buff+s-n,n);
     }
   else if(s<n) {
     int l=n-s;
     memset(out,0,l);
-    BN_bn2bin(&big,out+l);
+    BN_bn2bin(big,out+l);
     }
-  else BN_bn2bin(&big,out);
+  else BN_bn2bin(big,out);
   return s;
 }
 
@@ -75,7 +75,7 @@ bool cBN::GetLE(const unsigned char *in, int n)
 {
   unsigned char *tmp=AUTOMEM(n);
   RotateBytes(tmp,in,n);
-  return BN_bin2bn(tmp,n,&big)!=0;
+  return BN_bin2bn(tmp,n,big)!=0;
 }
 
 int cBN::PutLE(unsigned char *out, int n) const

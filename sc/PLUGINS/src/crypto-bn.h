@@ -31,13 +31,13 @@ void RotateBytes(unsigned char *out, const unsigned char *in, int n);
 
 class cBN {
 private:
-  BIGNUM big;
+  BIGNUM *big;
 public:
-  cBN(void) { BN_init(&big); }
-  ~cBN() { BN_free(&big); }
-  operator BIGNUM* () { return &big; }
-  BIGNUM *operator->() { return &big; }
-  BIGNUM *BN(void) { return &big; }
+  cBN(void) : big(BN_new()) {}
+  ~cBN() { BN_free(big); }
+  operator BIGNUM* () { return big; }
+  BIGNUM *operator->() { return big; }
+  BIGNUM *BN(void) { return big; }
   bool Get(const unsigned char *in, int n);
   bool GetLE(const unsigned char *in, int n);
   int Put(unsigned char *out, int n) const;

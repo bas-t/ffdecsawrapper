@@ -28,9 +28,11 @@
 //       (as AES_KEY is const there), but SetKey is not. Be carefull.
 //
 
-#define OPENSSL_ALGORITHM_DEFINES
-#include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
+#define OPENSSL_ALGORITHM_DEFINES
+#endif
+#include <openssl/opensslconf.h>
 
 #if OPENSSL_VERSION_NUMBER < 0x0090700fL
 #error Openssl version 0.9.7 or newer is strongly recomended
