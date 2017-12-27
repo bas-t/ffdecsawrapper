@@ -77,7 +77,7 @@ struct pat {
   struct list_head dmx_filter_ll;
 };
 
-#define MAX_SIMULTANEOUS_PMT 32
+#define MAX_SIMULTANEOUS_PMT 64
 
 static int sid_opt = 0;
 static int opt_maxfilters = 32;
