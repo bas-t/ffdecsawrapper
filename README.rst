@@ -35,7 +35,7 @@
 
  **If you have to compile and install newest dvb drivers from v4l (or TBS and other v4l-based out of kernel drivers), you should apply proper dvb-mutex patch to your sources prior to compiling. If you are not sure on how to do this:**
 
- - `Basic instructions for v4l are here. <http://www.lursen.org/wiki/V4l_and_ffdecsawrapper>`_
+ - `Basic instructions for v4l are here. <http://www.lursen.net/wiki/V4l_and_ffdecsawrapper>`_
 
  **Note that you should not use v4l drivers if your DVB adapter is supported 'out of the box' by your kernel.**
 
@@ -43,5 +43,5 @@
 
  **USAGE:**
 
- - `Basic instructions on how tu use this software (in combination with MythTV). <http://www.lursen.org/wiki/FFdecsawrapper_with_MythTV_and_Oscam_on_Debian/Ubuntu>`_
+ - `Basic instructions on how tu use this software (in combination with MythTV). <http://www.lursen.net/wiki/FFdecsawrapper_with_MythTV_and_Oscam_on_Debian/Ubuntu>`_
 
