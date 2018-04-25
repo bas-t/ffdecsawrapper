@@ -579,6 +579,8 @@ if [ "x$module_opt" = "xyes" ]; then
   if [ "x$dvb_path" != "x" ]; then
     if [ -f $dvb_path/drivers/media/dvb-core/dvbdev.h ]; then
       cp -f $dvb_path/drivers/media/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
+    elif [ -f $dvb_path/include/media/dvbdev.h ]; then
+      cp -f $dvb_path/include/media/dvbdev.h dvbloopback/module/dvbdev.h
     elif [ -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h ]; then
       cp -f $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h dvbloopback/module/dvbdev.h
     else echo -en "
@@ -590,6 +592,8 @@ Could not locate any of the following:
 $dvb_path/drivers/media/dvb-core/dvbdev.h
 
 $dvb_path/drivers/media/dvb/dvb-core/dvbdev.h
+
+$dvb_path/include/media/dvbdev.h
 
 Aborting...
 \E[0m
