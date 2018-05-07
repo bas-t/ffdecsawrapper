@@ -569,6 +569,13 @@ Missing dependency g++-$CCKERNEL, marking for installation.
 fi
 
 #
+# Fix disapearing headers declarations in newer kernels
+#
+if ! cat /usr/include/linux/dvb/dmx.h | grep DMX_KERNEL_CLIENT > /dev/null 2>&1; then
+  patch -d/ -p0 < ../dmx.patch
+fi
+
+#
 # End Debian Section
 #
 

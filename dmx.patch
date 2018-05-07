@@ -1,0 +1,81 @@
+--- /usr/include/linux/dvb/dmx.h	2018-05-01 21:47:31.000000000 +0200
++++ /usr/include/linux/dvb/dmx.h	2018-05-06 18:56:27.335090931 +0200
+@@ -178,6 +178,7 @@
+ #define DMX_CHECK_CRC       1
+ #define DMX_ONESHOT         2
+ #define DMX_IMMEDIATE_START 4
++#define DMX_KERNEL_CLIENT   0x8000
+ };
+ 
+ /**
+@@ -198,6 +199,22 @@
+ 	__u32           flags;
+ };
+ 
++struct dmx_caps {
++	__u32 caps;
++	int num_decoders;
++};
++
++enum dmx_source {
++	DMX_SOURCE_FRONT0 = 0,
++	DMX_SOURCE_FRONT1,
++	DMX_SOURCE_FRONT2,
++	DMX_SOURCE_FRONT3,
++	DMX_SOURCE_DVR0   = 16,
++	DMX_SOURCE_DVR1,
++	DMX_SOURCE_DVR2,
++	DMX_SOURCE_DVR3
++};
++
+ /**
+  * struct dmx_stc - Stores System Time Counter (STC) information.
+  *
+@@ -307,6 +324,8 @@
+ #define DMX_SET_PES_FILTER       _IOW('o', 44, struct dmx_pes_filter_params)
+ #define DMX_SET_BUFFER_SIZE      _IO('o', 45)
+ #define DMX_GET_PES_PIDS         _IOR('o', 47, __u16[5])
++#define DMX_GET_CAPS             _IOR('o', 48, struct dmx_caps)
++#define DMX_SET_SOURCE           _IOW('o', 49, enum dmx_source)
+ #define DMX_GET_STC              _IOWR('o', 50, struct dmx_stc)
+ #define DMX_ADD_PID              _IOW('o', 51, __u16)
+ #define DMX_REMOVE_PID           _IOW('o', 52, __u16)
+@@ -318,6 +337,8 @@
+ typedef enum dmx_input dmx_input_t;
+ typedef enum dmx_ts_pes dmx_pes_type_t;
+ typedef struct dmx_filter dmx_filter_t;
++typedef struct dmx_caps dmx_caps_t;
++typedef enum dmx_source  dmx_source_t;
+ 
+ #endif
+ 
+--- /usr/include/linux/dvb/ca.h	2018-05-01 21:47:31.000000000 +0200
++++ /usr/include/linux/dvb/ca.h	2018-05-06 18:56:27.335090931 +0200
+@@ -132,6 +132,11 @@
+ 	unsigned char cw[8];
+ };
+ 
++struct ca_pid {
++	unsigned int pid;
++	int index;		/* -1 == disable*/
++};
++
+ #define CA_RESET          _IO('o', 128)
+ #define CA_GET_CAP        _IOR('o', 129, struct ca_caps)
+ #define CA_GET_SLOT_INFO  _IOR('o', 130, struct ca_slot_info)
+@@ -139,6 +144,7 @@
+ #define CA_GET_MSG        _IOR('o', 132, struct ca_msg)
+ #define CA_SEND_MSG       _IOW('o', 133, struct ca_msg)
+ #define CA_SET_DESCR      _IOW('o', 134, struct ca_descr)
++#define CA_SET_PID        _IOW('o', 135, struct ca_pid)
+ 
+ #if !defined(__KERNEL__)
+ 
+@@ -148,6 +154,7 @@
+ typedef struct ca_caps  ca_caps_t;
+ typedef struct ca_msg ca_msg_t;
+ typedef struct ca_descr ca_descr_t;
++typedef struct ca_pid ca_pid_t;
+ 
+ #endif
+ 
