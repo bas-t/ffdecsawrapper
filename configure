@@ -620,7 +620,7 @@ Aborting...
   else
     if uname -r | grep "rc" > /dev/null 2>&1; then
       RC=$(uname -r | cut -d'-' -f2)
-      wget https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL-$RC -Odvbloopback/module/dvbdev.h
+      wget https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/plain/include/media/dvbdev.h?id=refs/tags/v$SHORT_KERNEL-$RC -Odvbloopback/module/dvbdev.h
     elif [ "$VERSION" -gt 415 ]; then
       wget https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/plain/include/media/dvbdev.h?id=refs/tags/v$SHORT_KERNEL -Odvbloopback/module/dvbdev.h
     else
