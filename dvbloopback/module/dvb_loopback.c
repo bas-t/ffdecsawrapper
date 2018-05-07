@@ -113,54 +113,6 @@ static void rvfree(void *mem, unsigned long size)
 	vfree(mem);
 }
 
-static int call_func(struct file *file,
-		     unsigned int cmd, void **parg,
-		     int (*func)(struct file *file, unsigned int cmd, void *arg))
-{
-	int err, msize;
-	struct dtv_properties *tvps = *parg;
-	struct dtv_property *tvp = NULL, *oldprops = NULL;
-
-	if ((cmd != FE_SET_PROPERTY) && (cmd != FE_GET_PROPERTY))
-		return func(file, cmd, *parg);
-
-	/* Put an arbitrary limit on the number of messages that can
-	 * be sent at once */
-	if ((tvps->num == 0) || (tvps->num > DTV_IOCTL_MAX_MSGS))
-		return -EINVAL;
-
-	msize = _IOC_SIZE(cmd) + tvps->num * sizeof(struct dtv_property);
-
-	/*
-	 * Since most part of the code assume that "parg" is a contious piece of
-	 * memory when FE_SET_PROPERTY / FE_GET_PROPERTY is used
-	 * It doesn't work with tvps->props attached as a pointer
-	 * it will be over written and recalculated as an offset to parg (tvps)
-	 * This is not a nice fix but it works  /H.Schillstrom
-	 */
-	tvps = krealloc(*parg, msize, GFP_KERNEL);
-	if (!tvps)
-		return -ENOMEM;
-
-	*parg = tvps;
-	tvp = *parg + _IOC_SIZE(cmd);
-
-	if (copy_from_user(tvp, tvps->props, tvps->num * sizeof(*tvp)))
-		return -EFAULT;
-
-	oldprops = tvps->props;
-	tvps->props = tvp;
-
-	err = func(file, cmd, *parg);
-
-	if (cmd == FE_GET_PROPERTY) {
-		if (copy_to_user((void __user *)oldprops, tvp,
-				 tvps->num * sizeof(struct dtv_property)))
-			err = -EFAULT;
-	}
-	return err;
-}
-
 /* This is a copy of dvb_usercopy.  We need to do this because it isn't exported
    by dvbdev
 */
@@ -171,9 +123,12 @@ static int dvblb_usercopy(struct file *file,
  		     unsigned int cmd, void *arg))
 
 {
+	char    sbuf[128];
 	void    *mbuf = NULL;
 	void    *parg = NULL;
 	int     err  = -EINVAL;
+	struct  dtv_properties *tvps = NULL;
+	struct  dtv_property *tvp = NULL;
 
 	/*  Copy arguments into temp kernel buffer  */
 	switch (_IOC_DIR(cmd)) {
@@ -187,19 +142,41 @@ static int dvblb_usercopy(struct file *file,
 	case _IOC_READ: /* some v4l ioctls are marked wrong ... */
 	case _IOC_WRITE:
 	case (_IOC_WRITE | _IOC_READ):
-		mbuf = kmalloc(_IOC_SIZE(cmd), GFP_KERNEL);
-		if (!mbuf)
-			return -ENOMEM;
-		parg = mbuf;
+		if (_IOC_SIZE(cmd) <= sizeof(sbuf)) {
+			parg = sbuf;
+		} else {
+			/* too big to allocate from stack */
+			mbuf = kmalloc(_IOC_SIZE(cmd),GFP_KERNEL);
+			if (NULL == mbuf)
+				return -ENOMEM;
+			parg = mbuf;
+		}
 
 		err = -EFAULT;
 		if (copy_from_user(parg, (void __user *)arg, _IOC_SIZE(cmd)))
 			goto out;
+		if ((cmd == FE_SET_PROPERTY) || (cmd == FE_GET_PROPERTY)) {
+		    tvps = (struct dtv_properties __user *)arg;
+		    tvp = (struct dtv_property *) kmalloc(tvps->num *
+			sizeof(struct dtv_property), GFP_KERNEL);
+		    if (!tvp){
+			err = -ENOMEM;
+			goto out;
+		    }
+		    if (copy_from_user(tvp, tvps->props, 
+			(tvps->num) * sizeof(struct dtv_property))) {
+			err = -EFAULT;
+			goto out;
+		    }
+		    tvps = (struct dtv_properties __user *)parg;
+		    tvps->props = tvp;
+		    tvp = NULL;
+		}
 		break;
 	}
 
 	/* call driver */
-	if ((err = call_func(file, cmd, &parg, func)) == -ENOIOCTLCMD)
+	if ((err = func(file, cmd, parg)) == -ENOIOCTLCMD)
 		err = -ENOTTY;
 
 	if (err < 0)
@@ -210,15 +187,25 @@ static int dvblb_usercopy(struct file *file,
 	{
 	case _IOC_READ:
 	case (_IOC_WRITE | _IOC_READ):
+		if ((cmd == FE_GET_PROPERTY) || (cmd == FE_SET_PROPERTY)) 
+		{
+		    tvps = (struct dtv_properties __user *)arg;
+		    tvp = tvps->props;
+		    tvps = (struct dtv_properties __user *)parg;
+		    if (copy_to_user(tvp, tvps->props, tvps->num * 
+			    sizeof(struct dtv_property))) {
+ 			err = -EFAULT;
+			goto out;
+		    }
+		    tvps->props = tvp;
+		}
 		if (copy_to_user((void __user *)arg, parg, _IOC_SIZE(cmd)))
 			err = -EFAULT;
 		break;
 	}
 
 out:
-	/* The krealloc() may have changed the buffer pointer */
-	if (mbuf)
-		kfree(parg);
+	kfree(mbuf);
 	return err;
 }
 
@@ -1010,7 +997,11 @@ static int create_lb_dev(struct dvblb *dvblb, int dev_idx, int type)
 
 // create loopback device (will be frontend0)
 	ret = dvb_register_device(&dvblb->adapter, &lbdev->lb_dev,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)
 	                    &dvbdev_looped, lbdev, type);
+#else
+	                    &dvbdev_looped, lbdev, type, 0);
+#endif
 	if (ret != 0) {
 		info("error registering device adapter%d",
 		     dvblb->adapter.num);
@@ -1018,7 +1009,11 @@ static int create_lb_dev(struct dvblb *dvblb, int dev_idx, int type)
 	}
 // create userspace device (will be frontend1)
 	ret = dvb_register_device(&dvblb->adapter, &lbdev->user_dev,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)
 	                    &dvbdev_userspace, lbdev, type);
+#else
+	                    &dvbdev_userspace, lbdev, type, 0);
+#endif
 	if (ret != 0) {
 		info("error registering device adapter%d",
 		     dvblb->adapter.num);
@@ -1225,8 +1220,7 @@ static int __init dvblb_init(void)
 static void __exit cleanup_dvblb_module(void)
 {
 	int i;
-	printk("dvbloopback: unregistering %d adapters\n", num_adapters);
-	//info("Unregistering ca loopback devices");
+	info("Unregistering ca loopback devices");
 	for(i = 0; i < num_adapters; i++) {
 		if(0 == dvblb_global[i].init)
 			break;
