@@ -88,7 +88,10 @@ Aborting...
 # Define where to build and from what dir to build
 
     BUILD_DIR="/lib/modules/`uname -r`/build"
-    TEMPDIR="/usr/src/$SHORT_KERNEL"
+    TEMPDIR="temp"
+    rm -rf $TEMPDIR
+    mkdir -p $TEMPDIR
+    cd $TEMPDIR
 
 
 # Abort if running kernel is < 3.x
@@ -136,7 +139,7 @@ will be patched for use with ffdecsawrapper.
 
   if [ "$?" -eq 0 ]; then
     apt-get build-dep linux --no-install-recommends -y || die "Error installing \"build-dep linux\""
-    apt-get --reinstall install linux-source-$SHORT_KERNEL -y || die "Error installing linux-source-$SHORT_KERNEL"
+    apt-get source linux -y || die "Error(s) while fetching Debian Linux source"
 
 # Compile the patched dvb-core.ko module and install it
 
@@ -145,15 +148,8 @@ Building patched dvb-core module for kernel `uname -r`
 
 Preparing, this may take a while...
 "
-    rm -rf $TEMPDIR
-    mkdir -p $TEMPDIR
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
       if [ "$SECOND_DIGIT" -lt 7 ]; then
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 5 linux-source-$SHORT_KERNEL/drivers/media/dvb/dvb-core/
-        fi
         echo "
 Building and installing
 "
@@ -170,11 +166,6 @@ Building and installing
           fail
         fi
       elif [ "$SECOND_DIGIT" -lt 13 ]; then
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        fi
         echo "
 Building and installing
 "
@@ -191,11 +182,6 @@ Building and installing
           fail
         fi
       else
-        if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-          tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-          tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-        fi
         echo "
 Building and installing
 "
@@ -213,11 +199,6 @@ Building and installing
         fi
       fi
     else
-      if  test -f /usr/src/linux-source-$SHORT_KERNEL.tar.bz2; then
-        tar -xjf /usr/src/linux-source-$SHORT_KERNEL.tar.bz2 -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-      elif test -f /usr/src/linux-source-$SHORT_KERNEL.tar.xz; then
-        tar -xJf /usr/src/linux-source-$SHORT_KERNEL.tar.xz -C $TEMPDIR --strip-components 4 linux-source-$SHORT_KERNEL/drivers/media/dvb-core/
-      fi
       echo "
 Building and installing
 "
