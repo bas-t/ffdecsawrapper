@@ -1,5 +1,5 @@
---- /usr/include/linux/dvb/dmx.h	2018-05-01 21:47:31.000000000 +0200
-+++ /usr/include/linux/dvb/dmx.h	2018-05-06 18:56:27.335090931 +0200
+--- usr/include/linux/dvb/dmx.h	2018-05-01 21:47:31.000000000 +0200
++++ usr/include/linux/dvb/dmx.h	2018-05-06 18:56:27.335090931 +0200
 @@ -178,6 +178,7 @@
  #define DMX_CHECK_CRC       1
  #define DMX_ONESHOT         2
@@ -49,8 +49,8 @@
  
  #endif
  
---- /usr/include/linux/dvb/ca.h	2018-05-01 21:47:31.000000000 +0200
-+++ /usr/include/linux/dvb/ca.h	2018-05-06 18:56:27.335090931 +0200
+--- usr/include/linux/dvb/ca.h	2018-05-01 21:47:31.000000000 +0200
++++ usr/include/linux/dvb/ca.h	2018-05-06 18:56:27.335090931 +0200
 @@ -132,6 +132,11 @@
  	unsigned char cw[8];
  };
