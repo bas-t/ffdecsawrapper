@@ -579,6 +579,14 @@ fi
 # End Debian Section
 #
 
+FIRST_DIGIT=$(echo `uname -r` | awk -F/ '{print $NF}' | grep -o '[[:digit:]]\+' | head -n1 | awk 'NR==1')
+SECOND_DIGIT=$(echo `uname -r` | awk -F/ '{print $NF}' | grep -o '[[:digit:]]\+' | head -n2 | awk 'NR==2')
+EXTRA_DIGIT="0"
+VERSION="$FIRST_DIGIT$SECOND_DIGIT"
+chars=`echo -n $SECOND_DIGIT  | wc -c`
+if ! [ "$chars" -eq 2 ]; then
+VERSION="$FIRST_DIGIT$EXTRA_DIGIT$SECOND_DIGIT"
+fi
 
 # Get the right dvbdev.h in place
 # If --dvb_dir= is set, use supplied header
@@ -613,6 +621,8 @@ Aborting...
     if uname -r | grep "rc" > /dev/null 2>&1; then
       RC=$(uname -r | cut -d'-' -f2)
       wget https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL-$RC -Odvbloopback/module/dvbdev.h
+    elif [ "$VERSION" -gt 415 ]; then
+      wget https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/plain/include/media/dvbdev.h?id=refs/tags/v$SHORT_KERNEL -Odvbloopback/module/dvbdev.h
     else
       wget https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/plain/drivers/media/dvb-core/dvbdev.h?id=refs/tags/v$SHORT_KERNEL -Odvbloopback/module/dvbdev.h
     fi
