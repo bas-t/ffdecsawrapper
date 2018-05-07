@@ -138,8 +138,8 @@ will be patched for use with ffdecsawrapper.
 
   if [ "$?" -eq 0 ]; then
     apt-get build-dep linux --no-install-recommends -y || die "Error installing \"build-dep linux\""
-    rm -rf $TEMPDIR && mkdir $TEMPDIR && cd $TEMPDIR && apt-get source linux-image-`uname -r` -y || die "Error installing linux-source-$UBUNTU_KERNEL"
-    cd linux*
+    rm -rf $TEMPDIR && mkdir $TEMPDIR && cd $TEMPDIR &&   apt-get source linux -y || die "Error(s) while fetching Debian Linux source"
+    cd linux-*
     CWD=$(pwd)
     if  [ "$FIRST_DIGIT" -eq 3 ]; then
       if [ "$SECOND_DIGIT" -lt 7 ]; then
