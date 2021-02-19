@@ -219,7 +219,7 @@ static int dvblb_procfs_open(struct inode *inode, struct file *filep)
 {
     return single_open(filep, dvblb_procfs_read, PDE_DATA(inode));
 }
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5.6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static const struct file_operations dvblb_procfs_fops = {
     .owner      = THIS_MODULE,
     .open       = dvblb_procfs_open,
@@ -230,10 +230,10 @@ static const struct file_operations dvblb_procfs_fops = {
 #else
 static const struct proc_ops dvblb_procfs_fops = {
     .proc_open  = dvblb_procfs_open,
-    .proc_release = single_release,
     .proc_read = seq_read,
     .proc_lseek = seq_lseek,
     .proc_write = dvblb_procfs_write,
+    .proc_release = single_release,
  };
 #endif
 #endif
@@ -262,7 +262,7 @@ static int dvblb_procfs_adapter_open(struct inode *inode, struct file *filep)
 {
     return single_open(filep, dvblb_procfs_adapter_read, PDE_DATA(inode));
 }
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5.6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static const struct file_operations dvblb_procfs_adapter_fops = {
     .owner      = THIS_MODULE,
     .open       = dvblb_procfs_adapter_open,
@@ -273,10 +273,10 @@ static const struct file_operations dvblb_procfs_adapter_fops = {
 #else
 static const struct proc_ops dvblb_procfs_adapter_fops = {
     .proc_open  = dvblb_procfs_adapter_open,
-    .proc_release = single_release,
     .proc_read  = seq_read,
     .proc_lseek = seq_lseek,
     .proc_write = dvblb_procfs_adapter_write,
+    .proc_release = single_release,
  };
 #endif
 #endif
