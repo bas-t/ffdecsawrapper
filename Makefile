@@ -7,7 +7,7 @@ CC       ?= gcc
 CXX      ?= g++
 CXXFLAGS ?= -Wall -D__user= 
 
-DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__KERNEL_STRICT_NAMES
+DEFINES += -DRELEASE_VERSION=\"$(VERSION)\" -D__LOOSE_KERNEL_NAMES
 INCLUDES += -Idvbloopback/module
 LBDIR = dvbloopback/src
 TOOL = ffdecsawrapper
