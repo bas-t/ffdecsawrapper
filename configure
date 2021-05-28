@@ -58,36 +58,6 @@ Aborting...
 exit 1
 }
 
-experimental_api(){
-echo -en "
-\E[1;33;44m
-Your kernel or v4l media stack is compiled with
-
-CONFIG_MEDIA_CONTROLLER_DVB=y, or
-CONFIG_MEDIA_CONTROLLER_DVB=m
-
-This is a new and experimental api.
-
-The dvbloopback module will likely
-crash your kernel.
-
-You are heading for DISASTER!!!
-
-Recompile your kernel/v4l media stack with:
-
-# CONFIG_MEDIA_CONTROLLER_DVB is not set
-
-Aborting...
-
-Feel free to patch the dvbloopback module
-so it can coexist with Mauro's new api.
-If you do, please share your patch.
-\E[0m
-
-"
-exit 1
-}
-
 show_help(){
   echo " Usage: ./configure --opt1=<opt> --opt2=<opt>"
   echo "                        "
@@ -389,18 +359,6 @@ Aborting...
         fi
       fi
     fi
-  fi
-fi
-
-# Abort if the kernel/v4l tree is compiled with CONFIG_MEDIA_CONTROLLER_DVB
-
-if [ "x$dvb_path" != "x" ]; then
-  if cat $dvb_path/../v4l/.config | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
-    experimental_api
-  fi
-else
-  if cat /boot/config-`uname -r` | grep "CONFIG_MEDIA_CONTROLLER_DVB=y" > /dev/null 2>&1 ;then
-    experimental_api
   fi
 fi
 
